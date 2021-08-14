@@ -24,6 +24,17 @@ python3 object_tracker.py
 ```
 docker volume create mobilitydb_data
 docker-compose up -d
+```
+TO setup mobilitydb
+```
+cd pg_extender
+psql -h 172.19.0.3 -d mobilitydb -U docker
+Enter "docker" as the default password
+\i overlap.sql;
+\q
+```
+To fully activate apperception in TASM:
+```
 docker ps
 ```
 After fetching the CONTAINER_ID of apperceptiontasm/tasm:latest, run
@@ -37,10 +48,7 @@ pip3 install -r requirements.txt
 ```
 # Try the demo.
 In the docker:  
-`jupyter notebook --ip 0.0.0.0 --port 8890 --allow-root &`
-
-copy the jupyter notebook url
-open up a browser, paste the url, and replace the hostname with 172.19.0.2 which is the static host for apperception docker container
+`jupyter notebook --ip 172.19.0.2 --port 8890 --allow-root &`
 
 The demo notebook first constructs the world. Then it queries for the trajectory and videos of the cars that appeared once in an area of interests within some time interval.
 
