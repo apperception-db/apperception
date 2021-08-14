@@ -1,6 +1,5 @@
 uncompyle6
 psycopg2
-tensorflow
 ffmpeg-python
 ffprobe-python
 easydict
