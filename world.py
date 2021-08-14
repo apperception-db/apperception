@@ -1,5 +1,4 @@
 from typing import Callable
-import uncompyle6
 import psycopg2
 from metadata_context import *
 from video_context import *

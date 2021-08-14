@@ -1,0 +1,40 @@
+version: '3'
+services:
+  tasm:
+    image: apperceptiontasm/tasm:latest
+    ports:
+      - "5000:5000"
+    # Mount volume 
+    volumes:
+      - "./:/apperception"
+    entrypoint: /bin/sh
+    stdin_open: true
+    tty: true
+    links:
+      - "mobilitydb"
+    networks:
+      vpcbr:
+        ipv4_address: 172.19.0.2
+    
+  mobilitydb:
+
+    # image to fetch from docker hub
+    image: mobilitydb/mobilitydb
+    ports:
+      - "25432:5432"
+    volumes:
+      - "mobilitydb_data:/var/lib/postgresql"
+    networks:
+      vpcbr:
+        ipv4_address: 172.19.0.3
+
+volumes:
+  mobilitydb_data:
+
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 172.19.0.0/16
+         gateway: 172.19.0.1
