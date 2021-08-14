@@ -3,6 +3,14 @@
 World-db ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
 ### How to Setuo Apperception Repo
+
+For ssh:
+```
+git clone git@github.com:apperception-db/apperception.git
+cd apperception
+```
+
+For HTTPS:
 ```
 git clone https://github.com/apperception-db/apperception.git
 cd apperception
