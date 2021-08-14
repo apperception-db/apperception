@@ -36,7 +36,8 @@ class VideoContextExecutor:
         camera_sql = create_or_insert_camera_table(self.conn, world_name, camera_node)
         if camera_node.object_recognition is not None:
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
-        #video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.current_context.tasm)
+        if self.current_context.tasm:
+            video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.current_context.tasm)
         return camera_sql
 
     def visit_obj_rec(self, camera_node, object_rec_node):
@@ -53,7 +54,8 @@ class VideoContextExecutor:
         
         tracking_results = recognize(video_file, algo, tracker_type, tracker)
         add_recognized_objs(self.conn, lens, tracking_results, start_time)
-        #metadata_to_tasm(tracking_results, camera_node.metadata_id, self.current_context.tasm)
+        if self.current_context.tasm:
+            metadata_to_tasm(tracking_results, camera_node.metadata_id, self.current_context.tasm)
         
     def execute(self):
         query = self.visit()

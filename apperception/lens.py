@@ -217,7 +217,7 @@ class PinholeLens(Lens):
 		"""
 		x, y = pixel_coord
 		pixel = np.matrix([[x], [y], [depth]])
-		return self.inv_transform @ pixel
+		return (self.inv_transform @ pixel).flatten().tolist()[0]
 
 	def pixels_to_world(self, pixel_coords, depths):
 		"""

@@ -36,16 +36,21 @@ class WorldExecutor:
         ### then it can use these to tile the video and get it
         cam_nodes = self.curr_world.get_video_cams
         tasm = self.curr_world.fetch_tasm()
-        all_selection = {}
         for cam_node in cam_nodes:
             current_metadata_identifier = cam_node.metadata_id
             current_video_file = cam_nodes.video_file
             tasm.activate_regret_based_tiling(current_video_file, current_metadata_identifier)
             for label, timestamps in metadata_results.items():
-                selection = tasm.select_tiles(current_video_file, current_metadata_identifier, label, timestamps[0], timestamps[-1])
+                tasm.get_video_roi(
+                    f'./output/{label}.mp4', # output path
+                    current_video_file, # name in TASM
+                    current_metadata_identifier, # metadata identifier in TASM
+                    label, # label name
+                    timestamps[0], # first frame inclusive
+                    timestamps[-1] # last frame exclusive
+                )
                 tasm.retile_based_on_regret(current_video_file, current_metadata_identifier)
-            all_selection.update(cam_node, selection)
-        return all_selection
+
     
     def get_video(self, metadata_results):
         start_time = self.curr_world.VideoContext.start_time

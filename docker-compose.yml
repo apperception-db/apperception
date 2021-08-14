@@ -2,8 +2,11 @@ version: '3'
 services:
   tasm:
     image: apperceptiontasm/tasm:latest
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
     ports:
-      - "5000:5000"
+      - "8890:8890"
     # Mount volume 
     volumes:
       - "./:/apperception"

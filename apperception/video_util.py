@@ -4,12 +4,13 @@ import numpy as np
 import datetime 
 import cv2
 from object_tracker import yolov4_deepsort_video_track
-# import tasm
+
 
 def video_data_to_tasm(video_file, metadata_id, t):
 	t.store(video_file, metadata_id)
 
 def metadata_to_tasm(formatted_result, metadata_id, t):
+	import tasm
 	metadata_info = []
 	bound_width = lambda x : min(max(0, x), 3840)
 	bound_height = lambda y: min(max(0, y), 2160)
@@ -162,7 +163,7 @@ def recognize(video_file, recog_algo = "", tracker_type = "default", customized_
 
 
 def add_recognized_objs(conn, lens, formatted_result, start_time, properties={'color':{}}, default_depth=True):
-	
+	clean_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
@@ -225,6 +226,12 @@ def bbox_to_postgres(conn, item_id, object_type, color, start_time, timestamps, 
 	create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 
 
+def clean_tables(conn):
+	cursor = conn.cursor()
+	cursor.execute("DROP TABLE IF EXISTS General_Bbox;")
+	cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory;")
+	conn.commit()
+
 # Create general trajectory table
 def create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	#Creating a cursor object using the cursor() method
@@ -234,6 +241,7 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	Now the timestamp matches, the starting time should be the meta data of the world
 	Then the timestamp should be the timestamp regarding the world starting time
 	'''
+	
 	#Creating table with the first item
 	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
 	itemId TEXT,
@@ -258,7 +266,7 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);")
 	conn.commit()
-	print("General Bboxe Table created successfully........")
+	print("General Bboxes Table created successfully........")
 	#Insert the trajectory of the first item
 	insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 

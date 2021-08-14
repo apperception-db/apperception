@@ -1,5 +1,6 @@
 from metadata_context import *
 from metadata_util import *
+import numpy as np
 
 # Executor class to execute the context input
 # Essentially translates the context to a SQL query that
@@ -103,7 +104,7 @@ class MetadataContextExecutor:
     def execute(self, create_view = False, view_name=""):
         self.cursor = self.conn.cursor()
         self.cursor.execute(self.visit(create_view=create_view, view_name=view_name))
-        return self.cursor.fetchall()
+        return np.asarray(self.cursor.fetchall())
 
 
 def translate_aggregation(aggr_node, aggregated):
