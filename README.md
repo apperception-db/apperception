@@ -33,13 +33,14 @@ docker exec -it {CONTAINER_ID of apperceptiontasm/tasm:latest} /bin/bash
 Now we are under TASM env
 ```
 cd /apperception/
+pip3 install -r requirements.txt
 ```
 # Try the demo.
 In the docker:  
 `jupyter notebook --ip 0.0.0.0 --port 8890 --allow-root &`
 
-On the local machine:  
-`ssh -L 8890:127.0.0.1:8890 <user>@<host>`
+copy the jupyter notebook url
+open up a browser, paste the url, and replace the hostname with 172.19.0.2 which is the static host for apperception docker container
 
 The demo notebook first constructs the world. Then it queries for the trajectory and videos of the cars that appeared once in an area of interests within some time interval.
 
