@@ -4,13 +4,14 @@ from metadata_context import *
 from video_context import *
 import copy
 from world_executor import WorldExecutor
+import matplotlib.pyplot as plt
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
 
 class World:
 
-    def __init__(self, name, units):
-        self.VideoContext = VideoContext(name, units)
+    def __init__(self, name, units, enable_tasm=False):
+        self.VideoContext = VideoContext(name, units, enable_tasm)
         self.MetadataContext = MetadataContext(single_mode=False)
         self.MetadataContext.start_time = self.VideoContext.start_time
         self.GetVideo = False
@@ -122,6 +123,7 @@ class World:
         return world_executor.execute()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
+        print(self.VideoContext.camera_nodes)
         camera = self.VideoContext.camera_nodes[cam_id]
         video_file = camera.video_file
         if default:
@@ -137,12 +139,26 @@ class World:
             print(initBB)
             cv2.destroyAllWindows()
             print("world coordinate #1")
-            tl = camera.lens.pixel_to_world(initBB[0], 1)
+            tl = camera.lens.pixel_to_world(initBB[:2], 1)
             print(tl)
             x1, y1, z1 = tl
             print("world coordinate #2")
-            br = camera.lens.pixel_to_world((initBB[0][0]+initBB[1][0], initBB[0][1]+initBB[1][1]), 1)
+            br = camera.lens.pixel_to_world((initBB[0]+initBB[2], initBB[1]+initBB[3]), 1)
             print(br)
             x2, y2, z2 = br
-        return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=z1, x2=x2, y2=y2, z2=z2)
-  
+        return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
+    
+    def overlay_trajectory(self, cam_id, trajectory):
+        camera = self.VideoContext.get_camera(cam_id)
+        video_file = camera.video_file
+        for traj in trajectory:
+            current_trajectory = np.asarray(traj[0])
+            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+            vs = cv2.VideoCapture(video_file)
+            frame = vs.read()
+            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+            for point in frame_points.tolist():
+                cv2.circle(frame,tuple([int(point[0]), int(point[1])]),3,(255,0,0))
+            plt.figure()
+            plt.imshow(frame)
+            plt.show()

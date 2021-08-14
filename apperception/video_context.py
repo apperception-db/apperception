@@ -6,7 +6,7 @@ import uncompyle6
 import psycopg2
 from video_util import *
 import datetime 
-# import tasm
+
 
 # Camera node
 class Camera:
@@ -69,11 +69,15 @@ class ObjectRecognition:
         self.properties = properties
 
 class VideoContext:
-    def __init__(self, name, units):
+    def __init__(self, name, units, enable_tasm=False):
         self.root = self
         self.name = name
         self.units = units
-        # self.tasm = tasm.TASM()
+        if enable_tasm:
+            import tasm
+            self.tasm = tasm.TASM()
+        else:
+            self.tasm = None
         self.camera_nodes = {}
         self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
 
@@ -108,6 +112,9 @@ class VideoContext:
         camera_node.add_properties(properties, property_type)
        # Display error 
 
+    def get_camera(self, cam_id):
+        return self.__get_camera(cam_id)
+    
     # Get camera
     def __get_camera(self, cam_id):
         if cam_id in self.camera_nodes.keys():

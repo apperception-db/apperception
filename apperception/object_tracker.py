@@ -30,7 +30,7 @@ from collections import namedtuple
 FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny', 
                      'model', 'iou', 'score', 'dont_show', 'info', 'count'])\
           (framework='tf', weights='./yolov4-deepsort/checkpoints/yolov4-416', size=416, tiny=True, model='yolov4',
-           iou=0.45, score=0.50, dont_show=True, info=False, count=True)
+           iou=0.45, score=0.50, dont_show=True, info=False, count=False)
 
 # flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
 # flags.DEFINE_string('weights', './checkpoints/yolov4-416',
@@ -186,8 +186,8 @@ def yolov4_deepsort_video_track(video_file):
 											"tracked_cnt":[frame_num]}
 		else:
 			break
-
+	print("# of tracked items:", len(formatted_result))
 	return formatted_result
 
-result = yolov4_deepsort_video_track("./amber_videos/traffic-scene-shorter.mp4")
-import code; code.interact(local=vars())
+# result = yolov4_deepsort_video_track("./amber_videos/traffic-scene-shorter.mp4")
+# import code; code.interact(local=vars())
