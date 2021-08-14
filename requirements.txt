@@ -4,10 +4,10 @@ ffmpeg-python
 ffprobe-python
 easydict
 scipy
-opencv-python==4.4.0.42
+opencv-python
 lxml
 tqdm
-tensorflow==2.3.0rc0
+tensorflow
 absl-py
 easydict
 matplotlib
