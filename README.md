@@ -22,7 +22,10 @@ python3 object_tracker.py
 
 ### Start Apperception Env
 ```
-docker-compose up
+docker volume create mobilitydb_data
+docker-compose up -d
+docker ps
+docker exec -it {CONTAINER_ID of apperceptiontasm/tasm:latest} /bin/bash
 ```
 Now we are under TASM env
 ```
