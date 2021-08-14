@@ -25,6 +25,9 @@ python3 object_tracker.py
 docker volume create mobilitydb_data
 docker-compose up -d
 docker ps
+```
+After fetching the CONTAINER_ID of apperceptiontasm/tasm:latest, run
+```
 docker exec -it {CONTAINER_ID of apperceptiontasm/tasm:latest} /bin/bash
 ```
 Now we are under TASM env
