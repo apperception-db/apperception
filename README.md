@@ -2,14 +2,18 @@
 
 World-db ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
-### How to Setup Apperception Repo
+## How to Setup Apperception Repo
 
 For ssh:
 ```
 git clone git@github.com:apperception-db/apperception.git
 cd apperception
 ```
-
+For HTTPS:
+```
+git clone https://github.com/apperception-db/apperception.git
+cd apperception
+```
 ### Downloading Official YOLOv4 Pre-trained Weights in the repo
 
 Copy and paste yolov4.weights from your downloads folder into this repository. For the Demo, we use yolov4-tiny.weights,
@@ -18,12 +22,7 @@ If you want to use yolov4-tiny.weights, a smaller model that is faster at runnin
 
 Our object tracker uses YOLOv4 to make the object detections, which deep sort then uses to track. There exists an official pre-trained YOLOv4 object detector model that is able to detect 80 classes. For easy demo purposes we will use the pre-trained weights for our tracker. Download pre-trained yolov4.weights file: https://drive.google.com/open?id=1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT
 
-For HTTPS:
-```
-git clone https://github.com/apperception-db/apperception.git
-cd apperception
-```
-Then we setup the repo
+### Then we setup the repo
 ```
 chmod u+x ./setup.sh
 chmod 733 ./setup.sh
