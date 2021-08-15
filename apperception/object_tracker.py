@@ -2,7 +2,7 @@ import os
 # comment out below line to enable tensorflow logging outputs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 import sys
-sys.path.append(os.path.join(os.getcwd(),"yolov4-deepsort"))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)),"../yolov4-deepsort"))
 import time
 import tensorflow as tf
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -29,7 +29,9 @@ from tools import generate_detections as gdet
 from collections import namedtuple
 FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny', 
                      'model', 'iou', 'score', 'dont_show', 'info', 'count'])\
-          (framework='tf', weights='./yolov4-deepsort/checkpoints/yolov4-416', size=416, tiny=True, model='yolov4',
+          (framework='tf', 
+           weights=os.path.join(os.path.dirname(os.path.realpath(__file__)),'../yolov4-deepsort/checkpoints/yolov4-416'), 
+           size=416, tiny=True, model='yolov4',
            iou=0.45, score=0.50, dont_show=True, info=False, count=False)
 
 # flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
@@ -51,7 +53,9 @@ def yolov4_deepsort_video_track(video_file):
 	nms_max_overlap = 1.0
 	
 	# initialize deep sort
-	model_filename = './yolov4-deepsort/model_data/mars-small128.pb'
+	
+	model_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                               	  '../yolov4-deepsort/model_data/mars-small128.pb')
 	encoder = gdet.create_box_encoder(model_filename, batch_size=1)
 	# calculate cosine distance metric
 	metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -189,5 +193,3 @@ def yolov4_deepsort_video_track(video_file):
 	print("# of tracked items:", len(formatted_result))
 	return formatted_result
 
-# result = yolov4_deepsort_video_track("./amber_videos/traffic-scene-shorter.mp4")
-# import code; code.interact(local=vars())

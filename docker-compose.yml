@@ -24,7 +24,7 @@ services:
     # image to fetch from docker hub
     image: mobilitydb/mobilitydb
     ports:
-      - "25432:5432"
+      - "25432:25432"
     volumes:
       - "mobilitydb_data:/var/lib/postgresql"
     networks:

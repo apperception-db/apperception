@@ -16,7 +16,7 @@ class MetadataContextExecutor:
         host='localhost',
         user=None,
         password=None,
-        port=5432,
+        port=25432,
         database_name=None):
         self.conn = psycopg2.connect(
         database=database_name, user=user, password=password, host=host, port=port
