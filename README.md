@@ -20,7 +20,6 @@ Then we setup the repo
 chmod u+x ./setup.sh
 chmod 733 ./setup.sh
 ./setup.sh
-python3 object_tracker.py
 ```
 ## Apperception Demo Tryout without TASM
 As TASM requires nividia-docker/nvidia-docker2(https://www.ibm.com/docs/en/maximo-vi/8.2.0?topic=planning-installing-docker-nvidia-docker2) during runtime, and a machine with an encode-capable GPU (https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new). To tryout Apperception features without TASM, run the following:
@@ -37,13 +36,13 @@ Enter "docker" as the default password
 \i overlap.sql;
 \q
 ```
-# Try the demo.
+### Try the demo.
 In the docker:
 `jupyter notebook`
 
 The demo notebook first constructs the world. Then it queries for the trajectory of the cars that appeared once in an area of interests within some time interval.
 
-To fully activate apperception in TASM:
+##To fully activate apperception in TASM:
 ```
 docker-compose up
 cd pg_extender
@@ -62,7 +61,7 @@ Now we are under TASM env
 cd /apperception/
 pip3 install -r requirements.txt
 ```
-# Try the demo.
+### Try the demo.
 In the docker:  
 `jupyter notebook --ip 172.19.0.2 --port 8890 --allow-root &`
 Directly open the jupyter url
