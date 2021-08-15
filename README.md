@@ -42,7 +42,7 @@ In the docker:
 
 The demo notebook first constructs the world. Then it queries for the trajectory of the cars that appeared once in an area of interests within some time interval.
 
-##To fully activate apperception in TASM:
+## To fully activate apperception in TASM:
 ```
 docker-compose up
 cd pg_extender
