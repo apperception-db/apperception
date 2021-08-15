@@ -16,6 +16,7 @@ git clone https://github.com/apperception-db/apperception.git
 cd apperception
 ```
 Then we setup the repo
+```
 chmod u+x ./setup.sh
 chmod 733 ./setup.sh
 ./setup.sh
