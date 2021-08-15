@@ -36,7 +36,7 @@ As TASM requires nividia-docker/nvidia-docker2(https://www.ibm.com/docs/en/maxim
 ### Start Apperception Metadata Store MobilityDB(https://github.com/MobilityDB/MobilityDB)
 ```
 docker volume create mobilitydb_data
-docker run --name "mobilitydb" localhost -d -p 25432:25432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
+docker run --name "mobilitydb" -d -p 25432:25432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
 ```
 We need to setup the mobilitydb with customized functions
 ```
