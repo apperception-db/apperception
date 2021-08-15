@@ -14,7 +14,7 @@ services:
     stdin_open: true
     tty: true
     links:
-      - "mobilitydb"
+            - "mobilitydb:localhost"
     networks:
       vpcbr:
         ipv4_address: 172.19.0.2
