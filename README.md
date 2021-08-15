@@ -10,7 +10,7 @@ git clone git@github.com:apperception-db/apperception.git
 cd apperception
 ```
 
-Downloading Official YOLOv4 Pre-trained Weights in the repo
+### Downloading Official YOLOv4 Pre-trained Weights in the repo
 
 Copy and paste yolov4.weights from your downloads folder into this repository. For the Demo, we use yolov4-tiny.weights,
 
