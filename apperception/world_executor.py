@@ -82,11 +82,11 @@ class WorldExecutor:
                 vid_times = convert_datetime_to_frame_num(start_time, timestamps)
                 # print(vid_times)
 
-                vid_fname = self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + item_id + '.mp4'
+                vid_fname = './output/'+self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + item_id + '.mp4'
                 # print(vid_fname)
                 get_video_roi(vid_fname, cam_video_file, cam_coords, vid_times) 
                 video_files.append(vid_fname)
-                
+        print("output video files", ','.join(video_files))
         return video_files
         
     def execute(self):
