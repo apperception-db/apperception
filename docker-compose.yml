@@ -14,7 +14,7 @@ services:
     stdin_open: true
     tty: true
     links:
-            - "mobilitydb:localhost"
+      - "mobilitydb:localhost"
     networks:
       vpcbr:
         ipv4_address: 172.19.0.2
@@ -24,7 +24,7 @@ services:
     # image to fetch from docker hub
     image: mobilitydb/mobilitydb
     ports:
-      - "25432:25432"
+      - "25432:5432"
     volumes:
       - "mobilitydb_data:/var/lib/postgresql"
     networks:

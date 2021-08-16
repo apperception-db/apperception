@@ -20,7 +20,10 @@ class World:
     
     def get_camera(self, cam_id=[]):
         # Change depending if you're on docker or not 
-        world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+        if self.enable_tasm:
+            world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
+        else:
+            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
         return world_executor.get_camera(cam_id)
     
 #########################
@@ -119,7 +122,9 @@ class World:
             world_executor.enable_tasm()
             print("successfully enable tasm during execution time")
         # Change depending if you're on docker or not 
-        world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+            world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
+        else:
+            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
         return world_executor.execute()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
