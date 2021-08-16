@@ -5,10 +5,11 @@ import json
 
 # TODO: Add checks for Nones 
 class VideoContextExecutor:
-    def __init__(self, conn, new_video_context:VideoContext=None):
+    def __init__(self, conn, new_video_context:VideoContext=None, tasm=None):
         if new_video_context:
             self.context(new_video_context)
         self.conn = conn
+        self.tasm = tasm
 
     def context(self, video_context:VideoContext):
         self.current_context = video_context
@@ -36,8 +37,8 @@ class VideoContextExecutor:
         camera_sql = create_or_insert_camera_table(self.conn, world_name, camera_node)
         if camera_node.object_recognition is not None:
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
-        if self.current_context.tasm:
-            video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.current_context.tasm)
+        if self.tasm:
+            video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.tasm)
         return camera_sql
 
     def visit_obj_rec(self, camera_node, object_rec_node):
@@ -54,8 +55,8 @@ class VideoContextExecutor:
         
         tracking_results = recognize(video_file, algo, tracker_type, tracker)
         add_recognized_objs(self.conn, lens, tracking_results, start_time)
-        if self.current_context.tasm:
-            metadata_to_tasm(tracking_results, camera_node.metadata_id, self.current_context.tasm)
+        if self.tasm:
+            metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
         
     def execute(self):
         query = self.visit()
