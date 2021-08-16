@@ -47,8 +47,8 @@ Enter "docker" as the default password
 \q
 ```
 ### Try the demo.
-In the docker:
-`jupyter notebook`
+In apperception repo:
+`jupyter notebook` or `python3 -m notebook`
 
 The demo notebook first constructs the world. Then it queries for the trajectory of the cars that appeared once in an area of interests within some time interval.
 
