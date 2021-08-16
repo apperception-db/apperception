@@ -44,6 +44,7 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 	"""
 
 	rois = np.array(rois).T
+	print(rois.shape)
 	len_x, len_y = np.max(rois.T[2] - rois.T[0]), np.max(rois.T[3] - rois.T[1])
 	# len_x, len_y  = np.max(rois.T[0][1] - rois.T[0][0]), np.max(rois.T[1][1] - rois.T[1][0])
 
@@ -82,9 +83,10 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 			
 
 			roi_byte = np.pad(roi_byte, pad_width = [(pad_y, len_y - diff_y - pad_y), (pad_x, len_x - diff_x - pad_x), (0, 0)])
+			frame = cv2.cvtColor(roi_byte, cv2.COLOR_RGB2BGR)
 
 			
-			vid_writer.write(frame)
+			vid_writer.write(roi_byte)
 		frame_cnt += 1
 		if not ret:
 			break
@@ -227,7 +229,7 @@ def bbox_to_postgres(conn, item_id, object_type, color, start_time, timestamps, 
 		deltas.append(meta_box[1:])
 	postgres_timestamps = convert_timestamps(start_time, timestamps)
 	create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
-
+	print(f"{item_id} saved successfully")
 
 def clean_tables(conn):
 	cursor = conn.cursor()
@@ -257,7 +259,6 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	cursor.execute(create_itemtraj_sql)
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);")
 	conn.commit()
-	
 	#Creating table with the first item
 	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS General_Bbox(
 	itemId TEXT,
@@ -271,7 +272,7 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	conn.commit()
 	#Insert the trajectory of the first item
 	insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
-	print(f"{item_id} saved successfully")
+
 
 # Insert general trajectory
 def insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
