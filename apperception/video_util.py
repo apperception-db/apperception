@@ -257,7 +257,7 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	cursor.execute(create_itemtraj_sql)
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);")
 	conn.commit()
-	print("Item General Trajectory Table created successfully")
+	
 	#Creating table with the first item
 	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS General_Bbox(
 	itemId TEXT,
@@ -269,10 +269,9 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);")
 	conn.commit()
-	print("General Bboxes Table created successfully........")
 	#Insert the trajectory of the first item
 	insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
-
+	print(f"{item_id} saved successfully")
 
 # Insert general trajectory
 def insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
