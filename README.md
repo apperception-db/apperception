@@ -46,6 +46,18 @@ Enter "docker" as the default password
 \i overlap.sql;
 \q
 ```
+
+For Mac users, if `psql -h localhost -p 25432 -d mobilitydb -U docker` errors and trying `psql` errors too, 
+1. First, run
+```
+rm /usr/local/var/postgres/postmaster.pid
+brew services restart postgresql
+```
+2. If you get an error that says `psql: error: server closed the connection unexpectedly`, 
+```
+createdb <username>
+```
+
 ### Try the demo.
 In apperception repo:
 `jupyter notebook` or `python3 -m notebook`
