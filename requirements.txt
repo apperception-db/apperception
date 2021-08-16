@@ -12,3 +12,4 @@ absl-py
 easydict
 matplotlib
 pillow
+jupyter
