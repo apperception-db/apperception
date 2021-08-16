@@ -36,12 +36,12 @@ As TASM requires nividia-docker/nvidia-docker2(https://www.ibm.com/docs/en/maxim
 ### Start Apperception Metadata Store MobilityDB(https://github.com/MobilityDB/MobilityDB)
 ```
 docker volume create mobilitydb_data
-docker run --name "mobilitydb" -d -p 25432:25432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
+docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
 ```
 We need to setup the mobilitydb with customized functions
 ```
 cd pg_extender
-psql -d mobilitydb -U docker
+psql -h localhost -p 25432 -d mobilitydb -U docker
 Enter "docker" as the default password
 \i overlap.sql;
 \q
