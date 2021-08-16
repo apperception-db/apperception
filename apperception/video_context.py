@@ -69,15 +69,10 @@ class ObjectRecognition:
         self.properties = properties
 
 class VideoContext:
-    def __init__(self, name, units, enable_tasm=False):
+    def __init__(self, name, units):
         self.root = self
         self.name = name
         self.units = units
-        if enable_tasm:
-            import tasm
-            self.tasm = tasm.TASM()
-        else:
-            self.tasm = None
         self.camera_nodes = {}
         self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
 

@@ -44,7 +44,6 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 	"""
 
 	rois = np.array(rois).T
-
 	len_x, len_y = np.max(rois.T[2] - rois.T[0]), np.max(rois.T[3] - rois.T[1])
 	# len_x, len_y  = np.max(rois.T[0][1] - rois.T[0][0]), np.max(rois.T[1][1] - rois.T[1][0])
 
@@ -52,7 +51,7 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 	len_y = int(round(len_y))
 	# print(len_x)
 	# print(len_y)
-	vid_writer = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc(*'MP4V'), int(cam_video.fps), (len_x, len_y))
+	vid_writer = cv2.VideoWriter(file_name, cv2.VideoWriter_fourcc('m', 'p', '4', 'v'), 30, (len_x, len_y))
 	# print("rois")
 	# print(rois)
 	start_time = int(times[0])
@@ -61,10 +60,10 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 	while(cap.isOpened()):
 		# Capture frame-by-frame
 		ret, frame = cap.read()
-		if frame_cnt in times:
-
+		if frame_cnt in times and ret:
 			i = frame_cnt - start_time
 			if i >= len(rois):
+				print("incorrect length:", len(rois))
 				break
 			current_roi = rois[i]
 
@@ -83,8 +82,12 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 			
 
 			roi_byte = np.pad(roi_byte, pad_width = [(pad_y, len_y - diff_y - pad_y), (pad_x, len_x - diff_x - pad_x), (0, 0)])
-			frame = cv2.cvtColor(roi_byte, cv2.COLOR_RGB2BGR)
+
+			
 			vid_writer.write(frame)
+		frame_cnt += 1
+		if not ret:
+			break
 
 	vid_writer.release()
 
