@@ -7,21 +7,18 @@ from world_executor import WorldExecutor
 import matplotlib.pyplot as plt
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
-
+world_executor = WorldExecutor()
 class World:
 
     def __init__(self, name, units, enable_tasm=False):
-        self.VideoContext = VideoContext(name, units, enable_tasm)
+        self.VideoContext = VideoContext(name, units)
         self.MetadataContext = MetadataContext(single_mode=False)
         self.MetadataContext.start_time = self.VideoContext.start_time
         self.GetVideo = False
+        self.enable_tasm = enable_tasm
         # self.AccessedVideoContext = False
     
-    def fetch_tasm(self):
-        return self.VideoContext.tasm
-    
     def get_camera(self, cam_id=[]):
-        world_executor = WorldExecutor(self)
         # Change depending if you're on docker or not 
         world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
         return world_executor.get_camera(cam_id)
@@ -117,7 +114,10 @@ class World:
         return new_context
     
     def execute(self):
-        world_executor = WorldExecutor(self)
+        world_executor.create_world(self)
+        if self.enable_tasm:
+            world_executor.enable_tasm()
+            print("successfully enable tasm during execution time")
         # Change depending if you're on docker or not 
         world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
         return world_executor.execute()

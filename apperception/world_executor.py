@@ -5,15 +5,16 @@ from video_util import *
 import numpy as np
 
 class WorldExecutor:
-    def __init__(self, world):
+    def __init__(self, world=None):
         if world:
             self.create_world(world)
-    
+        self.tasm = None
+        
     def connect_db(self, 
         host='localhost',
         user=None,
         password=None,
-        port=25432,
+        port=5432,
         database_name=None):
 
         self.conn = psycopg2.connect(database=database_name, user=user, password=password, host=host, port=port)
@@ -21,6 +22,11 @@ class WorldExecutor:
     def create_world(self, world):
         self.curr_world = world
         return self
+    
+    def enable_tasm(self):
+        import tasm
+        if not self.tasm:
+            self.tasm = tasm.TASM()
     
     def get_camera(self, cam_id = []):
         assert self.curr_world, self.conn
@@ -60,7 +66,6 @@ class WorldExecutor:
         ### from the world
         cam_nodes = self.curr_world.get_video_cams
         video_files = []
-        ### TODO: Integration to TASM
         for i in range(len(cam_nodes)):
             cam_id, ratio, cam_x, cam_y, cam_z, focal_x, focal_y, fov, skew_factor = cam_nodes[i]
             cam_video_file = self.curr_world.VideoContext.camera_nodes[cam_id].video_file
@@ -73,33 +78,34 @@ class WorldExecutor:
                 world_coords = reformat_fetched_world_coords(world_coords)
 
                 cam_coords = world_to_pixel(world_coords, transform_matrix)
-                # print("is it able to convert to pixels")
-                # print(cam_coords)
+               
                 vid_times = convert_datetime_to_frame_num(start_time, timestamps)
                 # print(vid_times)
 
-                vid_fname = self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + cam_id + item_id + '.mp4'
+                vid_fname = self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + item_id + '.mp4'
                 # print(vid_fname)
-
                 get_video_roi(vid_fname, cam_video_file, cam_coords, vid_times) 
-                # print("is it able to produce video?")
                 video_files.append(vid_fname)
                 
         return video_files
         
     def execute(self):
         # Edit logic for execution here through checks of whether VideoContext or MetadataContext is being used 
-        video_executor = VideoContextExecutor(self.conn, self.curr_world.VideoContext)
+        video_executor = VideoContextExecutor(self.conn, self.curr_world.VideoContext, self.tasm)
         video_executor.execute()
 
         if self.curr_world.MetadataContext.scan.view == None:
             return
 
         if self.curr_world.GetVideo:
-            metadata_executor = MetadataContextExecutor(self.conn, self.curr_world.MetadataContext.get_columns(primarykey, time))
-            metadata_results = video_fetch_reformat(metadata_executor.execute())
-            # return self.get_video(metadata_results)
-            return self.tasm_get_video(metadata_results)
+            if self.tasm:
+                metadata_executor = MetadataContextExecutor(self.conn, self.curr_world.MetadataContext.get_columns(primarykey, time))
+                metadata_results = video_fetch_reformat_tasm(metadata_executor.execute())
+                return self.tasm_get_video(metadata_results)
+            else:
+                metadata_executor = MetadataContextExecutor(self.conn, self.curr_world.MetadataContext.get_columns(primarykey, geometry, time))
+                metadata_results = video_fetch_reformat(metadata_executor.execute())
+                return self.get_video(metadata_results)
 
         metadata_executor = MetadataContextExecutor(self.conn, self.curr_world.MetadataContext)
         return metadata_executor.execute()
@@ -128,7 +134,7 @@ def world_to_pixel(world_coords, transform):
 
     return np.stack((tl_vid_coords[0], tl_vid_coords[1], br_vid_coords[0], br_vid_coords[1]), axis=0)
 
-def video_fetch_reformat(fetched_meta):
+def video_fetch_reformat_tasm(fetched_meta):
     result = {}
     for meta in fetched_meta:
         item_id, timestamp = meta[0], meta[1]
@@ -138,4 +144,16 @@ def video_fetch_reformat(fetched_meta):
             result[item_id] = {'tracked_cnt':[timestamp]}
 
     return result
-        
+
+
+def video_fetch_reformat(fetched_meta):
+    result = {}
+    for meta in fetched_meta:
+        item_id, coordinates, timestamp = meta[0], meta[1:-1], meta[-1]
+        if item_id in result:
+            result[item_id][0].append(coordinates)
+            result[item_id][1].append(timestamp)
+        else:
+            result[item_id] = [[coordinates],[timestamp]]
+
+    return result
