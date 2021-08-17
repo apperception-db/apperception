@@ -3,7 +3,11 @@
 World-db ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
 ## How to Setup Apperception Repo
-
+### Install dependencies:
+```
+apt-get update && apt-get install -y postgresql python3-opencv
+```
+### Clone the Apperception repo
 For ssh:
 ```
 git clone git@github.com:apperception-db/apperception.git
