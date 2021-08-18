@@ -1,6 +1,6 @@
-# world-db: a database management system optimized for multi-video applications
+# Apperception: a database management system optimized for multi-video applications
 
-World-db ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
+Apperception ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
 ## How to Setup Apperception Repo
 ### Install dependencies:
