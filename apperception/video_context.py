@@ -15,7 +15,7 @@ class Camera:
         self.ratio = ratio
         self.video_file = video_file
         self.metadata_id = metadata_id
-        self.properties = []
+        self.properties = {}
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been 
