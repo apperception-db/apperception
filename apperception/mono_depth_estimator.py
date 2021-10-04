@@ -73,6 +73,6 @@ def create_depth_frames(video_byte_array, model_name="mono+stereo_640x192"):
 
 		# Saving numpy file
 		# Save the resized disp instead
-		scaled_disp, _ = disp_to_depth(disp_resized.squeeze(), 0.1, 100)
-		disp_map[i] = scaled_disp.cpu().detach().numpy()
+		scaled_disp, depth = disp_to_depth(disp_resized.squeeze(), 0.1, 100)
+		disp_map[i] = depth.cpu().detach().numpy()
 	return disp_map

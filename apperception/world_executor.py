@@ -1,3 +1,4 @@
+import lens
 from metadata_context_executor import *
 from metadata_context import *
 from video_context_executor import *
@@ -67,24 +68,24 @@ class WorldExecutor:
         cam_nodes = self.curr_world.get_video_cams
         video_files = []
         for i in range(len(cam_nodes)):
-            cam_id, ratio, cam_x, cam_y, cam_z, focal_x, focal_y, fov, skew_factor = cam_nodes[i]
-            cam_video_file = self.curr_world.VideoContext.camera_nodes[cam_id].video_file
-
-            transform_matrix = create_transform_matrix(focal_x, focal_y, cam_x, cam_y, skew_factor)
+            cam_id, cam_x, cam_y, cam_z, fov, skew_factor = cam_nodes[i]
+            current_cam_node = self.curr_world.VideoContext.camera_nodes[cam_id]
+            current_cam_video_file = current_cam_node.video_file
+            current_cam_len = current_cam_node.len
             
             for item_id, vals in metadata_results.items():
                 world_coords, timestamps = vals
                 # print("timestamps are", timestamps)
                 world_coords = reformat_fetched_world_coords(world_coords)
 
-                cam_coords = world_to_pixel(world_coords, transform_matrix)
+                cam_coords = current_cam_len.world_to_pixel(world_coords)
                
                 vid_times = convert_datetime_to_frame_num(start_time, timestamps)
                 # print(vid_times)
 
                 vid_fname = './output/'+self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + item_id + '.mp4'
                 # print(vid_fname)
-                get_video_roi(vid_fname, cam_video_file, cam_coords, vid_times) 
+                get_video_roi(vid_fname, current_cam_video_file, cam_coords, vid_times) 
                 video_files.append(vid_fname)
         print("output video files", ','.join(video_files))
         return video_files
@@ -110,15 +111,6 @@ class WorldExecutor:
         metadata_executor = MetadataContextExecutor(self.conn, self.curr_world.MetadataContext)
         return metadata_executor.execute()
 
-def create_transform_matrix(focal_x, focal_y, cam_x, cam_y, skew_factor):
-    alpha = skew_factor
-
-    transform = np.array([[focal_x, alpha, cam_x, 0], 
-                                    [0, focal_y, cam_y, 0],
-                                    [0, 0, 1, 0]
-                                   ])
-
-    return transform
 
 def reformat_fetched_world_coords(world_coords):
     return np.array(world_coords)
