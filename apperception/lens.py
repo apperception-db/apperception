@@ -52,7 +52,7 @@ class VRLens(Lens):
 		print("focal_width", self.focal_width)
 		print("focal_height", self.focal_height)
 		self.alpha = skew_factor
-		self.scaling_transform = np.linalg.inv(np.matrix(
+		self.scaling_transform = np.linalg.inv(np.asarray(
 								[[self.focal_width, self.alpha, width/2], 
 								 [0, self.focal_height, height/2],
 								 [0, 0, 1],
@@ -70,7 +70,7 @@ class VRLens(Lens):
 		R_8 = np.sin(roll)*-np.cos(pitch)
 		R_9 = np.cos(roll)*np.cos(pitch)
 
-		self.rotational_transform = np.matrix([[R_1, R_2, R_3, cam_x],
+		self.rotational_transform = np.asarray([[R_1, R_2, R_3, cam_x],
 			[R_4, R_5, R_6, cam_y], 
 			[R_7, R_8, R_9, cam_z],
 			[0, 0, 0, 1]
@@ -84,19 +84,19 @@ class VRLens(Lens):
 		Translate pixel coordinates to world coordinates. 
 		"""       
 		x, y = pixel_coord
-		pixel = np.matrix([[x], [y], [1]])
+		pixel = np.array([[x], [y], [1]])
 		scaled_matrix = self.scaling_transform @ pixel
-		scaled_pixels = np.matrix([scaled_matrix[0], scaled_matrix[1], [depth], [1]])
+		scaled_pixels = np.asarray([scaled_matrix[0], scaled_matrix[1], [depth], [1]])
 		return self.rotational_transform @ scaled_pixels
 
 	def pixels_to_world(self, pixel_coords, depths):
 		"""
 		Translate multiple pixel coordinates to world coordinates. 
 		"""
-		x, y =  [c[0] for c in pixel_coords], [c[1] for c in pixel_coords]
-		pixels = np.matrix([x, y, np.ones(len(depths))])
+		x, y =  pixel_coords
+		pixels = np.asarray([x, y, np.ones(len(depths))])
 		scaled_matrix = self.scaling_transform @ pixels
-		scaled_pixels = np.matrix([scaled_matrix[0], scaled_matrix[1], depths, np.ones(len(depths))])
+		scaled_pixels = np.asarray([scaled_matrix[0], scaled_matrix[1], depths, np.ones(len(depths))])
 		return self.rotational_transform @ scaled_pixels 
 
 	def world_to_pixel(self, world_coord):
@@ -104,10 +104,10 @@ class VRLens(Lens):
 		Translate world coordinates to pixel coordinates
 		"""
 		x, y, z, w = world_coord
-		world_pixel = np.matrix([[x], [y], [z], [w]])
+		world_pixel = np.asarray([[x], [y], [z], [w]])
 		scaled_pixels = self.inv_rotational_transform @ world_pixel
 		print("scaled_pixels after inv rotation", scaled_pixels)
-		original_pixel = self.inv_scaling_transform @ np.matrix([scaled_pixels[0], scaled_pixels[1], [1]])
+		original_pixel = self.inv_scaling_transform @ np.asarray([scaled_pixels[0], scaled_pixels[1], [1]])
 		return original_pixel
 
 	def world_to_pixels(self, world_coords):
@@ -115,7 +115,7 @@ class VRLens(Lens):
 		Translate world coordinates to pixel coordinates
 		"""
 		scaled_pixels = self.inv_rotational_transform @ world_coords
-		original_pixels = self.inv_scaling_transform @ np.matrix([scaled_pixels[0], scaled_pixels[1], np.ones(len(scaled_pixels[0]))])
+		original_pixels = self.inv_scaling_transform @ np.asarray([scaled_pixels[0], scaled_pixels[1], np.ones(len(scaled_pixels[0]))])
 		return original_pixels    
 
 
