@@ -44,9 +44,9 @@ class World:
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
 
-    def camera(self, cam_id, location, ratio, video_file, metadata_identifier, lens):
+    def camera(self, cam_id, video_file, metadata_identifier, lens):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
+        new_context.VideoContext.camera(cam_id, video_file, metadata_identifier, lens)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
