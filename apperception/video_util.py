@@ -135,9 +135,7 @@ def create_or_insert_camera_table(conn, world_name, camera):
 	sql = '''CREATE TABLE IF NOT EXISTS Cameras(
 	cameraId TEXT,
 	worldId TEXT,
-	ratio real,
 	origin geometry,
-	focalpoints geometry,
 	fov INTEGER,
 	skev_factor real
 	);'''
@@ -154,39 +152,31 @@ def insert_camera(conn, world_name, camera_node):
 	focal_x = str(lens.focal_x)
 	focal_y = str(lens.focal_y)
 	cam_x, cam_y, cam_z = str(lens.cam_origin[0]), str(lens.cam_origin[1]), str(lens.cam_origin[2])
-	cursor.execute('''INSERT INTO Cameras (cameraId, worldId, ratio, origin, focalpoints, fov, skev_factor) '''+ \
-			'''VALUES (\'%s\', \'%s\', %f, \'POINT Z (%s %s %s)\', \'POINT(%s %s)\', %s, %f);''' \
-			%(camera_node.cam_id, world_name, camera_node.ratio, cam_x, cam_y, cam_z, focal_x, focal_y, lens.fov, lens.alpha))
+	cursor.execute('''INSERT INTO Cameras (cameraId, worldId, origin, fov, skev_factor) '''+ \
+			'''VALUES (\'%s\', \'%s\', \'POINT Z (%s %s %s)\', %s, %f);''' \
+			%(camera_node.cam_id, world_name,cam_x, cam_y, cam_z, lens.fov, lens.alpha))
 	print("New camera inserted successfully.........")
 	conn.commit()
 
 # Default object recognition (YOLOv3)
-def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None):
+def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None, default_depth=True):
 	# recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
 	# return recognition.video_item_recognize(video.byte_array)
-	return yolov4_deepsort_video_track(video_file)	
+	return yolov4_deepsort_video_track(video_file, default_depth)	
 
 
-def add_recognized_objs(conn, lens, formatted_result, start_time, properties={'color':{}}, default_depth=True):
+def add_recognized_objs(conn, lens, formatted_result, start_time, properties={'color':{}}):
 	clean_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
 		tracked_cnt = formatted_result[item_id]["tracked_cnt"]
-		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1]))
-		if default_depth:
-			top_left_depths = np.ones(len(recognized_bboxes))
-		else:
-			top_left_depths = self.__get_depths_of_points(recognized_bboxes[:,0,0], recognized_bboxes[:,0,1])
-		top_left = lens.pixels_to_world(top_left, top_left_depths)
+		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1], recognized_bboxes[:,0,2]))
+		top_left = lens.pixels_to_world(top_left, top_left)
 		
 		# Convert bottom right coordinates to world coordinates
-		bottom_right = np.vstack((recognized_bboxes[:,1,0], recognized_bboxes[:,1,1]))
-		if default_depth:
-			bottom_right_depths = np.ones(len(tracked_cnt))
-		else:
-			bottom_right_depths = self.__get_depths_of_points(recognized_bboxes[:,1,0], recognized_bboxes[:,1,1])
-		bottom_right = lens.pixels_to_world(bottom_right, bottom_right_depths)
+		bottom_right = np.vstack((recognized_bboxes[:,1,0], recognized_bboxes[:,1,1], recognized_bboxes[:,1,2]))
+		bottom_right = lens.pixels_to_world(bottom_right, bottom_right)
 		
 		top_left = np.array(top_left.T)
 		bottom_right = np.array(bottom_right.T)
