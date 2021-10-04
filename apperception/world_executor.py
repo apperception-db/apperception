@@ -71,7 +71,7 @@ class WorldExecutor:
             cam_id, cam_x, cam_y, cam_z, fov, skew_factor = cam_nodes[i]
             current_cam_node = self.curr_world.VideoContext.camera_nodes[cam_id]
             current_cam_video_file = current_cam_node.video_file
-            current_cam_len = current_cam_node.len
+            current_cam_len = current_cam_node.lens
             
             for item_id, vals in metadata_results.items():
                 world_coords, timestamps = vals
