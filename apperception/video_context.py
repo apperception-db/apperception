@@ -10,7 +10,7 @@ import datetime
 
 # Camera node
 class Camera:
-    def __init__(self, cam_id, video_file, metadata_id, len):
+    def __init__(self, cam_id, video_file, metadata_id, lens):
         self.cam_id = cam_id
         self.video_file = video_file
         self.metadata_id = metadata_id
@@ -22,7 +22,7 @@ class Camera:
         # have not added to the camera.
         self.items = [] 
         self.object_recognition = None
-        self.len = len
+        self.lens = lens
 
     def add_item(self, item):
         # Add item
@@ -32,9 +32,9 @@ class Camera:
         # Add property
         self.properties[property_type].append(new_prop)
 
-    def add_lens(self, len):
+    def add_lens(self, lens):
         # Add lens
-        self.len = len
+        self.lens = lens
 
     # Add a default add_recog_obj = True
     def recognize(self, algo = 'Yolo', tracker_type = 'multi', tracker = None):

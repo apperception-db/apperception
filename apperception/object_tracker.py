@@ -29,10 +29,10 @@ from tools import generate_detections as gdet
 from mono_depth_estimator import create_depth_frames
 
 from collections import namedtuple
-FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny', 
+FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny',
 					 'model', 'iou', 'score', 'dont_show', 'info', 'count'])\
-		  (framework='tf', 
-		   weights=os.path.join(os.path.dirname(os.path.realpath(__file__)),'../yolov4-deepsort/checkpoints/yolov4-416'), 
+		  (framework='tf',
+		   weights=os.path.join(os.path.dirname(os.path.realpath(__file__)),'../yolov4-deepsort/checkpoints/yolov4-416'),
 		   size=416, tiny=True, model='yolov4',
 		   iou=0.45, score=0.50, dont_show=True, info=False, count=False)
 
@@ -53,9 +53,9 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 	max_cosine_distance = 0.4
 	nn_budget = None
 	nms_max_overlap = 1.0
-	
+
 	# initialize deep sort
-	
+
 	model_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 									 '../yolov4-deepsort/model_data/mars-small128.pb')
 	encoder = gdet.create_box_encoder(model_filename, batch_size=1)
@@ -84,7 +84,7 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 		ret, frame = cap.read()
 		if ret == True:
 			image = Image.fromarray(frame)
-			frame_depth = create_depth_frames(image)
+			
 			frame_num +=1
 			# print('Frame #: ', frame_num)
 			frame_size = frame.shape[:2]
@@ -93,7 +93,7 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 			image_data = image_data[np.newaxis, ...].astype(np.float32)
 			start_time = time.time()
 
-			
+
 			batch_data = tf.constant(image_data)
 			pred_bbox = infer(batch_data)
 			for key, value in pred_bbox.items():
@@ -131,7 +131,7 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 
 			# by default allow all classes in .names file
 			allowed_classes = list(class_names.values())
-			
+
 			# custom allowed classes (uncomment line below to customize tracker for only people)
 			#allowed_classes = ['person']
 
@@ -166,26 +166,27 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 			scores = np.array([d.confidence for d in detections])
 			classes = np.array([d.class_name for d in detections])
 			indices = preprocessing.non_max_suppression(boxs, classes, nms_max_overlap, scores)
-			detections = [detections[i] for i in indices]       
+			detections = [detections[i] for i in indices]
 
 			# Call the tracker
 			tracker.predict()
 			tracker.update(detections)
 
-			# update tracks
-			# current_bboxes = []
-			# current_labels = []
-			
 			for track in tracker.tracks:
 				if not track.is_confirmed() or track.time_since_update > 1:
-					continue 
+					continue
 				bbox = track.to_tlbr()
 				class_name = track.get_class()
 				item_id = class_name+"-"+str(track.track_id)
 				tl = [int(bbox[0]), int(bbox[1])]
 				br = [int(bbox[2]), int(bbox[3])]
-				tl_depth = frame_depth[0][tl[1], tl[0]] if not default_depth else 1
-				br_depth = frame_depth[0][br[1], br[0]] if not default_depth else 1
+				if not default_depth:
+					frame_depth = create_depth_frames(np.array([np.asarray(image)]))
+					tl_depth = frame_depth[0][tl[1], tl[0]]
+					br_depth = frame_depth[0][br[1], br[0]]
+				else:
+					tl_depth = 1
+					br_depth = 1
 				tl.append(tl_depth)
 				br.append(br_depth)
 				if item_id in formatted_result:
@@ -197,6 +198,7 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 											"tracked_cnt":[frame_num]}
 		else:
 			break
+	cap.release()
 	print("# of tracked items:", len(formatted_result))
 	return formatted_result
 
