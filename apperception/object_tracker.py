@@ -26,13 +26,15 @@ from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
 from tools import generate_detections as gdet
 
+from mono_depth_estimator import create_depth_frames
+
 from collections import namedtuple
 FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny', 
-                     'model', 'iou', 'score', 'dont_show', 'info', 'count'])\
-          (framework='tf', 
-           weights=os.path.join(os.path.dirname(os.path.realpath(__file__)),'../yolov4-deepsort/checkpoints/yolov4-416'), 
-           size=416, tiny=True, model='yolov4',
-           iou=0.45, score=0.50, dont_show=True, info=False, count=False)
+					 'model', 'iou', 'score', 'dont_show', 'info', 'count'])\
+		  (framework='tf', 
+		   weights=os.path.join(os.path.dirname(os.path.realpath(__file__)),'../yolov4-deepsort/checkpoints/yolov4-416'), 
+		   size=416, tiny=True, model='yolov4',
+		   iou=0.45, score=0.50, dont_show=True, info=False, count=False)
 
 # flags.DEFINE_string('framework', 'tf', '(tf, tflite, trt')
 # flags.DEFINE_string('weights', './checkpoints/yolov4-416',
@@ -46,7 +48,7 @@ FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny',
 # flags.DEFINE_boolean('info', False, 'show detailed info of tracked objects')
 # flags.DEFINE_boolean('count', False, 'count objects being tracked on screen')
 
-def yolov4_deepsort_video_track(video_file):
+def yolov4_deepsort_video_track(video_file, default_depth=True):
 	# Definition of the parameters
 	max_cosine_distance = 0.4
 	nn_budget = None
@@ -55,7 +57,7 @@ def yolov4_deepsort_video_track(video_file):
 	# initialize deep sort
 	
 	model_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                               	  '../yolov4-deepsort/model_data/mars-small128.pb')
+									 '../yolov4-deepsort/model_data/mars-small128.pb')
 	encoder = gdet.create_box_encoder(model_filename, batch_size=1)
 	# calculate cosine distance metric
 	metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
@@ -82,6 +84,7 @@ def yolov4_deepsort_video_track(video_file):
 		ret, frame = cap.read()
 		if ret == True:
 			image = Image.fromarray(frame)
+			frame_depth = create_depth_frames(image)
 			frame_num +=1
 			# print('Frame #: ', frame_num)
 			frame_size = frame.shape[:2]
@@ -178,15 +181,19 @@ def yolov4_deepsort_video_track(video_file):
 					continue 
 				bbox = track.to_tlbr()
 				class_name = track.get_class()
-				# current_bboxes.append([[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]])
-				# current_labels.append(class_name)
 				item_id = class_name+"-"+str(track.track_id)
+				tl = [int(bbox[0]), int(bbox[1])]
+				br = [int(bbox[2]), int(bbox[3])]
+				tl_depth = frame_depth[0][tl[1], tl[0]] if not default_depth else 1
+				br_depth = frame_depth[0][br[1], br[0]] if not default_depth else 1
+				tl.append(tl_depth)
+				br.append(br_depth)
 				if item_id in formatted_result:
-					formatted_result[item_id]["bboxes"].append([[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]])
+					formatted_result[item_id]["bboxes"].append([tl, br])
 					formatted_result[item_id]["tracked_cnt"].append(frame_num)
 				else:
 					formatted_result[item_id]={"object_type": class_name,
-											"bboxes":[[[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]]],
+											"bboxes":[[tl, br]],
 											"tracked_cnt":[frame_num]}
 		else:
 			break
