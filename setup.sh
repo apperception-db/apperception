@@ -4,6 +4,7 @@ mv ./yolov4-tiny.weights ./yolov4-deepsort/data
 mv ./yolov4.weights ./yolov4-deepsort/data
 python3 -m venv env
 source env/bin/activate
+pip3 install --upgrade pip
 pip3 install -r requirements.txt
 mv checkpoint/ ./yolov4-deepsort
 pip install -r requirements.txt
