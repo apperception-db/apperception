@@ -13,3 +13,4 @@ easydict
 matplotlib
 pillow
 jupyter
+torch
