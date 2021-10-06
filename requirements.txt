@@ -12,3 +12,5 @@ absl-py
 easydict
 matplotlib
 pillow
+jupyter
+torch
