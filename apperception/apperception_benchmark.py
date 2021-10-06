@@ -1,10 +1,7 @@
 ### IMPORTS
 import cv2
 
-from world import *
-from world_executor import *
-from video_util import *
-from metadata_util import *
+from world import World
 import lens
 import point
 
