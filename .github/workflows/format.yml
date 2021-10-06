@@ -53,6 +53,13 @@ jobs:
           git push
       
       - name: Analyze the code with flake8
+        if: always()
         run: |
           pip install flake8
           python -m flake8 apperception
+      
+      - name: Type Check with mypy
+        if: always()
+        run: |
+          pip install mypy
+          python -m mypy apperception
