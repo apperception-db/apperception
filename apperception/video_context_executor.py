@@ -1,17 +1,18 @@
 from video_context import VideoContext
-from video_util import create_or_insert_world_table, create_or_insert_camera_table, recognize, video_data_to_tasm, add_recognized_objs, metadata_to_tasm
+from video_util import (add_recognized_objs, create_or_insert_camera_table,
+                        create_or_insert_world_table, metadata_to_tasm,
+                        recognize, video_data_to_tasm)
 
-import json
 
-# TODO: Add checks for Nones 
+# TODO: Add checks for Nones
 class VideoContextExecutor:
-    def __init__(self, conn, new_video_context:VideoContext=None, tasm=None):
+    def __init__(self, conn, new_video_context: VideoContext = None, tasm=None):
         if new_video_context:
             self.context(new_video_context)
         self.conn = conn
         self.tasm = tasm
 
-    def context(self, video_context:VideoContext):
+    def context(self, video_context: VideoContext):
         self.current_context = video_context
         return self
 
@@ -20,7 +21,7 @@ class VideoContextExecutor:
         return video_query
 
     def visit_world(self):
-        # Query to store world in database 
+        # Query to store world in database
         name, units = self.current_context.name, self.current_context.units
         world_sql = create_or_insert_world_table(self.conn, name, units)
 
@@ -52,12 +53,10 @@ class VideoContextExecutor:
         tracker_type = object_rec_node.tracker_type
         algo = object_rec_node.algo
 
-        
         tracking_results = recognize(video_file, algo, tracker_type, tracker)
         add_recognized_objs(self.conn, lens, tracking_results, start_time)
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
-        
+
     def execute(self):
         query = self.visit()
-
