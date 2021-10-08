@@ -1,8 +1,9 @@
 name: Format and Lint
 on:
   push:
-    branches:
-      - '**'
+    branches-ignore:
+      - 'main'
+      - 'dev'
 
 jobs:
   format:
