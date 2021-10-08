@@ -1,0 +1,66 @@
+name: Format and Lint
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'dev'
+
+jobs:
+  format:
+    name: Format and Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Set up Python 3.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Fix lint with autoflake
+        run: |
+          pip install autoflake
+          python -m autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
+      
+      - name: Fix lint with autopep8
+        id: autopep8
+        uses: peter-evans/autopep8@v1
+        with:
+          args: apperception
+        
+      - name: Format with black
+        uses: psf/black@stable
+        with:
+          options: --config pyproject.toml
+          src: apperception
+      
+      - name: Sort imports with isort
+        run: |
+          pip install isort
+          python -m isort apperception
+      
+      - name: Commit linted and formatted changes
+        run: |
+          git config --global user.name 'Github Actions Bot'
+          git config --global user.email 'apperception-actions-bot@users.noreply.github.com'
+          git commit -am "Automated lint and format fixes"
+          git push
+      
+      - name: Analyze the code with flake8
+        if: always()
+        run: |
+          pip install flake8
+          python -m flake8 apperception
+      
+      - name: Type Check with mypy
+        if: always()
+        run: |
+          pip install mypy
+          python -m mypy apperception

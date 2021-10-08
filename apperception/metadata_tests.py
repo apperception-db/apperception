@@ -1,9 +1,8 @@
 import unittest
-from metadata_context import *
-from metadata_context_executor import *
-from metadata import *
+import psycopg2
 
-from metadata_util import *
+from metadata_context import MetadataContext, geometry, primarykey, time
+from metadata_context_executor import MetadataContextExecutor
 import json
 
 test_context = MetadataContext()
