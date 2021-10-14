@@ -1,8 +1,8 @@
 import numpy as np
 import psycopg2
 from metadata import View
-from metadata_context import (Aggregate, Column, Filter, MetadataContext, Predicate,
-                              Project, Scan, asMFJSON)
+from metadata_context import (Aggregate, Column, Filter, MetadataContext,
+                              Predicate, Project, Scan, asMFJSON)
 from metadata_util import common_aggregation, metadata_view
 
 
@@ -20,7 +20,7 @@ class MetadataContextExecutor:
     def connect_db(
         self, host="localhost", user=None, password=None, port=25432, database_name=None
     ):
-        """Connect to the database """
+        """Connect to the database"""
         self.conn = psycopg2.connect(
             database=database_name, user=user, password=password, host=host, port=port
         )

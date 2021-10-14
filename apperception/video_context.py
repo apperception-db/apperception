@@ -1,12 +1,13 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+
 import datetime
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import psycopg2
-from tracker import Tracker
 from lens import Lens
 from point import Point
+from tracker import Tracker
 from video_util import Units
 
 
@@ -57,6 +58,7 @@ class Camera:
 @dataclass
 class Item:
     """Item node"""
+
     item_id: str
     item_type: str
     location: Any  # TODO: what is the type of location?
@@ -66,6 +68,7 @@ class Item:
 @dataclass
 class ObjectRecognition:
     """Object Recognition node"""
+
     algo: str
     tracker_type: str
     tracker: Optional[Tracker] = None
@@ -99,7 +102,9 @@ class VideoContext:
     def get_units(self):
         return self.units
 
-    def camera(self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens):
+    def camera(
+        self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens
+    ):
         """Establish camera"""
         camera_node = self.__get_camera(cam_id)
         if not camera_node:

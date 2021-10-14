@@ -1,7 +1,5 @@
 from typing import Dict, List
 
-import psycopg2
-
 from video_context import Camera, ObjectRecognition, VideoContext
 from video_util import (add_recognized_objs, create_or_insert_camera_table,
                         create_or_insert_world_table, metadata_to_tasm,

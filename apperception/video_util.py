@@ -1,17 +1,15 @@
 import datetime
 from typing import Any, Dict, Optional
-from typing_extensions import Literal
 
 import cv2
 import numpy as np
-import psycopg2
 from lens import Lens
-from tracker import Tracker
 from object_tracker import yolov4_deepsort_video_track
-
+from tracker import Tracker
+from typing_extensions import Literal
 
 # TODO: add more units
-Units = Literal['metrics']
+Units = Literal["metrics"]
 
 
 def video_data_to_tasm(video_file, metadata_id, t):
@@ -217,7 +215,12 @@ def recognize(
 
 
 def add_recognized_objs(
-    conn, lens: Lens, formatted_result: Dict[str, Any], start_time: datetime.datetime, properties: dict = {"color": {}}, default_depth: bool = True
+    conn,
+    lens: Lens,
+    formatted_result: Dict[str, Any],
+    start_time: datetime.datetime,
+    properties: dict = {"color": {}},
+    default_depth: bool = True,
 ):
     clean_tables(conn)
     for item_id in formatted_result:
@@ -412,11 +415,15 @@ def insert_general_trajectory(
     traj_centroids = traj_centroids[:-1]
     traj_centroids += "}', "
     insert_trajectory += traj_centroids
-    insert_trajectory += "stbox 'STBOX Z((%s, %s, %s)," % (
-        min_ltx,
-        min_lty,
-        min_ltz,
-    ) + "(%s, %s, %s))'); " % (max_brx, max_bry, max_brz)
+    insert_trajectory += (
+        "stbox 'STBOX Z((%s, %s, %s),"
+        % (
+            min_ltx,
+            min_lty,
+            min_ltz,
+        )
+        + "(%s, %s, %s))'); " % (max_brx, max_bry, max_brz)
+    )
     cursor.execute(insert_trajectory)
     cursor.execute(insert_bbox_trajectory)
     # Commit your changes in the database
