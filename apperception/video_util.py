@@ -1,12 +1,16 @@
 import datetime
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 import cv2
 import numpy as np
-from lens import Lens
+import psycopg2
+from bounding_box import BoundingBox
 from object_tracker import yolov4_deepsort_video_track
-from tracker import Tracker
 from typing_extensions import Literal
+
+from lens import Lens
+from object_tracker import FormattedResult
+from tracker import Tracker
 
 # TODO: add more units
 Units = Literal["metrics"]
@@ -16,7 +20,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, FormattedResult], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -207,17 +211,18 @@ def recognize(
     recog_algo: str = "",
     tracker_type: str = "default",
     customized_tracker: Optional[Tracker] = None,
+    crop: Optional[BoundingBox] = None,
 ):
     """Default object recognition (YOLOv3)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
-    return yolov4_deepsort_video_track(video_file)
+    return yolov4_deepsort_video_track(video_file, crop)
 
 
 def add_recognized_objs(
-    conn,
+    conn: psycopg2.connection,
     lens: Lens,
-    formatted_result: Dict[str, Any],
+    formatted_result: Dict[str, FormattedResult],
     start_time: datetime.datetime,
     properties: dict = {"color": {}},
     default_depth: bool = True,

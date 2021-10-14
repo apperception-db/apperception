@@ -30,6 +30,9 @@ from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
 
+from typing import List, Dict, Optional, TypedDict
+from bounding_box import BoundingBox
+
 FLAGS = namedtuple(
     "Flags",
     ["framework", "weights", "size", "tiny", "model", "iou", "score", "dont_show", "info", "count"],
@@ -60,8 +63,18 @@ FLAGS = namedtuple(
 # flags.DEFINE_boolean('info', False, 'show detailed info of tracked objects')
 # flags.DEFINE_boolean('count', False, 'count objects being tracked on screen')
 
+# load standard tensorflow saved model
+saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERVING])
+infer = saved_model_loaded.signatures["serving_default"]
 
-def yolov4_deepsort_video_track(video_file):
+
+class FormattedResult(TypedDict):
+    object_type: str
+    bboxes: List[List[List[int]]]  # TODO: use List[Tuple[Tuple[int, int], Tuple[int, int]]]
+    tracked_cnt: List[int]
+
+
+def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
     # Definition of the parameters
     max_cosine_distance = 0.4
     nn_budget = None
@@ -86,11 +99,7 @@ def yolov4_deepsort_video_track(video_file):
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
     input_size = 416
 
-    # load standard tensorflow saved model
-    saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERVING])
-    infer = saved_model_loaded.signatures["serving_default"]
-
-    formatted_result = {}
+    formatted_result: Dict[str, FormattedResult] = {}
     cap = cv2.VideoCapture(video_file)
     frame_num = 0
     # while video is running
@@ -98,6 +107,9 @@ def yolov4_deepsort_video_track(video_file):
         # Capture frame-by-frame
         ret, frame = cap.read()
         if ret:
+            cropped_frame = frame[crop.y0 : crop.y1, crop.x0 : crop.x1, :] if crop else frame
+            # cropped_frame = np.pad(cropped_frame, ((crop.y0, frame.shape[0] - crop.y1), (crop.x0, frame.shape[1] - crop.x1), (0, 0)))
+            frame = cropped_frame
             image = Image.fromarray(frame)
             frame_num += 1
             # print('Frame #: ', frame_num)
@@ -139,7 +151,7 @@ def yolov4_deepsort_video_track(video_file):
             pred_bbox = [bboxes, scores, classes, num_objects]
 
             # read in all class names from config
-            class_names = utils.read_class_names(cfg.YOLO.CLASSES)
+            class_names: Dict[int, str] = utils.read_class_names(cfg.YOLO.CLASSES)
 
             # by default allow all classes in .names file
             allowed_classes = list(class_names.values())
@@ -206,7 +218,7 @@ def yolov4_deepsort_video_track(video_file):
                 class_name = track.get_class()
                 # current_bboxes.append([[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]])
                 # current_labels.append(class_name)
-                item_id = class_name + "-" + str(track.track_id)
+                item_id = f"{class_name}-{str(track.track_id)}"
                 if item_id in formatted_result:
                     formatted_result[item_id]["bboxes"].append(
                         [[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]]

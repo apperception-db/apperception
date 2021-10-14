@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from video_context import Camera, ObjectRecognition, VideoContext
 from video_util import (add_recognized_objs, create_or_insert_camera_table,
@@ -10,7 +10,10 @@ recognized_camera: Dict[str, bool] = {}
 
 class VideoContextExecutor:
     # TODO: Add checks for Nones
-    def __init__(self, conn, new_video_context: VideoContext = None, tasm=None):
+
+    def __init__(
+        self, conn: Any, new_video_context: VideoContext = None, tasm=None
+    ):
         if new_video_context:
             self.context(new_video_context)
         self.conn = conn
@@ -58,9 +61,13 @@ class VideoContextExecutor:
         tracker = object_rec_node.tracker
         tracker_type = object_rec_node.tracker_type
         algo = object_rec_node.algo
+        crop = object_rec_node.crop
 
-        tracking_results = recognize(video_file, algo, tracker_type, tracker)
+        tracking_results = recognize(video_file, algo, tracker_type, tracker, crop)
+        # TODO: @mick recognized object should have recognizing area annotated.
         add_recognized_objs(self.conn, lens, tracking_results, start_time)
+        # TODO: @mick should remove all the object recognized that are associated with the same camera
+        # but its recognized area is a subset of another existing area.
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
 

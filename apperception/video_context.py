@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import psycopg2
+from bounding_box import BoundingBox
 from lens import Lens
 from point import Point
 from tracker import Tracker
@@ -50,9 +51,9 @@ class Camera:
     ):
         # Add a default add_recog_obj = True (TODO?)
         # Create object recognition node
-        object_rec_node = ObjectRecognition(algo, tracker_type, tracker=None)
-        self.object_recognition = object_rec_node
-        return object_rec_node
+        self.object_recognition = ObjectRecognition(algo, tracker_type, tracker, crop)
+        return self.object_recognition
+
 
 
 @dataclass
@@ -72,6 +73,7 @@ class ObjectRecognition:
     algo: str
     tracker_type: str
     tracker: Optional[Tracker] = None
+    crop: Optional[BoundingBox] = None
     bboxes: list = field(default_factory=list)  # TODO: what is the type of bboxes?
     labels: Any = None  # TODO: what is the type of labels?
     tracked_cnt: Any = None  # TODO: what is the type of trackd_cnt?
@@ -88,7 +90,7 @@ class VideoContext:
         self.units: Units = units
         self.camera_nodes: Dict[str, Camera] = {}
         self.start_time: datetime.datetime = datetime.datetime(2021, 6, 8, 7, 10, 28)
-        self.conn: Any = None
+        self.conn: Optional[psycopg2.connection] = None
 
     def connect_db(self, host="localhost", user=None, password=None, port=5432, database_name=None):
         """Connect to the database"""
