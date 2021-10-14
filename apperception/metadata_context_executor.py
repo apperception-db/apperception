@@ -12,10 +12,10 @@ class MetadataContextExecutor:
     the backend and interpret
     """
 
-    def __init__(self, conn: psycopg2.connection, new_context: MetadataContext = None):
+    def __init__(self, conn, new_context: MetadataContext = None):
         if new_context:
             self.context(new_context)
-        self.conn: psycopg2.connection = conn
+        self.conn = conn
 
     def connect_db(
         self, host="localhost", user=None, password=None, port=25432, database_name=None

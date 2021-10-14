@@ -12,7 +12,7 @@ recognized_camera: Dict[str, bool] = {}
 
 class VideoContextExecutor:
     # TODO: Add checks for Nones
-    def __init__(self, conn: psycopg2.connection, new_video_context: VideoContext = None, tasm=None):
+    def __init__(self, conn, new_video_context: VideoContext = None, tasm=None):
         if new_video_context:
             self.context(new_video_context)
         self.conn = conn

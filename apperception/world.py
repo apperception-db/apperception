@@ -1,10 +1,8 @@
 import copy
-from typing import Optional
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from bounding_box import BoundingBox
 from metadata_context import MetadataContext
 from video_context import VideoContext
 from world_executor import WorldExecutor
@@ -182,4 +180,4 @@ class World:
                 cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
             plt.figure()
             plt.imshow(frame)
-            # plt.show()
+            plt.show()

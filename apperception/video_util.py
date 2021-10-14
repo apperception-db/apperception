@@ -1,13 +1,12 @@
 import datetime
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 from typing_extensions import Literal
 
 import cv2
 import numpy as np
 import psycopg2
-from apperception.lens import Lens
-from apperception.object_tracker import FormattedResult
-from apperception.tracker import Tracker
+from lens import Lens
+from tracker import Tracker
 from object_tracker import yolov4_deepsort_video_track
 
 
@@ -19,7 +18,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, FormattedResult], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -218,7 +217,7 @@ def recognize(
 
 
 def add_recognized_objs(
-    conn: psycopg2.connection, lens: Lens, formatted_result: Dict[str, FormattedResult], start_time: datetime.datetime, properties: dict = {"color": {}}, default_depth: bool = True
+    conn, lens: Lens, formatted_result: Dict[str, Any], start_time: datetime.datetime, properties: dict = {"color": {}}, default_depth: bool = True
 ):
     clean_tables(conn)
     for item_id in formatted_result:

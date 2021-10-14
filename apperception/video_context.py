@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 import psycopg2
 from tracker import Tracker
-from bounding_box import BoundingBox
 from lens import Lens
 from point import Point
 from video_util import Units
