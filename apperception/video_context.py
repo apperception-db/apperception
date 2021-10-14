@@ -85,7 +85,7 @@ class VideoContext:
         self.units: Units = units
         self.camera_nodes: Dict[str, Camera] = {}
         self.start_time: datetime.datetime = datetime.datetime(2021, 6, 8, 7, 10, 28)
-        self.conn: Optional[psycopg2.connection] = None
+        self.conn: Any = None
 
     def connect_db(self, host="localhost", user=None, password=None, port=5432, database_name=None):
         """Connect to the database"""
