@@ -134,7 +134,7 @@ class MetadataContext:
     """Context Root Node"""
 
     def __init__(self, single_mode=True):
-        """Initialize the root, which is itself"""
+        # Initialize the root, which is itself
         self.root = self
         self.start_time = None
         self.project = Project(self.root)
