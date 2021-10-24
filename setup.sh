@@ -1,5 +1,6 @@
 #!/bin/bash
 
+mkdir output
 
 # setup python environments and dependencies
 python3 -m venv env
@@ -13,10 +14,9 @@ mv ./yolov4-tiny.weights ./yolov4-deepsort/data
 mv ./yolov4.weights ./yolov4-deepsort/data
 mv checkpoints/ ./yolov4-deepsort
 cp ./config.py ./yolov4-deepsort/core
-mkdir output
 
 # setup YoloV5
-git clone --recurse-submodules https://github.com/mikel-brostrom/Yolov5_DeepSort_Pytorch.git yolov5_deepsort
-pushd yolov5_deepsort
+git clone --recurse-submodules git@github.com:mikel-brostrom/Yolov5_DeepSort_Pytorch.git yolov5-deepsort
+pushd yolov5-deepsort
 python3 -m pip install -r requirements.txt
 popd
