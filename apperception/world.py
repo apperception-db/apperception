@@ -1,13 +1,14 @@
 import copy
-from typing import Optional
 
 import cv2
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-from bounding_box import BoundingBox
 from metadata_context import MetadataContext
 from video_context import VideoContext
 from world_executor import WorldExecutor
+
+matplotlib.use('Qt5Agg')
 
 BASE_VOLUME_QUERY_TEXT = "stbox 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'"
 world_executor = WorldExecutor()
@@ -68,10 +69,9 @@ class World:
         algo="Yolo",
         tracker_type="multi",
         tracker=None,
-        crop: Optional[BoundingBox] = None,
     ):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker, crop)
+        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker)
         return new_context
 
     #########################
@@ -183,4 +183,4 @@ class World:
                 cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
             plt.figure()
             plt.imshow(frame)
-            # plt.show()
+            plt.show()

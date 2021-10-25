@@ -1,15 +1,15 @@
 import datetime
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
-import psycopg2
+from object_tracker_2 import YoloV5Opt, yolov5_deepsort_video_track
 from bounding_box import BoundingBox
-from object_tracker import yolov4_deepsort_video_track
+# from object_tracker import yolov4_deepsort_video_track
 from typing_extensions import Literal
 
 from lens import Lens
-from object_tracker import FormattedResult
+from object_tracker_2 import FormattedResult
 from tracker import Tracker
 
 # TODO: add more units
@@ -213,14 +213,19 @@ def recognize(
     customized_tracker: Optional[Tracker] = None,
     crop: Optional[BoundingBox] = None,
 ):
-    """Default object recognition (YOLOv3)"""
+    """Default object recognition (YOLOv5)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
-    return yolov4_deepsort_video_track(video_file, crop)
+    if recog_algo == 'yolov4':
+        # return yolov4_deepsort_video_track(video_file, crop)
+        pass
+    else:
+        # use YoloV5 as default
+        return yolov5_deepsort_video_track(YoloV5Opt(video_file))
 
 
 def add_recognized_objs(
-    conn: psycopg2.connection,
+    conn: Any,
     lens: Lens,
     formatted_result: Dict[str, FormattedResult],
     start_time: datetime.datetime,

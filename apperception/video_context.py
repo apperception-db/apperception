@@ -51,7 +51,7 @@ class Camera:
     ):
         # Add a default add_recog_obj = True (TODO?)
         # Create object recognition node
-        self.object_recognition = ObjectRecognition(algo, tracker_type, tracker, crop)
+        self.object_recognition = ObjectRecognition(algo, tracker_type, tracker)
         return self.object_recognition
 
 

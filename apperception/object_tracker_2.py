@@ -1,40 +1,60 @@
 import sys
-from os import path
-CURRENT_DIR = path.dirname(path.realpath(__file__))
-sys.path.append(path.join(CURRENT_DIR, "../yolov5_deepsort/deep_sort_pytorch"))
-sys.path.append(path.join(CURRENT_DIR, "../yolov5_deepsort/yolov5"))
+import os
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(CURRENT_DIR, "../yolov5-deepsort/yolov5/"))
+sys.path.append(os.path.join(CURRENT_DIR, "../yolov5-deepsort/"))
 
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.downloads import attempt_download
 from yolov5.utils.datasets import LoadImages, LoadStreams
 from yolov5.utils.general import check_img_size, non_max_suppression, scale_coords, check_imshow, xyxy2xywh
-from yolov5.utils.torch_utils import select_device, time_sync
+from yolov5.utils.torch_utils import select_device  # , time_sync
 from yolov5.utils.plots import Annotator, colors
 from deep_sort_pytorch.utils.parser import get_config
 from deep_sort_pytorch.deep_sort import DeepSort
-import argparse
-import os
-import platform
+# import platform
 import shutil
-import time
+# import time
 from pathlib import Path
 import cv2
 import torch
 import torch.backends.cudnn as cudnn
-
-output = 0  # TODO: does not use (output folder -> we return the result)
-yolo_weights = path.join(CURRENT_DIR, '../yolov5_deepsort/yolov5/weights/yolov5s.pt')
-deep_sort_weights = path.join(CURRENT_DIR, '../yolov5_deepsort/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7')
-show_vid = False
-save_txt = False
-imgsz = 640  # TODO: compare with yolov4
-evaluate = True
+from typing import Dict, List, Tuple, Optional, TypedDict, Union
+from dataclasses import dataclass
 
 
-def detect(source, opt):
+@dataclass
+class YoloV5Opt:
+    source: str
+    yolo_weights: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/yolov5/weights/yolov5s.pt')
+    deep_sort_weights: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7')
+    output: str = 'inference/output'
+    img_size: Union[Tuple[int, int], int] = 640
+    conf_thres: float = 0.4
+    iou_thres: float = 0.5
+    fourcc: str = 'mp4v'
+    device: str = ''
+    show_vid: bool = False
+    save_vid: bool = False
+    save_txt: bool = False
+    classes: Optional[List[int]] = None
+    agnostic_nms: bool = False
+    augment: bool = False
+    evaluate: bool = False
+    config_deepsort: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml')
+
+
+class FormattedResult(TypedDict):
+    object_type: str
+    bboxes: List[List[List[int]]]  # TODO: use List[Tuple[Tuple[int, int], Tuple[int, int]]]
+    tracked_cnt: List[int]
+
+
+def detect(opt: YoloV5Opt):
     out, source, yolo_weights, deep_sort_weights, show_vid, save_vid, save_txt, imgsz, evaluate = \
         opt.output, opt.source, opt.yolo_weights, opt.deep_sort_weights, opt.show_vid, opt.save_vid, \
-            opt.save_txt, opt.img_size, opt.evaluate
+        opt.save_txt, opt.img_size, opt.evaluate
     webcam = source == '0' or source.startswith(
         'rtsp') or source.startswith('http') or source.endswith('.txt')
 
@@ -54,7 +74,7 @@ def detect(source, opt):
     # The MOT16 evaluation runs multiple inference streams in parallel, each one writing to
     # its own .txt file. Hence, in that case, the output folder is not restored
     if not evaluate:
-        if path.exists(out):
+        if os.path.exists(out):
             pass
             shutil.rmtree(out)  # delete output folder
         os.makedirs(out)  # make new output folder
@@ -85,13 +105,16 @@ def detect(source, opt):
 
     # Run inference
     if device.type != 'cpu':
-        model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
-    t0 = time.time()
+        imgsz1, imgsz2 = (imgsz, imgsz) if isinstance(imgsz, int) else imgsz
+        model(torch.zeros(1, 3, imgsz1, imgsz2).to(device).type_as(next(model.parameters())))  # run once
+    # t0 = time.time()
 
     save_path = str(Path(out))
     # extract what is in between the last '/' and last '.'
     txt_file_name = source.split('/')[-1].split('.')[0]
     txt_path = str(Path(out)) + '/' + txt_file_name + '.txt'
+
+    formatted_result: Dict[str, FormattedResult] = {}
 
     for frame_idx, (path, img, im0s, vid_cap) in enumerate(dataset):
         img = torch.from_numpy(img).to(device)
@@ -101,13 +124,13 @@ def detect(source, opt):
             img = img.unsqueeze(0)
 
         # Inference
-        t1 = time_sync()
+        # t1 = time_sync()
         pred = model(img, augment=opt.augment)[0]
 
         # Apply NMS
         pred = non_max_suppression(
             pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
-        t2 = time_sync()
+        # t2 = time_sync()
 
         # Process detections
         for i, det in enumerate(pred):  # detections per image
@@ -137,11 +160,11 @@ def detect(source, opt):
 
                 # pass detections to deepsort
                 outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss.cpu(), im0)
-                
+
                 # draw boxes for visualization
                 if len(outputs) > 0:
-                    for j, (output, conf) in enumerate(zip(outputs, confs)): 
-                        
+                    for j, (output, conf) in enumerate(zip(outputs, confs)):
+
                         bboxes = output[0:4]
                         id = output[4]
                         cls = output[5]
@@ -149,6 +172,19 @@ def detect(source, opt):
                         c = int(cls)  # integer class
                         label = f'{id} {names[c]} {conf:.2f}'
                         annotator.box_label(bboxes, label, color=colors(c, True))
+
+                        item_id = f"{names[c]}-{str(id)}"
+                        if item_id in formatted_result:
+                            formatted_result[item_id]["bboxes"].append(
+                                [[int(bboxes[0]), int(bboxes[1])], [int(bboxes[2]), int(bboxes[3])]]
+                            )
+                            formatted_result[item_id]["tracked_cnt"].append(frame_idx)
+                        else:
+                            formatted_result[item_id] = {
+                                "object_type": names[c],
+                                "bboxes": [[[int(bboxes[0]), int(bboxes[1])], [int(bboxes[2]), int(bboxes[3])]]],
+                                "tracked_cnt": [frame_idx],
+                            }
 
                         if save_txt:
                             # to MOT format
@@ -158,14 +194,13 @@ def detect(source, opt):
                             bbox_h = output[3] - output[1]
                             # Write MOT compliant results to file
                             with open(txt_path, 'a') as f:
-                               f.write(('%g ' * 10 + '\n') % (frame_idx, id, bbox_left,
-                                                           bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))  # label format
+                                f.write(('%g ' * 10 + '\n') % (frame_idx, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, -1))  # label format
 
             else:
                 deepsort.increment_ages()
 
             # Print time (inference + NMS)
-            print('%sDone. (%.3fs)' % (s, t2 - t1))
+            # print('%sDone. (%.3fs)' % (s, t2 - t1))
 
             # Stream results
             im0 = annotator.result()
@@ -189,39 +224,19 @@ def detect(source, opt):
                         save_path += '.mp4'
 
                     vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
-                vid_writer.write(im0)
 
-    if save_txt or save_vid:
-        print('Results saved to %s' % os.getcwd() + os.sep + out)
-        if platform == 'darwin':  # MacOS
-            os.system('open ' + save_path)
+                if vid_writer:
+                    vid_writer.write(im0)
 
-    print('Done. (%.3fs)' % (time.time() - t0))
+    # if save_txt or save_vid:
+    #     print('Results saved to %s' % os.getcwd() + os.sep + out)
+    #     if platform == 'darwin':  # MacOS
+    #         os.system('open ' + save_path)
+
+    # print('Done. (%.3fs)' % (time.time() - t0))
+    return formatted_result
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--yolo_weights', nargs='+', type=str, default='yolov5/weights/yolov5s.pt', help='model.pt path(s)')
-    parser.add_argument('--deep_sort_weights', type=str, default='deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7', help='ckpt.t7 path')
-    # file/folder, 0 for webcam
-    parser.add_argument('--source', type=str, default='0', help='source')
-    parser.add_argument('--output', type=str, default='inference/output', help='output folder')  # output folder
-    parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
-    parser.add_argument('--conf-thres', type=float, default=0.4, help='object confidence threshold')
-    parser.add_argument('--iou-thres', type=float, default=0.5, help='IOU threshold for NMS')
-    parser.add_argument('--fourcc', type=str, default='mp4v', help='output video codec (verify ffmpeg support)')
-    parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
-    parser.add_argument('--show-vid', action='store_true', help='display tracking video results')
-    parser.add_argument('--save-vid', action='store_true', help='save video tracking results')
-    parser.add_argument('--save-txt', action='store_true', help='save MOT compliant results to *.txt')
-    # class 0 is person, 1 is bycicle, 2 is car... 79 is oven
-    parser.add_argument('--classes', nargs='+', type=int, help='filter by class: --class 0, or --class 16 17')
-    parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
-    parser.add_argument('--augment', action='store_true', help='augmented inference')
-    parser.add_argument('--evaluate', action='store_true', help='augmented inference')
-    parser.add_argument("--config_deepsort", type=str, default="deep_sort_pytorch/configs/deep_sort.yaml")
-    args = parser.parse_args()
-    args.img_size = check_img_size(args.img_size)
-
+def yolov5_deepsort_video_track(opt: YoloV5Opt):
     with torch.no_grad():
-        detect(args)
+        return detect(opt)
