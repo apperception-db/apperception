@@ -24,6 +24,12 @@ class Lens:
         """
         return None
 
+    def pixels_to_world(self, pixel_coords, depths):
+        """
+        Translate multiple pixel coordinates to world coordinates.
+        """
+        return None
+
     def world_to_pixel(self, world_coord, depth):
         """
         Translate world coordinates to pixel coordinates

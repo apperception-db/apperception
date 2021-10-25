@@ -1,5 +1,7 @@
 import os
 
+from apperception.tracked_object import TrackedObject
+
 # comment out below line to enable tensorflow logging outputs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import sys
@@ -30,7 +32,7 @@ from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
 
-from typing import List, Dict, Optional, TypedDict
+from typing import Dict, Optional
 from bounding_box import BoundingBox
 
 FLAGS = namedtuple(
@@ -68,12 +70,6 @@ saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERV
 infer = saved_model_loaded.signatures["serving_default"]
 
 
-class FormattedResult(TypedDict):
-    object_type: str
-    bboxes: List[List[List[int]]]  # TODO: use List[Tuple[Tuple[int, int], Tuple[int, int]]]
-    tracked_cnt: List[int]
-
-
 def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
     # Definition of the parameters
     max_cosine_distance = 0.4
@@ -99,7 +95,7 @@ def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
     input_size = 416
 
-    formatted_result: Dict[str, FormattedResult] = {}
+    formatted_result: Dict[str, TrackedObject] = {}
     cap = cv2.VideoCapture(video_file)
     frame_num = 0
     # while video is running
@@ -219,17 +215,14 @@ def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
                 # current_bboxes.append([[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]])
                 # current_labels.append(class_name)
                 item_id = f"{class_name}-{str(track.track_id)}"
-                if item_id in formatted_result:
-                    formatted_result[item_id]["bboxes"].append(
-                        [[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]]
-                    )
-                    formatted_result[item_id]["tracked_cnt"].append(frame_num)
-                else:
-                    formatted_result[item_id] = {
-                        "object_type": class_name,
-                        "bboxes": [[[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]]],
-                        "tracked_cnt": [frame_num],
-                    }
+                if item_id not in formatted_result:
+                    formatted_result[item_id] = TrackedObject(class_name)
+
+                formatted_result[item_id].bboxes.append(
+                    [[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]]
+                )
+                formatted_result[item_id].tracked_cnt.append(frame_num)
+
         else:
             break
     print("# of tracked items:", len(formatted_result))

@@ -1,5 +1,6 @@
 import sys
 import os
+from apperception.tracked_object import TrackedObject
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(CURRENT_DIR, "../yolov5-deepsort/yolov5/"))
@@ -13,7 +14,7 @@ from yolov5.utils.torch_utils import select_device
 from deep_sort_pytorch.utils.parser import get_config
 from deep_sort_pytorch.deep_sort import DeepSort
 import torch
-from typing import Dict, List, Tuple, Optional, TypedDict, Union
+from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
 
 
@@ -36,12 +37,6 @@ class YoloV5Opt:
     augment: bool = False
     evaluate: bool = False
     config_deepsort: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml')
-
-
-class FormattedResult(TypedDict):
-    object_type: str
-    bboxes: List[List[List[int]]]  # TODO: use List[Tuple[Tuple[int, int], Tuple[int, int]]]
-    tracked_cnt: List[int]
 
 
 def detect(opt: YoloV5Opt):
@@ -81,7 +76,7 @@ def detect(opt: YoloV5Opt):
         imgsz1, imgsz2 = (imgsz, imgsz) if isinstance(imgsz, int) else imgsz
         model(torch.zeros(1, 3, imgsz1, imgsz2).to(device).type_as(next(model.parameters())))  # run once
 
-    formatted_result: Dict[str, FormattedResult] = {}
+    formatted_result: Dict[str, TrackedObject] = {}
     for frame_idx, (_, img, im0s, _) in enumerate(dataset):
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -118,18 +113,14 @@ def detect(opt: YoloV5Opt):
             for output in outputs:
 
                 x1, y1, x2, y2, id, c = [int(o) for o in output]
-                bboxes = [[x1, y1], [x2, y2]]
+                bboxes = ((x1, y1), (x2, y2))
                 item_id = f"{names[c]}-{str(id)}"
 
-                if item_id in formatted_result:
-                    formatted_result[item_id]["bboxes"].append(bboxes)
-                    formatted_result[item_id]["tracked_cnt"].append(frame_idx)
-                else:
-                    formatted_result[item_id] = {
-                        "object_type": names[c],
-                        "bboxes": [bboxes],
-                        "tracked_cnt": [frame_idx],
-                    }
+                if item_id not in formatted_result:
+                    formatted_result[item_id] = TrackedObject(object_type=names[c])
+
+                formatted_result[item_id].bboxes.append(bboxes)
+                formatted_result[item_id].tracked_cnt.append(frame_idx)
 
     return formatted_result
 

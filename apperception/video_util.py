@@ -3,13 +3,13 @@ from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
-from object_tracker_2 import YoloV5Opt, yolov5_deepsort_video_track
+from object_tracker_2 import TrackedObject, YoloV5Opt, yolov5_deepsort_video_track
 from bounding_box import BoundingBox
 # from object_tracker import yolov4_deepsort_video_track
 from typing_extensions import Literal
 
 from lens import Lens
-from object_tracker_2 import FormattedResult
+from object_tracker_2 import FormattedResult2
 from tracker import Tracker
 
 # TODO: add more units
@@ -20,7 +20,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, FormattedResult], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, FormattedResult2], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -227,16 +227,16 @@ def recognize(
 def add_recognized_objs(
     conn: Any,
     lens: Lens,
-    formatted_result: Dict[str, FormattedResult],
+    formatted_result: Dict[str, TrackedObject],
     start_time: datetime.datetime,
     properties: dict = {"color": {}},
     default_depth: bool = True,
 ):
     clean_tables(conn)
     for item_id in formatted_result:
-        object_type = formatted_result[item_id]["object_type"]
-        recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
-        tracked_cnt = formatted_result[item_id]["tracked_cnt"]
+        object_type = formatted_result[item_id].object_type
+        recognized_bboxes = np.array(formatted_result[item_id].bboxes)
+        tracked_cnt = formatted_result[item_id].tracked_cnt
         top_left = np.vstack((recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]))
         if default_depth:
             top_left_depths = np.ones(len(recognized_bboxes))
