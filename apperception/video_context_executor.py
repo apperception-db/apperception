@@ -1,10 +1,11 @@
 from typing import Any, Dict, List, Set
 
 from video_context import Camera, ObjectRecognition, VideoContext
-from video_util import (BoundingBox, add_recognized_objs,
+from video_util import (add_recognized_objs,
                         create_or_insert_camera_table, get_video_dimension,
                         create_or_insert_world_table, metadata_to_tasm,
                         recognize, video_data_to_tasm)
+from bounding_box import BoundingBox
 
 recognized_camera: Dict[str, BoundingBox] = {}
 visited_camera: Set[str] = set()

@@ -32,6 +32,7 @@ from tools import generate_detections as gdet
 
 from typing import Dict
 from tracked_object import TrackedObject
+from bounding_box import BoundingBox
 
 FLAGS = namedtuple(
     "Flags",
@@ -214,7 +215,7 @@ def yolov4_deepsort_video_track(video_file: str):
                     formatted_result[item_id] = TrackedObject(class_name)
 
                 formatted_result[item_id].bboxes.append(
-                    ((int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])))
+                    BoundingBox(int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]))
                 )
                 formatted_result[item_id].tracked_cnt.append(frame_num)
 

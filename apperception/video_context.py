@@ -8,7 +8,8 @@ import psycopg2
 from lens import Lens
 from point import Point
 from tracker import Tracker
-from video_util import BoundingBox, Units
+from video_util import Units
+from bounding_box import BoundingBox
 
 
 class Camera:

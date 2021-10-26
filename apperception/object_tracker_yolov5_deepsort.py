@@ -16,6 +16,7 @@ import torch
 from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
 from tracked_object import TrackedObject
+from bounding_box import BoundingBox
 
 
 @dataclass
@@ -111,7 +112,7 @@ def detect(opt: YoloV5Opt):
             for output in outputs:
 
                 x1, y1, x2, y2, id, c = [int(o) for o in output]
-                bboxes = ((x1, y1), (x2, y2))
+                bboxes = BoundingBox(x1, y1, x2, y2)
                 item_id = f"{names[c]}-{str(id)}"
 
                 if item_id not in formatted_result:
