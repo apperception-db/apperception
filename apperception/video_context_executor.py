@@ -1,11 +1,14 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 from video_context import Camera, ObjectRecognition, VideoContext
-from video_util import (add_recognized_objs, create_or_insert_camera_table,
+from video_util import (BoundingBox, add_recognized_objs,
+                        create_or_insert_camera_table, get_video_dimension,
                         create_or_insert_world_table, metadata_to_tasm,
                         recognize, video_data_to_tasm)
 
-recognized_camera: Dict[str, bool] = {}
+recognized_camera: Dict[str, BoundingBox] = {}
+visited_camera: Set[str] = set()
+created_world: Set[str] = set()
 
 
 class VideoContextExecutor:
@@ -30,22 +33,28 @@ class VideoContextExecutor:
     def visit_world(self):
         # Query to store world in database
         name, units = self.current_context.name, self.current_context.units
-        world_sql = create_or_insert_world_table(self.conn, name, units)
+
+        if name not in created_world:
+            world_sql = create_or_insert_world_table(self.conn, name, units)
+            created_world.add(name)
 
         all_sqls: List[str] = []
         cameras = self.current_context.camera_nodes
-        if len(cameras) != 0:
-            for c in cameras.values():
-                cam_id = c.cam_id
-                if not recognized_camera.get(cam_id, False):
-                    camera_sql = self.visit_camera(c)
-                    all_sqls.append(camera_sql)
-                    recognized_camera[cam_id] = True
+        for c in cameras.values():
+            camera_sql = self.visit_camera(c)
+            all_sqls.append(camera_sql)
         return all_sqls
 
     def visit_camera(self, camera_node: Camera):
         world_name = self.current_context.name
-        camera_sql = create_or_insert_camera_table(self.conn, world_name, camera_node)
+        camera_sql = ""
+
+        if camera_node.cam_id not in visited_camera:
+            # Only insert camera once
+            camera_node.dimension = get_video_dimension(camera_node.video_file)
+            camera_sql = create_or_insert_camera_table(self.conn, world_name, camera_node)
+            visited_camera.add(camera_node.cam_id)
+
         if camera_node.object_recognition is not None:
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
         if self.tasm:

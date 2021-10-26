@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import psycopg2
 from lens import Lens
 from point import Point
 from tracker import Tracker
-from video_util import Units
+from video_util import BoundingBox, Units
 
 
 class Camera:
@@ -31,6 +31,7 @@ class Camera:
         self.object_recognition: Optional[ObjectRecognition] = None
         self.point: Point = point
         self.lens: Lens = lens
+        self.dimension: Optional[Tuple[int, int]] = None
 
     def add_item(self, item: Item):
         # Add item
@@ -75,6 +76,7 @@ class ObjectRecognition:
     labels: Any = None  # TODO: what is the type of labels?
     tracked_cnt: Any = None  # TODO: what is the type of trackd_cnt?
     properties: Any = None  # TODO: what is the type of properties?
+    recognition_areas: List[BoundingBox] = field(default_factory=list)
 
     def add_properties(self, properties):
         self.properties = properties

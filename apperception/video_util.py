@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -12,6 +12,8 @@ from tracker import Tracker
 
 # TODO: add more units
 Units = Literal["metrics"]
+
+BoundingBox = Tuple[Tuple[int, int], Tuple[int, int]]
 
 
 def video_data_to_tasm(video_file, metadata_id, t):
@@ -126,8 +128,6 @@ def create_or_insert_world_table(conn, name, units: Units):
     """
     Create and Populate A world table with the given world object.
     """
-    # Doping Worlds table if already exists. TODO: For testing purpose only
-    cursor.execute("DROP TABLE IF EXISTS Worlds;")
     # Creating table with the first world
     sql = """CREATE TABLE IF NOT EXISTS Worlds(
     worldId TEXT PRIMARY KEY,
@@ -158,18 +158,20 @@ def create_or_insert_camera_table(conn, world_name, camera):
     """
     Create and Populate A camera table with the given camera object.
     """
-    # Doping Cameras table if already exists. TODO: For testing purpose only
-    cursor.execute("DROP TABLE IF EXISTS Cameras")
     # Creating table with the first camera
-    sql = """CREATE TABLE IF NOT EXISTS Cameras(
-    cameraId TEXT,
-    worldId TEXT,
-    ratio real,
-    origin geometry,
-    focalpoints geometry,
-    fov INTEGER,
-    skev_factor real
-    );"""
+    sql = "\n".join([
+        "CREATE TABLE IF NOT EXISTS Cameras(",
+        "    cameraId TEXT,",
+        "    worldId TEXT,",
+        "    ratio real,",
+        "    origin geometry,",
+        "    focalpoints geometry,",
+        "    fov INTEGER,",
+        "    skev_factor real,",
+        "    width integer,",
+        "    height integer",
+        ");"
+    ])
     cursor.execute(sql)
     print("Camera Table created successfully........")
     insert_camera(conn, world_name, camera)
@@ -184,9 +186,10 @@ def insert_camera(conn, world_name, camera_node):
     focal_x = str(lens.focal_x)
     focal_y = str(lens.focal_y)
     cam_x, cam_y, cam_z = str(lens.cam_origin[0]), str(lens.cam_origin[1]), str(lens.cam_origin[2])
+    width, height = camera_node.dimension
     cursor.execute(
-        """INSERT INTO Cameras (cameraId, worldId, ratio, origin, focalpoints, fov, skev_factor) """
-        + """VALUES (\'%s\', \'%s\', %f, \'POINT Z (%s %s %s)\', \'POINT(%s %s)\', %s, %f);"""
+        """INSERT INTO Cameras (cameraId, worldId, ratio, origin, focalpoints, fov, skev_factor, width, height) """
+        + """VALUES (\'%s\', \'%s\', %f, \'POINT Z (%s %s %s)\', \'POINT(%s %s)\', %s, %f, %d, %d);"""
         % (
             camera_node.cam_id,
             world_name,
@@ -198,10 +201,20 @@ def insert_camera(conn, world_name, camera_node):
             focal_y,
             lens.fov,
             lens.alpha,
+            width,
+            height
         )
     )
     print("New camera inserted successfully.........")
     conn.commit()
+
+
+def get_video_dimension(video_file: str):
+    vid: cv2.VideoCapture = cv2.VideoCapture(video_file)
+    width = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    # width and height are floats
+    return (int(width), int(height))
 
 
 def recognize(

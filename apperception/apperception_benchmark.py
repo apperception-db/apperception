@@ -2,7 +2,7 @@
 
 import lens
 import point
-from world import World
+from world import World, world_executor
 
 # import tasm
 
@@ -17,6 +17,12 @@ fps = 30
 
 # First we define a world
 traffic_world = World(name=name, units=units)
+world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+conn = world_executor.conn
+cursor = conn.cursor()
+cursor.execute("DROP TABLE IF EXISTS Worlds;")
+cursor.execute("DROP TABLE IF EXISTS Cameras;")
+conn.commit()
 
 # Secondly we construct the camera
 fov, res, cam_origin, skew_factor = (
