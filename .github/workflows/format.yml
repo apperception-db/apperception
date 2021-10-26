@@ -63,4 +63,4 @@ jobs:
         if: always()
         run: |
           pip install mypy
-          python -m mypy apperception
+          yes | python -m mypy --install-types apperception ; python -m mypy apperception

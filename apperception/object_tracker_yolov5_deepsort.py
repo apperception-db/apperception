@@ -1,6 +1,5 @@
 import sys
 import os
-from apperception.tracked_object import TrackedObject
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(CURRENT_DIR, "../yolov5-deepsort/yolov5/"))
@@ -16,6 +15,7 @@ from deep_sort_pytorch.deep_sort import DeepSort
 import torch
 from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
+from tracked_object import TrackedObject
 
 
 @dataclass
@@ -23,26 +23,24 @@ class YoloV5Opt:
     source: str
     yolo_weights: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/yolov5/weights/yolov5s.pt')
     deep_sort_weights: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7')
-    output: str = 'inference/output'
+    # output: str = 'inference/output'
     img_size: Union[Tuple[int, int], int] = 640
     conf_thres: float = 0.4
     iou_thres: float = 0.5
-    fourcc: str = 'mp4v'
+    # fourcc: str = 'mp4v'
     device: str = ''
-    show_vid: bool = False
-    save_vid: bool = False
-    save_txt: bool = False
+    # show_vid: bool = False
+    # save_vid: bool = False
+    # save_txt: bool = False
     classes: Optional[List[int]] = None
     agnostic_nms: bool = False
     augment: bool = False
-    evaluate: bool = False
+    # evaluate: bool = False
     config_deepsort: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml')
 
 
 def detect(opt: YoloV5Opt):
-    source, yolo_weights, deep_sort_weights, imgsz = \
-        opt.source, opt.yolo_weights, opt.deep_sort_weights, \
-        opt.img_size
+    source, yolo_weights, deep_sort_weights, imgsz = opt.source, opt.yolo_weights, opt.deep_sort_weights, opt.img_size
 
     # initialize deepsort
     cfg = get_config()

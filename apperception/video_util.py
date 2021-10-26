@@ -3,13 +3,11 @@ from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
-from object_tracker_2 import TrackedObject, YoloV5Opt, yolov5_deepsort_video_track
-from bounding_box import BoundingBox
-# from object_tracker import yolov4_deepsort_video_track
+from object_tracker_yolov5_deepsort import TrackedObject, YoloV5Opt, yolov5_deepsort_video_track
+from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
 from typing_extensions import Literal
 
 from lens import Lens
-from object_tracker_2 import FormattedResult2
 from tracker import Tracker
 
 # TODO: add more units
@@ -20,7 +18,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, FormattedResult2], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, TrackedObject], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -32,8 +30,8 @@ def metadata_to_tasm(formatted_result: Dict[str, FormattedResult2], metadata_id,
         return min(max(0, y), 2160)
 
     for obj, info in formatted_result.items():
-        object_type = info["object_type"]
-        for bbox, frame in zip(info["bboxes"], info["tracked_cnt"]):
+        object_type = info.object_type
+        for bbox, frame in zip(info.bboxes, info.tracked_cnt):
             x1 = bound_width(bbox[0][0])
             y1 = bound_height(bbox[0][1])
             x2 = bound_width(bbox[1][0])
@@ -211,14 +209,12 @@ def recognize(
     recog_algo: str = "",
     tracker_type: str = "default",
     customized_tracker: Optional[Tracker] = None,
-    crop: Optional[BoundingBox] = None,
 ):
     """Default object recognition (YOLOv5)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
     if recog_algo == 'yolov4':
-        # return yolov4_deepsort_video_track(video_file, crop)
-        pass
+        return yolov4_deepsort_video_track(video_file)
     else:
         # use YoloV5 as default
         return yolov5_deepsort_video_track(YoloV5Opt(video_file))

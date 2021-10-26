@@ -61,9 +61,8 @@ class VideoContextExecutor:
         tracker = object_rec_node.tracker
         tracker_type = object_rec_node.tracker_type
         algo = object_rec_node.algo
-        crop = object_rec_node.crop
 
-        tracking_results = recognize(video_file, algo, tracker_type, tracker, crop)
+        tracking_results = recognize(video_file, algo, tracker_type, tracker)
         # TODO: @mick recognized object should have recognizing area annotated.
         add_recognized_objs(self.conn, lens, tracking_results, start_time)
         # TODO: @mick should remove all the object recognized that are associated with the same camera

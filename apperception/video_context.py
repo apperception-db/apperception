@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 import psycopg2
-from bounding_box import BoundingBox
 from lens import Lens
 from point import Point
 from tracker import Tracker
@@ -55,7 +54,6 @@ class Camera:
         return self.object_recognition
 
 
-
 @dataclass
 class Item:
     """Item node"""
@@ -73,7 +71,6 @@ class ObjectRecognition:
     algo: str
     tracker_type: str
     tracker: Optional[Tracker] = None
-    crop: Optional[BoundingBox] = None
     bboxes: list = field(default_factory=list)  # TODO: what is the type of bboxes?
     labels: Any = None  # TODO: what is the type of labels?
     tracked_cnt: Any = None  # TODO: what is the type of trackd_cnt?

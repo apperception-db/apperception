@@ -1,7 +1,5 @@
 import os
 
-from apperception.tracked_object import TrackedObject
-
 # comment out below line to enable tensorflow logging outputs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import sys
@@ -32,8 +30,8 @@ from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
 
-from typing import Dict, Optional
-from bounding_box import BoundingBox
+from typing import Dict
+from tracked_object import TrackedObject
 
 FLAGS = namedtuple(
     "Flags",
@@ -70,7 +68,7 @@ saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERV
 infer = saved_model_loaded.signatures["serving_default"]
 
 
-def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
+def yolov4_deepsort_video_track(video_file: str):
     # Definition of the parameters
     max_cosine_distance = 0.4
     nn_budget = None
@@ -103,9 +101,6 @@ def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
         # Capture frame-by-frame
         ret, frame = cap.read()
         if ret:
-            cropped_frame = frame[crop.y0 : crop.y1, crop.x0 : crop.x1, :] if crop else frame
-            # cropped_frame = np.pad(cropped_frame, ((crop.y0, frame.shape[0] - crop.y1), (crop.x0, frame.shape[1] - crop.x1), (0, 0)))
-            frame = cropped_frame
             image = Image.fromarray(frame)
             frame_num += 1
             # print('Frame #: ', frame_num)
@@ -219,7 +214,7 @@ def yolov4_deepsort_video_track(video_file: str, crop: Optional[BoundingBox]):
                     formatted_result[item_id] = TrackedObject(class_name)
 
                 formatted_result[item_id].bboxes.append(
-                    [[int(bbox[0]), int(bbox[1])], [int(bbox[2]), int(bbox[3])]]
+                    ((int(bbox[0]), int(bbox[1])), (int(bbox[2]), int(bbox[3])))
                 )
                 formatted_result[item_id].tracked_cnt.append(frame_num)
 
