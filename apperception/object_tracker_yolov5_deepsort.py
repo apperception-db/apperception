@@ -16,7 +16,7 @@ import torch
 from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
 from tracked_object import TrackedObject
-from bounding_box import BoundingBox
+from bounding_box import BoundingBox, WHOLE_FRAME
 
 
 @dataclass
@@ -38,6 +38,7 @@ class YoloV5Opt:
     augment: bool = False
     # evaluate: bool = False
     config_deepsort: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml')
+    recognition_area: BoundingBox = WHOLE_FRAME
 
 
 def detect(opt: YoloV5Opt):

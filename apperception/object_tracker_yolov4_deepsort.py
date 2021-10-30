@@ -32,7 +32,7 @@ from tools import generate_detections as gdet
 
 from typing import Dict
 from tracked_object import TrackedObject
-from bounding_box import BoundingBox
+from bounding_box import BoundingBox, WHOLE_FRAME
 
 FLAGS = namedtuple(
     "Flags",
@@ -69,7 +69,7 @@ saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERV
 infer = saved_model_loaded.signatures["serving_default"]
 
 
-def yolov4_deepsort_video_track(video_file: str):
+def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox = WHOLE_FRAME):
     # Definition of the parameters
     max_cosine_distance = 0.4
     nn_budget = None

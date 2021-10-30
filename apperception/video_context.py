@@ -9,7 +9,7 @@ from lens import Lens
 from point import Point
 from tracker import Tracker
 from video_util import Units
-from bounding_box import BoundingBox
+from bounding_box import BoundingBox, WHOLE_FRAME
 
 
 class Camera:
@@ -48,11 +48,13 @@ class Camera:
         self.lens = lens
 
     def recognize(
-        self, algo: str = "Yolo", tracker_type: str = "multi", tracker: Optional[Tracker] = None
+        self, algo: str = "Yolo", tracker_type: str = "multi", tracker: Optional[Tracker] = None, recognition_area: BoundingBox = WHOLE_FRAME
     ):
         # Add a default add_recog_obj = True (TODO?)
         # Create object recognition node
-        self.object_recognition = ObjectRecognition(algo, tracker_type, tracker)
+        if not self.object_recognition:
+            self.object_recognition = ObjectRecognition(algo, tracker_type, tracker)
+        self.object_recognition.recognition_areas.append(recognition_area)
         return self.object_recognition
 
 
@@ -75,7 +77,7 @@ class ObjectRecognition:
     tracker: Optional[Tracker] = None
     bboxes: list = field(default_factory=list)  # TODO: what is the type of bboxes?
     labels: Any = None  # TODO: what is the type of labels?
-    tracked_cnt: Any = None  # TODO: what is the type of trackd_cnt?
+    tracked_cnt: Any = None  # TODO: what is the type of tracked_cnt?
     properties: Any = None  # TODO: what is the type of properties?
     recognition_areas: List[BoundingBox] = field(default_factory=list)
 

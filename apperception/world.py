@@ -4,7 +4,10 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+
+from bounding_box import WHOLE_FRAME, BoundingBox
 from metadata_context import MetadataContext
+from tracker import Tracker
 from video_context import VideoContext
 from world_executor import WorldExecutor
 
@@ -65,13 +68,14 @@ class World:
 
     def recognize(
         self,
-        cam_id,
-        algo="Yolo",
-        tracker_type="multi",
-        tracker=None,
+        cam_id: str,
+        algo: str = "Yolo",
+        tracker_type: str = "multi",
+        tracker: Tracker = None,
+        recognition_area: BoundingBox = WHOLE_FRAME
     ):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker)
+        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker, recognition_area)
         return new_context
 
     #########################

@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
+from bounding_box import WHOLE_FRAME, BoundingBox
 from object_tracker_yolov5_deepsort import TrackedObject, YoloV5Opt, yolov5_deepsort_video_track
 from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
 from typing_extensions import Literal
@@ -220,15 +221,16 @@ def recognize(
     recog_algo: str = "",
     tracker_type: str = "default",
     customized_tracker: Optional[Tracker] = None,
+    recognition_area: BoundingBox = WHOLE_FRAME
 ):
     """Default object recognition (YOLOv5)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
     if recog_algo == 'yolov4':
-        return yolov4_deepsort_video_track(video_file)
+        return yolov4_deepsort_video_track(video_file, recognition_area)
     else:
         # use YoloV5 as default
-        return yolov5_deepsort_video_track(YoloV5Opt(video_file))
+        return yolov5_deepsort_video_track(YoloV5Opt(video_file, recognition_area=recognition_area))
 
 
 def add_recognized_objs(
@@ -239,6 +241,7 @@ def add_recognized_objs(
     properties: dict = {"color": {}},
     default_depth: bool = True,
 ):
+    # TODO: move cleaning to apperception_benchmark.py
     clean_tables(conn)
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
