@@ -66,6 +66,7 @@ class WorldExecutor:
         ### TODO: I forget why we used the data from the db instead of directly fetch
         ### from the world
         cam_nodes = self.curr_world.get_video_cams
+        
         video_files = []
         for i in range(len(cam_nodes)):
             cam_id, cam_x, cam_y, cam_z, fov, skew_factor = cam_nodes[i]
@@ -78,12 +79,12 @@ class WorldExecutor:
                 # print("timestamps are", timestamps)
                 world_coords = reformat_fetched_world_coords(world_coords)
 
-                cam_coords = current_cam_len.world_to_pixel(world_coords)
-               
+                cam_coords = world_bbox_to_pixels(world_coords, current_cam_len)
+                
                 vid_times = convert_datetime_to_frame_num(start_time, timestamps)
                 # print(vid_times)
 
-                vid_fname = './output/'+self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + item_id + '.mp4'
+                vid_fname = '../output/'+self.curr_world.VideoContext.camera_nodes[cam_id].metadata_id + item_id + '.mp4'
                 # print(vid_fname)
                 get_video_roi(vid_fname, current_cam_video_file, cam_coords, vid_times) 
                 video_files.append(vid_fname)
@@ -115,14 +116,15 @@ class WorldExecutor:
 def reformat_fetched_world_coords(world_coords):
     return np.array(world_coords)
 
-def world_to_pixel(world_coords, transform):
+def world_bbox_to_pixels(world_coords, cam_len):
+
     tl_x, tl_y, tl_z, br_x, br_y, br_z = world_coords.T
 
     tl_world_pixels = np.array([tl_x, tl_y, tl_z, np.ones(len(tl_x))])
-    tl_vid_coords = transform @ tl_world_pixels
+    tl_vid_coords = cam_len.world_to_pixels(tl_world_pixels)
 
     br_world_pixels = np.array([br_x, br_y, br_z, np.ones(len(br_x))])
-    br_vid_coords = transform @ br_world_pixels
+    br_vid_coords = cam_len.world_to_pixels(br_world_pixels)
 
     return np.stack((tl_vid_coords[0], tl_vid_coords[1], br_vid_coords[0], br_vid_coords[1]), axis=0)
 
