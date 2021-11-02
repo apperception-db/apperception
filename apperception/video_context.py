@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import psycopg2
+from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
 from point import Point
 from tracker import Tracker
@@ -31,6 +32,7 @@ class Camera:
         self.object_recognition: Optional[ObjectRecognition] = None
         self.point: Point = point
         self.lens: Lens = lens
+        self.dimension: Optional[Tuple[int, int]] = None
 
     def add_item(self, item: Item):
         # Add item
@@ -46,13 +48,18 @@ class Camera:
         self.lens = lens
 
     def recognize(
-        self, algo: str = "Yolo", tracker_type: str = "multi", tracker: Optional[Tracker] = None
+        self,
+        algo: str = "Yolo",
+        tracker_type: str = "multi",
+        tracker: Optional[Tracker] = None,
+        recognition_area: BoundingBox = WHOLE_FRAME,
     ):
         # Add a default add_recog_obj = True (TODO?)
         # Create object recognition node
-        object_rec_node = ObjectRecognition(algo, tracker_type, tracker=None)
-        self.object_recognition = object_rec_node
-        return object_rec_node
+        if not self.object_recognition:
+            self.object_recognition = ObjectRecognition(algo, tracker_type, tracker)
+        self.object_recognition.recognition_areas.append(recognition_area)
+        return self.object_recognition
 
 
 @dataclass
@@ -74,8 +81,9 @@ class ObjectRecognition:
     tracker: Optional[Tracker] = None
     bboxes: list = field(default_factory=list)  # TODO: what is the type of bboxes?
     labels: Any = None  # TODO: what is the type of labels?
-    tracked_cnt: Any = None  # TODO: what is the type of trackd_cnt?
+    tracked_cnt: Any = None  # TODO: what is the type of tracked_cnt?
     properties: Any = None  # TODO: what is the type of properties?
+    recognition_areas: List[BoundingBox] = field(default_factory=list)
 
     def add_properties(self, properties):
         self.properties = properties
@@ -88,7 +96,7 @@ class VideoContext:
         self.units: Units = units
         self.camera_nodes: Dict[str, Camera] = {}
         self.start_time: datetime.datetime = datetime.datetime(2021, 6, 8, 7, 10, 28)
-        self.conn: Any = None
+        self.conn: Optional[psycopg2.connection] = None
 
     def connect_db(self, host="localhost", user=None, password=None, port=5432, database_name=None):
         """Connect to the database"""
