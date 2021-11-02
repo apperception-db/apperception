@@ -1,8 +1,8 @@
 # IMPORTS
 
-from bounding_box import BoundingBox
 import lens
 import point
+from bounding_box import BoundingBox
 from world import World, world_executor
 
 # import tasm

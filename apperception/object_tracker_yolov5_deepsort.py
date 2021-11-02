@@ -1,35 +1,39 @@
-import sys
 import os
+import sys
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 sys.path.append(os.path.join(CURRENT_DIR, "../yolov5-deepsort/yolov5/"))
 sys.path.append(os.path.join(CURRENT_DIR, "../yolov5-deepsort/"))
 
-from yolov5.models.experimental import attempt_load
-from yolov5.utils.downloads import attempt_download
-from yolov5.utils.datasets import LoadImages
-from yolov5.utils.general import check_img_size, non_max_suppression, scale_coords, xyxy2xywh
-from yolov5.utils.torch_utils import select_device
-from deep_sort_pytorch.utils.parser import get_config
-from deep_sort_pytorch.deep_sort import DeepSort
-import torch
-from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple, Union
+
+import torch
+from bounding_box import WHOLE_FRAME, BoundingBox
+from deep_sort_pytorch.deep_sort import DeepSort
+from deep_sort_pytorch.utils.parser import get_config
 from tracked_object import TrackedObject
-from bounding_box import BoundingBox, WHOLE_FRAME
+from yolov5.models.experimental import attempt_load
+from yolov5.utils.datasets import LoadImages
+from yolov5.utils.downloads import attempt_download
+from yolov5.utils.general import (check_img_size, non_max_suppression,
+                                  scale_coords, xyxy2xywh)
+from yolov5.utils.torch_utils import select_device
 
 
 @dataclass
 class YoloV5Opt:
     source: str
-    yolo_weights: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/yolov5/weights/yolov5s.pt')
-    deep_sort_weights: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7')
+    yolo_weights: str = os.path.join(CURRENT_DIR, "../yolov5-deepsort/yolov5/weights/yolov5s.pt")
+    deep_sort_weights: str = os.path.join(
+        CURRENT_DIR, "../yolov5-deepsort/deep_sort_pytorch/deep_sort/deep/checkpoint/ckpt.t7"
+    )
     # output: str = 'inference/output'
     img_size: Union[Tuple[int, int], int] = 640
     conf_thres: float = 0.4
     iou_thres: float = 0.5
     # fourcc: str = 'mp4v'
-    device: str = ''
+    device: str = ""
     # show_vid: bool = False
     # save_vid: bool = False
     # save_txt: bool = False
@@ -37,12 +41,20 @@ class YoloV5Opt:
     agnostic_nms: bool = False
     augment: bool = False
     # evaluate: bool = False
-    config_deepsort: str = os.path.join(CURRENT_DIR, '../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml')
+    config_deepsort: str = os.path.join(
+        CURRENT_DIR, "../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml"
+    )
     recognition_area: BoundingBox = WHOLE_FRAME
 
 
 def detect(opt: YoloV5Opt):
-    source, yolo_weights, deep_sort_weights, imgsz, crop = opt.source, opt.yolo_weights, opt.deep_sort_weights, opt.img_size, opt.recognition_area
+    source, yolo_weights, deep_sort_weights, imgsz, crop = (
+        opt.source,
+        opt.yolo_weights,
+        opt.deep_sort_weights,
+        opt.img_size,
+        opt.recognition_area,
+    )
 
     if crop.is_whole_frame():
         crop = BoundingBox(0, 0, 100, 100)
@@ -50,58 +62,73 @@ def detect(opt: YoloV5Opt):
     # initialize deepsort
     cfg = get_config()
     cfg.merge_from_file(opt.config_deepsort)
-    attempt_download(deep_sort_weights, repo='mikel-brostrom/Yolov5_DeepSort_Pytorch')
-    deepsort = DeepSort(cfg.DEEPSORT.REID_CKPT,
-                        max_dist=cfg.DEEPSORT.MAX_DIST, min_confidence=cfg.DEEPSORT.MIN_CONFIDENCE,
-                        max_iou_distance=cfg.DEEPSORT.MAX_IOU_DISTANCE,
-                        max_age=cfg.DEEPSORT.MAX_AGE, n_init=cfg.DEEPSORT.N_INIT, nn_budget=cfg.DEEPSORT.NN_BUDGET,
-                        use_cuda=True)
+    attempt_download(deep_sort_weights, repo="mikel-brostrom/Yolov5_DeepSort_Pytorch")
+    deepsort = DeepSort(
+        cfg.DEEPSORT.REID_CKPT,
+        max_dist=cfg.DEEPSORT.MAX_DIST,
+        min_confidence=cfg.DEEPSORT.MIN_CONFIDENCE,
+        max_iou_distance=cfg.DEEPSORT.MAX_IOU_DISTANCE,
+        max_age=cfg.DEEPSORT.MAX_AGE,
+        n_init=cfg.DEEPSORT.N_INIT,
+        nn_budget=cfg.DEEPSORT.NN_BUDGET,
+        use_cuda=True,
+    )
 
     # Initialize
     device = select_device(opt.device)
 
-    half = device.type != 'cpu'  # half precision only supported on CUDA
+    half = device.type != "cpu"  # half precision only supported on CUDA
     # Load model
     model = attempt_load(yolo_weights, map_location=device)  # load FP32 model
     stride = int(model.stride.max())  # model stride
     imgsz = check_img_size(imgsz, s=stride)  # check img_size
-    names = model.module.names if hasattr(model, 'module') else model.names  # get class names
+    names = model.module.names if hasattr(model, "module") else model.names  # get class names
     if half:
         model.half()  # to FP16
 
     dataset = LoadImages(source, img_size=imgsz, stride=stride)
 
     # Get names and colors
-    names = model.module.names if hasattr(model, 'module') else model.names
+    names = model.module.names if hasattr(model, "module") else model.names
 
     # Run inference
-    if device.type != 'cpu':
+    if device.type != "cpu":
         _, img, _, _ = dataset[0]
         h, w = img.shape[1:]
 
         # crop image
-        x1, y1, x2, y2 = [int(v / 100.) for v in [
-            w * crop.x1,
-            h * crop.y1,
-            w * crop.x2,
-            h * crop.y2,
-        ]]
+        x1, y1, x2, y2 = [
+            int(v / 100.0)
+            for v in [
+                w * crop.x1,
+                h * crop.y1,
+                w * crop.x2,
+                h * crop.y2,
+            ]
+        ]
 
-        img = img[:, y1 : y2, x1 : x2]
-        model(torch.zeros(1, 3, img.shape[1], img.shape[2]).to(device).type_as(next(model.parameters())))  # run once
+        img = img[:, y1:y2, x1:x2]
+        model(
+            torch.zeros(1, 3, img.shape[1], img.shape[2])
+            .to(device)
+            .type_as(next(model.parameters()))
+        )  # run once
 
     formatted_result: Dict[str, TrackedObject] = {}
     for frame_idx, (_, img, im0s, _) in enumerate(dataset):
         h, w = img.shape[1:]
 
         # crop image
-        x1, y1, x2, y2 = [int(v / 100.) for v in [
-            w * crop.x1,
-            h * crop.y1,
-            w * crop.x2,
-            h * crop.y2,
-        ]]
-        img = img[:, y1 : y2, x1 : x2]
+        x1, y1, x2, y2 = [
+            int(v / 100.0)
+            for v in [
+                w * crop.x1,
+                h * crop.y1,
+                w * crop.x2,
+                h * crop.y2,
+            ]
+        ]
+        img = img[:, y1:y2, x1:x2]
 
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -114,7 +141,8 @@ def detect(opt: YoloV5Opt):
 
         # Apply NMS
         pred = non_max_suppression(
-            pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
+            pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms
+        )
 
         # Process detections
         for det in pred:  # detections per image

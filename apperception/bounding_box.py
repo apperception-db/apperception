@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 
@@ -13,7 +14,12 @@ class BoundingBox:
         if other.is_whole_frame():
             return True
 
-        return other.x1 <= self.x1 and self.x2 <= other.x2 and other.y1 <= self.y1 and self.y2 <= other.y2
+        return (
+            other.x1 <= self.x1
+            and self.x2 <= other.x2
+            and other.y1 <= self.y1
+            and self.y2 <= other.y2
+        )
 
     def to_tuples(self):
         return (self.y1, self.x1), (self.y2, self.x2)
@@ -24,7 +30,7 @@ class BoundingBox:
     @property
     def area(self):
         if self.is_whole_frame():
-            return float('inf')
+            return float("inf")
         return (self.x2 - self.x1) * (self.y2 - self.y1)
 
 

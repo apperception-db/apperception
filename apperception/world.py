@@ -4,14 +4,13 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-
 from bounding_box import WHOLE_FRAME, BoundingBox
 from metadata_context import MetadataContext
 from tracker import Tracker
 from video_context import VideoContext
 from world_executor import WorldExecutor
 
-matplotlib.use('Qt5Agg')
+matplotlib.use("Qt5Agg")
 
 BASE_VOLUME_QUERY_TEXT = "stbox 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'"
 world_executor = WorldExecutor()
@@ -72,10 +71,12 @@ class World:
         algo: str = "Yolo",
         tracker_type: str = "multi",
         tracker: Tracker = None,
-        recognition_area: BoundingBox = WHOLE_FRAME  # bounding box value in percentage not pixel
+        recognition_area: BoundingBox = WHOLE_FRAME,  # bounding box value in percentage not pixel
     ):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker, recognition_area)
+        new_context.VideoContext.camera_nodes[cam_id].recognize(
+            algo, tracker_type, tracker, recognition_area
+        )
         return new_context
 
     #########################

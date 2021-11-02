@@ -1,11 +1,10 @@
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Set
 
+from bounding_box import WHOLE_FRAME, BoundingBox
 from video_context import Camera, ObjectRecognition, VideoContext
-from video_util import (add_recognized_objs,
-                        create_or_insert_camera_table, get_video_dimension,
-                        create_or_insert_world_table, metadata_to_tasm,
-                        recognize, video_data_to_tasm)
-from bounding_box import BoundingBox, WHOLE_FRAME
+from video_util import (add_recognized_objs, create_or_insert_camera_table,
+                        create_or_insert_world_table, get_video_dimension,
+                        metadata_to_tasm, recognize, video_data_to_tasm)
 
 recognized_areas: Dict[str, Set[BoundingBox]] = {}
 visited_camera: Set[str] = set()
@@ -15,9 +14,7 @@ created_world: Set[str] = set()
 class VideoContextExecutor:
     # TODO: Add checks for Nones
 
-    def __init__(
-        self, conn: Any, new_video_context: VideoContext = None, tasm=None
-    ):
+    def __init__(self, conn: Any, new_video_context: VideoContext = None, tasm=None):
         if new_video_context:
             self.context(new_video_context)
         self.conn = conn
@@ -81,12 +78,14 @@ class VideoContextExecutor:
             add_recognized_objs(self.conn, lens, tracking_results, start_time)
             recognized_areas[camera_node.cam_id] = {WHOLE_FRAME}
         else:
-            recognition_areas = sorted(recognition_areas, key=lambda a : a.area, reverse=True)
+            recognition_areas = sorted(recognition_areas, key=lambda a: a.area, reverse=True)
             for recognition_area in recognition_areas:
                 if is_area_recognized(recognition_area, recognized_areas[camera_node.cam_id]):
                     continue
 
-                tracking_results = recognize(video_file, algo, tracker_type, tracker, recognition_area)
+                tracking_results = recognize(
+                    video_file, algo, tracker_type, tracker, recognition_area
+                )
                 add_recognized_objs(self.conn, lens, tracking_results, start_time)
                 # TODO: should remove recognized objects in overlapped areas
 
@@ -111,7 +110,9 @@ def to_recognize_whole_frame(recognition_areas: List[BoundingBox]):
         return False
 
     area = recognition_areas[0]
-    if area.is_whole_frame() or (area.x1 == 0 and area.y1 == 0 and area.x2 == 100 and area.y2 == 100):
+    if area.is_whole_frame() or (
+        area.x1 == 0 and area.y1 == 0 and area.x2 == 100 and area.y2 == 100
+    ):
         return True
 
     (y1, x1), (y2, x2) = recognition_areas[0].to_tuples()
@@ -124,4 +125,4 @@ def to_recognize_whole_frame(recognition_areas: List[BoundingBox]):
         y1 = min(area.y1, y1, 0)
         y2 = max(area.y2, y2, 100)
 
-    return (x2 - x1) * (y2 - y1) >= 100 * 100 / 2.
+    return (x2 - x1) * (y2 - y1) >= 100 * 100 / 2.0

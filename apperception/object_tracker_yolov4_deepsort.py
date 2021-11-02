@@ -13,6 +13,7 @@ physical_devices = tf.config.experimental.list_physical_devices("GPU")
 if len(physical_devices) > 0:
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
 from collections import namedtuple
+from typing import Dict
 
 # from absl import app, flags, logging
 # from absl.flags import FLAGS
@@ -20,6 +21,7 @@ import core.utils as utils
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+from bounding_box import WHOLE_FRAME, BoundingBox
 from core.config import cfg
 # deep sort imports
 from deep_sort import nn_matching, preprocessing
@@ -29,10 +31,7 @@ from PIL import Image
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
-
-from typing import Dict
 from tracked_object import TrackedObject
-from bounding_box import BoundingBox, WHOLE_FRAME
 
 FLAGS = namedtuple(
     "Flags",

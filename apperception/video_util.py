@@ -1,15 +1,15 @@
 import datetime
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
 from bounding_box import WHOLE_FRAME, BoundingBox
-from object_tracker_yolov5_deepsort import TrackedObject, YoloV5Opt, yolov5_deepsort_video_track
-from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
-from typing_extensions import Literal
-
 from lens import Lens
+from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
+from object_tracker_yolov5_deepsort import (TrackedObject, YoloV5Opt,
+                                            yolov5_deepsort_video_track)
 from tracker import Tracker
+from typing_extensions import Literal
 
 # TODO: add more units
 Units = Literal["metrics"]
@@ -158,19 +158,21 @@ def create_or_insert_camera_table(conn, world_name, camera):
     Create and Populate A camera table with the given camera object.
     """
     # Creating table with the first camera
-    sql = "\n".join([
-        "CREATE TABLE IF NOT EXISTS Cameras(",
-        "    cameraId TEXT,",
-        "    worldId TEXT,",
-        "    ratio real,",
-        "    origin geometry,",
-        "    focalpoints geometry,",
-        "    fov INTEGER,",
-        "    skev_factor real,",
-        "    width integer,",
-        "    height integer",
-        ");"
-    ])
+    sql = "\n".join(
+        [
+            "CREATE TABLE IF NOT EXISTS Cameras(",
+            "    cameraId TEXT,",
+            "    worldId TEXT,",
+            "    ratio real,",
+            "    origin geometry,",
+            "    focalpoints geometry,",
+            "    fov INTEGER,",
+            "    skev_factor real,",
+            "    width integer,",
+            "    height integer",
+            ");",
+        ]
+    )
     cursor.execute(sql)
     print("Camera Table created successfully........")
     insert_camera(conn, world_name, camera)
@@ -201,7 +203,7 @@ def insert_camera(conn, world_name, camera_node):
             lens.fov,
             lens.alpha,
             width,
-            height
+            height,
         )
     )
     print("New camera inserted successfully.........")
@@ -221,14 +223,14 @@ def recognize(
     recog_algo: str = "",
     tracker_type: str = "default",
     customized_tracker: Optional[Tracker] = None,
-    recognition_area: BoundingBox = WHOLE_FRAME
+    recognition_area: BoundingBox = WHOLE_FRAME,
 ):
     """Default object recognition (YOLOv5)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
     if recognition_area.is_whole_frame():
         recognition_area = BoundingBox(0, 0, 100, 100)
-    if recog_algo == 'yolov4':
+    if recog_algo == "yolov4":
         return yolov4_deepsort_video_track(video_file, recognition_area)
     else:
         # use YoloV5 as default
@@ -247,7 +249,9 @@ def add_recognized_objs(
     clean_tables(conn)
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
-        recognized_bboxes = np.array([bbox.to_tuples() for bbox in formatted_result[item_id].bboxes])
+        recognized_bboxes = np.array(
+            [bbox.to_tuples() for bbox in formatted_result[item_id].bboxes]
+        )
         tracked_cnt = formatted_result[item_id].tracked_cnt
         top_left = np.vstack((recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]))
         if default_depth:

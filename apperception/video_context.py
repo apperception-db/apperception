@@ -5,11 +5,11 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
 import psycopg2
+from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
 from point import Point
 from tracker import Tracker
 from video_util import Units
-from bounding_box import BoundingBox, WHOLE_FRAME
 
 
 class Camera:
@@ -48,7 +48,11 @@ class Camera:
         self.lens = lens
 
     def recognize(
-        self, algo: str = "Yolo", tracker_type: str = "multi", tracker: Optional[Tracker] = None, recognition_area: BoundingBox = WHOLE_FRAME
+        self,
+        algo: str = "Yolo",
+        tracker_type: str = "multi",
+        tracker: Optional[Tracker] = None,
+        recognition_area: BoundingBox = WHOLE_FRAME,
     ):
         # Add a default add_recog_obj = True (TODO?)
         # Create object recognition node
