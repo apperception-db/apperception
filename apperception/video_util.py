@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -226,6 +226,8 @@ def recognize(
     """Default object recognition (YOLOv5)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
+    if recognition_area.is_whole_frame():
+        recognition_area = BoundingBox(0, 0, 100, 100)
     if recog_algo == 'yolov4':
         return yolov4_deepsort_video_track(video_file, recognition_area)
     else:

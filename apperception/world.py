@@ -72,7 +72,7 @@ class World:
         algo: str = "Yolo",
         tracker_type: str = "multi",
         tracker: Tracker = None,
-        recognition_area: BoundingBox = WHOLE_FRAME
+        recognition_area: BoundingBox = WHOLE_FRAME  # bounding box value in percentage not pixel
     ):
         new_context = copy.deepcopy(self)
         new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker, recognition_area)

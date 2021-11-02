@@ -42,7 +42,10 @@ class YoloV5Opt:
 
 
 def detect(opt: YoloV5Opt):
-    source, yolo_weights, deep_sort_weights, imgsz = opt.source, opt.yolo_weights, opt.deep_sort_weights, opt.img_size
+    source, yolo_weights, deep_sort_weights, imgsz, crop = opt.source, opt.yolo_weights, opt.deep_sort_weights, opt.img_size, opt.recognition_area
+
+    if crop.is_whole_frame():
+        crop = BoundingBox(0, 0, 100, 100)
 
     # initialize deepsort
     cfg = get_config()
@@ -73,11 +76,24 @@ def detect(opt: YoloV5Opt):
 
     # Run inference
     if device.type != 'cpu':
+        # TODO: adjust image size from `dataset`
+        # TODO: crop
         imgsz1, imgsz2 = (imgsz, imgsz) if isinstance(imgsz, int) else imgsz
         model(torch.zeros(1, 3, imgsz1, imgsz2).to(device).type_as(next(model.parameters())))  # run once
 
     formatted_result: Dict[str, TrackedObject] = {}
     for frame_idx, (_, img, im0s, _) in enumerate(dataset):
+        h, w = img.shape[1:]
+
+        # crop image
+        x1, y1, x2, y2 = [int(v / 100.) for v in [
+            w * crop.x1,
+            h * crop.y1,
+            w * crop.x2,
+            h * crop.y2,
+        ]]
+        img = img[:, y1 : y2, x1 : x2]
+
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
@@ -98,9 +114,15 @@ def detect(opt: YoloV5Opt):
                 deepsort.increment_ages()
                 continue
 
+            # add padding from cropped frame
+            det[:, :4] += torch.tensor([[x1, y1, x1, y1]])
+
             # Rescale boxes from img_size to im0 size
             det[:, :4] = scale_coords(
-                img.shape[2:], det[:, :4], im0s.shape).round()
+                (h, w),
+                det[:, :4],
+                im0s.shape,
+            ).round()
 
             xywhs = xyxy2xywh(det[:, 0:4])
             confs = det[:, 4]
@@ -112,7 +134,7 @@ def detect(opt: YoloV5Opt):
             # collect result bounding boxes
             for output in outputs:
 
-                x1, y1, x2, y2, id, c = [int(o) for o in output]
+                y1, x1, y2, x2, id, c = [int(o) for o in output]
                 bboxes = BoundingBox(x1, y1, x2, y2)
                 item_id = f"{names[c]}-{str(id)}"
 

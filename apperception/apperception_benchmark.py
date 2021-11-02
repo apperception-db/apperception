@@ -1,5 +1,6 @@
 # IMPORTS
 
+from bounding_box import BoundingBox
 import lens
 import point
 from world import World, world_executor
@@ -57,7 +58,8 @@ traffic_world = traffic_world.camera(
 )
 
 # Call execute on the world to run the detection algorithm and save the real data to the database
-recognized_world = traffic_world.recognize(cam_id)
+recognized_world = traffic_world.recognize(cam_id, recognition_area=BoundingBox(0, 50, 50, 100))
+recognized_world = recognized_world.recognize(cam_id, recognition_area=BoundingBox(0, 0, 100, 50))
 recognized_world.execute()
 
 volume = traffic_world.select_intersection_of_interest_or_use_default(cam_id=cam_id)

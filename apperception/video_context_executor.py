@@ -75,7 +75,7 @@ class VideoContextExecutor:
 
         recognition_areas = object_rec_node.recognition_areas
 
-        if to_recognize_whole_frame(recognition_areas, camera_node.dimension):
+        if to_recognize_whole_frame(recognition_areas):
             tracking_results = recognize(video_file, algo, tracker_type, tracker)
             # TODO: @mick remove other recognized object of this camera
             add_recognized_objs(self.conn, lens, tracking_results, start_time)
@@ -106,21 +106,22 @@ def is_area_recognized(area: BoundingBox, recognized: Set[BoundingBox]):
     return False
 
 
-def to_recognize_whole_frame(recognition_areas: List[BoundingBox], dimension: Optional[Tuple[int, int]] = None):
+def to_recognize_whole_frame(recognition_areas: List[BoundingBox]):
     if len(recognition_areas) == 0:
         return False
 
-    if recognition_areas[0].is_whole_frame() or dimension is None:
+    area = recognition_areas[0]
+    if area.is_whole_frame() or (area.x1 == 0 and area.y1 == 0 and area.x2 == 100 and area.y2 == 100):
         return True
 
-    (x1, y1), (x2, y2) = recognition_areas[0].to_tuples()
+    (y1, x1), (y2, x2) = recognition_areas[0].to_tuples()
     for area in recognition_areas[1:]:
         if area.is_whole_frame():
             return True
 
-        x1 = min(area.x1, x1)
-        x2 = min(area.x2, x2)
-        y1 = min(area.y1, y1)
-        y2 = min(area.y2, y2)
+        x1 = min(area.x1, x1, 0)
+        x2 = max(area.x2, x2, 100)
+        y1 = min(area.y1, y1, 0)
+        y2 = max(area.y2, y2, 100)
 
-    return (x2 - x1) * (y2 - y2) >= dimension[0] * dimension[1] / 2.
+    return (x2 - x1) * (y2 - y1) >= 100 * 100 / 2.

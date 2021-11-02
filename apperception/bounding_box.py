@@ -16,7 +16,7 @@ class BoundingBox:
         return other.x1 <= self.x1 and self.x2 <= other.x2 and other.y1 <= self.y1 and self.y2 <= other.y2
 
     def to_tuples(self):
-        return (self.x1, self.y1), (self.x2, self.y2)
+        return (self.y1, self.x1), (self.y2, self.x2)
 
     def is_whole_frame(self):
         return self.x1 == -1 and self.y1 == -1 and self.x2 == -1 and self.y2 == -1
