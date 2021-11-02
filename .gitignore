@@ -1,2 +1,7 @@
 __MACOSX
 __pycache__
+
+yolov4-deepsort
+yolov5-deepsort
+.mypy_cache
+.idea

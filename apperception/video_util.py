@@ -3,8 +3,11 @@ from typing import Any, Dict, Optional
 
 import cv2
 import numpy as np
+from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
-from object_tracker import yolov4_deepsort_video_track
+from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
+from object_tracker_yolov5_deepsort import (TrackedObject, YoloV5Opt,
+                                            yolov5_deepsort_video_track)
 from tracker import Tracker
 from typing_extensions import Literal
 
@@ -16,7 +19,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, TrackedObject], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -28,12 +31,12 @@ def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
         return min(max(0, y), 2160)
 
     for obj, info in formatted_result.items():
-        object_type = info["object_type"]
-        for bbox, frame in zip(info["bboxes"], info["tracked_cnt"]):
-            x1 = bound_width(bbox[0][0])
-            y1 = bound_height(bbox[0][1])
-            x2 = bound_width(bbox[1][0])
-            y2 = bound_height(bbox[1][1])
+        object_type = info.object_type
+        for bbox, frame in zip(info.bboxes, info.tracked_cnt):
+            x1 = bound_width(bbox.x1)
+            y1 = bound_height(bbox.y1)
+            x2 = bound_width(bbox.x2)
+            y2 = bound_height(bbox.y2)
             if frame < 0 or x1 < 0 or y1 < 0 or x2 < 0 or y2 < 0:
                 import pdb
 
@@ -124,8 +127,6 @@ def create_or_insert_world_table(conn, name, units: Units):
     """
     Create and Populate A world table with the given world object.
     """
-    # Doping Worlds table if already exists. TODO: For testing purpose only
-    cursor.execute("DROP TABLE IF EXISTS Worlds;")
     # Creating table with the first world
     sql = """CREATE TABLE IF NOT EXISTS Worlds(
     worldId TEXT PRIMARY KEY,
@@ -156,18 +157,22 @@ def create_or_insert_camera_table(conn, world_name, camera):
     """
     Create and Populate A camera table with the given camera object.
     """
-    # Doping Cameras table if already exists. TODO: For testing purpose only
-    cursor.execute("DROP TABLE IF EXISTS Cameras")
     # Creating table with the first camera
-    sql = """CREATE TABLE IF NOT EXISTS Cameras(
-    cameraId TEXT,
-    worldId TEXT,
-    ratio real,
-    origin geometry,
-    focalpoints geometry,
-    fov INTEGER,
-    skev_factor real
-    );"""
+    sql = "\n".join(
+        [
+            "CREATE TABLE IF NOT EXISTS Cameras(",
+            "    cameraId TEXT,",
+            "    worldId TEXT,",
+            "    ratio real,",
+            "    origin geometry,",
+            "    focalpoints geometry,",
+            "    fov INTEGER,",
+            "    skev_factor real,",
+            "    width integer,",
+            "    height integer",
+            ");",
+        ]
+    )
     cursor.execute(sql)
     print("Camera Table created successfully........")
     insert_camera(conn, world_name, camera)
@@ -182,9 +187,10 @@ def insert_camera(conn, world_name, camera_node):
     focal_x = str(lens.focal_x)
     focal_y = str(lens.focal_y)
     cam_x, cam_y, cam_z = str(lens.cam_origin[0]), str(lens.cam_origin[1]), str(lens.cam_origin[2])
+    width, height = camera_node.dimension
     cursor.execute(
-        """INSERT INTO Cameras (cameraId, worldId, ratio, origin, focalpoints, fov, skev_factor) """
-        + """VALUES (\'%s\', \'%s\', %f, \'POINT Z (%s %s %s)\', \'POINT(%s %s)\', %s, %f);"""
+        """INSERT INTO Cameras (cameraId, worldId, ratio, origin, focalpoints, fov, skev_factor, width, height) """
+        + """VALUES (\'%s\', \'%s\', %f, \'POINT Z (%s %s %s)\', \'POINT(%s %s)\', %s, %f, %d, %d);"""
         % (
             camera_node.cam_id,
             world_name,
@@ -196,10 +202,20 @@ def insert_camera(conn, world_name, camera_node):
             focal_y,
             lens.fov,
             lens.alpha,
+            width,
+            height,
         )
     )
     print("New camera inserted successfully.........")
     conn.commit()
+
+
+def get_video_dimension(video_file: str):
+    vid: cv2.VideoCapture = cv2.VideoCapture(video_file)
+    width = vid.get(cv2.CAP_PROP_FRAME_WIDTH)
+    height = vid.get(cv2.CAP_PROP_FRAME_HEIGHT)
+    # width and height are floats
+    return (int(width), int(height))
 
 
 def recognize(
@@ -207,26 +223,36 @@ def recognize(
     recog_algo: str = "",
     tracker_type: str = "default",
     customized_tracker: Optional[Tracker] = None,
+    recognition_area: BoundingBox = WHOLE_FRAME,
 ):
-    """Default object recognition (YOLOv3)"""
+    """Default object recognition (YOLOv5)"""
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
-    return yolov4_deepsort_video_track(video_file)
+    if recognition_area.is_whole_frame():
+        recognition_area = BoundingBox(0, 0, 100, 100)
+    if recog_algo == "yolov4":
+        return yolov4_deepsort_video_track(video_file, recognition_area)
+    else:
+        # use YoloV5 as default
+        return yolov5_deepsort_video_track(YoloV5Opt(video_file, recognition_area=recognition_area))
 
 
 def add_recognized_objs(
-    conn,
+    conn: Any,
     lens: Lens,
-    formatted_result: Dict[str, Any],
+    formatted_result: Dict[str, TrackedObject],
     start_time: datetime.datetime,
     properties: dict = {"color": {}},
     default_depth: bool = True,
 ):
+    # TODO: move cleaning to apperception_benchmark.py
     clean_tables(conn)
     for item_id in formatted_result:
-        object_type = formatted_result[item_id]["object_type"]
-        recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
-        tracked_cnt = formatted_result[item_id]["tracked_cnt"]
+        object_type = formatted_result[item_id].object_type
+        recognized_bboxes = np.array(
+            [bbox.to_tuples() for bbox in formatted_result[item_id].bboxes]
+        )
+        tracked_cnt = formatted_result[item_id].tracked_cnt
         top_left = np.vstack((recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]))
         if default_depth:
             top_left_depths = np.ones(len(recognized_bboxes))
