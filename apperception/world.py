@@ -82,6 +82,16 @@ class World:
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.get_trajectory(interval, distinct)
         return new_context
+    
+    def get_merged_trajectory(self, interval = []):
+        new_context = copy.deepcopy(self)
+        new_context.MetadataContext.get_merged_trajectory(interval)
+        return new_context
+    
+    def get_merged_geo(self, interval = []):
+        new_context = copy.deepcopy(self)
+        new_context.MetadataContext.get_merged_geo(interval)
+        return new_context
 
     def get_geo(self, interval = [], distinct = False):
         new_context = copy.deepcopy(self)
@@ -158,7 +168,7 @@ class World:
         video_file = camera.video_file
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
-            frame_points = camera.lens.world_to_pixels(np.vstack((current_trajectory.T, np.ones(len(current_trajectory.T[0]))))).T
+            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
             vs = cv2.VideoCapture(video_file)
             frame = vs.read()
             frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
