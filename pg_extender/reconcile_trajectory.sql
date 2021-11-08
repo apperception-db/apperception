@@ -58,10 +58,22 @@ BEGIN
               FROM min_join_pair, Temp_Trajectory  
               WHERE min_join_pair.tempId = Temp_Trajectory.itemId;';
 
+  EXECUTE 'INSERT INTO Main_Bbox  
+            SELECT min_join_pair.mainId, Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
+              FROM min_join_pair, Temp_Bbox  
+              WHERE min_join_pair.tempId = Temp_Bbox.itemId;';
+
   EXECUTE 'INSERT INTO MAIN_Trajectory 
             SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId), Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
               FROM Temp_Trajectory  
               WHERE Temp_Trajectory.itemId NOT IN ( 
+                SELECT DISTINCT tempId 
+                FROM min_join_pair);';
+  
+  EXECUTE 'INSERT INTO MAIN_Bbox 
+            SELECT CONCAT(Temp_Bbox.cameraId, ' || E'\'_\'' || ', Temp_Bbox.itemId), Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
+              FROM Temp_Bbox  
+              WHERE Temp_Bbox.itemId NOT IN ( 
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
 
@@ -73,6 +85,7 @@ BEGIN
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
   EXECUTE 'TRUNCATE TABLE Temp_Trajectory;';
+  EXECUTE 'TRUNCATE TABLE Temp_Bbox;'
 
   RETURN;
 END
