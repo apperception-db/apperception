@@ -126,6 +126,3 @@ class VideoContext:
     # Clear
     def clear(self):
         self.camera_nodes = []
-
-    
-

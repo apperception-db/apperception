@@ -49,6 +49,10 @@ FLAGS = namedtuple('Flags', ['framework', 'weights', 'size', 'tiny',
 # flags.DEFINE_boolean('count', False, 'count objects being tracked on screen')
 
 def yolov4_deepsort_video_track(video_file, default_depth=True):
+	# import json
+	# with open('text_result.txt') as json_file:
+	# 	formatted_result = json.load(json_file)
+	# return formatted_result
 	# Definition of the parameters
 	max_cosine_distance = 0.4
 	nn_budget = None

@@ -43,8 +43,8 @@ traffic_world = traffic_world.camera(cam_id=cam2_id,
                                lens=cam2_len)
 
 ### Call execute on the world to run the detection algorithm and save the real data to the database
-# recognized_world = traffic_world.recognize(cam1_id)
-# recognized_world.execute()
+recognized_world = traffic_world.recognize(cam1_id)
+recognized_world.execute()
 
 # tracking_results = recognize(cam2_video_file)
 # file1 = open("resultfile_2.txt","w")
@@ -53,20 +53,20 @@ traffic_world = traffic_world.camera(cam_id=cam2_id,
 # conn = psycopg2.connect(database="mobilitydb", user="docker", password="docker", host="localhost", port=25432)
 # add_recognized_objs(conn, cam2_len, tracking_results, traffic_world.VideoContext.start_time, temp=True)
 
-volume = traffic_world.select_intersection_of_interest_or_use_default(cam_id=cam2_id)
-filtered_world = traffic_world.predicate(lambda obj:obj.object_type == "car")
-# filtered_world = filtered_world.interval([0,fps*3])
+# volume = traffic_world.select_intersection_of_interest_or_use_default(cam_id=cam2_id)
+# filtered_world = traffic_world.predicate(lambda obj:obj.object_type == "car")
+# # filtered_world = filtered_world.interval([0,fps*3])
  
-### to get the trajectory and the video over the entire trajectory(amber case)
-filtered_ids = filtered_world.selectkey(distinct = True).execute()
-print("filtered_ids are", filtered_ids)
-print(len(filtered_ids))
-if len(filtered_ids)>0:
-    id_array = [e[0] for e in filtered_ids]
-    ### Fetch the trajectory of these items
-    trajectory = traffic_world.predicate(lambda obj: obj.object_id in id_array, {"id_array":id_array}).get_trajectory(distinct=True).execute()
-    traffic_world.overlay_trajectory(cam2_id, trajectory)
-    ## Get the videos of these items
-    entire_video = traffic_world.predicate(lambda obj: obj.object_id in id_array, {"id_array":id_array}).get_video()
-    entire_video.execute()
+# ### to get the trajectory and the video over the entire trajectory(amber case)
+# filtered_ids = filtered_world.selectkey(distinct = True).execute()
+# print("filtered_ids are", filtered_ids)
+# print(len(filtered_ids))
+# if len(filtered_ids)>0:
+#     id_array = [e[0] for e in filtered_ids]
+#     ### Fetch the trajectory of these items
+#     trajectory = traffic_world.predicate(lambda obj: obj.object_id in id_array, {"id_array":id_array}).get_trajectory(distinct=True).execute()
+#     traffic_world.overlay_trajectory(cam2_id, trajectory)
+#     ## Get the videos of these items
+#     entire_video = traffic_world.predicate(lambda obj: obj.object_id in id_array, {"id_array":id_array}).get_video()
+#     entire_video.execute()
 
