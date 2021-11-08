@@ -250,20 +250,22 @@ def create_main_trajectory(conn):
 	cursor = conn.cursor()
 	create_main_traj_sql = '''CREATE TABLE IF NOT EXISTS Main_Trajectory(
 	itemId TEXT,
- 	cameraId TEXT,
-	trajCentroids tgeompoint
+	cameraId TEXT,
+	trajCentroids tgeompoint,
+	PRIMARY KEY(itemId, cameraId)
 	);'''
-	 # create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Main_Bbox(
-	# itemId TEXT,
-	# trajBbox stbox,
-	# FOREIGN KEY(itemId)
-	# 	REFERENCES Main_Trajectory(itemId)
-	# );'''
-	# cursor.execute(create_bboxes_sql)
-	# cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Main_Bbox(itemId);")
-	# cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Temp_Bbox USING GiST(trajBbox);")
 	cursor.execute(create_main_traj_sql)
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Main_Trajectory USING GiST(trajCentroids);")
+	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Main_Bbox(
+	itemId TEXT,
+	cameraId TEXT,
+	trajBbox stbox,
+	FOREIGN KEY(itemId, cameraId)
+		REFERENCES Main_Trajectory(itemId, cameraId)
+	);'''
+	cursor.execute(create_bboxes_sql)
+	cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Main_Bbox(itemId);")
+	cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Main_Bbox USING GiST(trajBbox);")
 	conn.commit()
 
 def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs):
@@ -278,15 +280,15 @@ def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, colo
 	);'''
 	cursor.execute(create_temp_traj_sql)
 	conn.commit()
-	# create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Temp_Bbox(
-	# itemId TEXT,
-	# trajBbox stbox,
-	# FOREIGN KEY(itemId)
-	# 	REFERENCES Temp_Trajectory(itemId)
-	# );'''
-	# cursor.execute(create_bboxes_sql)
-	# cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Main_Bbox(itemId);")
-	# cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Temp_Bbox USING GiST(trajBbox);")
+	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Temp_Bbox(
+	itemId TEXT,
+	cameraId TEXT,
+	trajBbox stbox
+	);'''
+	cursor.execute(create_bboxes_sql)
+	cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Temp_Bbox(itemId);")
+	cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Temp_Bbox USING GiST(trajBbox);")
+	conn.commit()
 	insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs)
 	
 def reconcile_trajectory(conn, threshold=40):
@@ -297,10 +299,10 @@ def reconcile_trajectory(conn, threshold=40):
 # Insert general trajectory
 def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs, temp = False):
 	cursor = conn.cursor()
-	 #Inserting bboxes into Bbox table
-	# insert_bbox_trajectory = ""
-	# insert_format = f"INSERT INTO Temp_Trajectory (itemId, trajBbox) "+ \
-	# f"VALUES (\'{item_id}\',"
+	#Inserting bboxes into Bbox table
+	insert_bbox_trajectory = ""
+	insert_format = f"INSERT INTO Temp_Bbox (itemId, cameraId, trajBbox) "+ \
+	f"VALUES (\'{item_id}\', \'{camera_id}\', "
 	# Insert the item_trajectory separately
 	insert_trajectory = f"INSERT INTO Temp_Trajectory(itemId, cameraId, objectType, color, trajCentroids, largestBbox) "+ \
 	f"VALUES (\'{item_id}\', \'{camera_id}\', \'{object_type}\', \'{color}\', " 
@@ -315,9 +317,9 @@ def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgre
 		
 		min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = min(tl[0], min_ltx), min(tl[1], min_lty), min(tl[2], min_ltz),\
 			max(br[0], max_brx), max(br[1], max_bry), max(br[2], max_brz)
-		# current_bbox_sql = "stbox \'STBOX ZT((%s, %s, %s, %s), (%s, %s, %s, %s))\');" \
-		# %(tl[0], tl[1], tl[2], postgres_timestamp, br[0], br[1], br[2], postgres_timestamp)
-		# insert_bbox_trajectory += insert_format + current_bbox_sql
+		current_bbox_sql = "stbox \'STBOX ZT((%s, %s, %s, %s), (%s, %s, %s, %s))\');" \
+		%(tl[0], tl[1], tl[2], postgres_timestamp, br[0], br[1], br[2], postgres_timestamp)
+		insert_bbox_trajectory += insert_format + current_bbox_sql
 		### Construct trajectory
 		current_point = pairs[i]
 		tg_pair_centroid = "POINT Z (%s %s %s)@%s," \
@@ -329,7 +331,7 @@ def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgre
 	insert_trajectory += "stbox \'STBOX Z((%s, %s, %s),"%(min_ltx, min_lty, min_ltz)\
 		+"(%s, %s, %s))\'); "%(max_brx, max_bry, max_brz)
 	cursor.execute(insert_trajectory)
-	# cursor.execute(insert_bbox_trajectory)
+	cursor.execute(insert_bbox_trajectory)
 	conn.commit()
 
 def fetch_camera(conn, world_id, cam_id = []):
