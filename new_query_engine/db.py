@@ -26,11 +26,11 @@ class Database:
         return query + self._select_cam_with_world_id(world_id) if query \
                 else self._select_cam_with_world_id(world_id) # UNION
 
-    def nest_from(self, sub_query: Query, condition: str):
+    def nest_from(self, query: Query, condition: str):
         """
         Called when executing filter commands (predicate, interval ...etc) 
         """
-        return Query.from_(sub_query).select("*").where(eval(condition))
+        return Query.from_(query).select("*").where(eval(condition))
 
     def execute_get_query(self, query: Query):
         """
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     print(q)
 
     # w3 = w2.predicate(cam.size < 4)
-    q = db.nest_from(sub_query = q, condition = "sub_query.size < 4")
+    q = db.nest_from(query = q, condition = "query.size < 4")
     print(q)
 
     # w4 = w3.add_camera({cam_id: "2", size: 3, world_id: "2"})
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     print(q)
 
     # w5 = w4.predicate(cam.size < 6)
-    q = db.nest_from(sub_query = q, condition = "sub_query.size < 6")
+    q = db.nest_from(query = q, condition = "query.size < 6")
     print(q)
 
     # w6 = w5.get_camera()
