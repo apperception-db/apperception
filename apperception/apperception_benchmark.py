@@ -36,7 +36,7 @@ cam_lens = lens.PinholeLens(res, cam_origin, fov, skew_factor)
 
 pt_id, cam_id, x, y, z, time, pt_type = (
     point_attrs["p_id"],
-    point_attrs["cam_id"], # why we need camera
+    point_attrs["cam_id"],  # why we need camera
     point_attrs["x"],
     point_attrs["y"],
     point_attrs["z"],
@@ -84,7 +84,7 @@ if len(filtered_ids) > 0:
     # plot the trajectory of each cars on the first video frame
 
     traffic_world.overlay_trajectory(cam_id, trajectory)
-    
+
     # Get the videos of these items
 #     entire_video = traffic_world.predicate(lambda obj: obj.object_id in id_array, {"id_array":id_array}).get_video()
 #     entire_video.execute()

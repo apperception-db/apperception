@@ -54,7 +54,7 @@ class VideoContextExecutor:
             visited_camera.add(camera_node.cam_id)
             recognized_areas[camera_node.cam_id] = set()
 
-        if camera_node.object_recognition is not None: # lazy recognize
+        if camera_node.object_recognition is not None:  # lazy recognize
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
         if self.tasm:
             video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.tasm)
