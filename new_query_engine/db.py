@@ -63,7 +63,7 @@ if __name__ == "__main__":
     q = db.nest_from(sub_query = q, condition = "sub_query.size < 4")
     print(q)
 
-    # w4 = w3.add_camera({cam_id: "1", size: 5, world_id: "2"})
+    # w4 = w3.add_camera({cam_id: "2", size: 3, world_id: "2"})
     q = db.concat_with(query = q, world_id = "2")
     print(q)
 
