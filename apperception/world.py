@@ -48,6 +48,7 @@ class World:
     def get_units(self):
         return self.VideoContext.get_units()
 
+    # TODO: should be add_item / add_camera?
     def item(self, item_id, cam_id, item_type, location):
         new_context = copy.deepcopy(self)
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
@@ -157,6 +158,7 @@ class World:
             x1, y1, z1 = 0.01082532, 2.59647246, 0
             x2, y2, z2 = 3.01034039, 3.35985782, 2
         else:
+            # TODO: what?
             vs = cv2.VideoCapture(video_file)
             frame = vs.read()
             frame = frame[1]
