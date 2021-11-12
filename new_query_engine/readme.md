@@ -19,6 +19,6 @@ docker run -d -p 5432:5432 --name mypostgres --restart always -v postgresql-data
 - When we call get-data method (such as selectKey / get_trajectories) we construct an SQL - query based on the sequence of operations.
 - When see predicates, we nest the query of the old world. 
 - When see update, we concat the query of the old world.
-
+- We can add cache on each node to accelerate.
 
 

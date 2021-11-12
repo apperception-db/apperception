@@ -15,7 +15,7 @@ class World:
 
     def add_camera(self, *args, **kwargs):
         """
-        1. For update method, we create two nodes: the first node will write to the db, the second node will retrieve from the db
+        1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
         2. For the write node, never double write. (so we use done flag)
         ... -> [write] -> [retrive] -> ...
         """
