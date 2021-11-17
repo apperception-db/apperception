@@ -5,9 +5,6 @@ import cv2
 import numpy as np
 from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
-from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
-from object_tracker_yolov5_deepsort import (TrackedObject, YoloV5Opt,
-                                            yolov5_deepsort_video_track)
 from tracker import Tracker
 from typing_extensions import Literal
 
@@ -19,7 +16,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, TrackedObject], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -226,6 +223,9 @@ def recognize(
     recognition_area: BoundingBox = WHOLE_FRAME,
 ):
     """Default object recognition (YOLOv5)"""
+    from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
+    from object_tracker_yolov5_deepsort import (TrackedObject, YoloV5Opt,
+                                                yolov5_deepsort_video_track)
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
     if recognition_area.is_whole_frame():
@@ -240,7 +240,7 @@ def recognize(
 def add_recognized_objs(
     conn: Any,
     lens: Lens,
-    formatted_result: Dict[str, TrackedObject],
+    formatted_result: Dict[str, Any],
     start_time: datetime.datetime,
     properties: dict = {"color": {}},
     default_depth: bool = True,
