@@ -1,4 +1,5 @@
-from db import Database
+from new_db import Database
+from new_util import create_camera
 import uuid
 
 class World:
@@ -25,7 +26,7 @@ class World:
 
     def predicate(self, *args, **kwargs):
         new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.nest_from
+        new_node.fn = self.db.filter_cam
         new_node.args, new_node.kwargs = args, kwargs
         return new_node
 
@@ -37,13 +38,13 @@ class World:
 
     def _retrieve_camera(self, *args, **kwargs):
         new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.concat_with
+        new_node.fn = self.db.retrieve_cam
         new_node.args, new_node.kwargs = args, kwargs
         return new_node
 
     def get_camera(self, *args, **kwargs):
         new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.execute_get_query
+        new_node.fn = self.db.get_cam
         new_node.args, new_node.kwargs = args, kwargs
         return new_node._execute_from_root()
 
@@ -51,7 +52,7 @@ class World:
         new_world = World()
         new_world.parent = self
         return new_world
-    
+
     def _execute_from_root(self):
         nodes = []
         curr = self
@@ -74,11 +75,12 @@ class World:
                     node._execute()
                     node.done = True
             else:
-                query = node._execute(query = query)
+                print(query)
+                query = node._execute(query=query)
 
         res = query
         return res
-    
+
     def _execute(self, *args, **kwargs):
         # print("executing fn = {}, with args = {} and kwargs = {}".format(self.fn, self.args, self.kwargs))
         return self.fn(*self.args, *args, **self.kwargs, **kwargs)
@@ -92,50 +94,22 @@ class World:
     def __str__(self):
         return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(self.fn, self.args, self.kwargs, self.done, self.world_id)
 
-
 if __name__ == "__main__":
-    
-    # w1 = World()
 
-    # w2 = w1.add_camera(cam_id = "1", cam_size = 5)
-
-    # w3 = w2.predicate(condition = "query.size < 4")
-
-    # w4 = w3.add_camera(cam_id = "2", cam_size = 3)
-
-    # w5 = w4.predicate(condition = "query.size < 6")
-
-    # res = w5.get_camera()
-
-    # print(list(res))
-
-    """
-    w1 - w2 - w3 - w311 - w312  
-                 - w321 - w322
-    """
     w1 = World()
 
-    w2 = w1.add_camera(cam_id = "c2", cam_size = 1)
+    c2 = create_camera(cam_id="cam2", fov=60)
 
-    w3 = w2.add_camera(cam_id = "c3", cam_size = 1)
+    w2t = w1.add_camera(camera_node=c2)
 
-    w311 = w3.add_camera(cam_id = "c311", cam_size = 1)
+    w2 = w2t.predicate(condition="query.fov < 310")
+    #
+    c3 = create_camera(cam_id="cam3", fov=120)
 
-    w312 = w311.add_camera(cam_id = "c312", cam_size = 1)
+    w3 = w2.add_camera(camera_node=c3)
 
-    w313 = w312.add_camera(cam_id = "c313", cam_size = 1)
+    w4 = w3.predicate(condition="query.fov < 300")
 
-    w321 = w3.add_camera(cam_id = "c321", cam_size = 1)
+    res = w4.get_camera()
 
-    w322 = w321.add_camera(cam_id = "c322", cam_size = 1)
-
-    w323 = w321.add_camera(cam_id = "c323", cam_size = 1)
-
-    res3 = w3.get_camera()
-    print(list(res3)) # [('c3', 1, '55145a19-db3a-4a4d-af1c-00a266fe1964'), ('c2', 1, '2a7a17b5-783e-4881-9326-c878565cfd40')]
-
-    res322 = w322.get_camera()
-    print(list(res322)) # [('c2', 1, '2a7a17b5-783e-4881-9326-c878565cfd40'), ('c3', 1, '55145a19-db3a-4a4d-af1c-00a266fe1964'), ('c321', 1, '7c40fce0-5254-44ea-9692-2e735a263aa3'), ('c322', 1, 'a46270e2-8893-4945-819a-9259423a7b5d')]
-
-    res312 = w312.get_camera()
-    print(list(res312)) # [('c2', 1, '2a7a17b5-783e-4881-9326-c878565cfd40'), ('c3', 1, '55145a19-db3a-4a4d-af1c-00a266fe1964'), ('c311', 1, 'b257beab-d4d1-40e9-8744-e574b7060285'), ('c312', 1, '59b9f8ee-643c-448b-bd01-bab86e8dedcd')]
+    print(res)

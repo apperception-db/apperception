@@ -1,11 +1,11 @@
 # New query engine
 
 ## Prerequisite
-- Create a docker container for postgres
+- Create a docker container for mobilitydb
 
 ```
-docker volume create --name postgresql-data
-docker run -d -p 5432:5432 --name mypostgres --restart always -v postgresql-data:/var/lib/postgresql/data -e POSTGRES_PASSWORD=1234 postgres
+docker volume create mobilitydb_data
+docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
 ```
 
 ## Design
