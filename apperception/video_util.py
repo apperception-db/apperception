@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -7,6 +9,9 @@ from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
 from tracker import Tracker
 from typing_extensions import Literal
+
+if TYPE_CHECKING:
+    from object_tracker_yolov5_deepsort import TrackedObject
 
 # TODO: add more units
 Units = Literal["metrics"]
@@ -16,7 +21,7 @@ def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, TrackedObject], metadata_id, t):
     import tasm
 
     metadata_info = []
@@ -170,7 +175,7 @@ def recognize(
 def add_recognized_objs(
     conn: Any,
     lens: Lens,
-    formatted_result: Dict[str, Any],
+    formatted_result: Dict[str, TrackedObject],
     start_time: datetime.datetime,
     properties: dict = {"color": {}},
     default_depth: bool = True,
