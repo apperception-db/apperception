@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import Any, Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import cv2
 import numpy as np
@@ -229,7 +229,9 @@ def recognize(
 ):
     """Default object recognition (YOLOv5)"""
     from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
-    from object_tracker_yolov5_deepsort import (YoloV5Opt, yolov5_deepsort_video_track)
+    from object_tracker_yolov5_deepsort import (YoloV5Opt,
+                                                yolov5_deepsort_video_track)
+
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
     if recognition_area.is_whole_frame():
@@ -384,7 +386,9 @@ def create_or_insert_general_trajectory(
     cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);")
     conn.commit()
     # Insert the trajectory of the first item
-    insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id)
+    insert_general_trajectory(
+        conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id
+    )
 
 
 def insert_general_trajectory(
@@ -395,11 +399,15 @@ def insert_general_trajectory(
     cursor = conn.cursor()
     # Inserting bboxes into Bbox table
     insert_bbox_trajectory = ""
-    insert_format = "INSERT INTO General_Bbox (itemId, worldId, trajBbox) " + "VALUES ('%s','%s'," % (item_id+"-"+world_id, world_id)
+    insert_format = (
+        "INSERT INTO General_Bbox (itemId, worldId, trajBbox) "
+        + "VALUES ('%s','%s'," % (item_id + "-" + world_id, world_id)
+    )
     # Insert the item_trajectory separately
     insert_trajectory = (
         "INSERT INTO Item_General_Trajectory (itemId, worldId, objectType, color, trajCentroids, largestBbox) "
-        + "VALUES ('%s', '%s', '%s', '%s', " % (item_id+"-"+world_id, world_id, object_type, color)
+        + "VALUES ('%s', '%s', '%s', '%s', "
+        % (item_id + "-" + world_id, world_id, object_type, color)
     )
     traj_centroids = "'{"
     min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = (
