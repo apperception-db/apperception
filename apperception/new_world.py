@@ -1,11 +1,12 @@
+import uuid
+from enum import Enum
 from typing import Set
 
-from video_context import Camera
 from bounding_box import BoundingBox
 from new_db import Database
 from new_util import create_camera
-from enum import Enum
-import uuid
+from video_context import Camera
+
 
 class Type(Enum):
     # query type:
@@ -13,6 +14,7 @@ class Type(Enum):
     # when we encounter recognize(), we should not execute it because the inserted object must not be in the final result.
     # we use enum type to determine whether we should execute this node
     CAM, BBOX, TRAJ = 0, 1, 2
+
 
 class World:
     # all worlds share a db instance
@@ -37,7 +39,11 @@ class World:
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.insert_bbox_traj
         new_node.type = set([Type.TRAJ, Type.BBOX])
-        new_node.args, new_node.kwargs = [], {"world_id": new_node.world_id, "camera_node": camera_node, "recognition_area": recognition_area}
+        new_node.args, new_node.kwargs = [], {
+            "world_id": new_node.world_id,
+            "camera_node": camera_node,
+            "recognition_area": recognition_area,
+        }
         return new_node
 
     def _retrieve_bbox(self, world_id: str):
@@ -96,7 +102,10 @@ class World:
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.insert_cam
         new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = [], {"camera_node": camera_node, "world_id": new_node.world_id}
+        new_node.args, new_node.kwargs = [], {
+            "camera_node": camera_node,
+            "world_id": new_node.world_id,
+        }
         return new_node
 
     def _retrieve_camera(self, world_id: str):
@@ -132,7 +141,7 @@ class World:
         # execute the nodes from the root
         for node in nodes[::-1]:
             # root
-            if node.fn == None:
+            if node.fn is None:
                 continue
             # if different type => pass
             if type not in node.type:
@@ -160,7 +169,10 @@ class World:
             curr = curr.parent
 
     def __str__(self):
-        return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(self.fn, self.args, self.kwargs, self.done, self.world_id)
+        return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(
+            self.fn, self.args, self.kwargs, self.done, self.world_id
+        )
+
 
 if __name__ == "__main__":
 

@@ -1,28 +1,26 @@
 import datetime
-import sqlite3
-import psycopg2
-import lens
-import point
-from pypika import Table, Field, Column
 
+import psycopg2
 from bounding_box import BoundingBox
 from new_util import create_camera
-from video_context import Camera
-from video_util import get_video_dimension, recognize, add_recognized_objs
+from pypika import Column, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import SnowflakeQuery as Query
-
+from video_context import Camera
+from video_util import add_recognized_objs, get_video_dimension, recognize
 
 CAMERA_TABLE = "cameras"
 TRAJ_TABLE = "item_general_trajectory"
 BBOX_TABLE = "general_bbox"
 
+
 class Database:
     def __init__(self):
         # should setup a postgres in docker first
-        self.con = psycopg2.connect(dbname="mobilitydb", user="docker", host="localhost", port="25432",
-                                    password="docker")
+        self.con = psycopg2.connect(
+            dbname="mobilitydb", user="docker", host="localhost", port="25432", password="docker"
+        )
         self.cur = self.con.cursor()
 
         # create camera table
@@ -34,30 +32,21 @@ class Database:
         # create traj table
         self._create_item_general_trajectory_table()
 
-
     def _create_camera_table(self):
         # drop old
-        q1 = (
-            Query
-                .drop_table(CAMERA_TABLE)
-                .if_exists()
-        )
+        q1 = Query.drop_table(CAMERA_TABLE).if_exists()
 
         # create new
-        q2 = (
-            Query
-                .create_table(CAMERA_TABLE)
-                .columns(
-                Column("cameraId", "TEXT"),
-                Column("worldId", "TEXT"),
-                Column("ratio", "real"),
-                Column("origin", "geometry"),
-                Column("focalpoints", "geometry"),
-                Column("fov", "INTEGER"),
-                Column("skev_factor", "real"),
-                Column("width", "integer"),
-                Column("height", "integer")
-            )
+        q2 = Query.create_table(CAMERA_TABLE).columns(
+            Column("cameraId", "TEXT"),
+            Column("worldId", "TEXT"),
+            Column("ratio", "real"),
+            Column("origin", "geometry"),
+            Column("focalpoints", "geometry"),
+            Column("fov", "INTEGER"),
+            Column("skev_factor", "real"),
+            Column("width", "integer"),
+            Column("height", "integer"),
         )
 
         self.cur.execute(q1.get_sql())
@@ -71,20 +60,24 @@ class Database:
         lens = camera_node.lens
         focal_x = str(lens.focal_x)
         focal_y = str(lens.focal_y)
-        cam_x, cam_y, cam_z = str(lens.cam_origin[0]), str(lens.cam_origin[1]), str(lens.cam_origin[2])
+        cam_x, cam_y, cam_z = (
+            str(lens.cam_origin[0]),
+            str(lens.cam_origin[1]),
+            str(lens.cam_origin[2]),
+        )
         camera_node.dimension = get_video_dimension(camera_node.video_file)
         width, height = camera_node.dimension
 
-        q = (
-            Query
-                .into(cam)
-                .insert(
-                cam_id, world_id, cam_ratio,
-                f"POINT Z ({cam_x} {cam_y} {cam_z})",
-                f"POINT({focal_x} {focal_y})",
-                lens.fov, lens.alpha,
-                width, height
-            )
+        q = Query.into(cam).insert(
+            cam_id,
+            world_id,
+            cam_ratio,
+            f"POINT Z ({cam_x} {cam_y} {cam_z})",
+            f"POINT({focal_x} {focal_y})",
+            lens.fov,
+            lens.alpha,
+            width,
+            height,
         )
         # print(q)
         self.cur.execute(q.get_sql())
@@ -95,25 +88,23 @@ class Database:
         Called when executing update commands (add_camera, add_objs ...etc)
         """
 
-        return query + self._select_cam_with_world_id(world_id) if query \
-            else self._select_cam_with_world_id(world_id)  # UNION
+        return (
+            query + self._select_cam_with_world_id(world_id)
+            if query
+            else self._select_cam_with_world_id(world_id)
+        )  # UNION
 
     def _select_cam_with_world_id(self, world_id: str):
         """
         Select cams with certain world id
         """
         cam = Table(CAMERA_TABLE)
-        q = (
-            Query
-                .from_(cam)
-                .select("*")
-                .where(cam.worldId == world_id)
-        )
+        q = Query.from_(cam).select("*").where(cam.worldId == world_id)
         return q
 
     def filter_cam(self, query: Query, condition: str):
         """
-        Called when executing filter commands (predicate, interval ...etc) 
+        Called when executing filter commands (predicate, interval ...etc)
         """
         return Query.from_(query).select("*").where(eval(condition))
 
@@ -123,8 +114,10 @@ class Database:
         """
 
         # hack
-        q = f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor" \
+        q = (
+            f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
             + f" FROM ({query.get_sql()}) AS final"
+        )
 
         print(q)
 
@@ -144,7 +137,9 @@ class Database:
     def insert_bbox_traj(self, world_id: str, camera_node: Camera, recognition_area: BoundingBox):
         start_time = datetime.datetime.now()
         video_file, algo, lens = camera_node.video_file, "Yolo", camera_node.lens
-        tracking_results = recognize(video_file=video_file, recog_algo=algo, recognition_area=recognition_area)
+        tracking_results = recognize(
+            video_file=video_file, recog_algo=algo, recognition_area=recognition_area
+        )
         add_recognized_objs(self.con, lens, tracking_results, start_time, world_id)
 
     def retrieve_bbox(self, query: Query = None, world_id: str = ""):
@@ -155,7 +150,11 @@ class Database:
     def retrieve_traj(self, query: Query = None, world_id: str = ""):
         traj = Table(TRAJ_TABLE)
         # q = Query.from_(traj).select("*").where(traj.worldId == world_id)
-        q = Query.from_(traj).select("itemid", "objecttype", "worldid").where(traj.worldId == world_id)  # for debug
+        q = (
+            Query.from_(traj)
+            .select("itemid", "objecttype", "worldid")
+            .where(traj.worldId == world_id)
+        )  # for debug
         return query + q if query else q  # UNION
 
     def get_bbox(self, query: Query):
@@ -170,15 +169,19 @@ class Database:
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
 
+
 if __name__ == "__main__":
     # Ingest the camera to the world
     c1 = create_camera("cam1", 120)
     c2 = create_camera("cam2", 150)
 
     db = Database()
-    db.insert_bbox_traj(world_id="myworld", camera_node=c1, recognition_area=BoundingBox(0, 50, 50, 100))
-    db.insert_bbox_traj(world_id="myworld2", camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
-
+    db.insert_bbox_traj(
+        world_id="myworld", camera_node=c1, recognition_area=BoundingBox(0, 50, 50, 100)
+    )
+    db.insert_bbox_traj(
+        world_id="myworld2", camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100)
+    )
 
     q = db.retrieve_traj(world_id="myworld2")
     db.cur.execute(q.get_sql())
