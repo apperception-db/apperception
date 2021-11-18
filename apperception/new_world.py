@@ -1,5 +1,6 @@
 from typing import Set
 
+from video_context import Camera
 from bounding_box import BoundingBox
 from new_db import Database
 from new_util import create_camera
@@ -26,83 +27,83 @@ class World:
         self.world_id = str(uuid.uuid4())
         self.type: Set[Type] = None
 
-    def recognize(self, *args, **kwargs):
-        node1 = self._insert_bbox_traj(*args, **kwargs)
+    def recognize(self, camera_node: Camera, recognition_area: BoundingBox):
+        node1 = self._insert_bbox_traj(camera_node=camera_node, recognition_area=recognition_area)
         node2 = node1._retrieve_bbox(world_id=node1.world_id)
         node3 = node2._retrieve_traj(world_id=node1.world_id)
         return node3
 
-    def _insert_bbox_traj(self, *args, **kwargs):
+    def _insert_bbox_traj(self, camera_node: Camera, recognition_area: BoundingBox):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.insert_bbox_traj
         new_node.type = set([Type.TRAJ, Type.BBOX])
-        new_node.args, new_node.kwargs = args, {**kwargs, "world_id": new_node.world_id}
+        new_node.args, new_node.kwargs = [], {"world_id": new_node.world_id, "camera_node": camera_node, "recognition_area": recognition_area}
         return new_node
 
-    def _retrieve_bbox(self, *args, **kwargs):
+    def _retrieve_bbox(self, world_id: str):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.retrieve_bbox
         new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {"world_id": world_id}
         return new_node
 
-    def _retrieve_traj(self, *args, **kwargs):
+    def _retrieve_traj(self, world_id: str):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.retrieve_traj
         new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {"world_id": world_id}
         return new_node
 
-    def get_bbox(self, *args, **kwargs):
+    def get_bbox(self):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.get_bbox
         new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.BBOX)
 
-    def get_traj(self, *args, **kwargs):
+    def get_traj(self):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.get_traj
         new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.TRAJ)
 
-    def add_camera(self, *args, **kwargs):
+    def add_camera(self, camera_node: Camera):
         """
         1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
         2. For the write node, never double write. (so we use done flag)
         ... -> [write] -> [retrive] -> ...
         """
-        node1 = self._insert_camera(*args, **kwargs)
-        node2 = node1._retrieve_camera(world_id = node1.world_id)
+        node1 = self._insert_camera(camera_node=camera_node)
+        node2 = node1._retrieve_camera(world_id=node1.world_id)
         return node2
 
-    def predicate(self, *args, **kwargs):
+    def predicate(self, condition: str):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.filter_cam
         new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {"condition": condition}
         return new_node
 
-    def _insert_camera(self, *args, **kwargs):
+    def _insert_camera(self, camera_node: Camera):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.insert_cam
         new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = args, {**kwargs, "world_id": new_node.world_id}
+        new_node.args, new_node.kwargs = [], {"camera_node": camera_node, "world_id": new_node.world_id}
         return new_node
 
-    def _retrieve_camera(self, *args, **kwargs):
+    def _retrieve_camera(self, world_id: str):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.retrieve_cam
         new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {"world_id": world_id}
         return new_node
 
-    def get_camera(self, *args, **kwargs):
+    def get_camera(self):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.get_cam
         new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = args, kwargs
+        new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.CAM)
 
     def _create_new_world_and_link(self):
@@ -110,7 +111,7 @@ class World:
         new_world.parent = self
         return new_world
 
-    def _execute_from_root(self, type):
+    def _execute_from_root(self, type: Type):
         nodes = []
         curr = self
         res = None
@@ -169,7 +170,7 @@ if __name__ == "__main__":
     # w3 = w2.add_camera(camera_node=c3)
     #
     # w4 = w3.predicate(condition="query.fov < 300")
-
+    #
     # res = w4.get_camera()
     #
     # print(res)
