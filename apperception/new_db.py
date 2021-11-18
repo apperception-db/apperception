@@ -167,6 +167,8 @@ class Database:
         return self.cur.fetchall()
 
     # TODO: filter on bbox / traj
+    def filter_traj_type(self, query: Query, object_type: str):
+        return Query.from_(query).select("*").where(query.objecttype == object_type)
 
 if __name__ == "__main__":
     # Ingest the camera to the world

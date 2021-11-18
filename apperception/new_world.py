@@ -68,6 +68,13 @@ class World:
         new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.TRAJ)
 
+    def filter_traj_type(self, object_type: str):
+        new_node = self._create_new_world_and_link()
+        new_node.fn = self.db.filter_traj_type
+        new_node.type = set([Type.TRAJ])
+        new_node.args, new_node.kwargs = [], {"object_type": object_type}
+        return new_node
+
     def add_camera(self, camera_node: Camera):
         """
         1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
@@ -183,5 +190,6 @@ if __name__ == "__main__":
     w3 = w2.recognize(camera_node=c3, recognition_area=BoundingBox(0, 50, 50, 100))
     res2 = w2.get_traj()
     print(res2)
-    res3 = w3.get_traj()
-    print(res3)
+    w4 = w3.filter_traj_type("person")
+    res4 = w4.get_traj()
+    print(res4)
