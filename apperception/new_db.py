@@ -1,16 +1,22 @@
+import datetime
 import sqlite3
 import psycopg2
 import lens
 import point
 from pypika import Table, Field, Column
+
+from bounding_box import BoundingBox
+from new_util import create_camera
 from video_context import Camera
-from video_util import get_video_dimension
+from video_util import get_video_dimension, recognize, add_recognized_objs
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import SnowflakeQuery as Query
 
 
 CAMERA_TABLE = "cameras"
+TRAJ_TABLE = "item_general_trajectory"
+BBOX_TABLE = "general_bbox"
 
 class Database:
     def __init__(self):
@@ -21,6 +27,13 @@ class Database:
 
         # create camera table
         self._create_camera_table()
+
+        # create bbox table
+        self._create_general_bbox_table()
+
+        # create traj table
+        self._create_item_general_trajectory_table()
+
 
     def _create_camera_table(self):
         # drop old
@@ -96,7 +109,6 @@ class Database:
                 .select("*")
                 .where(cam.worldId == world_id)
         )
-        # print(q)
         return q
 
     def filter_cam(self, query: Query, condition: str):
@@ -111,64 +123,73 @@ class Database:
         """
 
         # hack
-        q = f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor" + f" FROM ({query.get_sql()}) AS final"
+        q = f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor" \
+            + f" FROM ({query.get_sql()}) AS final"
 
         print(q)
 
         self.cur.execute(q)
         return self.cur.fetchall()
 
+    def _create_general_bbox_table(self):
+        # already created in create_or_insert_general_trajectory
+        self.cur.execute("DROP TABLE IF EXISTS General_Bbox;")
+        self.con.commit()
+
+    def _create_item_general_trajectory_table(self):
+        # already created in create_or_insert_general_trajectory
+        self.cur.execute("DROP TABLE IF EXISTS Item_General_Trajectory;")
+        self.con.commit()
+
+    def insert_bbox_traj(self, world_id: str, camera_node: Camera, recognition_area: BoundingBox):
+        start_time = datetime.datetime.now()
+        video_file, algo, lens = camera_node.video_file, "Yolo", camera_node.lens
+        tracking_results = recognize(video_file=video_file, recog_algo=algo, recognition_area=recognition_area)
+        add_recognized_objs(self.con, lens, tracking_results, start_time, world_id)
+
+    def retrieve_bbox(self, query: Query = None, world_id: str = ""):
+        bbox = Table(BBOX_TABLE)
+        q = Query.from_(bbox).select("*").where(bbox.worldId == world_id)
+        return query + q if query else q  # UNION
+
+    def retrieve_traj(self, query: Query = None, world_id: str = ""):
+        traj = Table(TRAJ_TABLE)
+        # q = Query.from_(traj).select("*").where(traj.worldId == world_id)
+        q = Query.from_(traj).select("itemid", "objecttype", "worldid").where(traj.worldId == world_id)  # for debug
+        return query + q if query else q  # UNION
+
+    def get_bbox(self, query: Query):
+        self.cur.execute(query.get_sql())
+        return self.cur.fetchall()
+
+    def get_traj(self, query: Query):
+        self.cur.execute(query.get_sql())
+        return self.cur.fetchall()
+
+    # TODO: filter on bbox / traj
 
 if __name__ == "__main__":
-    # Let's define some attribute for constructing the world first
-    name = "traffic_scene"  # world name
-    units = "metrics"  # world units
-    video_file = "../amber_videos/traffic-scene-shorter.mp4"  # example video file
-    lens_attrs = {"fov": 120, "cam_origin": (0, 0, 0), "skew_factor": 0}
-    point_attrs = {"p_id": "p1", "cam_id": "cam1", "x": 0, "y": 0, "z": 0, "time": None, "type": "pos"}
-    camera_attrs = {"ratio": 0.5}
-    fps = 30
-
-    fov, res, cam_origin, skew_factor = (
-        lens_attrs["fov"],
-        [1280, 720],
-        lens_attrs["cam_origin"],
-        lens_attrs["skew_factor"],
-    )
-
-    cam_lens = lens.PinholeLens(res, cam_origin, fov, skew_factor)
-
-    pt_id, cam_id, x, y, z, time, pt_type = (
-        point_attrs["p_id"],
-        point_attrs["cam_id"],
-        point_attrs["x"],
-        point_attrs["y"],
-        point_attrs["z"],
-        point_attrs["time"],
-        point_attrs["type"],
-    )
-    location = point.Point(pt_id, cam_id, x, y, z, time, pt_type)
-
-    ratio = camera_attrs["ratio"]
-
     # Ingest the camera to the world
-    c1 = Camera(
-        cam_id=cam_id,
-        point=location,
-        ratio=ratio,
-        video_file=video_file,
-        metadata_id=name + "_" + cam_id,
-        lens=cam_lens,
-    )
+    c1 = create_camera("cam1", 120)
+    c2 = create_camera("cam2", 150)
 
     db = Database()
+    db.insert_bbox_traj(world_id="myworld", camera_node=c1, recognition_area=BoundingBox(0, 50, 50, 100))
+    db.insert_bbox_traj(world_id="myworld2", camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
+
+
+    q = db.retrieve_traj(world_id="myworld2")
+    db.cur.execute(q.get_sql())
+    res = db.cur.fetchall()
+    print(res)
+
     # db.insert_cam("1", 5, "1")
     # db.insert_cam("2", 3, "2")
-    db.insert_cam("wid-1", c1)
-
-    q = db.retrieve_cam(world_id="wid-1")
-    res = db.execute_get_query(q)
-    print(res)
+    # db.insert_cam("wid-1", c1)
+    #
+    # q = db.retrieve_cam(world_id="wid-1")
+    # res = db.execute_get_query(q)
+    # print(res)
     # # w1 = world()
     # q = ""
     # camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)

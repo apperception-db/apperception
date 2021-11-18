@@ -147,7 +147,6 @@ class World:
             x1, y1, z1 = 0.01082532, 2.59647246, 0
             x2, y2, z2 = 3.01034039, 3.35985782, 2
         else:
-            # TODO: what?
             vs = cv2.VideoCapture(video_file)
             frame = vs.read()
             frame = frame[1]

@@ -6,7 +6,7 @@ def create_camera(cam_id, fov):
     # Let's define some attribute for constructing the world first
     name = "traffic_scene"  # world name
     units = "metrics"  # world units
-    video_file = "../amber_videos/traffic-scene-shorter.mp4"  # example video file
+    video_file = "./amber_videos/traffic-scene-mini.mp4"  # example video file
     lens_attrs = {"fov": fov, "cam_origin": (0, 0, 0), "skew_factor": 0}
     point_attrs = {"p_id": "p1", "cam_id": cam_id, "x": 0, "y": 0, "z": 0, "time": None, "type": "pos"}
     camera_attrs = {"ratio": 0.5}

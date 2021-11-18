@@ -177,11 +177,12 @@ def add_recognized_objs(
     lens: Lens,
     formatted_result: Dict[str, TrackedObject],
     start_time: datetime.datetime,
+    world_id: str,
     properties: dict = {"color": {}},
     default_depth: bool = True,
 ):
-    # TODO: move cleaning to apperception_benchmark.py
-    clean_tables(conn)
+    # # TODO: move cleaning to apperception_benchmark.py
+    # clean_tables(conn)
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(
@@ -223,6 +224,7 @@ def add_recognized_objs(
             start_time,
             tracked_cnt,
             obj_traj,
+            world_id,
             type="yolov4",
         )
         # bbox_to_tasm()
@@ -247,7 +249,7 @@ def bbox_to_data3d(bbox):
 
 
 def bbox_to_postgres(
-    conn, item_id, object_type, color, start_time, timestamps, bboxes, type="yolov3"
+    conn, item_id, object_type, color, start_time, timestamps, bboxes, world_id, type="yolov3"
 ):
     """Insert bboxes to postgres"""
     if type == "yolov3":
@@ -261,7 +263,7 @@ def bbox_to_postgres(
         deltas.append(meta_box[1:])
     postgres_timestamps = convert_timestamps(start_time, timestamps)
     create_or_insert_general_trajectory(
-        conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs
+        conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id
     )
     print(f"{item_id} saved successfully")
 
@@ -274,7 +276,7 @@ def clean_tables(conn):
 
 
 def create_or_insert_general_trajectory(
-    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs
+    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id
 ):
     """Create general trajectory table"""
     # Creating a cursor object using the cursor() method
@@ -292,6 +294,7 @@ def create_or_insert_general_trajectory(
     color TEXT,
     trajCentroids tgeompoint,
     largestBbox stbox,
+    worldId TEXT,
     PRIMARY KEY (itemId)
     );"""
     cursor.execute(create_itemtraj_sql)
@@ -303,6 +306,7 @@ def create_or_insert_general_trajectory(
     create_bboxes_sql = """CREATE TABLE IF NOT EXISTS General_Bbox(
     itemId TEXT,
     trajBbox stbox,
+    worldId TEXT,
     FOREIGN KEY(itemId)
         REFERENCES Item_General_Trajectory(itemId)
     );"""
@@ -311,22 +315,22 @@ def create_or_insert_general_trajectory(
     cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);")
     conn.commit()
     # Insert the trajectory of the first item
-    insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
+    insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id)
 
 
 def insert_general_trajectory(
-    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs
+    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id
 ):
     """Insert general trajectory"""
     # Creating a cursor object using the cursor() method
     cursor = conn.cursor()
     # Inserting bboxes into Bbox table
     insert_bbox_trajectory = ""
-    insert_format = "INSERT INTO General_Bbox (itemId, trajBbox) " + "VALUES ('%s'," % (item_id)
+    insert_format = "INSERT INTO General_Bbox (itemId, worldId, trajBbox) " + "VALUES ('%s','%s'," % (item_id+"-"+world_id, world_id)
     # Insert the item_trajectory separately
     insert_trajectory = (
-        "INSERT INTO Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "
-        + "VALUES ('%s', '%s', '%s', " % (item_id, object_type, color)
+        "INSERT INTO Item_General_Trajectory (itemId, worldId, objectType, color, trajCentroids, largestBbox) "
+        + "VALUES ('%s', '%s', '%s', '%s', " % (item_id+"-"+world_id, world_id, object_type, color)
     )
     traj_centroids = "'{"
     min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = (
