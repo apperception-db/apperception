@@ -16,7 +16,11 @@ mv checkpoints/ ./yolov4-deepsort
 cp ./configs/yolov4-config.py ./yolov4-deepsort/core/config.py
 
 # setup YoloV5
-git clone --recurse-submodules git@github.com:mikel-brostrom/Yolov5_DeepSort_Pytorch.git yolov5-deepsort
+yolov5_dir="yolov5-deepsort"
+git clone --recurse-submodules git@github.com:mikel-brostrom/Yolov5_DeepSort_Pytorch.git "${yolov5_dir}"
+pushd "${yolov5_dir}"
+git checkout 8aec0b5
+popd
 cp ./configs/yolov5-deepsort-config.yaml ./yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml
 pushd yolov5-deepsort
 python3 -m pip install -r requirements.txt
