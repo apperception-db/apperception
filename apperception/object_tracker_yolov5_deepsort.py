@@ -64,7 +64,7 @@ def detect(opt: YoloV5Opt):
     cfg.merge_from_file(opt.config_deepsort)
     attempt_download(deep_sort_weights, repo="mikel-brostrom/Yolov5_DeepSort_Pytorch")
     deepsort = DeepSort(
-        cfg.DEEPSORT.REID_CKPT,
+        deep_sort_weights,
         max_dist=cfg.DEEPSORT.MAX_DIST,
         min_confidence=cfg.DEEPSORT.MIN_CONFIDENCE,
         max_iou_distance=cfg.DEEPSORT.MAX_IOU_DISTANCE,
@@ -92,30 +92,30 @@ def detect(opt: YoloV5Opt):
     names = model.module.names if hasattr(model, "module") else model.names
 
     # Run inference
-    if device.type != "cpu":
-        _, img, _, _ = dataset[0]
-        h, w = img.shape[1:]
+    # if device.type != "cpu":
+    #     _, img, _, _ = dataset[0]
+    #     h, w = img.shape[1:]
 
-        # crop image
-        x1, y1, x2, y2 = [
-            int(v / 100.0)
-            for v in [
-                w * crop.x1,
-                h * crop.y1,
-                w * crop.x2,
-                h * crop.y2,
-            ]
-        ]
+    #     # crop image
+    #     x1, y1, x2, y2 = [
+    #         int(v / 100.0)
+    #         for v in [
+    #             w * crop.x1,
+    #             h * crop.y1,
+    #             w * crop.x2,
+    #             h * crop.y2,
+    #         ]
+    #     ]
 
-        img = img[:, y1:y2, x1:x2]
-        model(
-            torch.zeros(1, 3, img.shape[1], img.shape[2])
-            .to(device)
-            .type_as(next(model.parameters()))
-        )  # run once
+    #     img = img[:, y1:y2, x1:x2]
+    #     model(
+    #         torch.zeros(1, 3, img.shape[1], img.shape[2])
+    #         .to(device)
+    #         .type_as(next(model.parameters()))
+    #     )  # run once
 
     formatted_result: Dict[str, TrackedObject] = {}
-    for frame_idx, (_, img, im0s, _) in enumerate(dataset):
+    for frame_idx, (_, img, im0s, _, _) in enumerate(dataset):
         h, w = img.shape[1:]
 
         # crop image
@@ -152,7 +152,7 @@ def detect(opt: YoloV5Opt):
                 continue
 
             # add padding from cropped frame
-            det[:, :4] += torch.tensor([[x1, y1, x1, y1]])
+            det[:, :4] += torch.tensor([[x1, y1, x1, y1]]).to(device)
 
             # Rescale boxes from img_size to im0 size
             det[:, :4] = scale_coords(
