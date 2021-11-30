@@ -130,13 +130,15 @@ class Database:
         """
 
         # hack
-        q = f"SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor" \
+        q = (
+            f"SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
             + f" FROM ({query.get_sql()}) AS final"
+        )
 
         # print(q)
 
         self.cur.execute(q)
-        return self.cur.fetchall()    
+        return self.cur.fetchall()
 
     def _create_general_bbox_table(self):
         # already created in create_or_insert_general_trajectory
