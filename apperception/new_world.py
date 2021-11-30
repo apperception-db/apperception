@@ -29,8 +29,6 @@ class World:
         self.world_id = str(uuid.uuid4())
         self.type: Set[Type] = None
 
-
-
     def get_id(self):
         # to get world id
         return self.world_id
@@ -194,21 +192,21 @@ if __name__ == "__main__":
          cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
     """
     # w1 = World()
-    
+
     # c2 = create_camera(cam_id="cam2", fov=60)
-    
+
     # w2 = w1.add_camera(camera_node=c2)
-    
+
     # w3 = w2.predicate(condition="query.fov < 30")
 
     # c4 = create_camera(cam_id="cam4", fov=120)
-    
+
     # w4 = w3.add_camera(camera_node=c4)
-    
+
     # w5 = w4.predicate(condition="query.fov < 130")
-    
+
     # res = w5.get_camera()
-    
+
     # print(res)
 
     """
@@ -229,7 +227,6 @@ if __name__ == "__main__":
     # res4 = w4.get_traj()
     # print(res4)
 
-
     """
     w1 ------ w2 --------------- get_bbox
           recognize
@@ -239,28 +236,27 @@ if __name__ == "__main__":
     # w2 = w1.recognize(camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
     # res2 = w2.get_bbox()
     # print(res2)
-    
 
     """
     w1 ------ w2 ------------w3----------------------w4-----------------------w5
          cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
     """
     w1 = World()
-    
+
     c2 = create_camera(cam_id="cam2", fov=60)
-    
+
     w2 = w1.add_camera(camera_node=c2)
-    
+
     w3 = w2.predicate(condition="query.fov < 30")
 
     c4 = create_camera(cam_id="cam4", fov=120)
-    
+
     w4 = w3.add_camera(camera_node=c4)
-    
+
     w5 = w4.predicate(condition="query.fov < 130")
-    
+
     res = w5.get_len()
-    
+
     print(res)
     print(w4.get_id())
     print(w3.get_id())
