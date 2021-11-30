@@ -190,13 +190,14 @@ class Database:
     def interval(self, query, start, end):
         # https://pypika.readthedocs.io/en/latest/4_extending.html
         from pypika import CustomFunction
+
         Tmin = CustomFunction("Tmin", ["stbox"])
         Tmax = CustomFunction("Tmax", ["stbox"])
         return (
-                Query.from_(query)
-                .select("*")
-                .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
-                )
+            Query.from_(query)
+            .select("*")
+            .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
+        )
 
 
 if __name__ == "__main__":

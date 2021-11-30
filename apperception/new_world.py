@@ -1,7 +1,7 @@
+import datetime
 import uuid
 from enum import Enum
 from typing import Set
-import datetime
 
 from bounding_box import BoundingBox
 from new_db import Database
