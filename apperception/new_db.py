@@ -32,6 +32,9 @@ class Database:
         # create traj table
         self._create_item_general_trajectory_table()
 
+        # The start time of the database access object
+        self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
+
     def _create_camera_table(self):
         # drop old
         q1 = Query.drop_table(CAMERA_TABLE).if_exists()
@@ -151,12 +154,11 @@ class Database:
         self.con.commit()
 
     def insert_bbox_traj(self, world_id: str, camera_node: Camera, recognition_area: BoundingBox):
-        start_time = datetime.datetime.now()
         video_file, algo, lens = camera_node.video_file, "Yolo", camera_node.lens
         tracking_results = recognize(
             video_file=video_file, recog_algo=algo, recognition_area=recognition_area
         )
-        add_recognized_objs(self.con, lens, tracking_results, start_time, world_id)
+        add_recognized_objs(self.con, lens, tracking_results, self.start_time, world_id)
 
     def retrieve_bbox(self, query: Query = None, world_id: str = ""):
         bbox = Table(BBOX_TABLE)
@@ -184,6 +186,17 @@ class Database:
     # TODO: filter on bbox / traj
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
+
+    def interval(self, query, start, end):
+        # https://pypika.readthedocs.io/en/latest/4_extending.html
+        from pypika import CustomFunction
+        Tmin = CustomFunction("Tmin", ["stbox"])
+        Tmax = CustomFunction("Tmax", ["stbox"])
+        return (
+                Query.from_(query)
+                .select("*")
+                .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
+                )
 
 
 if __name__ == "__main__":

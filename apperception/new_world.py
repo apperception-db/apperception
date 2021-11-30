@@ -1,6 +1,7 @@
 import uuid
 from enum import Enum
 from typing import Set
+import datetime
 
 from bounding_box import BoundingBox
 from new_db import Database
@@ -83,6 +84,17 @@ class World:
         new_node.fn = self.db.filter_traj_type
         new_node.type = set([Type.TRAJ])
         new_node.args, new_node.kwargs = [], {"object_type": object_type}
+        return new_node
+
+    def interval(self, start, end):
+        new_node = self._create_new_world_and_link()
+
+        starttime = str(self.db.start_time + datetime.timedelta(seconds=start))
+        endtime = str(self.db.start_time + datetime.timedelta(seconds=end))
+
+        new_node.fn = self.db.interval
+        new_node.type = set([Type.BBOX])
+        new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
         return new_node
 
     def add_camera(self, camera_node: Camera):
@@ -231,32 +243,34 @@ if __name__ == "__main__":
     w1 ------ w2 --------------- get_bbox
           recognize
     """
-    # w1 = World()
-    # c2 = create_camera(cam_id="cam2", fov=60)
-    # w2 = w1.recognize(camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
-    # res2 = w2.get_bbox()
-    # print(res2)
+    w1 = World()
+    c2 = create_camera(cam_id="cam2", fov=60)
+    w2 = w1.recognize(camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
+
+    w3 = w2.interval(0, 3)
+    res2 = w3.get_bbox()
+    print(res2)
 
     """
     w1 ------ w2 ------------w3----------------------w4-----------------------w5
          cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
     """
-    w1 = World()
+    # w1 = World()
 
-    c2 = create_camera(cam_id="cam2", fov=60)
+    # c2 = create_camera(cam_id="cam2", fov=60)
 
-    w2 = w1.add_camera(camera_node=c2)
+    # w2 = w1.add_camera(camera_node=c2)
 
-    w3 = w2.predicate(condition="query.fov < 30")
+    # w3 = w2.predicate(condition="query.fov < 30")
 
-    c4 = create_camera(cam_id="cam4", fov=120)
+    # c4 = create_camera(cam_id="cam4", fov=120)
 
-    w4 = w3.add_camera(camera_node=c4)
+    # w4 = w3.add_camera(camera_node=c4)
 
-    w5 = w4.predicate(condition="query.fov < 130")
+    # w5 = w4.predicate(condition="query.fov < 130")
 
-    res = w5.get_len()
+    # res = w5.get_len()
 
-    print(res)
-    print(w4.get_id())
-    print(w3.get_id())
+    # print(res)
+    # print(w4.get_id())
+    # print(w3.get_id())
