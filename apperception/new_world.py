@@ -3,6 +3,10 @@ import uuid
 from enum import Enum
 from typing import Set, Dict, Any
 
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+
 from point import Point
 from bounding_box import BoundingBox
 from new_db import Database
@@ -32,11 +36,28 @@ class World:
         self.world_id = str(uuid.uuid4())
         self.type: Set[Type] = None
 
+    def overlay_trajectory(self, cam_id, trajectory):
+        camera = World.camera_nodes[cam_id]
+        video_file = camera.video_file
+        for traj in trajectory:
+            current_trajectory = np.asarray(traj[0])
+            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+            vs = cv2.VideoCapture(video_file)
+            frame = vs.read()
+            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+            for point in frame_points.tolist():
+                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
+            plt.figure()
+            plt.imshow(frame)
+            plt.show()
+
     def get_id(self):
         # to get world id
         return self.world_id
 
     def recognize(self, cam_id: str, recognition_area: BoundingBox):
+        assert cam_id in World.camera_nodes
+
         camera_node = World.camera_nodes[cam_id]
         node1 = self._insert_bbox_traj(camera_node=camera_node, recognition_area=recognition_area)
         node2 = node1._retrieve_bbox(world_id=node1.world_id)
