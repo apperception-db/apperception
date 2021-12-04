@@ -36,7 +36,8 @@ class World:
         # to get world id
         return self.world_id
 
-    def recognize(self, camera_node: Camera, recognition_area: BoundingBox):
+    def recognize(self, cam_id: str, recognition_area: BoundingBox):
+        camera_node = World.camera_nodes[cam_id]
         node1 = self._insert_bbox_traj(camera_node=camera_node, recognition_area=recognition_area)
         node2 = node1._retrieve_bbox(world_id=node1.world_id)
         node3 = node2._retrieve_traj(world_id=node1.world_id)
@@ -207,85 +208,4 @@ class World:
 
 if __name__ == "__main__":
 
-    """
-    w1 ------ w2 ------------w3----------------------w4-----------------------w5
-         cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
-    """
-    # w1 = World()
-
-    # c2 = create_camera(cam_id="cam2", fov=60)
-
-    # w2 = w1.add_camera(camera_node=c2)
-
-    # w3 = w2.predicate(condition="query.fov < 30")
-
-    # c4 = create_camera(cam_id="cam4", fov=120)
-
-    # w4 = w3.add_camera(camera_node=c4)
-
-    # w5 = w4.predicate(condition="query.fov < 130")
-
-    # res = w5.get_camera()
-
-    # print(res)
-
-    """
-    w1 ------ w2 ----------------- w3 ---------------- w4 --------------------
-          recognize              recognize          filter_traj_type         |
-              |                                                              |
-              -------- get_traj                                              -------- get_traj
-    """
-    # w1 = World()
-    # c2 = create_camera(cam_id="cam2", fov=60)
-    # c3 = create_camera(cam_id="cam3", fov=60)
-    # # w2 = w1.add_camera(camera_node=c2)
-    # w2 = w1.recognize(camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
-    # w3 = w2.recognize(camera_node=c3, recognition_area=BoundingBox(0, 50, 50, 100))
-    # res2 = w2.get_traj()
-    # print(res2)
-    # w4 = w3.filter_traj_type("person")
-    # res4 = w4.get_traj()
-    # print(res4)
-
-    """
-    w1 ------ w2 --------------- get_bbox
-          recognize
-    """
-    w1 = World()
-    c2 = create_camera(cam_id="cam2", fov=60)
-    w2 = w1.recognize(camera_node=c2, recognition_area=BoundingBox(0, 50, 50, 100))
-
-    w3 = w2.interval(0, 3)
-    res2 = w3.get_bbox()
-    print(res2)
-
-    """
-    w1 ------ w2 ------------w3----------------------w4-----------------------w5
-         cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
-    """
-    # w1 = World()
-
-    # c2 = create_camera(cam_id="cam2", fov=60)
-
-    """
-    w1 ------ w2 ------------w3----------------------w4-----------------------w5
-         cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
-    """
-    w1 = World()
-    
-    c2 = create_camera(cam_id="cam2", fov=60)
-    
-    w2 = w1.add_camera(cam_id=c2.cam_id, point=c2.point, ratio=c2.ratio, video_file=c2.video_file, metadata_id=c2.metadata_id, lens=c2.lens)
-    
-    w3 = w2.predicate(condition="query.fov < 30")
-
-    c4 = create_camera(cam_id="cam4", fov=120)
-    
-    w4 = w3.add_camera(cam_id=c4.cam_id, point=c4.point, ratio=c4.ratio, video_file=c4.video_file, metadata_id=c4.metadata_id, lens=c4.lens)
-
-    w5 = w4.predicate(condition="query.fov < 130")
-
-    res = w5.get_camera()
-
-    print(res)
-
+    pass
