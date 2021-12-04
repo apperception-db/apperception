@@ -248,7 +248,7 @@ def add_recognized_objs(
     lens: Lens,
     formatted_result: Dict[str, TrackedObject],
     start_time: datetime.datetime,
-    world_id: str,
+    world_id: str = "default",
     properties: dict = {"color": {}},
     default_depth: bool = True,
 ):
@@ -320,7 +320,7 @@ def bbox_to_data3d(bbox):
 
 
 def bbox_to_postgres(
-    conn, item_id, object_type, color, start_time, timestamps, bboxes, world_id, type="yolov3"
+    conn, item_id, object_type, color, start_time, timestamps, bboxes, world_id="default", type="yolov3"
 ):
     """Insert bboxes to postgres"""
     if type == "yolov3":
@@ -347,7 +347,7 @@ def clean_tables(conn):
 
 
 def create_or_insert_general_trajectory(
-    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id
+    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id="default"
 ):
     """Create general trajectory table"""
     # Creating a cursor object using the cursor() method
@@ -392,7 +392,7 @@ def create_or_insert_general_trajectory(
 
 
 def insert_general_trajectory(
-    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id
+    conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, world_id="default"
 ):
     """Insert general trajectory"""
     # Creating a cursor object using the cursor() method
@@ -481,7 +481,7 @@ def merge_trajectory(item_id, new_postgres_timestamps, new_bboxes, new_pairs):
     return
 
 
-def fetch_camera(conn, world_id, cam_id=[]):
+def fetch_camera(conn, world_id="default", cam_id=[]):
     cursor = conn.cursor()
 
     if cam_id == []:
