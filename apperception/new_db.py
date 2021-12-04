@@ -3,7 +3,7 @@ import datetime
 import psycopg2
 from bounding_box import BoundingBox
 from new_util import create_camera
-from pypika import Column, Table
+from pypika import Column, Table, CustomFunction
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import SnowflakeQuery as Query
@@ -118,8 +118,8 @@ class Database:
 
         # hack
         q = (
-            f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
-            + f" FROM ({query.get_sql()}) AS final"
+                f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
+                + f" FROM ({query.get_sql()}) AS final"
         )
 
         # print(q)
@@ -134,11 +134,9 @@ class Database:
 
         # hack
         q = (
-            f"SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
-            + f" FROM ({query.get_sql()}) AS final"
+                f"SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
+                + f" FROM ({query.get_sql()}) AS final"
         )
-
-        # print(q)
 
         self.cur.execute(q)
         return self.cur.fetchall()
@@ -175,28 +173,41 @@ class Database:
         return self.cur.fetchall()
 
     def get_traj(self, query: Query):
-        self.cur.execute(query.get_sql())
+        # hack
+        query = (
+                f"SELECT asMFJSON(trajCentroids)::json->'coordinates'"
+                + f" FROM ({query.get_sql()}) as final"
+        )
+
+        print('get_traj', query)
+        self.cur.execute(query)
         return self.cur.fetchall()
 
     def get_traj_key(self, query: Query):
         q = Query.from_(query).select("itemid")
+        print('get_traj_key', q.get_sql())
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
-    # TODO: filter on bbox / traj
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
 
+    def filter_traj_volume(self, query: Query, volume: str):
+        overlap = CustomFunction("overlap", ["bbox1", "bbox2"])
+        return (
+            Query.from_(query)
+                .select("*")
+                .where(overlap(query.largestBbox, volume))
+        )
+
     def interval(self, query, start, end):
         # https://pypika.readthedocs.io/en/latest/4_extending.html
-        from pypika import CustomFunction
-
         Tmin = CustomFunction("Tmin", ["stbox"])
         Tmax = CustomFunction("Tmax", ["stbox"])
         return (
             Query.from_(query)
-            .select("*")
-            .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
+                .select("*")
+                .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
         )
 
 

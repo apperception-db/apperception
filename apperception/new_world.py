@@ -5,15 +5,21 @@ from typing import Set, Dict, Any
 
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
 
 from point import Point
-from bounding_box import BoundingBox
+from bounding_box import BoundingBox, WHOLE_FRAME
 from new_db import Database
 from new_util import create_camera
 from video_context import Camera
 from lens import Lens
+import matplotlib
+import matplotlib.pyplot as plt
 
+matplotlib.use("Qt5Agg")
+print('get backend', matplotlib.get_backend())
+# plt.figure()
+# plt.plot([1,2,3,4])
+# plt.show()
 
 class Type(Enum):
     # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
@@ -22,7 +28,7 @@ class Type(Enum):
     CAM, BBOX, TRAJ = 0, 1, 2
 
 
-BASE_VOLUME_QUERY_TEXT = "stbox 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'"
+BASE_VOLUME_QUERY_TEXT = 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'
 
 
 class World:
@@ -40,6 +46,8 @@ class World:
         self.type: Set[Type] = None
 
     def overlay_trajectory(self, cam_id, trajectory):
+        matplotlib.use("Qt5Agg")  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
+        print('get backend', matplotlib.get_backend())
         camera = World.camera_nodes[cam_id]
         video_file = camera.video_file
         for traj in trajectory:
@@ -55,7 +63,7 @@ class World:
             plt.show()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
-        camera = self.camera_nodes.camera_nodes[cam_id]
+        camera = self.camera_nodes[cam_id]
         video_file = camera.video_file
         if default:
             x1, y1, z1 = 0.01082532, 2.59647246, 0
@@ -83,7 +91,7 @@ class World:
         # to get world id
         return self.world_id
 
-    def recognize(self, cam_id: str, recognition_area: BoundingBox):
+    def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
         assert cam_id in World.camera_nodes
 
         camera_node = World.camera_nodes[cam_id]
@@ -145,13 +153,21 @@ class World:
         new_node.args, new_node.kwargs = [], {"object_type": object_type}
         return new_node
 
-    def add_camera(self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens):
+    def filter_traj_volume(self, volume: str):
+        new_node = self._create_new_world_and_link()
+        new_node.fn = self.db.filter_traj_volume
+        new_node.type = set([Type.TRAJ])
+        new_node.args, new_node.kwargs = [], {"volume": volume}
+        return new_node
+
+
+    def add_camera(self, cam_id: str, location: Point, ratio: float, video_file: str, metadata_identifier: str, lens: Lens):
         """
         1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
         2. For the write node, never double write. (so we use done flag)
         ... -> [write] -> [retrive] -> ...
         """
-        camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
+        camera_node = Camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
         World.camera_nodes[cam_id] = camera_node
 
         node1 = self._insert_camera(camera_node=camera_node)
@@ -261,6 +277,3 @@ class World:
             self.fn, self.args, self.kwargs, self.done, self.world_id
         )
 
-
-if __name__ == "__main__":
-    pass

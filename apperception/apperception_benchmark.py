@@ -10,7 +10,7 @@ from world import World, world_executor
 # Let's define some attribute for constructing the world first
 name = "traffic_scene"  # world name
 units = "metrics"  # world units
-video_file = "./amber_videos/traffic-scene-shorter.mp4"  # example video file
+video_file = "./amber_videos/traffic-scene-mini.mp4"  # example video file
 lens_attrs = {"fov": 120, "cam_origin": (0, 0, 0), "skew_factor": 0}
 point_attrs = {"p_id": "p1", "cam_id": "cam1", "x": 0, "y": 0, "z": 0, "time": None, "type": "pos"}
 camera_attrs = {"ratio": 0.5}
@@ -36,7 +36,7 @@ cam_lens = lens.PinholeLens(res, cam_origin, fov, skew_factor)
 
 pt_id, cam_id, x, y, z, time, pt_type = (
     point_attrs["p_id"],
-    point_attrs["cam_id"],  # why we need camera
+    point_attrs["cam_id"],
     point_attrs["x"],
     point_attrs["y"],
     point_attrs["z"],
@@ -80,6 +80,7 @@ if len(filtered_ids) > 0:
         .get_trajectory(distinct=True)
         .execute()
     )
+    print(trajectory)
 
     # plot the trajectory of each cars on the first video frame
 
