@@ -112,19 +112,6 @@ class World:
         new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
         return new_node
 
-    def add_camera(self, camera_node: Camera):
-        """
-        1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
-        2. For the write node, never double write. (so we use done flag)
-        ... -> [write] -> [retrive] -> ...
-        """
-        camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
-        World.camera_nodes[cam_id] = camera_node
-
-        node1 = self._insert_camera(camera_node=camera_node)
-        node2 = node1._retrieve_camera(world_id=node1.world_id)
-        return node2
-
     def add_properties(self, cam_id: str, properties: Any):
         self.camera_nodes[cam_id].add_property(properties)
 
