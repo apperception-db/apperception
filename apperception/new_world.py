@@ -103,6 +103,13 @@ class World:
         new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.TRAJ)
 
+    def get_traj_key(self):
+        new_node = self._create_new_world_and_link()
+        new_node.fn = self.db.get_traj_key
+        new_node.type = set([Type.TRAJ])
+        new_node.args, new_node.kwargs = [], {}
+        return new_node._execute_from_root(Type.TRAJ)
+
     def filter_traj_type(self, object_type: str):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.filter_traj_type

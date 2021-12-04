@@ -167,12 +167,7 @@ class Database:
 
     def retrieve_traj(self, query: Query = None, world_id: str = ""):
         traj = Table(TRAJ_TABLE)
-        # q = Query.from_(traj).select("*").where(traj.worldId == world_id)
-        q = (
-            Query.from_(traj)
-            .select("itemid", "objecttype", "worldid")
-            .where(traj.worldId == world_id)
-        )  # for debug
+        q = Query.from_(traj).select("*").where(traj.worldId == world_id)
         return query + q if query else q  # UNION
 
     def get_bbox(self, query: Query):
@@ -181,6 +176,11 @@ class Database:
 
     def get_traj(self, query: Query):
         self.cur.execute(query.get_sql())
+        return self.cur.fetchall()
+
+    def get_traj_key(self, query: Query):
+        q = Query.from_(query).select("itemid")
+        self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
     # TODO: filter on bbox / traj
