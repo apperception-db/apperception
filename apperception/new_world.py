@@ -14,12 +14,15 @@ from new_util import create_camera
 from video_context import Camera
 from lens import Lens
 
+
 class Type(Enum):
-    # query type:
-    # for example, if we call get_cam(), and we execute the commands from root.
-    # when we encounter recognize(), we should not execute it because the inserted object must not be in the final result.
-    # we use enum type to determine whether we should execute this node
+    # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
+    # recognize(), we should not execute it because the inserted object must not be in the final result. we use enum
+    # type to determine whether we should execute this node
     CAM, BBOX, TRAJ = 0, 1, 2
+
+
+BASE_VOLUME_QUERY_TEXT = "stbox 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'"
 
 
 class World:
@@ -50,6 +53,31 @@ class World:
             plt.figure()
             plt.imshow(frame)
             plt.show()
+
+    def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
+        camera = self.camera_nodes.camera_nodes[cam_id]
+        video_file = camera.video_file
+        if default:
+            x1, y1, z1 = 0.01082532, 2.59647246, 0
+            x2, y2, z2 = 3.01034039, 3.35985782, 2
+        else:
+            vs = cv2.VideoCapture(video_file)
+            frame = vs.read()
+            frame = frame[1]
+            cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
+            cv2.resizeWindow("Frame", 384, 216)
+            initBB = cv2.selectROI("Frame", frame, fromCenter=False)
+            print(initBB)
+            cv2.destroyAllWindows()
+            print("world coordinate #1")
+            tl = camera.lens.pixel_to_world(initBB[:2], 1)
+            print(tl)
+            x1, y1, z1 = tl
+            print("world coordinate #2")
+            br = camera.lens.pixel_to_world((initBB[0] + initBB[2], initBB[1] + initBB[3]), 1)
+            print(br)
+            x2, y2, z2 = br
+        return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
 
     def get_id(self):
         # to get world id
@@ -235,5 +263,4 @@ class World:
 
 
 if __name__ == "__main__":
-
     pass
