@@ -1,13 +1,14 @@
 import datetime
 import uuid
 from enum import Enum
-from typing import Set
+from typing import Set, Dict, Any
 
+from point import Point
 from bounding_box import BoundingBox
 from new_db import Database
 from new_util import create_camera
 from video_context import Camera
-
+from lens import Lens
 
 class Type(Enum):
     # query type:
@@ -20,6 +21,7 @@ class Type(Enum):
 class World:
     # all worlds share a db instance
     db = Database()
+    camera_nodes: Dict[str, Camera] = {}
 
     def __init__(self):
         self.fn = None
@@ -86,6 +88,19 @@ class World:
         new_node.args, new_node.kwargs = [], {"object_type": object_type}
         return new_node
 
+    def add_camera(self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens):
+        """
+        1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
+        2. For the write node, never double write. (so we use done flag)
+        ... -> [write] -> [retrive] -> ...
+        """
+        camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
+        World.camera_nodes[cam_id] = camera_node
+
+        node1 = self._insert_camera(camera_node=camera_node)
+        node2 = node1._retrieve_camera(world_id=node1.world_id)
+        return node2
+
     def interval(self, start, end):
         new_node = self._create_new_world_and_link()
 
@@ -103,9 +118,15 @@ class World:
         2. For the write node, never double write. (so we use done flag)
         ... -> [write] -> [retrive] -> ...
         """
+        camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
+        World.camera_nodes[cam_id] = camera_node
+
         node1 = self._insert_camera(camera_node=camera_node)
         node2 = node1._retrieve_camera(world_id=node1.world_id)
         return node2
+
+    def add_properties(self, cam_id: str, properties: Any):
+        self.camera_nodes[cam_id].add_property(properties)
 
     def predicate(self, condition: str):
         new_node = self._create_new_world_and_link()
@@ -259,18 +280,25 @@ if __name__ == "__main__":
 
     # c2 = create_camera(cam_id="cam2", fov=60)
 
-    # w2 = w1.add_camera(camera_node=c2)
+    """
+    w1 ------ w2 ------------w3----------------------w4-----------------------w5
+         cam2(fov=60)  predicate(fov<30)       cam4(fov=120)         predicate(fov<130)
+    """
+    w1 = World()
+    
+    c2 = create_camera(cam_id="cam2", fov=60)
+    
+    w2 = w1.add_camera(cam_id=c2.cam_id, point=c2.point, ratio=c2.ratio, video_file=c2.video_file, metadata_id=c2.metadata_id, lens=c2.lens)
+    
+    w3 = w2.predicate(condition="query.fov < 30")
 
-    # w3 = w2.predicate(condition="query.fov < 30")
+    c4 = create_camera(cam_id="cam4", fov=120)
+    
+    w4 = w3.add_camera(cam_id=c4.cam_id, point=c4.point, ratio=c4.ratio, video_file=c4.video_file, metadata_id=c4.metadata_id, lens=c4.lens)
 
-    # c4 = create_camera(cam_id="cam4", fov=120)
+    w5 = w4.predicate(condition="query.fov < 130")
 
-    # w4 = w3.add_camera(camera_node=c4)
+    res = w5.get_camera()
 
-    # w5 = w4.predicate(condition="query.fov < 130")
+    print(res)
 
-    # res = w5.get_len()
-
-    # print(res)
-    # print(w4.get_id())
-    # print(w3.get_id())
