@@ -249,7 +249,15 @@ def bbox_to_data3d(bbox):
 
 
 def bbox_to_postgres(
-    conn, item_id, object_type, color, start_time, timestamps, bboxes, world_id="default", type="yolov3"
+    conn,
+    item_id,
+    object_type,
+    color,
+    start_time,
+    timestamps,
+    bboxes,
+    world_id="default",
+    type="yolov3",
 ):
     """Insert bboxes to postgres"""
     if type == "yolov3":

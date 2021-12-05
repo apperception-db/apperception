@@ -1,25 +1,24 @@
 import datetime
 import uuid
 from enum import Enum
-from typing import Set, Dict, Any
+from typing import Any, Dict, Set
 
 import cv2
-import numpy as np
-
-from point import Point
-from bounding_box import BoundingBox, WHOLE_FRAME
-from new_db import Database
-from new_util import create_camera
-from video_context import Camera
-from lens import Lens
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+from bounding_box import WHOLE_FRAME, BoundingBox
+from lens import Lens
+from new_db import Database
+from point import Point
+from video_context import Camera
 
 matplotlib.use("Qt5Agg")
-print('get backend', matplotlib.get_backend())
+print("get backend", matplotlib.get_backend())
 # plt.figure()
 # plt.plot([1,2,3,4])
 # plt.show()
+
 
 class Type(Enum):
     # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
@@ -28,7 +27,7 @@ class Type(Enum):
     CAM, BBOX, TRAJ = 0, 1, 2
 
 
-BASE_VOLUME_QUERY_TEXT = 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'
+BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 
 
 class World:
@@ -46,8 +45,10 @@ class World:
         self.type: Set[Type] = None
 
     def overlay_trajectory(self, cam_id, trajectory):
-        matplotlib.use("Qt5Agg")  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
-        print('get backend', matplotlib.get_backend())
+        matplotlib.use(
+            "Qt5Agg"
+        )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
+        print("get backend", matplotlib.get_backend())
         camera = World.camera_nodes[cam_id]
         video_file = camera.video_file
         for traj in trajectory:
@@ -160,8 +161,15 @@ class World:
         new_node.args, new_node.kwargs = [], {"volume": volume}
         return new_node
 
-
-    def add_camera(self, cam_id: str, location: Point, ratio: float, video_file: str, metadata_identifier: str, lens: Lens):
+    def add_camera(
+        self,
+        cam_id: str,
+        location: Point,
+        ratio: float,
+        video_file: str,
+        metadata_identifier: str,
+        lens: Lens,
+    ):
         """
         1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
         2. For the write node, never double write. (so we use done flag)
@@ -276,4 +284,3 @@ class World:
         return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(
             self.fn, self.args, self.kwargs, self.done, self.world_id
         )
-
