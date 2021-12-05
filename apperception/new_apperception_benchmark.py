@@ -1,8 +1,6 @@
 import lens
 import point
-from bounding_box import BoundingBox
 from new_world import World
-
 
 # Let's define some attribute for constructing the world first
 name = "traffic_scene"  # world name
