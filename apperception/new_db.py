@@ -214,6 +214,16 @@ class Database:
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
+    def get_distance(self, query, start, end):
+        atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
+        cumulativeLength = CustomFunction("cumulativeLength", ["input"])
+        q = Query.from_(query).select(
+                cumulativeLength(atPeriodSet(query.trajCentroids,
+                    "{[%s, %s)}" % (start, end))))
+
+        self.cur.execute(q.get_sql())
+        return self.cur.fetchall()
+
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
 
