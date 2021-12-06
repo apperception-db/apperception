@@ -198,12 +198,13 @@ class Database:
         Zmax = CustomFunction("Zmax", ["stbox"])
 
         q = Query.from_(query).select(
-                Xmin(query.trajBbox),
-                Ymin(query.trajBbox),
-                Zmin(query.trajBbox),
-                Xmax(query.trajBbox),
-                Ymax(query.trajBbox),
-                Zmax(query.trajBbox))
+            Xmin(query.trajBbox),
+            Ymin(query.trajBbox),
+            Zmin(query.trajBbox),
+            Xmax(query.trajBbox),
+            Ymax(query.trajBbox),
+            Zmax(query.trajBbox),
+        )
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
