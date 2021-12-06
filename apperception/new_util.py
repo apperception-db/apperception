@@ -1,5 +1,7 @@
 import lens
 import point
+from video_util import convert_datetime_to_frame_num, get_video_roi
+from world_executor import create_transform_matrix, reformat_fetched_world_coords, world_to_pixel
 from video_context import Camera
 
 
@@ -51,3 +53,51 @@ def create_camera(cam_id, fov):
         metadata_id=name + "_" + cam_id,
         lens=cam_lens,
     )
+
+def video_fetch_reformat(fetched_meta):
+    result = {}
+    for meta in fetched_meta:
+        item_id, coordinates, timestamp = meta[0], meta[1:-1], meta[-1]
+        if item_id in result:
+            result[item_id][0].append(coordinates)
+            result[item_id][1].append(timestamp)
+        else:
+            result[item_id] = [[coordinates], [timestamp]]
+
+    return result
+
+def get_video(metadata_results, cams, start_time):
+    print("Start time is", start_time)
+    # The cam nodes are raw data from the database
+    # TODO: I forget why we used the data from the db instead of directly fetch
+    # from the world
+    print(metadata_results)
+    print(cams)
+
+    video_files = []
+    for cam in cams:
+        cam_id, ratio, cam_x, cam_y, cam_z, focal_x, focal_y, fov, skew_factor = cam.cam_id, cam.ratio, cam.lens.cam_origin[0], cam.lens.cam_origin[1], cam.lens.cam_origin[2], cam.lens.focal_x, cam.lens.focal_y, cam.lens.fov, cam.lens.alpha
+        cam_video_file = cam.video_file
+        transform_matrix = create_transform_matrix(focal_x, focal_y, cam_x, cam_y, skew_factor)
+
+        for item_id, vals in metadata_results.items():
+            world_coords, timestamps = vals
+            # print("timestamps are", timestamps)
+            world_coords = reformat_fetched_world_coords(world_coords)
+            print(world_coords, transform_matrix)
+            cam_coords = world_to_pixel(world_coords, transform_matrix)
+
+            vid_times = convert_datetime_to_frame_num(start_time, timestamps)
+            # print(vid_times)
+
+            vid_fname = (
+                "./output/"
+                + cam.metadata_id
+                + item_id
+                + ".mp4"
+            )
+            # print(vid_fname)
+            get_video_roi(vid_fname, cam_video_file, cam_coords, vid_times)
+            video_files.append(vid_fname)
+    print("output video files", ",".join(video_files))
+    return video_files

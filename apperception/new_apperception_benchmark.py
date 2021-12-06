@@ -49,24 +49,21 @@ traffic_world = traffic_world.add_camera(
 # Call execute on the world to run the detection algorithm and save the real data to the database
 recognized_world = traffic_world.recognize(cam_id)
 
-# TODO: filtered by volume
 volume = traffic_world.select_intersection_of_interest_or_use_default(cam_id=cam_id)
-# filtered_world = traffic_world.predicate(lambda obj: obj.object_type == "car").predicate(
-#     lambda obj: obj.location in volume, {"volume": volume}
-# )
-# filtered_world = filtered_world.interval([0, fps * 3])
 
-# filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume).interval(0, fps * 3)
-filtered_world = recognized_world.filter_traj_type("car").interval(0, fps * 3)
+filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume).interval(0, fps * 3)
 filtered_ids = filtered_world.get_traj_key()
-
 print("filtered_ids are", filtered_ids)
 print(len(filtered_ids))
 
-# trajectory = recognized_world.filter_traj_type("car").filter_traj_volume(volume).get_traj()
-trajectory = recognized_world.filter_traj_type("car").get_traj()
+trajectory = filtered_world.get_traj()
 print("trajectories are", trajectory)
+
+# draw overlay
 traffic_world.overlay_trajectory(cam_id, trajectory)
+
+# render tracking video
+filtered_world.get_video([cam_id])
 
 
 print("Times are:")

@@ -1,7 +1,7 @@
 import datetime
 import uuid
 from enum import Enum
-from typing import Any, Dict, Set
+from typing import Set, Dict, Any, List
 
 import cv2
 import matplotlib
@@ -125,6 +125,13 @@ class World:
         new_node.type = set([Type.TRAJ])
         new_node.args, new_node.kwargs = [], {"world_id": world_id}
         return new_node
+
+    def get_video(self, cam_ids: List = []):
+        new_node = self._create_new_world_and_link()
+        new_node.fn = self.db.get_video
+        new_node.type = set([Type.TRAJ])
+        new_node.args, new_node.kwargs = [], {"cams": [World.camera_nodes[cam_id] for cam_id in cam_ids]}
+        return new_node._execute_from_root(Type.TRAJ)
 
     def get_bbox(self):
         new_node = self._create_new_world_and_link()
