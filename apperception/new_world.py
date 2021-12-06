@@ -241,6 +241,13 @@ class World:
         new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.BBOX)
 
+    def get_time(self):
+        new_node = self._create_new_world_and_link()
+        new_node.fn = self.db.get_time
+        new_node.type = set([Type.BBOX])
+        new_node.args, new_node.kwargs = [], {}
+        return new_node._execute_from_root(Type.BBOX)
+
     def _create_new_world_and_link(self):
         new_world = World()
         new_world.parent = self
