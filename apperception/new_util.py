@@ -67,12 +67,9 @@ def video_fetch_reformat(fetched_meta):
     return result
 
 def get_video(metadata_results, cams, start_time):
-    print("Start time is", start_time)
     # The cam nodes are raw data from the database
     # TODO: I forget why we used the data from the db instead of directly fetch
     # from the world
-    print(metadata_results)
-    print(cams)
 
     video_files = []
     for cam in cams:
@@ -84,7 +81,6 @@ def get_video(metadata_results, cams, start_time):
             world_coords, timestamps = vals
             # print("timestamps are", timestamps)
             world_coords = reformat_fetched_world_coords(world_coords)
-            print(world_coords, transform_matrix)
             cam_coords = world_to_pixel(world_coords, transform_matrix)
 
             vid_times = convert_datetime_to_frame_num(start_time, timestamps)
