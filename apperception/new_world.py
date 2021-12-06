@@ -166,6 +166,16 @@ class World:
         new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
         return new_node._execute_from_root(Type.TRAJ)
 
+    def get_speed(self, start, end):
+        new_node = self._create_new_world_and_link()
+        starttime = str(self.db.start_time + datetime.timedelta(seconds=start))
+        endtime = str(self.db.start_time + datetime.timedelta(seconds=end))
+
+        new_node.fn = self.db.get_speed
+        new_node.type = set([Type.TRAJ])
+        new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
+        return new_node._execute_from_root(Type.TRAJ)
+
     def filter_traj_type(self, object_type: str):
         new_node = self._create_new_world_and_link()
         new_node.fn = self.db.filter_traj_type

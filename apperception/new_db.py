@@ -224,6 +224,17 @@ class Database:
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
+    def get_speed(self, query, start, end):
+        atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
+        speed = CustomFunction("speed", ["input"])
+
+        q = Query.from_(query).select(
+                speed(atPeriodSet(query.trajCentroids,
+                    "{[%s, %s)}" % (start, end))))
+
+        self.cur.execute(q.get_sql())
+        return self.cur.fetchall()
+
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
 
