@@ -257,8 +257,6 @@ class Database:
                 )
             )
 
-        print(query)
-
         self.cur.execute(query.get_sql())
         fetched_meta = self.cur.fetchall()
         fetched_meta = video_fetch_reformat(fetched_meta)
