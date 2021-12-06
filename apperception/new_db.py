@@ -229,8 +229,8 @@ class Database:
         speed = CustomFunction("speed", ["input"])
 
         q = Query.from_(query).select(
-                speed(atPeriodSet(query.trajCentroids,
-                    "{[%s, %s)}" % (start, end))))
+            speed(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
+        )
 
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
