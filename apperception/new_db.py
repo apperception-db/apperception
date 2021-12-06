@@ -2,7 +2,7 @@ import datetime
 
 import psycopg2
 from bounding_box import BoundingBox
-from new_util import create_camera
+from new_util import create_camera, video_fetch_reformat, get_video
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
@@ -231,6 +231,38 @@ class Database:
             .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
         )
 
+    def get_video(self, query, cams):
+        bbox = Table(BBOX_TABLE)
+        Xmin = CustomFunction("Xmin", ["stbox"])
+        Ymin = CustomFunction("Ymin", ["stbox"])
+        Zmin = CustomFunction("Zmin", ["stbox"])
+        Xmax = CustomFunction("Xmax", ["stbox"])
+        Ymax = CustomFunction("Ymax", ["stbox"])
+        Zmax = CustomFunction("Zmax", ["stbox"])
+        Tmin = CustomFunction("Tmin", ["stbox"])
+
+        query = (Query
+                .from_(query)
+                .inner_join(bbox)
+                .using("itemid")
+                .select(
+                    query.itemid,
+                    Xmin(bbox.trajBbox),
+                    Ymin(bbox.trajBbox),
+                    Zmin(bbox.trajBbox),
+                    Xmax(bbox.trajBbox),
+                    Ymax(bbox.trajBbox),
+                    Zmax(bbox.trajBbox),
+                    Tmin(bbox.trajBbox)
+                )
+            )
+
+        print(query)
+
+        self.cur.execute(query.get_sql())
+        fetched_meta = self.cur.fetchall()
+        fetched_meta = video_fetch_reformat(fetched_meta)
+        get_video(fetched_meta, cams, self.start_time)
 
 if __name__ == "__main__":
     # Ingest the camera to the world
