@@ -208,6 +208,12 @@ class Database:
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
+    def get_time(self, query: Query):
+        Tmin = CustomFunction("Tmin", ["stbox"])
+        q = Query.from_(query).select(Tmin(query.trajBbox))
+        self.cur.execute(q.get_sql())
+        return self.cur.fetchall()
+
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
 
