@@ -51,7 +51,9 @@ recognized_world = traffic_world.recognize(cam_id)
 
 volume = traffic_world.select_intersection_of_interest_or_use_default(cam_id=cam_id)
 
-filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume).interval(0, fps * 3)
+filtered_world = (
+    recognized_world.filter_traj_type("car").filter_traj_volume(volume).interval(0, fps * 3)
+)
 filtered_ids = filtered_world.get_traj_key()
 print("filtered_ids are", filtered_ids)
 print(len(filtered_ids))
