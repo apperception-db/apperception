@@ -67,3 +67,10 @@ print(len(filtered_ids))
 trajectory = recognized_world.filter_traj_type("car").get_traj()
 print("trajectories are", trajectory)
 traffic_world.overlay_trajectory(cam_id, trajectory)
+
+
+print("Times are:")
+print(filtered_world.get_time())
+
+print("Bbox geos are:")
+print(filtered_world.get_bbox_geo())
