@@ -218,8 +218,8 @@ class Database:
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
         cumulativeLength = CustomFunction("cumulativeLength", ["input"])
         q = Query.from_(query).select(
-                cumulativeLength(atPeriodSet(query.trajCentroids,
-                    "{[%s, %s)}" % (start, end))))
+            cumulativeLength(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
+        )
 
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
