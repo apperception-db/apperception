@@ -189,6 +189,24 @@ class Database:
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
+    def get_bbox_geo(self, query: Query):
+        Xmin = CustomFunction("Xmin", ["stbox"])
+        Ymin = CustomFunction("Ymin", ["stbox"])
+        Zmin = CustomFunction("Zmin", ["stbox"])
+        Xmax = CustomFunction("Xmax", ["stbox"])
+        Ymax = CustomFunction("Ymax", ["stbox"])
+        Zmax = CustomFunction("Zmax", ["stbox"])
+
+        q = Query.from_(query).select(
+                Xmin(query.trajBbox),
+                Ymin(query.trajBbox),
+                Zmin(query.trajBbox),
+                Xmax(query.trajBbox),
+                Ymax(query.trajBbox),
+                Zmax(query.trajBbox))
+        self.cur.execute(q.get_sql())
+        return self.cur.fetchall()
+
     def filter_traj_type(self, query: Query, object_type: str):
         return Query.from_(query).select("*").where(query.objecttype == object_type)
 
