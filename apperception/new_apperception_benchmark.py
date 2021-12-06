@@ -76,3 +76,6 @@ print(filtered_world.get_bbox_geo())
 
 print("Trajectory distances are:")
 print(filtered_world.get_distance(0, 30))
+
+print("Trajectory speeds are:")
+print(filtered_world.get_speed(0, 30))
