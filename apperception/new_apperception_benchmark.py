@@ -72,7 +72,9 @@ print("ids are", ids)
 # In[16]:
 
 
-filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume).interval(0, fps * 3)
+filtered_world = (
+    recognized_world.filter_traj_type("car").filter_traj_volume(volume).interval(0, fps * 3)
+)
 filtered_ids = filtered_world.get_traj_key()
 print("filtered_ids are", filtered_ids)
 
@@ -113,7 +115,7 @@ print("Times are:", times)
 
 
 geos = filtered_world.get_bbox_geo()
-print("Bbox geos are:",geos)
+print("Bbox geos are:", geos)
 
 
 # In[23]:
@@ -131,7 +133,3 @@ print(filtered_world.get_speed(0, 30))
 
 
 # In[ ]:
-
-
-
-
