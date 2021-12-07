@@ -15,10 +15,6 @@ from video_context import Camera
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
-# plt.figure()
-# plt.plot([1,2,3,4])
-# plt.show()
-
 
 class Type(Enum):
     # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
