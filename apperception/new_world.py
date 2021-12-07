@@ -16,6 +16,7 @@ from video_context import Camera
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
 
+
 class Type(Enum):
     # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
     # recognize(), we should not execute it because the inserted object must not be in the final result. we use enum
