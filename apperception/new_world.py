@@ -156,7 +156,7 @@ class World:
         new_node.args, new_node.kwargs = [], {}
         return new_node._execute_from_root(Type.TRAJ)
 
-    def get_distance(self, start, end):
+    def get_distance(self, start: float, end: float):
         new_node = self._create_new_world_and_link()
         starttime = str(self.db.start_time + datetime.timedelta(seconds=start))
         endtime = str(self.db.start_time + datetime.timedelta(seconds=end))
