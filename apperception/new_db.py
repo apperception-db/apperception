@@ -118,7 +118,7 @@ class Database:
 
         # hack
         q = (
-            f"SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
+            "SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
             + f" FROM ({query.get_sql()}) AS final"
         )
 
@@ -134,7 +134,7 @@ class Database:
 
         # hack
         q = (
-            f"SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
+            "SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
             + f" FROM ({query.get_sql()}) AS final"
         )
 
@@ -175,7 +175,7 @@ class Database:
     def get_traj(self, query: Query):
         # hack
         query = (
-            f"SELECT asMFJSON(trajCentroids)::json->'coordinates'"
+            "SELECT asMFJSON(trajCentroids)::json->'coordinates'"
             + f" FROM ({query.get_sql()}) as final"
         )
 
@@ -214,7 +214,7 @@ class Database:
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
-    def get_distance(self, query, start, end):
+    def get_distance(self, query: Query, start: str, end: str):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
         cumulativeLength = CustomFunction("cumulativeLength", ["input"])
         q = Query.from_(query).select(
