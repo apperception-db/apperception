@@ -1,19 +1,19 @@
 from typing import Callable
 import psycopg2
 from metadata_context import *
-from video_context import *
+from scenic_context import *
 import copy
 from world_executor import WorldExecutor
 import matplotlib.pyplot as plt
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
 world_executor = WorldExecutor()
-class World:
+class ScenicWorld:
 
     def __init__(self, name, units, enable_tasm=False):
-        self.VideoContext = VideoContext(name, units)
+        self.ScenicVideoContext = ScenicVideoContext(name, units)
         self.MetadataContext = MetadataContext(single_mode=False)
-        self.MetadataContext.start_time = self.VideoContext.start_time
+        self.MetadataContext.start_time = self.ScenicVideoContext.start_time
         self.GetVideo = False
         self.enable_tasm = enable_tasm
         # self.AccessedVideoContext = False
@@ -29,7 +29,6 @@ class World:
 #########################
 ###   Video Context  ####
 #########################
-    # TODO(@Vanessa): Add a helper function
     def get_lens(self, cam_id=""):
         return self.get_camera(cam_id).lens
     
@@ -43,10 +42,10 @@ class World:
         new_context = copy.deepcopy(self)
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
-    
-    def camera(self, cam_id, location, ratio, video_file, metadata_identifier, lens):
+
+    def scenic_camera(self, cam_id, video_file, metadata_identifier):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
+        new_context.ScenicVideoContext.scenic_camera(cam_id, video_file, metadata_identifier)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
@@ -54,9 +53,9 @@ class World:
         new_context.VideoContext.properties(cam_id, properties, property_type)
         return new_context
 
-    def recognize(self, cam_id, algo ='Yolo', tracker_type = 'multi', tracker = None):
+    def recognize(self, cam_id, scenic_data_dir):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker)
+        new_context.ScenicVideoContext.camera_nodes[cam_id].recognize(scenic_data_dir)
         return new_context
 
 #########################

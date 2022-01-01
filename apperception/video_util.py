@@ -99,7 +99,7 @@ def create_or_insert_world_table(conn, name, units):
 	'''
 	Create and Populate A world table with the given world object.
 	'''
-	#Doping Worlds table if already exists. TODO: For testing purpose only
+	#Doping Worlds table if already exists.
 	cursor.execute("DROP TABLE IF EXISTS Worlds;")
 	#Creating table with the first world
 	sql = '''CREATE TABLE IF NOT EXISTS Worlds(
@@ -129,7 +129,7 @@ def create_or_insert_camera_table(conn, world_name, camera):
 	'''
 	Create and Populate A camera table with the given camera object.
 	'''
-	#Doping Cameras table if already exists. TODO: For testing purpose only
+	#Doping Cameras table if already exists.
 	cursor.execute("DROP TABLE IF EXISTS Cameras")
 	#Creating table with the first camera
 	sql = '''CREATE TABLE IF NOT EXISTS Cameras(
@@ -160,7 +160,8 @@ def insert_camera(conn, world_name, camera_node):
 	print("New camera inserted successfully.........")
 	conn.commit()
 
-# Default object recognition (YOLOv3)
+
+# Default object recognition (YOLOv4)
 def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None):
 	# recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
 	# return recognition.video_item_recognize(video.byte_array)
@@ -218,6 +219,22 @@ def bbox_to_data3d(bbox):
 
 # Insert bboxes to postgres
 def bbox_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
+	if type == 'yolov3':
+		timestamps = range(timestamps)
+
+	converted_bboxes = [bbox_to_data3d(bbox) for bbox in bboxes]
+	pairs = []
+	deltas = []
+	for meta_box in converted_bboxes:
+		pairs.append(meta_box[0])
+		deltas.append(meta_box[1:])
+	postgres_timestamps = convert_timestamps(start_time, timestamps)
+	create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	print(f"{item_id} saved successfully")
+
+# Insert bboxes to postgres
+def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
+	### TODO: Modify the following codes to add recognized scenic objects to the database
 	if type == 'yolov3':
 		timestamps = range(timestamps)
 

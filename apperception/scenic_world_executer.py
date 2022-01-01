@@ -1,10 +1,10 @@
 from metadata_context_executor import *
 from metadata_context import *
-from video_context_executor import *
+from scenic_video_context_executor import *
 from video_util import *
 import numpy as np
 
-class WorldExecutor:
+class ScenicWorldExecutor:
     def __init__(self, world=None):
         if world:
             self.create_world(world)
@@ -60,6 +60,10 @@ class WorldExecutor:
     
     def get_video(self, metadata_results):
         start_time = self.curr_world.VideoContext.start_time
+        # print("Start time is", start_time)
+        ### The cam nodes are raw data from the database
+        ### TODO: I forget why we used the data from the db instead of directly fetch
+        ### from the world
         cam_nodes = self.curr_world.get_video_cams
         video_files = []
         for i in range(len(cam_nodes)):
@@ -87,7 +91,7 @@ class WorldExecutor:
         
     def execute(self):
         # Edit logic for execution here through checks of whether VideoContext or MetadataContext is being used 
-        video_executor = VideoContextExecutor(self.conn, self.curr_world.VideoContext, self.tasm)
+        video_executor = ScenicVideoContextExecutor(self.conn, self.curr_world.VideoContext, self.tasm)
         video_executor.execute()
 
         if self.curr_world.MetadataContext.scan.view == None:
