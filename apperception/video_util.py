@@ -127,6 +127,8 @@ def create_or_insert_world_table(conn, name, units: Units):
     """
     Create and Populate A world table with the given world object.
     """
+    # Doping Worlds table if already exists.
+    cursor.execute("DROP TABLE IF EXISTS Worlds;")
     # Creating table with the first world
     sql = """CREATE TABLE IF NOT EXISTS Worlds(
     worldId TEXT PRIMARY KEY,
@@ -157,6 +159,8 @@ def create_or_insert_camera_table(conn, world_name, camera):
     """
     Create and Populate A camera table with the given camera object.
     """
+    # Doping Cameras table if already exists.
+    cursor.execute("DROP TABLE IF EXISTS Cameras")
     # Creating table with the first camera
     sql = "\n".join(
         [
@@ -292,7 +296,6 @@ def add_recognized_objs(
         )
         # bbox_to_tasm()
 
-
 def convert_timestamps(start_time, timestamps):
     """Helper function to convert the timestam to the timestamp formula pg-trajectory uses"""
     return [str(start_time + datetime.timedelta(seconds=t)) for t in timestamps]
@@ -330,6 +333,22 @@ def bbox_to_postgres(
     )
     print(f"{item_id} saved successfully")
 
+
+# Insert bboxes to postgres
+def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
+	### TODO: Modify the following codes to add recognized scenic objects to the database
+	if type == 'yolov3':
+		timestamps = range(timestamps)
+
+	converted_bboxes = [bbox_to_data3d(bbox) for bbox in bboxes]
+	pairs = []
+	deltas = []
+	for meta_box in converted_bboxes:
+		pairs.append(meta_box[0])
+		deltas.append(meta_box[1:])
+	postgres_timestamps = convert_timestamps(start_time, timestamps)
+	create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	print(f"{item_id} saved successfully")
 
 def clean_tables(conn):
     cursor = conn.cursor()
