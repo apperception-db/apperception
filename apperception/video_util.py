@@ -1,5 +1,6 @@
 import ast
 from sys import base_exec_prefix
+from threading import local
 import psycopg2
 import numpy as np
 import datetime 
@@ -160,17 +161,19 @@ def insert_camera(conn, world_name, camera_node):
 	conn.commit()
 
 # Default object recognition (YOLOv3)
-def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None, default_depth=True):
+def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None, default_depth=False):
 	# recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
 	# return recognition.video_item_recognize(video.byte_array)
 	return yolov4_deepsort_video_track(video_file, default_depth)	
 
 def add_recognized_objs(conn, camera_id, lens, formatted_result, start_time, properties={'color':{}}, temp=False):
 	# clean_tables(conn)
+	
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
 		tracked_cnt = formatted_result[item_id]["tracked_cnt"]
+		centroids = lens.pixels_to_world(np.mean(recognized_bboxes, axis=1).T).T
 		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1]))
 		top_left = lens.pixels_to_world(top_left, recognized_bboxes[:,0,2])
 		# Convert bottom right coordinates to world coordinates
@@ -179,13 +182,14 @@ def add_recognized_objs(conn, camera_id, lens, formatted_result, start_time, pro
 		
 		top_left = np.array(top_left.T)
 		bottom_right = np.array(bottom_right.T)
+  
 		obj_traj = []
 		for i in range(len(top_left)):
 			current_tl = top_left[i]
 			current_br = bottom_right[i]
 			obj_traj.append([current_tl.tolist(), current_br.tolist()])      
 
-		bbox_to_postgres(conn, item_id, camera_id, object_type, "default_color" if item_id not in properties['color'] else properties['color'][item_id], start_time, tracked_cnt, obj_traj, type="yolov4", temp=temp)
+		bbox_to_postgres(conn, item_id, camera_id, object_type, "default_color" if item_id not in properties['color'] else properties['color'][item_id], start_time, tracked_cnt, obj_traj, centroids)
 	reconcile_trajectory(conn)
 		# bbox_to_tasm()
 	
@@ -193,38 +197,19 @@ def add_recognized_objs(conn, camera_id, lens, formatted_result, start_time, pro
 def convert_timestamps(start_time, timestamps):
 	return [str(start_time + datetime.timedelta(seconds=t)) for t in timestamps]
 
-# Helper function to convert trajectory to centroids
-def bbox_to_data3d(bbox):
-	'''
-	Compute the center, x, y, z delta of the bbox
-	'''
-	tl, br = bbox
-	x_delta = (br[0] - tl[0])/2
-	y_delta = (br[1] - tl[1])/2
-	z_delta = (br[2] - tl[2])/2
-	center = (tl[0] + x_delta, tl[1] + y_delta, tl[2] + z_delta)
-	
-	return center, x_delta, y_delta, z_delta
-
 # Insert bboxes to postgres
-def bbox_to_postgres(conn, item_id, camera_id, object_type, color, start_time, timestamps, bboxes, type='yolov4', temp=False):
+def bbox_to_postgres(conn, item_id, camera_id, object_type, color, start_time, timestamps, bboxes, centroids):
 	cursor = conn.cursor()
-	converted_bboxes = [bbox_to_data3d(bbox) for bbox in bboxes]
-	pairs = []
-	deltas = []
-	for meta_box in converted_bboxes:
-		pairs.append(meta_box[0])
-		deltas.append(meta_box[1:])
 	postgres_timestamps = convert_timestamps(start_time, timestamps)
 	
-	create_or_insert_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	create_or_insert_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids)
 	print(f"{item_id} saved successfully")
 
 def clean_tables(cursor):
 	cursor.execute("DROP TABLE IF EXISTS General_Bbox;")
 	cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory;")
 
-def create_or_insert_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs):
+def create_or_insert_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids):
 	'''
 	Create and Populate A Trajectory table using mobilityDB.
 	Now the timestamp matches, the starting time should be the meta data of the world
@@ -232,7 +217,7 @@ def create_or_insert_trajectory(conn, item_id, camera_id, object_type, color, po
 	'''
 	create_item_meta(conn)
 	create_main_trajectory(conn)
-	create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids)
  
 def create_item_meta(conn):
 	cursor = conn.cursor()
@@ -268,7 +253,7 @@ def create_main_trajectory(conn):
 	cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Main_Bbox USING GiST(trajBbox);")
 	conn.commit()
 
-def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs):
+def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids):
 	cursor = conn.cursor()
 	create_temp_traj_sql = '''CREATE TABLE IF NOT EXISTS Temp_Trajectory(
 	itemId TEXT,
@@ -289,15 +274,16 @@ def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, colo
 	cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Temp_Bbox(itemId);")
 	cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Temp_Bbox USING GiST(trajBbox);")
 	conn.commit()
-	insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids)
 	
-def reconcile_trajectory(conn, threshold=40):
-	cursor = conn.cursor()
-	cursor.execute(f"SELECT reconcile_trajectory({threshold});")
-	conn.commit()
+def reconcile_trajectory(conn, threshold=100):
+	# cursor = conn.cursor()
+	# cursor.execute(f"SELECT reconcile_trajectory({threshold});")
+	# conn.commit()
+	pass
 
 # Insert general trajectory
-def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, pairs, temp = False):
+def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids):
 	cursor = conn.cursor()
 	#Inserting bboxes into Bbox table
 	insert_bbox_trajectory = ""
@@ -321,7 +307,7 @@ def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgre
 		%(tl[0], tl[1], tl[2], postgres_timestamp, br[0], br[1], br[2], postgres_timestamp)
 		insert_bbox_trajectory += insert_format + current_bbox_sql
 		### Construct trajectory
-		current_point = pairs[i]
+		current_point = centroids[i]
 		tg_pair_centroid = "POINT Z (%s %s %s)@%s," \
 		%(str(current_point[0]), str(current_point[1]), str(current_point[2]), postgres_timestamp)
 		traj_centroids += tg_pair_centroid

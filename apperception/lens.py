@@ -113,14 +113,13 @@ class VRLens(Lens):
 		position_vector = self.extrinsic_matrix @ transformed_3D_pos
 		return position_vector
 
-	def pixels_to_world(self, pixel_coords, depths):
+	def pixels_to_world(self, pixel_coords, depths=[]):
 		"""
 		Translate multiple pixel coordinates to world coordinates. 
 		"""
-		x, y =  pixel_coords
-		pixels = np.asarray([x, y, depths])
+		pixels = np.asarray([pixel_coords[0], pixel_coords[1], depths]) if len(depths) > 0 else pixel_coords
 		transformed_3D_pos = np.dot(np.linalg.inv(self.intrinsic_matrix),pixels)
-		transformed_3D_pos = np.asarray([transformed_3D_pos[0], transformed_3D_pos[1], depths, np.ones(len(depths))])
+		transformed_3D_pos = np.asarray([transformed_3D_pos[0], transformed_3D_pos[1], transformed_3D_pos[2], np.ones(len(transformed_3D_pos[2]))])
 		position_vector = self.extrinsic_matrix @ transformed_3D_pos
 		return position_vector
 
@@ -140,7 +139,7 @@ class VRLens(Lens):
 		Translate world coordinates to pixel coordinates
 		"""
 		x, y, z = world_coords
-		world_pixel = np.asarray([[x], [y], [z], np.ones(len(x))])
+		world_pixel = np.asarray([x, y, z, np.ones(len(x))])
 		transformed_3D_pos = np.dot(np.linalg.inv(self.extrinsic_matrix),
 								world_pixel)
 		position_2D = np.dot(self.intrinsic_matrix, transformed_3D_pos[:3])

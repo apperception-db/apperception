@@ -105,6 +105,7 @@ class MetadataContextExecutor:
         self.cursor = self.conn.cursor()
         query = self.visit(create_view=create_view, view_name=view_name)
         print(query)
+        # return []
         self.cursor.execute(query)
         return np.asarray(self.cursor.fetchall())
 
