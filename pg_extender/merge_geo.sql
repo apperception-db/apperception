@@ -1,16 +1,95 @@
+DROP FUNCTION IF EXISTS bbox_union(stbox, stbox);
+CREATE OR REPLACE FUNCTION bbox_union(stbox1 stbox, stbox2 stbox)
+RETURNS stbox AS
+$BODY$
+DECLARE
+    min_x float;
+    min_y float;
+    min_z float;
+    min_t timestamptz;
+    max_x float;
+    max_y float;
+    max_z float;
+    max_t timestamptz;
+BEGIN
+    If Xmin(stbox1) < Xmin(stbox2) Then
+        min_x := Xmin(stbox1);
+    Else
+        min_x := Xmin(stbox2);
+    End If;
+    If Ymin(stbox1) < Ymin(stbox2) Then
+        min_y := Ymin(stbox1);
+    Else
+        min_y := Ymin(stbox2);
+    End If;
+    If Zmin(stbox1) < Zmin(stbox2) Then
+        min_z := Zmin(stbox1);
+    Else
+        min_z := Zmin(stbox2);
+    End If;
+    If Tmin(stbox1) < Tmin(stbox2) Then
+        min_t := Tmin(stbox1);
+    Else
+        min_t := Tmin(stbox2);
+    End If;
+    If Xmax(stbox1) > Xmax(stbox2) Then
+        max_x := Xmax(stbox1);
+    Else
+        max_x := Xmax(stbox2);
+    End If;
+    If Ymax(stbox1) > Ymax(stbox2) Then
+        max_y := Ymax(stbox1);
+    Else
+        max_y := Ymax(stbox2);
+    End If;
+    If Zmax(stbox1) > Zmax(stbox2) Then
+        max_z := Zmax(stbox1);
+    Else
+        max_z := Zmax(stbox2);
+    End If;
+    If Tmax(stbox1) > Tmax(stbox2) Then
+        max_t := Tmax(stbox1);
+    Else
+        max_t := Tmax(stbox2);
+    End If;
+    RETURN stbox(format('STBOX ZT((%s, %s, %s, %s), (%s, %s, %s, %s))', 
+        min_x, min_y, min_z, min_t, max_x, max_y, max_z, max_t));
+    
+END;
+$BODY$ 
+LANGUAGE 'plpgsql';
+
 DROP FUNCTION IF EXISTS mergeGeoArray(stbox [], stbox [], integer, integer, stbox []);
 CREATE OR REPLACE FUNCTION mergeGeoArray(main_bbox stbox [], current_bbox stbox [], i integer, j integer, merged_bbox stbox []) 
 RETURNS stbox [] AS 
 $BODY$
+DECLARE
+    merged_bbox stbox [] = '{}';
+    i integer = 1;
+    j integer = 1;
 BEGIN
-    SELECT 
-        CASE WHEN (i > array_length(main_bbox,1) and j > array_length(current_bbox,1)) THEN merged_bbox
-             WHEN i > array_length(main_bbox,1) THEN mergeGeoArray(main_bbox,current_bbox,i,j+1,array_append(merged_bbox,current_bbox[j]))
-             WHEN j > array_length(current_bbox,1) THEN mergeGeoArray(main_bbox,current_bbox,i+1,j,array_append(merged_bbox,main_bbox[i]))
-             WHEN Tmin(main_bbox[i]) <  Tmin(current_bbox[j]) THEN mergeGeoArray(main_bbox,current_bbox,i+1,j,array_append(merged_bbox, main_bbox[i]))
-             WHEN Tmin(main_bbox[i]) > Tmin(current_bbox[j]) THEN mergeGeoArray(main_bbox,current_bbox,i,j+1,array_append(merged_bbox, current_bbox[j]))
-             WHEN Tmin(main_bbox[i]) = Tmin(current_bbox[j]) THEN mergeGeoArray(main_bbox, current_bbox,i+1,j+1,array_append(merged_bbox, main_bbox[i]+main_bbox[j]))
-        END;
+    WHILE i <= array_length(main_bbox,1) and j <= array_upper(current_bbox, 1) LOOP
+        IF Tmin(main_bbox[i]) <  Tmin(current_bbox[j]) THEN
+            merged_bbox := array_append(merged_bbox, main_bbox[i]);
+            i := i + 1;
+        ELSEIF Tmin(main_bbox[i]) >  Tmin(current_bbox[j]) THEN
+            merged_bbox := array_append(merged_bbox, current_bbox[j]);
+            j := j + 1;
+        ELSE
+            merged_bbox := array_append(merged_bbox, bbox_union(main_bbox[i], current_bbox[j]));
+            i := i + 1;
+            j := j + 1;
+        END IF;
+    END LOOP;
+    WHILE i <= array_length(main_bbox, 1) LOOP
+        merged_bbox := array_append(merged_bbox, main_bbox[i]);
+        i := i + 1;
+    END LOOP;
+    WHILE j <= array_length(current_bbox, 1) LOOP
+        merged_bbox := array_append(merged_bbox, current_bbox[j]);
+        j := j + 1;
+    END LOOP;
+    RETURN merged_bbox;
 END;
 $BODY$ 
 LANGUAGE 'plpgsql';
@@ -51,24 +130,24 @@ DECLARE
     current_bbox stbox [];
     geo_camId record;
 BEGIN
-    raise notice 'before loop';
     FOR geo_camId IN EXECUTE E'SELECT DISTINCT Main_Bbox.cameraId
                                     FROM Main_Bbox
                                     WHERE Main_Bbox.itemId = \'' || $1 || E'\';'
     LOOP
-        raise notice 'inside the loop';
         current_bbox := ARRAY(
             SELECT trajBbox 
             FROM Main_Bbox
-            WHERE cameraId = geo_camId.cameraId
+            WHERE cameraId = geo_camId.cameraId AND Main_Bbox.itemId = $1
             );
+        raise notice 'current length %', array_length(current_bbox, 1);
         IF main_bbox ISNULL THEN
             main_bbox := current_bbox;
         ELSE
-            main_bbox := mergeGeoArray(main_bbox, current_bbox, 0, 0, '{}');
+            main_bbox := mergeGeoArray(main_bbox, current_bbox, 1, 1, '{}');
         END IF;
         
     END LOOP;
+    raise notice 'length %', array_length(main_bbox, 1);
   RETURN unpackBbox(main_bbox);
 END;
 $BODY$

@@ -182,17 +182,23 @@ def yolov4_deepsort_video_track(video_file, default_depth=True):
 				bbox = track.to_tlbr()
 				class_name = track.get_class()
 				item_id = class_name+"-"+str(track.track_id)
-				tl = [int(bbox[0]), int(bbox[1])]
-				br = [int(bbox[2]), int(bbox[3])]
-				if not default_depth:
-					frame_depth = create_depth_frames(np.array([np.asarray(image)]))
-					tl_depth = frame_depth[0][tl[1], tl[0]]
-					br_depth = frame_depth[0][br[1], br[0]]
-				else:
-					tl_depth = 1
-					br_depth = 1
-				tl.append(tl_depth)
-				br.append(br_depth)
+				# tl = [int(bbox[0]), int(bbox[1])]
+				# br = [int(bbox[2]), int(bbox[3])]
+				tl = [400, 235, 3]
+				br = [650, 350, 2]
+				# if not default_depth:
+				# 	frame_depth = create_depth_frames(np.array([np.asarray(image)]))
+				# 	try:
+				# 		tl_depth = frame_depth[0][tl[1], tl[0]]
+				# 		br_depth = frame_depth[0][br[1], br[0]]
+				# 	except:
+				# 		tl_depth = 1
+				# 		br_depth = 1
+				# else:
+				# 	tl_depth = 1
+				# 	br_depth = 1
+				# tl.append(tl_depth)
+				# br.append(br_depth)
 				if item_id in formatted_result:
 					formatted_result[item_id]["bboxes"].append([tl, br])
 					formatted_result[item_id]["tracked_cnt"].append(frame_num)
