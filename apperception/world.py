@@ -169,7 +169,7 @@ class World:
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
             frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-            import code; code.interact(local=dict(globals(), **locals()))
+            # import code; code.interact(local=dict(globals(), **locals()))
             vs = cv2.VideoCapture(video_file)
             frame = vs.read()
             frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
