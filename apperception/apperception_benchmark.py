@@ -1,6 +1,8 @@
 ### IMPORTS
 import os
 import sys
+
+from numpy.core.fromnumeric import var
 sys.path.append(os.path.join(os.getcwd(),"apperception"))
 
 ### IMPORTS
@@ -49,16 +51,20 @@ def plot_3d(object_bboxes):
 name = 'traffic_scene' # world name
 units = 'metrics'      # world units
 cam1_id = 'cam1'
-cam1_video_file = "../../visual_road_video_cut/single_car_000.mp4" #cam1 view
+# cam1_video_file = "../../visual_road_video_cut/single_car_000.mp4" #cam1 view
+cam1_video_file = "../../visual_road_video_cut/traffic-001_clip_clip.mp4" #cam1 view
 cam2_id = 'cam2'
-cam2_video_file = "../../visual_road_video_cut/single_car_001.mp4" #cam2 view
+# cam2_video_file = "../../visual_road_video_cut/single_car_001.mp4" #cam2 view
+cam2_video_file = "../../visual_road_video_cut/traffic-002_clip_clip.mp4" #cam2 view
 
 ### First we define a world
 traffic_world = World(name=name, units=units)
 
 ### Secondly we construct the camera
-cam1_len = lens.VRLens(resolution=[960, 540], cam_origin=(202, -242,  1), yaw=135, roll=0, pitch=0, field_of_view=90)
-cam2_len = lens.VRLens(resolution=[960, 540], cam_origin=(210, -270, 9), yaw=225, roll=0, pitch=0, field_of_view=90)
+# cam1_len = lens.VRLens(resolution=[960, 540], cam_origin=(202, -242,  1), yaw=135, roll=0, pitch=0, field_of_view=90)
+# cam2_len = lens.VRLens(resolution=[960, 540], cam_origin=(210, -270, 9), yaw=225, roll=0, pitch=0, field_of_view=90)
+cam1_len = lens.VRLens(resolution=[3840, 2160], cam_origin=(199, -239, 5.2), yaw=-52, roll=0, pitch=0, field_of_view=90)
+cam2_len = lens.VRLens(resolution=[3840, 2160], cam_origin=(210, -270, 9), yaw=128, roll=0, pitch=-30, field_of_view=90)
 fps = 30
 
 ### Ingest the camera to the world
@@ -72,13 +78,17 @@ traffic_world = traffic_world.camera(cam_id=cam2_id,
                                lens=cam2_len)
 # cam1_recognized_world = traffic_world.recognize(cam1_id).execute()
 # merged_bbox_1 = traffic_world.predicate(lambda obj:obj.object_type == "car").get_merged_geo(distinct=True).execute()
-# plot_3d(merged_bbox_1[0][0].T)
-cam2_recognized_world = traffic_world.recognize(cam2_id).execute()
+
+# cam2_recognized_world = traffic_world.recognize(cam2_id).execute()
 merged_bbox_2 = traffic_world.predicate(lambda obj:obj.object_type == "car").get_merged_geo(distinct=True).execute()
 # plot_3d(merged_bbox_2[0][0].T)
+import code; code.interact(local=vars())
+for merged_bbox in merged_bbox_2:
+
+    plot_3d(np.asarray([np.asarray(a) for  a in merged_bbox[0]]).T)
 # filtered_world = traffic_world.predicate(lambda obj:obj.object_type == "car")
 # returned_trajectory = filtered_world.get_trajectory().execute()
-# traffic_world.overlay_trajectory(cam2_id, returned_trajectory)
+# traffic_world.overlay_trajectory(cam1_id, returned_trajectory)
 ### Call execute on the world to run the detection algorithm and save the real data to the database
 # recognized_world = traffic_world.recognize(cam1_id)
 # recognized_world.execute()

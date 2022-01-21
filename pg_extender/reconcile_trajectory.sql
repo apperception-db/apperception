@@ -47,7 +47,7 @@ BEGIN
               WHERE all_pair_of_distance.nearestapproachdistance = min_distance.min  
                 AND min_distance.min < ' || $1 || ';'; 
 -- Filter out the best pairs
-  EXECUTE 'CREATE OR REPLACE VIEW min_join_pair AS
+  EXECUTE 'CREATE TABLE min_join_pair AS
             SELECT join_pair.mainId, join_pair.tempId 
               FROM join_pair, 
                   (SELECT tempId, Min(join_pair.min) FROM join_pair GROUP BY tempid) as min_pair 
@@ -85,7 +85,8 @@ BEGIN
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
   EXECUTE 'TRUNCATE TABLE Temp_Trajectory;';
-  EXECUTE 'TRUNCATE TABLE Temp_Bbox;'
+  EXECUTE 'TRUNCATE TABLE Temp_Bbox;';
+  EXECUTE 'DROP TABLE min_join_pair;';
 
   RETURN;
 END
