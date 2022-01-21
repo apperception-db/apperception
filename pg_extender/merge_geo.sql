@@ -141,8 +141,10 @@ BEGIN
             );
         raise notice 'current length %', array_length(current_bbox, 1);
         IF main_bbox ISNULL THEN
+            raise notice 'first bbox array';
             main_bbox := current_bbox;
         ELSE
+            raise notice 'merge bbox array';
             main_bbox := mergeGeoArray(main_bbox, current_bbox, 1, 1, '{}');
         END IF;
         

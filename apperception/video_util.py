@@ -161,7 +161,7 @@ def insert_camera(conn, world_name, camera_node):
 	conn.commit()
 
 # Default object recognition (YOLOv3)
-def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None, default_depth=False):
+def recognize(video_file, recog_algo = "", tracker_type = "default", customized_tracker = None, default_depth=True):
 	# recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
 	# return recognition.video_item_recognize(video.byte_array)
 	return yolov4_deepsort_video_track(video_file, default_depth)	
@@ -277,10 +277,10 @@ def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, colo
 	insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids)
 	
 def reconcile_trajectory(conn, threshold=100):
-	# cursor = conn.cursor()
-	# cursor.execute(f"SELECT reconcile_trajectory({threshold});")
-	# conn.commit()
-	pass
+	cursor = conn.cursor()
+	cursor.execute(f"SELECT reconcile_trajectory({threshold});")
+	conn.commit()
+	# pass
 
 # Insert general trajectory
 def insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids):
