@@ -5,6 +5,10 @@ import datetime
 import cv2
 from object_tracker import yolov4_deepsort_video_track
 from video_util import *
+from pymongo import MongoClient
+from pyquaternion import Quaternion
+import json
+import os
 
 # Create a camera table
 def create_or_insert_scenic_camera_table(conn, world_name, camera):
@@ -28,7 +32,7 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 	);'''
 	cursor.execute(sql)
 	print("Camera Table created successfully........")
-	insert_scenic_camera(conn, world_name, camera)
+	# insert_scenic_camera(conn, world_name, camera)
 	return sql
 
 # Helper function to insert the camera
@@ -45,11 +49,105 @@ def insert_scenic_camera(conn, world_name, camera_node):
 	print("New camera inserted successfully.........")
 	conn.commit()
 
+# create collections in db and set index for quick query
+def insert_scenic_data(scenic_data_dir, db):
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'sample_data.json')) as f:
+		sample_data_json = json.load(f)
+	db['sample_data'].insert_many(sample_data_json)
+	db['sample_data'].create_index('token')
+	db['sample_data'].create_index('filename')
+	
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'attribute.json')) as f:
+		attribute_json = json.load(f)
+	db['attribute'].insert_many(attribute_json)
+	db['attribute'].create_index('token')
+
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'calibrated_sensor.json')) as f:
+		calibrated_sensor_json = json.load(f)
+	db['calibrated_sensor'].insert_many(calibrated_sensor_json)
+	db['calibrated_sensor'].create_index('token')
+	
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'category.json')) as f:
+		category_json = json.load(f)
+	db['category'].insert_many(category_json)
+	db['category'].create_index('token')
+
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'ego_pose.json')) as f:
+		ego_pose_json = json.load(f)
+	db['ego_pose'].insert_many(ego_pose_json)
+	db['ego_pose'].create_index('token')
+
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'instance.json')) as f:
+		instance_json = json.load(f)
+	db['instance'].insert_many(instance_json)
+	db['instance'].create_index('token')
+
+	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'sample_annotation.json')) as f:
+		sample_annotation_json = json.load(f)
+	db['sample_annotation'].insert_many(sample_annotation_json)
+	db['sample_annotation'].create_index('token')
+
+def get_box(translation, size, orientation):
+	"""
+	return: <np.float: 3, 8>. First four corners are the ones facing forward.
+            The last four are the ones facing backwards.
+	"""
+	center = np.array(translation)
+	wlh = np.array(size)
+	w, l, h = wlh
+
+	# 3D bounding box corners. (Convention: x points forward, y to the left, z up.)
+	x_corners = l / 2 * np.array([1,  1,  1,  1, -1, -1, -1, -1])
+	y_corners = w / 2 * np.array([1, -1, -1,  1,  1, -1, -1,  1])
+	z_corners = h / 2 * np.array([1,  1, -1, -1,  1,  1, -1, -1])
+	corners = np.vstack((x_corners, y_corners, z_corners))
+
+	# Rotate
+	corners = np.dot(orientation.rotation_matrix, corners)
+
+	# Translate
+	x, y, z = center
+	corners[0, :] = corners[0, :] + x
+	corners[1, :] = corners[1, :] + y
+	corners[2, :] = corners[2, :] + z
+
+	return [corners[:, 1], corners[:, 7]]
+
 def scenic_recognize(video_file, scenic_data_dir):
 	### TODO: Read all attributes from the 
 	### return formatted_result: {object: {bboxes: [[top_left:3d np.array, bottom_right:3d np.array]], 
  # 						  attributes: {*attr_name: *attr_value}}
  # 				}
+
+	# connect mongoDB
+	client = MongoClient("mongodb+srv://apperception:apperception@cluster0.gvxkh.mongodb.net/cluster0?retryWrites=true&w=majority")
+	db = client['apperception']
+
+	if len(db.list_collection_names()) == 0:
+		insert_scenic_data(scenic_data_dir, db)
+	else:
+		print('already exists')
+
+	formatted_result = {}
+
+	# get bboxes and categories of all the objects appeared in the image file
+	file_data = db['sample_data'].find_one({'filename': video_file})
+	sample_token = file_data['sample_token']
+	all_annotations = db['sample_annotation'].find({'sample_token': sample_token})
+	for annotation in all_annotations:
+		instance = db['instance'].find_one({'token': annotation['instance_token']})
+		if not instance:
+			continue
+		item_id = instance['token']
+		if item_id not in formatted_result:
+			formatted_result[item_id] = {'bboxes': [], 'attributes': {}}
+			category = db['category'].find_one({'token': instance['category_token']})
+			formatted_result[item_id]['attributes']['cat_name'] = category['name']
+			formatted_result[item_id]['attributes']['cat_desc'] = category['description']
+
+		bbox = get_box(annotation['translation'], annotation['size'], Quaternion(annotation['rotation']))
+		formatted_result[item_id]['bboxes'].append(bbox)
+
 	return {}	
 
 def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth=True):
