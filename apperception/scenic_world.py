@@ -3,11 +3,11 @@ import psycopg2
 from metadata_context import *
 from scenic_context import *
 import copy
-from world_executor import WorldExecutor
+from scenic_world_executer import ScenicWorldExecutor
 import matplotlib.pyplot as plt
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
-world_executor = WorldExecutor()
+world_executor = ScenicWorldExecutor()
 class ScenicWorld:
 
     def __init__(self, name, units, enable_tasm=False):
