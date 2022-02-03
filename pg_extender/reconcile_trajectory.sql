@@ -1,5 +1,5 @@
-DROP FUNCTION IF EXISTS create_all_time_intersect_view();
-CREATE OR REPLACE FUNCTION create_all_time_intersect_view() RETURNS void AS
+DROP FUNCTION IF EXISTS createAllTimeIntersectView();
+CREATE OR REPLACE FUNCTION createAllTimeIntersectView() RETURNS void AS
 $BODY$
 BEGIN
   EXECUTE 'CREATE OR REPLACE VIEW all_time_intersect AS  
@@ -14,8 +14,8 @@ END;
 $BODY$
 LANGUAGE 'plpgsql';
 
-DROP FUNCTION IF EXISTS create_all_pair_of_distance();
-CREATE OR REPLACE FUNCTION create_all_pair_of_distance() RETURNS void AS
+DROP FUNCTION IF EXISTS createAllPairOfDistance();
+CREATE OR REPLACE FUNCTION createAllPairOfDistance() RETURNS void AS
 $BODY$
 BEGIN
   EXECUTE 'CREATE OR REPLACE VIEW all_pair_of_distance AS  
@@ -28,17 +28,17 @@ BEGIN
                   AND Temp_Trajectory.itemId = all_time_intersect.tempId 
                   AND numTimestamps(all_time_intersect.intersection) > 0;';
   RETURN;
-END
+END;
 $BODY$
 LANGUAGE 'plpgsql';
 
-DROP FUNCTION IF EXISTS reconcile_trajectory(int);
-CREATE OR REPLACE FUNCTION reconcile_trajectory(threshold int) RETURNS void AS
+DROP FUNCTION IF EXISTS reconcileTrajectory(int);
+CREATE OR REPLACE FUNCTION reconcileTrajectory(threshold int) RETURNS void AS
 $BODY$
 BEGIN
-  EXECUTE 'SELECT create_all_time_intersect_view();';
+  EXECUTE 'SELECT createAllTimeIntersectView();';
 
-  EXECUTE 'SELECT create_all_pair_of_distance();';
+  EXECUTE 'SELECT createAllPairOfDistance();';
 -- Create the pairs of trajectory to join
   EXECUTE 'CREATE OR REPLACE VIEW join_pair AS  
             SELECT all_pair_of_distance.mainId, tempId, min_distance.min  
@@ -57,11 +57,23 @@ BEGIN
             SELECT min_join_pair.mainId, Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
               FROM min_join_pair, Temp_Trajectory  
               WHERE min_join_pair.tempId = Temp_Trajectory.itemId;';
+  
+  EXECUTE 'SELECT materializeExistingTrajectory(min_join_pair.mainId, Temp_Trajectory.trajCentroids)
+            FROM min_join_pair, Temp_Trajectory  
+              WHERE min_join_pair.tempId = Temp_Trajectory.itemId;';
 
   EXECUTE 'INSERT INTO Main_Bbox  
             SELECT min_join_pair.mainId, Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
               FROM min_join_pair, Temp_Bbox  
               WHERE min_join_pair.tempId = Temp_Bbox.itemId;';
+
+  EXECUTE 'SELECT  materializeExistingBbox(filtered_bbox.mainId, 
+                                          ARRAY(
+                                            SELECT Temp_Bbox.trajBbox 
+                                            FROM Temp_Bbox, min_join_pair
+                                            WHERE Temp_Bbox.itemId = min_join_pair.tempId 
+                                            and min_join_pair.mainId = filtered_bbox.mainId))
+            FROM (SELECT distinct min_join_pair.mainId FROM min_join_pair, Temp_Bbox WHERE min_join_pair.tempId = Temp_Bbox.itemId) as filtered_bbox;';
 
   EXECUTE 'INSERT INTO MAIN_Trajectory 
             SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId), Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
@@ -70,12 +82,20 @@ BEGIN
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
   
+  EXECUTE 'SELECT materializeNewTrajectory(CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId),  Temp_Trajectory.trajCentroids)
+            FROM Temp_Trajectory  
+              WHERE Temp_Trajectory.itemId NOT IN ( 
+                SELECT DISTINCT tempId 
+                FROM min_join_pair);';
+
   EXECUTE 'INSERT INTO MAIN_Bbox 
             SELECT CONCAT(Temp_Bbox.cameraId, ' || E'\'_\'' || ', Temp_Bbox.itemId), Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
               FROM Temp_Bbox  
               WHERE Temp_Bbox.itemId NOT IN ( 
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
+
+  EXECUTE 'SELECT materializeNewBbox();';
 
   EXECUTE 'INSERT INTO Item_Meta  
             SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId), 
@@ -84,6 +104,7 @@ BEGIN
               WHERE Temp_Trajectory.itemId NOT IN ( 
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
+
   EXECUTE 'TRUNCATE TABLE Temp_Trajectory;';
   EXECUTE 'TRUNCATE TABLE Temp_Bbox;';
   EXECUTE 'DROP TABLE min_join_pair;';
