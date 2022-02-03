@@ -7,7 +7,6 @@ import datetime
 import cv2
 from object_tracker import yolov4_deepsort_video_track
 
-
 def video_data_to_tasm(video_file, metadata_id, t):
 	t.store(video_file, metadata_id)
 
@@ -216,7 +215,8 @@ def create_or_insert_trajectory(conn, item_id, camera_id, object_type, color, po
 	Then the timestamp should be the timestamp regarding the world starting time
 	'''
 	create_item_meta(conn)
-	create_main_trajectory(conn)
+	create_main_trajectory_and_main_bbox(conn)
+	create_materialized_trajectory_and_bbox(conn)
 	create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids)
  
 def create_item_meta(conn):
@@ -231,7 +231,7 @@ def create_item_meta(conn):
 	cursor.execute(create_item_meta_sql)
 	conn.commit()
  
-def create_main_trajectory(conn):
+def create_main_trajectory_and_main_bbox(conn):
 	cursor = conn.cursor()
 	create_main_traj_sql = '''CREATE TABLE IF NOT EXISTS Main_Trajectory(
 	itemId TEXT,
@@ -251,6 +251,25 @@ def create_main_trajectory(conn):
 	cursor.execute(create_bboxes_sql)
 	cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Main_Bbox(itemId);")
 	cursor.execute(f"CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Main_Bbox USING GiST(trajBbox);")
+	conn.commit()
+ 
+def create_materialized_trajectory_and_bbox(conn):
+	cursor = conn.cursor()
+	create_materialized_traj_sql = '''CREATE TABLE IF NOT EXISTS Materialized_Trajectory(
+	itemId TEXT,
+	trajCentroids tgeompoint,
+	PRIMARY KEY(itemId)
+	);'''
+	cursor.execute(create_materialized_traj_sql)
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Materialized_Trajectory USING GiST(trajCentroids);")
+	create_materialized_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Materialized_Bbox(
+	itemId TEXT,
+	trajBbox stbox[],
+	FOREIGN KEY(itemId)
+		REFERENCES Materialized_Trajectory(itemId)
+	);'''
+	cursor.execute(create_materialized_bboxes_sql)
+	cursor.execute(f"CREATE INDEX IF NOT EXISTS item_idx ON Materialized_Bbox(itemId);")
 	conn.commit()
 
 def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, color, postgres_timestamps, bboxes, centroids):
@@ -278,7 +297,7 @@ def create_or_insert_temp_trajectory(conn, item_id, camera_id, object_type, colo
 	
 def reconcile_trajectory(conn, threshold=100):
 	cursor = conn.cursor()
-	cursor.execute(f"SELECT reconcile_trajectory({threshold});")
+	cursor.execute(f"SELECT reconcileTrajectory({threshold});")
 	conn.commit()
 	# pass
 

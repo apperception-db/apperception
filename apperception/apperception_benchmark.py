@@ -79,15 +79,15 @@ traffic_world = traffic_world.camera(cam_id=cam2_id,
 # cam1_recognized_world = traffic_world.recognize(cam1_id).execute()
 # merged_bbox_1 = traffic_world.predicate(lambda obj:obj.object_type == "car").get_merged_geo(distinct=True).execute()
 
-# cam2_recognized_world = traffic_world.recognize(cam2_id).execute()
+cam2_recognized_world = traffic_world.recognize(cam2_id).execute()
 # merged_bbox_2 = traffic_world.predicate(lambda obj:obj.object_type == "car").get_merged_geo(distinct=True).execute()
 # plot_3d(merged_bbox_2[0][0].T)
 # import code; code.interact(local=vars())
 # for merged_bbox in merged_bbox_2:
 #     plot_3d(np.asarray([np.asarray(a) for  a in merged_bbox[0]]).T)
-filtered_world = traffic_world.predicate(lambda obj:obj.object_type == "car")
-returned_trajectory = filtered_world.get_trajectory().execute()
-traffic_world.overlay_trajectory(cam1_id, returned_trajectory)
+# filtered_world = traffic_world.predicate(lambda obj:obj.object_type == "car")
+# returned_trajectory = filtered_world.get_trajectory().execute()
+# traffic_world.overlay_trajectory(cam1_id, returned_trajectory)
 ### Call execute on the world to run the detection algorithm and save the real data to the database
 # recognized_world = traffic_world.recognize(cam1_id)
 # recognized_world.execute()
