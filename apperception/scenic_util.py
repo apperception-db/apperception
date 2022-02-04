@@ -9,6 +9,7 @@ from pymongo import MongoClient
 from pyquaternion import Quaternion
 import json
 import os
+from scenic_box import Box
 
 # Create a camera table
 def create_or_insert_scenic_camera_table(conn, world_name, camera):
@@ -87,31 +88,12 @@ def insert_scenic_data(scenic_data_dir, db):
 	db['sample_annotation'].insert_many(sample_annotation_json)
 	db['sample_annotation'].create_index('token')
 
-def get_box(translation, size, orientation):
-	"""
-	return: <np.float: 3, 8>. First four corners are the ones facing forward.
-            The last four are the ones facing backwards.
-	"""
-	center = np.array(translation)
-	wlh = np.array(size)
-	w, l, h = wlh
+def transform_box(box: Box, camera, ego_pose): 
+	box.translate(-np.array(ego_pose['translation']))
+	box.rotate(Quaternion(ego_pose['rotation']).inverse)
 
-	# 3D bounding box corners. (Convention: x points forward, y to the left, z up.)
-	x_corners = l / 2 * np.array([1,  1,  1,  1, -1, -1, -1, -1])
-	y_corners = w / 2 * np.array([1, -1, -1,  1,  1, -1, -1,  1])
-	z_corners = h / 2 * np.array([1,  1, -1, -1,  1,  1, -1, -1])
-	corners = np.vstack((x_corners, y_corners, z_corners))
-
-	# Rotate
-	corners = np.dot(orientation.rotation_matrix, corners)
-
-	# Translate
-	x, y, z = center
-	corners[0, :] = corners[0, :] + x
-	corners[1, :] = corners[1, :] + y
-	corners[2, :] = corners[2, :] + z
-
-	return [corners[:, 1], corners[:, 7]]
+	box.translate(-np.array(camera['translation']))
+	box.rotate(Quaternion(camera['rotation']).inverse)
 
 def scenic_recognize(video_file, scenic_data_dir):
 	### TODO: Read all attributes from the 
@@ -134,6 +116,8 @@ def scenic_recognize(video_file, scenic_data_dir):
 	file_data = db['sample_data'].find_one({'filename': video_file})
 	sample_token = file_data['sample_token']
 	all_annotations = db['sample_annotation'].find({'sample_token': sample_token})
+	camera_info = db['calibrated_sensor'].find_one({'token': file_data['calibrated_sensor_token']})
+	ego_pose = db['ego_pose'].find_one({'token': file_data['ego_pose_token']})
 	for annotation in all_annotations:
 		instance = db['instance'].find_one({'token': annotation['instance_token']})
 		if not instance:
@@ -145,10 +129,14 @@ def scenic_recognize(video_file, scenic_data_dir):
 			formatted_result[item_id]['attributes']['cat_name'] = category['name']
 			formatted_result[item_id]['attributes']['cat_desc'] = category['description']
 
-		bbox = get_box(annotation['translation'], annotation['size'], Quaternion(annotation['rotation']))
+		box = Box(annotation['translation'], annotation['size'], Quaternion(annotation['rotation']))
+		# transform_box(box, camera_info, ego_pose)
+		# corners = box.map_2d(np.array(camera_info['camera_intrinsic']))
+		corners = box.corners()
+		bbox = [corners[:, 1], corners[:, 7]]
 		formatted_result[item_id]['bboxes'].append(bbox)
 
-	return {}	
+	return {}
 
 def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth=True):
 	clean_tables(conn)
