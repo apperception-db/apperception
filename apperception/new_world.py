@@ -1,7 +1,11 @@
+from __future__ import annotations
 import datetime
 import uuid
 from enum import Enum
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
+from os import path
+import yaml
+import glob
 
 import cv2
 import matplotlib
@@ -30,16 +34,45 @@ BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 class World:
     # all worlds share a db instance
     db = Database()
-    camera_nodes: Dict[str, Camera] = {}
+    camera_nodes: Dict[str, Camera]
 
-    def __init__(self):
-        self.fn = None
-        self.args = None
-        self.kwargs = None
-        self.parent = None
-        self.done = False  # update node
-        self.world_id = str(uuid.uuid4())
-        self.type: Set[Type] = None
+    parent: Optional[World]
+    name: str
+    fn: Any
+    args: list[Any]
+    kwargs: dict[str, Any]
+    done: bool
+    world_id: str
+    timestamp: datetime.datetime
+    types: set[Type]
+    materialized: bool
+    log_file: str
+
+    def __init__(
+        self,
+        world_id: str,
+        timestamp: datetime.datetime,
+        parent: World = None,
+        name: str = None,
+        fn: Any = None,
+        args: list[Any] = None,
+        kwargs: dict[str, Any] = None,
+        done: bool = False,
+        types: Set[Type] = None,
+        materialized: bool = False,
+    ):
+        self.camera_nodes = {}
+
+        self.parent = parent
+        self.name = "" if name is None else name
+        self.fn = None if fn is None else (getattr(self.db, fn) if type(fn) == str else fn)
+        self.args = [] if args is None else args
+        self.kwargs = {} if kwargs is None else kwargs
+        self.done = done  # update node
+        self.world_id = world_id
+        self.timestamp = timestamp
+        self.types = set() if types is None else types
+        self.materialized = materialized
 
     def overlay_trajectory(self, cam_id, trajectory):
         matplotlib.use(
@@ -275,13 +308,12 @@ class World:
         return new_node._execute_from_root(Type.BBOX)
 
     def _create_new_world_and_link(self):
-        new_world = World()
-        new_world.parent = self
+        new_world = World(parent=self)
         return new_world
 
     def _execute_from_root(self, type: Type):
         nodes = []
-        curr = self
+        curr: Optional[World] = self
         res = None
         query = ""
 
@@ -324,3 +356,120 @@ class World:
         return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(
             self.fn, self.args, self.kwargs, self.done, self.world_id
         )
+
+
+def empty_world(name: str) -> World:
+    matched_files = list(filter(path.isfile, glob.glob(f"./*_*_{name}.ap.yaml")))
+    if len(matched_files):
+        return _empty_world_from_file(name, matched_files[0])
+    return _empty_world(name)
+
+
+def _empty_world_from_file(name: str, log_file: str) -> World:
+    with open(log_file, 'r') as f:
+        timestamp_str, world_id, *_ = log_file.split('_')
+
+    return World(
+        name=name,
+        world_id=world_id,
+        timestamp=datetime.datetime.fromisoformat(timestamp_str),
+        **yaml.safe_load(f)
+    )
+
+
+def _empty_world(name) -> World:
+    world_id = str(uuid.uuid4())
+    timestamp = datetime.datetime.utcnow()
+    log_file = f"{timestamp}_{world_id}_{name}.ap.yaml"
+    open(log_file, 'x').close()
+    return World(
+        name=name,
+        world_id=world_id,
+        timestamp=timestamp,
+    )
+
+
+def op_matched(file_content: dict[str, Any], fn: Any, args: list[Any] = None, kwargs: dict[str, Any] = None) -> bool:
+    return file_content['fn'] == fn.__name__ and file_content['args'] == args and file_content['kwargs'] == kwargs
+
+
+def derive_world(parent: World, fn: Any, args: list[Any], kwargs: dict[str, Any]) -> World:
+    world = _derive_world_from_file(parent, fn, args, kwargs)
+    if world is not None:
+        return world
+    return _derive_world(parent, fn, args, kwargs)
+
+
+def _derive_world(parent: World, fn: Any, args: list[Any], kwargs: dict[str, Any]) -> World:
+    world_id = str(uuid.uuid4())
+    timestamp = datetime.datetime.utcnow()
+    log_file = f"{timestamp}_{world_id}_.ap.yaml"
+
+    parent_filename = f"{parent.timestamp}_{parent.world_id}_{parent.name}.ap.yaml"
+    with open(parent_filename, 'r+') as pf:
+        parent_content = yaml.safe_load(pf)
+        children_filenames = parent_content['children_filenames']
+
+        if children_filenames is None:
+            children_filenames = []
+
+        if log_file not in children_filenames:
+            children_filenames.append(log_file)
+
+        parent_content['children_filenames'] = children_filenames
+        pf.write(yaml.safe_dump(parent_content))
+
+    with open(log_file, 'w') as f:
+        f.write(yaml.safe_dump({
+            'fn': fn.__name__,
+            'args': args,
+            'kwargs': kwargs,
+            'parent': parent_filename,
+        }))
+
+    return World(
+        world_id=world_id,
+        timestamp=timestamp,
+        fn=fn,
+        args=args,
+        kwargs=kwargs,
+        parent=parent,
+    )
+
+
+def _derive_world_from_file(parent: World, fn: Any, args: list[Any], kwargs: dict[str, Any]) -> Optional[World]:
+    parent_filename = f"{parent.timestamp}_{parent.world_id}_{parent.name}.ap.yaml"
+    with open(parent_filename, 'r') as f:
+        sibling_filenames: list[str] = yaml.safe_load(f)['children_filenames']
+
+    for sibling_filename in sibling_filenames:
+        with open(sibling_filename, 'r') as sf:
+            sibling_content = yaml.safe_load(sf)
+
+        if op_matched(sibling_content, fn, args, kwargs):
+            timestamp_str, world_id, *_ = sibling_filename.split('_')
+            return World(
+                timestamp=datetime.datetime.fromisoformat(timestamp_str),
+                world_id=world_id,
+                parent=parent,
+                **sibling_content,
+            )
+
+    return None
+
+
+def from_file(filename: str) -> World:
+    with open(filename, 'r') as f:
+        content = yaml.safe_load(f)
+
+    parent_filename = content['parent_filename']
+
+    if parent_filename is None:
+        parent = None
+    else:
+        parent = from_file(parent_filename)
+
+    return World(
+        parent=parent,
+        **content,
+    )
