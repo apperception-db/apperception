@@ -96,11 +96,36 @@ def transform_box(box: Box, camera, ego_pose):
 	box.rotate(Quaternion(camera['rotation']).inverse)
 
 def scenic_recognize(video_file, scenic_data_dir):
-	### TODO: Read all attributes from the 
-	### return formatted_result: {object: {bboxes: [[top_left:3d np.array, bottom_right:3d np.array]], 
- # 						  attributes: {*attr_name: *attr_value}}
- # 				}
-
+	"""
+	return:
+	video_frames: {
+		frame_id: {
+			filename: image file name,
+			camera_config: {
+				token,
+				translation,
+				rotation,
+				camera_intrinsic,
+				ego_config: {
+					token,
+					translation,
+					rotation,
+					timestamp
+				}
+			}
+		}
+		...
+	}
+	annotations: {
+		object_id: {
+			bboxes: [[[x1, y1, z1], [x2, y2, z2]], ...]
+			object_type,
+			frame_id
+		}
+		...
+	}
+	"""
+	
 	# connect mongoDB
 	client = MongoClient("mongodb+srv://apperception:apperception@cluster0.gvxkh.mongodb.net/cluster0?retryWrites=true&w=majority")
 	db = client['apperception']
@@ -110,7 +135,8 @@ def scenic_recognize(video_file, scenic_data_dir):
 	else:
 		print('already exists')
 
-	formatted_result = {}
+	video_frames = {}
+	annotations = {}
 
 	# get bboxes and categories of all the objects appeared in the image file
 	file_data = db['sample_data'].find_one({'filename': video_file})
@@ -118,25 +144,31 @@ def scenic_recognize(video_file, scenic_data_dir):
 	all_annotations = db['sample_annotation'].find({'sample_token': sample_token})
 	camera_info = db['calibrated_sensor'].find_one({'token': file_data['calibrated_sensor_token']})
 	ego_pose = db['ego_pose'].find_one({'token': file_data['ego_pose_token']})
+	del ego_pose['_id']
+	camera_info['ego_config'] = ego_pose
+	del camera_info['sensor_token']
+	del camera_info['_id']
+	video_frames[sample_token] = {'filename': video_file, 'camera_config': camera_info}
+
 	for annotation in all_annotations:
 		instance = db['instance'].find_one({'token': annotation['instance_token']})
 		if not instance:
 			continue
 		item_id = instance['token']
-		if item_id not in formatted_result:
-			formatted_result[item_id] = {'bboxes': [], 'attributes': {}}
+		if item_id not in annotations:
+			annotations[item_id] = {'bboxes': []}
 			category = db['category'].find_one({'token': instance['category_token']})
-			formatted_result[item_id]['attributes']['cat_name'] = category['name']
-			formatted_result[item_id]['attributes']['cat_desc'] = category['description']
+			annotations[item_id]['object_type'] = category['name']
+			annotations[item_id]['frame_id'] = sample_token
 
 		box = Box(annotation['translation'], annotation['size'], Quaternion(annotation['rotation']))
 		# transform_box(box, camera_info, ego_pose)
 		# corners = box.map_2d(np.array(camera_info['camera_intrinsic']))
 		corners = box.corners()
 		bbox = [corners[:, 1], corners[:, 7]]
-		formatted_result[item_id]['bboxes'].append(bbox)
+		annotations[item_id]['bboxes'].append(bbox)
 
-	return {}
+	return video_frames, annotations
 
 def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth=True):
 	clean_tables(conn)
