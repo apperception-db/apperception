@@ -1,8 +1,9 @@
 from __future__ import annotations
+from collections.abc import Iterable
 import datetime
 import uuid
-from enum import Enum
-from typing import Any, Dict, List, Optional, Set
+from enum import IntEnum
+from typing import Any, Dict, List, Optional, Set, Tuple
 from os import path
 import yaml
 import glob
@@ -21,11 +22,22 @@ matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
 
 
-class Type(Enum):
+class Type(IntEnum):
     # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
     # recognize(), we should not execute it because the inserted object must not be in the final result. we use enum
     # type to determine whether we should execute this node
     CAM, BBOX, TRAJ = 0, 1, 2
+
+    @staticmethod
+    def from_str(s: str) -> Type:
+        if s == 'Type.CAM':
+            return Type.CAM
+        elif s == 'Type.BBOX':
+            return Type.BBOX
+        elif s == 'Type.TRAJ':
+            return Type.TRAJ
+        else:
+            raise Exception('Type mismatched: provided ' + s)
 
 
 BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
@@ -34,45 +46,42 @@ BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 class World:
     # all worlds share a db instance
     db = Database()
-    camera_nodes: Dict[str, Camera]
+    camera_nodes: Dict[str, Camera] = {}
 
-    parent: Optional[World]
-    name: str
-    fn: Any
-    args: list[Any]
-    kwargs: dict[str, Any]
-    done: bool
-    world_id: str
-    timestamp: datetime.datetime
-    types: set[Type]
-    materialized: bool
-    log_file: str
+    _parent: Optional[World]
+    _name: str
+    _fn: Any
+    _args: tuple
+    _kwargs: dict[str, Any]
+    _done: bool
+    _world_id: str
+    _timestamp: datetime.datetime
+    _types: set[Type]
+    _materialized: bool
 
     def __init__(
         self,
         world_id: str,
         timestamp: datetime.datetime,
-        parent: World = None,
         name: str = None,
+        parent: World = None,
         fn: Any = None,
-        args: list[Any] = None,
+        args: tuple = None,
         kwargs: dict[str, Any] = None,
         done: bool = False,
         types: Set[Type] = None,
         materialized: bool = False,
     ):
-        self.camera_nodes = {}
-
-        self.parent = parent
-        self.name = "" if name is None else name
-        self.fn = None if fn is None else (getattr(self.db, fn) if type(fn) == str else fn)
-        self.args = [] if args is None else args
-        self.kwargs = {} if kwargs is None else kwargs
-        self.done = done  # update node
-        self.world_id = world_id
-        self.timestamp = timestamp
-        self.types = set() if types is None else types
-        self.materialized = materialized
+        self._parent = parent
+        self._name = "" if name is None else name
+        self._fn = None if fn is None else (getattr(self.db, fn) if type(fn) == str else fn)
+        self._args = () if args is None else args
+        self._kwargs = {} if kwargs is None else kwargs
+        self._done = done  # update node
+        self._world_id = world_id
+        self._timestamp = timestamp
+        self._types = set() if types is None else types
+        self._materialized = materialized
 
     def overlay_trajectory(self, cam_id, trajectory):
         matplotlib.use(
@@ -120,105 +129,105 @@ class World:
 
     def get_id(self):
         # to get world id
-        return self.world_id
+        # TODO: users can already access world_id
+        return self._world_id
 
     def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
         assert cam_id in World.camera_nodes
 
         camera_node = World.camera_nodes[cam_id]
         node1 = self._insert_bbox_traj(camera_node=camera_node, recognition_area=recognition_area)
-        node2 = node1._retrieve_bbox(world_id=node1.world_id)
-        node3 = node2._retrieve_traj(world_id=node1.world_id)
+        node2 = node1._retrieve_bbox(world_id=node1._world_id)
+        node3 = node2._retrieve_traj(world_id=node1._world_id)
         return node3
 
     def _insert_bbox_traj(self, camera_node: Camera, recognition_area: BoundingBox):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.insert_bbox_traj
-        new_node.type = set([Type.TRAJ, Type.BBOX])
-        new_node.args, new_node.kwargs = [], {
-            "world_id": new_node.world_id,
-            "camera_node": camera_node,
-            "recognition_area": recognition_area,
-        }
-        return new_node
+        return derive_world(
+            self,
+            {Type.TRAJ, Type.BBOX},
+            self.db.insert_bbox_traj,
+            camera_node=camera_node,
+            recognition_area=recognition_area,
+        )
 
     def _retrieve_bbox(self, world_id: str):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.retrieve_bbox
-        new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = [], {"world_id": world_id}
-        return new_node
+        return derive_world(
+            self,
+            {Type.BBOX},
+            self.db.retrieve_bbox,
+            world_id=world_id
+        )
 
     def _retrieve_traj(self, world_id: str):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.retrieve_traj
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {"world_id": world_id}
-        return new_node
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.retrieve_traj,
+            world_id=world_id
+        )
 
-    def get_video(self, cam_ids: List = []):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_video
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {
-            "cams": [World.camera_nodes[cam_id] for cam_id in cam_ids]
-        }
-        return new_node._execute_from_root(Type.TRAJ)
+    def get_video(self, cam_ids: List[str] = []):
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.get_video,
+            cams=[World.camera_nodes[cam_id] for cam_id in cam_ids],
+        )._execute_from_root(Type.TRAJ)
 
     def get_bbox(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_bbox
-        new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.BBOX)
+        return derive_world(
+            self,
+            {Type.BBOX},
+            self.db.get_bbox,
+        )._execute_from_root(Type.BBOX)
 
     def get_traj(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_traj
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.TRAJ)
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.get_traj,
+        )._execute_from_root(Type.TRAJ)
 
     def get_traj_key(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_traj_key
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.TRAJ)
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.get_traj_key,
+        )._execute_from_root(Type.TRAJ)
 
     def get_distance(self, start: float, end: float):
-        new_node = self._create_new_world_and_link()
-        starttime = str(self.db.start_time + datetime.timedelta(seconds=start))
-        endtime = str(self.db.start_time + datetime.timedelta(seconds=end))
-
-        new_node.fn = self.db.get_distance
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
-        return new_node._execute_from_root(Type.TRAJ)
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.get_distance,
+            start=str(self.db.start_time + datetime.timedelta(seconds=start)),
+            end=str(self.db.start_time + datetime.timedelta(seconds=end)),
+        )._execute_from_root(Type.TRAJ)
 
     def get_speed(self, start, end):
-        new_node = self._create_new_world_and_link()
-        starttime = str(self.db.start_time + datetime.timedelta(seconds=start))
-        endtime = str(self.db.start_time + datetime.timedelta(seconds=end))
-
-        new_node.fn = self.db.get_speed
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
-        return new_node._execute_from_root(Type.TRAJ)
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.get_speed,
+            start=str(self.db.start_time + datetime.timedelta(seconds=start)),
+            end=str(self.db.start_time + datetime.timedelta(seconds=end)),
+        )._execute_from_root(Type.TRAJ)
 
     def filter_traj_type(self, object_type: str):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.filter_traj_type
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {"object_type": object_type}
-        return new_node
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.filter_traj_type,
+            object_type=object_type
+        )
 
     def filter_traj_volume(self, volume: str):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.filter_traj_volume
-        new_node.type = set([Type.TRAJ])
-        new_node.args, new_node.kwargs = [], {"volume": volume}
-        return new_node
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.filter_traj_volume,
+            volume=volume
+        )
 
     def add_camera(
         self,
@@ -238,81 +247,78 @@ class World:
         World.camera_nodes[cam_id] = camera_node
 
         node1 = self._insert_camera(camera_node=camera_node)
-        node2 = node1._retrieve_camera(world_id=node1.world_id)
+        node2 = node1._retrieve_camera(world_id=node1._world_id)
         return node2
 
     def interval(self, start, end):
-        new_node = self._create_new_world_and_link()
+        return derive_world(
+            self,
+            {Type.BBOX},
+            self.db.interval,
+            start=str(self.db.start_time + datetime.timedelta(seconds=start)),
+            end=str(self.db.start_time + datetime.timedelta(seconds=end)),
+        )
 
-        starttime = str(self.db.start_time + datetime.timedelta(seconds=start))
-        endtime = str(self.db.start_time + datetime.timedelta(seconds=end))
-
-        new_node.fn = self.db.interval
-        new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = [], {"start": starttime, "end": endtime}
-        return new_node
-
-    def add_properties(self, cam_id: str, properties: Any):
-        self.camera_nodes[cam_id].add_property(properties)
+    def add_properties(self, cam_id: str, properties: Any, property_type: str, new_prop):
+        # TODO: Should we add this to DB instead of the global object?
+        self.camera_nodes[cam_id].add_property(properties, property_type, new_prop)
 
     def predicate(self, condition: str):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.filter_cam
-        new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = [], {"condition": condition}
-        return new_node
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.filter_cam,
+            condition=condition
+        )
 
     def _insert_camera(self, camera_node: Camera):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.insert_cam
-        new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = [], {
-            "camera_node": camera_node,
-            "world_id": new_node.world_id,
-        }
-        return new_node
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.insert_cam,
+            self.db.insert_cam,
+            # TODO: need to serialize Camera
+            camera_node=camera_node,
+        )
 
     def _retrieve_camera(self, world_id: str):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.retrieve_cam
-        new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = [], {"world_id": world_id}
-        return new_node
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.retrieve_cam,
+            world_id=world_id,
+        )
 
     def get_len(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_len
-        new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.CAM)
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.get_len,
+        )._execute_from_root(Type.CAM)
 
     def get_camera(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_cam
-        new_node.type = set([Type.CAM])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.CAM)
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.get_cam,
+        )._execute_from_root(Type.CAM)
 
     def get_bbox_geo(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_bbox_geo
-        new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.BBOX)
+        return derive_world(
+            self,
+            {Type.BBOX},
+            self.db.get_bbox_geo,
+        )._execute_from_root(Type.BBOX)
 
     def get_time(self):
-        new_node = self._create_new_world_and_link()
-        new_node.fn = self.db.get_time
-        new_node.type = set([Type.BBOX])
-        new_node.args, new_node.kwargs = [], {}
-        return new_node._execute_from_root(Type.BBOX)
-
-    def _create_new_world_and_link(self):
-        new_world = World(parent=self)
-        return new_world
+        return derive_world(
+            self,
+            {Type.BBOX},
+            self.db.get_time,
+        )._execute_from_root(Type.BBOX)
 
     def _execute_from_root(self, type: Type):
-        nodes = []
+        nodes: list[World] = []
         curr: Optional[World] = self
         res = None
         query = ""
@@ -320,7 +326,7 @@ class World:
         # collect all the nodes til the root
         while curr:
             nodes.append(curr)
-            curr = curr.parent
+            curr = curr._parent
 
         # execute the nodes from the root
         for node in nodes[::-1]:
@@ -328,13 +334,14 @@ class World:
             if node.fn is None:
                 continue
             # if different type => pass
-            if type not in node.type:
+            if type not in node.types:
                 continue
             # treat update method differently
             elif node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
                 if not node.done:
                     node._execute()
-                    node.done = True
+                    node._done = True
+                    node._update_log_file()
             else:
                 # print(query)
                 query = node._execute(query=query)
@@ -344,132 +351,239 @@ class World:
 
     def _execute(self, *args, **kwargs):
         # print("executing fn = {}, with args = {} and kwargs = {}".format(self.fn, self.args, self.kwargs))
-        return self.fn(*self.args, *args, **self.kwargs, **kwargs)
+        return self._fn(*self._args, *args, **{'world_id': self.world_id, **self._kwargs, **kwargs})
 
     def _print_til_root(self):
         curr = self
         while curr:
             # print(curr)
-            curr = curr.parent
+            curr = curr._parent
 
     def __str__(self):
         return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(
-            self.fn, self.args, self.kwargs, self.done, self.world_id
+            self._fn, self._args, self._kwargs, self._done, self._world_id
         )
+
+    @property
+    def filename(self):
+        return filename(self._timestamp, self._world_id, self._name)
+
+    @property
+    def world_id(self):
+        return self._world_id
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def fn(self):
+        return self._fn
+
+    @fn.setter
+    def fn(self, v):
+        if self._done:
+            raise Exception('World cannot be modified once executed')
+
+        self._fn = v
+        self._update_log_file()
+
+    @property
+    def args(self):
+        return self._args
+
+    @args.setter
+    def args(self, v):
+        if self._done:
+            raise Exception('World cannot be modified once executed')
+
+        self._args = v
+        self._update_log_file()
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @kwargs.setter
+    def kwargs(self, v):
+        if self._done:
+            raise Exception('World cannot be modified once executed')
+
+        self._kwargs = v
+        self._update_log_file()
+
+    @property
+    def done(self):
+        return self._done
+
+    @property
+    def types(self):
+        return self._types
+
+    @types.setter
+    def types(self, v):
+        if self._done:
+            raise Exception('World cannot be modified once executed')
+
+        self._types = v
+        self._update_log_file()
+
+    @property
+    def materialized(self):
+        return self._materialized
+
+    def _update_log_file(self):
+        with open(self.filename, "r+") as f:
+            children = yaml.safe_load(f).get("children_filenames", None)
+
+            f.write(yaml.safe_dump({
+                **({} if self.parent is None else {'parent': self.parent}),
+                **({} if self.types == set() else {'types': set(map(int, self.types))}),
+                **({} if self.fn is None else {'fn': self.fn.__name__}),
+                **({} if self.args == () else {'args': self.args}),
+                **({} if self.kwargs == {} else {'kwargs': self.kwargs}),
+                **({} if not self.done else {'done': self.done}),
+                **({} if not self.materialized else {'materialized': self.materialized}),
+                **({} if children is None else {'children_filenames': children}),
+            }))
+
+
+def filename(timestamp: datetime.datetime, world_id: str, name: str = ""):
+    return f"{timestamp}_{world_id}_{name}.ap.yaml"
 
 
 def empty_world(name: str) -> World:
     matched_files = list(filter(path.isfile, glob.glob(f"./*_*_{name}.ap.yaml")))
     if len(matched_files):
-        return _empty_world_from_file(name, matched_files[0])
+        return _empty_world_from_file(matched_files[0])
     return _empty_world(name)
 
 
-def _empty_world_from_file(name: str, log_file: str) -> World:
-    with open(log_file, 'r') as f:
-        timestamp_str, world_id, *_ = log_file.split('_')
-
-    return World(
-        name=name,
-        world_id=world_id,
-        timestamp=datetime.datetime.fromisoformat(timestamp_str),
-        **yaml.safe_load(f)
-    )
+def _empty_world_from_file(log_file: str) -> World:
+    with open(log_file, "r") as f:
+        return World(
+            *split_filename(log_file),
+            **yaml.safe_load(f),
+        )
 
 
-def _empty_world(name) -> World:
+def _empty_world(name: str) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
-    log_file = f"{timestamp}_{world_id}_{name}.ap.yaml"
-    open(log_file, 'x').close()
-    return World(
-        name=name,
-        world_id=world_id,
-        timestamp=timestamp,
+    log_file = filename(timestamp, world_id, name)
+    open(log_file, "x").close()
+    return World(world_id, timestamp, name)
+
+
+def op_matched(
+    file_content: dict[str, Any],
+    types: set[Type],
+    fn: Any,
+    args: tuple = None,
+    kwargs: dict[str, Any] = None,
+) -> bool:
+    return (
+        file_content.get("fn", None) == fn.__name__
+        and file_content.get("args", ()) == args
+        and file_content.get("kwargs", {}) == kwargs
+        and file_content.get("types", set()) == set(map(int, types))
     )
 
 
-def op_matched(file_content: dict[str, Any], fn: Any, args: list[Any] = None, kwargs: dict[str, Any] = None) -> bool:
-    return file_content['fn'] == fn.__name__ and file_content['args'] == args and file_content['kwargs'] == kwargs
-
-
-def derive_world(parent: World, fn: Any, args: list[Any], kwargs: dict[str, Any]) -> World:
-    world = _derive_world_from_file(parent, fn, args, kwargs)
+def derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> World:
+    world = _derive_world_from_file(parent, types, fn, *args, **kwargs)
     if world is not None:
         return world
-    return _derive_world(parent, fn, args, kwargs)
+    return _derive_world(parent, types, fn, *args, **kwargs)
 
 
-def _derive_world(parent: World, fn: Any, args: list[Any], kwargs: dict[str, Any]) -> World:
+def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
-    log_file = f"{timestamp}_{world_id}_.ap.yaml"
+    log_file = filename(timestamp, world_id)
 
-    parent_filename = f"{parent.timestamp}_{parent.world_id}_{parent.name}.ap.yaml"
-    with open(parent_filename, 'r+') as pf:
-        parent_content = yaml.safe_load(pf)
-        children_filenames = parent_content['children_filenames']
+    with open(parent.filename, "r+") as pf:
+        content = yaml.safe_load(pf)
+        content["children_filenames"] = content.get("children_filenames", set())
+        content["children_filenames"].add(log_file)
+        pf.write(yaml.safe_dump(content))
 
-        if children_filenames is None:
-            children_filenames = []
-
-        if log_file not in children_filenames:
-            children_filenames.append(log_file)
-
-        parent_content['children_filenames'] = children_filenames
-        pf.write(yaml.safe_dump(parent_content))
-
-    with open(log_file, 'w') as f:
-        f.write(yaml.safe_dump({
-            'fn': fn.__name__,
-            'args': args,
-            'kwargs': kwargs,
-            'parent': parent_filename,
-        }))
+    with open(log_file, "w") as f:
+        f.write(
+            yaml.safe_dump(
+                {
+                    "fn": fn.__name__,
+                    "args": args,
+                    "kwargs": kwargs,
+                    "parent": parent.filename,
+                    "types": set(map(int, types)),
+                }
+            )
+        )
 
     return World(
-        world_id=world_id,
-        timestamp=timestamp,
+        world_id,
+        timestamp,
         fn=fn,
         args=args,
         kwargs=kwargs,
         parent=parent,
+        types=types,
     )
 
 
-def _derive_world_from_file(parent: World, fn: Any, args: list[Any], kwargs: dict[str, Any]) -> Optional[World]:
-    parent_filename = f"{parent.timestamp}_{parent.world_id}_{parent.name}.ap.yaml"
-    with open(parent_filename, 'r') as f:
-        sibling_filenames: list[str] = yaml.safe_load(f)['children_filenames']
+def _derive_world_from_file(
+    parent: World, types: set[Type], fn: Any, *args, **kwargs
+) -> Optional[World]:
+    with open(parent.filename, "r") as f:
+        sibling_filenames: Iterable[str] = yaml.safe_load(f).get("children_filenames", [])
 
     for sibling_filename in sibling_filenames:
-        with open(sibling_filename, 'r') as sf:
+        with open(sibling_filename, "r") as sf:
             sibling_content = yaml.safe_load(sf)
 
-        if op_matched(sibling_content, fn, args, kwargs):
-            timestamp_str, world_id, *_ = sibling_filename.split('_')
+        if op_matched(sibling_content, types, fn, args, kwargs):
             return World(
-                timestamp=datetime.datetime.fromisoformat(timestamp_str),
-                world_id=world_id,
+                *split_filename(sibling_filename),
                 parent=parent,
-                **sibling_content,
+                **format_content(sibling_content),
             )
 
     return None
 
 
 def from_file(filename: str) -> World:
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         content = yaml.safe_load(f)
 
-    parent_filename = content['parent_filename']
-
+    parent_filename = content.get("parent_filename", None)
     if parent_filename is None:
         parent = None
     else:
         parent = from_file(parent_filename)
 
     return World(
+        *split_filename(filename),
         parent=parent,
-        **content,
+        **format_content(content)
     )
+
+
+def format_content(content: dict[str, Any]) -> dict[str, Any]:
+    if 'types' in content:
+        content['types'] = set(map(Type, content['types']))
+
+    return content
+
+
+def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
+    timestamp_str, world_id, name = filename.split('.')[0].split('_', 2)
+    return world_id, datetime.datetime.fromisoformat(timestamp_str), name
