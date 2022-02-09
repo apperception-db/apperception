@@ -1,17 +1,19 @@
 from __future__ import annotations
-from collections.abc import Iterable
+
 import datetime
-import uuid
-from enum import IntEnum
-from typing import Any, Dict, List, Optional, Set, Tuple
-from os import path
-import yaml
 import glob
+import pickle
+import uuid
+from collections.abc import Iterable
+from enum import IntEnum
+from os import path
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import yaml
 from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
 from new_db import Database
@@ -27,17 +29,6 @@ class Type(IntEnum):
     # recognize(), we should not execute it because the inserted object must not be in the final result. we use enum
     # type to determine whether we should execute this node
     CAM, BBOX, TRAJ = 0, 1, 2
-
-    @staticmethod
-    def from_str(s: str) -> Type:
-        if s == 'Type.CAM':
-            return Type.CAM
-        elif s == 'Type.BBOX':
-            return Type.BBOX
-        elif s == 'Type.TRAJ':
-            return Type.TRAJ
-        else:
-            raise Exception('Type mismatched: provided ' + s)
 
 
 BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
@@ -126,11 +117,6 @@ class World:
             print(br)
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
-
-    def get_id(self):
-        # to get world id
-        # TODO: users can already access world_id
-        return self._world_id
 
     def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
         assert cam_id in World.camera_nodes
@@ -243,6 +229,7 @@ class World:
         2. For the write node, never double write. (so we use done flag)
         ... -> [write] -> [retrive] -> ...
         """
+        # TODO: should let the user add a Camera instead of its fields
         camera_node = Camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
         World.camera_nodes[cam_id] = camera_node
 
@@ -272,13 +259,12 @@ class World:
         )
 
     def _insert_camera(self, camera_node: Camera):
+        # TODO: check md5/sha256 for the video file
         return derive_world(
             self,
             {Type.CAM},
             self.db.insert_cam,
-            self.db.insert_cam,
-            # TODO: need to serialize Camera
-            camera_node=camera_node,
+            camera_node_bytes=pickle.dumps(camera_node),
         )
 
     def _retrieve_camera(self, world_id: str):
@@ -351,7 +337,7 @@ class World:
 
     def _execute(self, *args, **kwargs):
         # print("executing fn = {}, with args = {} and kwargs = {}".format(self.fn, self.args, self.kwargs))
-        return self._fn(*self._args, *args, **{'world_id': self.world_id, **self._kwargs, **kwargs})
+        return self._fn(*self._args, *args, **{'world_id': self._world_id, **self._kwargs, **kwargs})
 
     def _print_til_root(self):
         curr = self
@@ -388,37 +374,13 @@ class World:
     def fn(self):
         return self._fn
 
-    @fn.setter
-    def fn(self, v):
-        if self._done:
-            raise Exception('World cannot be modified once executed')
-
-        self._fn = v
-        self._update_log_file()
-
     @property
     def args(self):
         return self._args
 
-    @args.setter
-    def args(self, v):
-        if self._done:
-            raise Exception('World cannot be modified once executed')
-
-        self._args = v
-        self._update_log_file()
-
     @property
     def kwargs(self):
         return self._kwargs
-
-    @kwargs.setter
-    def kwargs(self, v):
-        if self._done:
-            raise Exception('World cannot be modified once executed')
-
-        self._kwargs = v
-        self._update_log_file()
 
     @property
     def done(self):
@@ -427,14 +389,6 @@ class World:
     @property
     def types(self):
         return self._types
-
-    @types.setter
-    def types(self, v):
-        if self._done:
-            raise Exception('World cannot be modified once executed')
-
-        self._types = v
-        self._update_log_file()
 
     @property
     def materialized(self):
@@ -445,13 +399,13 @@ class World:
             children = yaml.safe_load(f).get("children_filenames", None)
 
             f.write(yaml.safe_dump({
-                **({} if self.parent is None else {'parent': self.parent}),
-                **({} if self.types == set() else {'types': set(map(int, self.types))}),
-                **({} if self.fn is None else {'fn': self.fn.__name__}),
-                **({} if self.args == () else {'args': self.args}),
-                **({} if self.kwargs == {} else {'kwargs': self.kwargs}),
-                **({} if not self.done else {'done': self.done}),
-                **({} if not self.materialized else {'materialized': self.materialized}),
+                **({} if self._parent is None else {'parent': self._parent}),
+                **({} if self._types == set() else {'types': set(map(int, self._types))}),
+                **({} if self._fn is None else {'fn': self._fn.__name__}),
+                **({} if self._args == () else {'args': self._args}),
+                **({} if self._kwargs == {} else {'kwargs': self._kwargs}),
+                **({} if not self._done else {'done': self._done}),
+                **({} if not self._materialized else {'materialized': self._materialized}),
                 **({} if children is None else {'children_filenames': children}),
             }))
 

@@ -1,3 +1,4 @@
+import pickle
 import datetime
 
 import psycopg2
@@ -56,7 +57,11 @@ class Database:
         self.cur.execute(q2.get_sql())
         self.con.commit()
 
-    def insert_cam(self, world_id: str, camera_node: Camera):
+    def insert_cam(self, world_id: str, camera_node_bytes: bytes):
+        camera_node = pickle.loads(camera_node_bytes)
+        if not isinstance(camera_node, Camera):
+            raise Exception('camera_node_bytes should be reconstructed as Camera')
+
         cam = Table(CAMERA_TABLE)
         cam_id = camera_node.cam_id
         cam_ratio = camera_node.ratio
