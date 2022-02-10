@@ -127,9 +127,12 @@ def scenic_recognize(video_file, scenic_data_dir):
 	"""
 	
 	# connect mongoDB
-	client = MongoClient("mongodb+srv://apperception:apperception@cluster0.gvxkh.mongodb.net/cluster0?retryWrites=true&w=majority")
+	mongo_url = "mongodb+srv://apperception:apperception@cluster0.gvxkh.mongodb.net/cluster0?retryWrites=true&w=majority"
+	data_lake_url = "mongodb://apperception:apperception@datalake0-bbd6k.a.query.mongodb.net/apperception?ssl=true&authSource=admin"
+	client = MongoClient(data_lake_url)
 	db = client['apperception']
 
+	# if statement not needed if Data Lake DB is being used
 	if len(db.list_collection_names()) == 0:
 		insert_scenic_data(scenic_data_dir, db)
 	else:
@@ -144,10 +147,8 @@ def scenic_recognize(video_file, scenic_data_dir):
 	all_annotations = db['sample_annotation'].find({'sample_token': sample_token})
 	camera_info = db['calibrated_sensor'].find_one({'token': file_data['calibrated_sensor_token']})
 	ego_pose = db['ego_pose'].find_one({'token': file_data['ego_pose_token']})
-	del ego_pose['_id']
 	camera_info['ego_config'] = ego_pose
 	del camera_info['sensor_token']
-	del camera_info['_id']
 	video_frames[sample_token] = {'filename': video_file, 'camera_config': camera_info}
 
 	for annotation in all_annotations:

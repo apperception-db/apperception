@@ -1,2 +1,9 @@
 __MACOSX
 __pycache__
+env
+yolov4-deepsort
+output
+checkpoints
+.ipynb_checkpoints
+yolov4-tiny.weights
+.gitignore
