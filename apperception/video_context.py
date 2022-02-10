@@ -12,27 +12,24 @@ from tracker import Tracker
 from video_util import Units
 
 
+@dataclass
 class Camera:
     """Camera node"""
 
-    def __init__(
-        self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens
-    ):
-        self.cam_id: str = cam_id
-        self.ratio: float = ratio
-        self.video_file: str = video_file
-        self.metadata_id: str = metadata_id
-        self.properties: Dict[str, list] = {}  # TODO: what is the type of properties?
-
-        # Contain objects that still have yet to be added to the backend
-        # If user calls recognize, those items will have already been
-        # stored in the backend. These are reserved for objects that users
-        # have not added to the camera.
-        self.items: List[Item] = []
-        self.object_recognition: Optional[ObjectRecognition] = None
-        self.point: Point = point
-        self.lens: Lens = lens
-        self.dimension: Optional[Tuple[int, int]] = None
+    cam_id: str
+    point: Point
+    ratio: float
+    video_file: str
+    metadata_id: str
+    lens: Lens
+    properties: Dict[str, list] = field(default_factory=dict)
+    # Contain objects that still have yet to be added to the backend
+    # If user calls recognize, those items will have already been
+    # stored in the backend. These are reserved for objects that users
+    # have not added to the camera.
+    items: List[Item] = field(default_factory=list)
+    object_recognition: Optional[ObjectRecognition] = None
+    dimension: Optional[Tuple[int, int]] = None
 
     def add_item(self, item: Item):
         # Add item

@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import datetime
 import glob
+import inspect
 import pickle
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
-from os import path
+from os import path, makedirs
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
@@ -22,6 +23,8 @@ from video_context import Camera
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
+
+makedirs('./.apperception_cache', exist_ok=True)
 
 
 class Type(IntEnum):
@@ -41,6 +44,7 @@ class World:
 
     _parent: Optional[World]
     _name: str
+    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | None
     _fn: Any
     _args: tuple
     _kwargs: dict[str, Any]
@@ -132,6 +136,7 @@ class World:
             self,
             {Type.TRAJ, Type.BBOX},
             self.db.insert_bbox_traj,
+            # does not pass in world_id because we want to use the world_id of the deriving world
             camera_node=camera_node,
             recognition_area=recognition_area,
         )
@@ -255,16 +260,16 @@ class World:
             self,
             {Type.CAM},
             self.db.filter_cam,
-            condition=condition
+            condition=condition,
         )
 
     def _insert_camera(self, camera_node: Camera):
-        # TODO: check md5/sha256 for the video file
         return derive_world(
             self,
             {Type.CAM},
             self.db.insert_cam,
-            camera_node_bytes=pickle.dumps(camera_node),
+            # does not pass in world_id because we want to use the world_id of the deriving world
+            camera_node=camera_node,
         )
 
     def _retrieve_camera(self, world_id: str):
@@ -337,7 +342,10 @@ class World:
 
     def _execute(self, *args, **kwargs):
         # print("executing fn = {}, with args = {} and kwargs = {}".format(self.fn, self.args, self.kwargs))
-        return self._fn(*self._args, *args, **{'world_id': self._world_id, **self._kwargs, **kwargs})
+        fn_spec = inspect.getfullargspec(self._fn)
+        if 'world_id' in fn_spec.args or fn_spec.varkw is not None:
+            return self._fn(*self._args, *args, **{'world_id': self._world_id, **self._kwargs, **kwargs})
+        return self._fn(*self._args, *args, **{**self._kwargs, **kwargs})
 
     def _print_til_root(self):
         curr = self
@@ -395,15 +403,15 @@ class World:
         return self._materialized
 
     def _update_log_file(self):
-        with open(self.filename, "r+") as f:
+        with open(self.filename, "r") as f:
             children = yaml.safe_load(f).get("children_filenames", None)
-
+        with open(self.filename, "w") as f:
             f.write(yaml.safe_dump({
-                **({} if self._parent is None else {'parent': self._parent}),
+                **({} if self._parent is None else {'parent': self._parent.filename}),
                 **({} if self._types == set() else {'types': set(map(int, self._types))}),
                 **({} if self._fn is None else {'fn': self._fn.__name__}),
-                **({} if self._args == () else {'args': self._args}),
-                **({} if self._kwargs == {} else {'kwargs': self._kwargs}),
+                **({} if self._args == () else {'args': pickle.dumps(self._args)}),
+                **({} if self._kwargs == {} else {'kwargs': pickle.dumps(self._kwargs)}),
                 **({} if not self._done else {'done': self._done}),
                 **({} if not self._materialized else {'materialized': self._materialized}),
                 **({} if children is None else {'children_filenames': children}),
@@ -411,11 +419,11 @@ class World:
 
 
 def filename(timestamp: datetime.datetime, world_id: str, name: str = ""):
-    return f"{timestamp}_{world_id}_{name}.ap.yaml"
+    return f".apperception_cache/{timestamp}_{world_id}_{name}.ap.yaml"
 
 
 def empty_world(name: str) -> World:
-    matched_files = list(filter(path.isfile, glob.glob(f"./*_*_{name}.ap.yaml")))
+    matched_files = list(filter(path.isfile, glob.glob(f"./.apperception_cache/*_*_{name}.ap.yaml")))
     if len(matched_files):
         return _empty_world_from_file(matched_files[0])
     return _empty_world(name)
@@ -423,18 +431,23 @@ def empty_world(name: str) -> World:
 
 def _empty_world_from_file(log_file: str) -> World:
     with open(log_file, "r") as f:
-        return World(
-            *split_filename(log_file),
-            **yaml.safe_load(f),
-        )
+        content = yaml.safe_load(f)
+        if 'children_filenames' in content:
+            del content['children_filenames']
+        return World(*split_filename(log_file), **content)
 
 
 def _empty_world(name: str) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
     log_file = filename(timestamp, world_id, name)
-    open(log_file, "x").close()
+    with open(log_file, "w") as f:
+        f.write(yaml.safe_dump({}))
     return World(world_id, timestamp, name)
+
+
+DUMPED_EMPTY_TUPLE = pickle.dumps(())
+DUMPED_EMPTY_DICT = pickle.dumps({})
 
 
 def op_matched(
@@ -446,8 +459,8 @@ def op_matched(
 ) -> bool:
     return (
         file_content.get("fn", None) == fn.__name__
-        and file_content.get("args", ()) == args
-        and file_content.get("kwargs", {}) == kwargs
+        and pickle.loads(file_content.get("args", DUMPED_EMPTY_TUPLE)) == args
+        and pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT)) == kwargs
         and file_content.get("types", set()) == set(map(int, types))
     )
 
@@ -464,8 +477,9 @@ def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> 
     timestamp = datetime.datetime.utcnow()
     log_file = filename(timestamp, world_id)
 
-    with open(parent.filename, "r+") as pf:
+    with open(parent.filename, "r") as pf:
         content = yaml.safe_load(pf)
+    with open(parent.filename, "w") as pf:
         content["children_filenames"] = content.get("children_filenames", set())
         content["children_filenames"].add(log_file)
         pf.write(yaml.safe_dump(content))
@@ -475,8 +489,8 @@ def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> 
             yaml.safe_dump(
                 {
                     "fn": fn.__name__,
-                    "args": args,
-                    "kwargs": kwargs,
+                    "args": pickle.dumps(args),
+                    "kwargs": pickle.dumps(kwargs),
                     "parent": parent.filename,
                     "types": set(map(int, types)),
                 }
@@ -535,9 +549,21 @@ def format_content(content: dict[str, Any]) -> dict[str, Any]:
     if 'types' in content:
         content['types'] = set(map(Type, content['types']))
 
+    if 'args' in content:
+        content['args'] = pickle.loads(content['args'])
+
+    if 'kwargs' in content:
+        content['kwargs'] = pickle.loads(content['kwargs'])
+
+    if 'parent' in content:
+        del content['parent']
+
+    if 'children_filenames' in content:
+        del content['children_filenames']
+
     return content
 
 
 def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
-    timestamp_str, world_id, name = filename.split('.')[0].split('_', 2)
+    timestamp_str, world_id, name = filename[:-len('.ap.yaml')].split('/')[-1].split('_', 2)
     return world_id, datetime.datetime.fromisoformat(timestamp_str), name

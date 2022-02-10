@@ -8,3 +8,4 @@ yolov5-deepsort
 .mypy_cache
 .idea
 output
+.apperception_cache
