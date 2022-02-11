@@ -6,7 +6,7 @@
 
 import lens
 import point
-from new_world import World
+from new_world import empty_world
 
 # Let's define some attribute for constructing the world first
 name = "traffic_scene"  # world name
@@ -18,7 +18,7 @@ camera_attrs = {"ratio": 0.5}
 fps = 30
 
 # 1. define a world
-traffic_world = World()
+traffic_world = empty_world(name="my-world")
 
 # 2. construct a camera
 fov, res, cam_origin, skew_factor = (
@@ -38,7 +38,7 @@ pt_id, cam_id, x, y, z, time, pt_type = (
     point_attrs["time"],
     point_attrs["type"],
 )
-location = point.Point(pt_id, cam_id, x, y, z, time, pt_type)
+location = point.Point(pt_id, cam_id, (x, y, z), time, pt_type)
 
 ratio = camera_attrs["ratio"]
 
@@ -63,7 +63,7 @@ volume = traffic_world.select_intersection_of_interest_or_use_default(cam_id=cam
 
 cams = traffic_world.get_camera()
 lens = traffic_world.get_len()
-ids = traffic_world.get_id()
+ids = traffic_world.world_id
 print("cameras are", cams)
 print("lens are", lens)
 print("ids are", ids)
