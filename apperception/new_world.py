@@ -39,7 +39,7 @@ BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 
 class World:
     # all worlds share a db instance
-    db = Database()
+    db = Database(reset=True)
     camera_nodes: Dict[str, Camera] = {}
 
     _parent: Optional[World]
@@ -127,32 +127,6 @@ class World:
         node2 = node1._retrieve_bbox(world_id=node1._world_id)
         node3 = node2._retrieve_traj(world_id=node1._world_id)
         return node3
-
-    def _insert_bbox_traj(self, camera_node: Camera, recognition_area: BoundingBox):
-        return derive_world(
-            self,
-            {Type.TRAJ, Type.BBOX},
-            self.db.insert_bbox_traj,
-            # does not pass in world_id because we want to use the world_id of the deriving world
-            camera_node=camera_node,
-            recognition_area=recognition_area,
-        )
-
-    def _retrieve_bbox(self, world_id: str):
-        return derive_world(
-            self,
-            {Type.BBOX},
-            self.db.retrieve_bbox,
-            world_id=world_id
-        )
-
-    def _retrieve_traj(self, world_id: str):
-        return derive_world(
-            self,
-            {Type.TRAJ},
-            self.db.retrieve_traj,
-            world_id=world_id
-        )
 
     def get_video(self, cam_ids: List[str] = []):
         return derive_world(
@@ -260,23 +234,6 @@ class World:
             condition=condition,
         )
 
-    def _insert_camera(self, camera_node: Camera):
-        return derive_world(
-            self,
-            {Type.CAM},
-            self.db.insert_cam,
-            # does not pass in world_id because we want to use the world_id of the deriving world
-            camera_node=camera_node,
-        )
-
-    def _retrieve_camera(self, world_id: str):
-        return derive_world(
-            self,
-            {Type.CAM},
-            self.db.retrieve_cam,
-            world_id=world_id,
-        )
-
     def get_len(self):
         return derive_world(
             self,
@@ -304,6 +261,49 @@ class World:
             {Type.BBOX},
             self.db.get_time,
         )._execute_from_root(Type.BBOX)
+
+    def _insert_camera(self, camera_node: Camera):
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.insert_cam,
+            # does not pass in world_id because we want to use the world_id of the deriving world
+            camera_node=camera_node,
+        )
+
+    def _retrieve_camera(self, world_id: str):
+        return derive_world(
+            self,
+            {Type.CAM},
+            self.db.retrieve_cam,
+            world_id=world_id,
+        )
+
+    def _insert_bbox_traj(self, camera_node: Camera, recognition_area: BoundingBox):
+        return derive_world(
+            self,
+            {Type.TRAJ, Type.BBOX},
+            self.db.insert_bbox_traj,
+            # does not pass in world_id because we want to use the world_id of the deriving world
+            camera_node=camera_node,
+            recognition_area=recognition_area,
+        )
+
+    def _retrieve_bbox(self, world_id: str):
+        return derive_world(
+            self,
+            {Type.BBOX},
+            self.db.retrieve_bbox,
+            world_id=world_id
+        )
+
+    def _retrieve_traj(self, world_id: str):
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.retrieve_traj,
+            world_id=world_id
+        )
 
     def _execute_from_root(self, type: Type):
         nodes: list[World] = []
@@ -338,16 +338,15 @@ class World:
         return res
 
     def _execute(self, **kwargs):
-        # print("executing fn = {}, with args = {} and kwargs = {}".format(self.fn, self.args, self.kwargs))
         fn_spec = inspect.getfullargspec(self._fn)
         if 'world_id' in fn_spec.args or fn_spec.varkw is not None:
             return self._fn(**{'world_id': self._world_id, **self._kwargs, **kwargs})
         return self._fn(**{**self._kwargs, **kwargs})
 
-    def _print_til_root(self):
+    def _print_lineage(self):
         curr = self
         while curr:
-            # print(curr)
+            print(curr)
             curr = curr._parent
 
     def __str__(self):
@@ -408,10 +407,6 @@ class World:
             }))
 
 
-def filename(timestamp: datetime.datetime, world_id: str, name: str = ""):
-    return f".apperception_cache/{timestamp}_{world_id}_{name}.ap.yaml"
-
-
 def empty_world(name: str) -> World:
     matched_files = list(filter(path.isfile, glob.glob(f"./.apperception_cache/*_*_{name}.ap.yaml")))
     if len(matched_files):
@@ -434,23 +429,6 @@ def _empty_world(name: str) -> World:
     with open(log_file, "w") as f:
         f.write(yaml.safe_dump({}))
     return World(world_id, timestamp, name)
-
-
-DUMPED_EMPTY_TUPLE = pickle.dumps(())
-DUMPED_EMPTY_DICT = pickle.dumps({})
-
-
-def op_matched(
-    file_content: dict[str, Any],
-    types: set[Type],
-    fn: Any,
-    kwargs: dict[str, Any] = None,
-) -> bool:
-    return (
-        file_content.get("fn", None) == fn.__name__
-        and pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT)) == kwargs
-        and file_content.get("types", set()) == set(map(int, types))
-    )
 
 
 def derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
@@ -531,6 +509,31 @@ def from_file(filename: str) -> World:
     )
 
 
+def filename(timestamp: datetime.datetime, world_id: str, name: str = ""):
+    return f".apperception_cache/{timestamp}_{world_id}_{name}.ap.yaml"
+
+
+def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
+    timestamp_str, world_id, name = filename[:-len('.ap.yaml')].split('/')[-1].split('_', 2)
+    return world_id, datetime.datetime.fromisoformat(timestamp_str), name
+
+
+DUMPED_EMPTY_DICT = pickle.dumps({})
+
+
+def op_matched(
+    file_content: dict[str, Any],
+    types: set[Type],
+    fn: Any,
+    kwargs: dict[str, Any] = None,
+) -> bool:
+    return (
+        file_content.get("fn", None) == fn.__name__
+        and pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT)) == kwargs
+        and file_content.get("types", set()) == set(map(int, types))
+    )
+
+
 def format_content(content: dict[str, Any]) -> dict[str, Any]:
     if 'types' in content:
         content['types'] = set(map(Type, content['types']))
@@ -545,8 +548,3 @@ def format_content(content: dict[str, Any]) -> dict[str, Any]:
         del content['children_filenames']
 
     return content
-
-
-def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
-    timestamp_str, world_id, name = filename[:-len('.ap.yaml')].split('/')[-1].split('_', 2)
-    return world_id, datetime.datetime.fromisoformat(timestamp_str), name
