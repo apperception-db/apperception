@@ -46,7 +46,6 @@ class World:
     _name: str
     # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | None
     _fn: Any
-    _args: tuple
     _kwargs: dict[str, Any]
     _done: bool
     _world_id: str
@@ -61,7 +60,6 @@ class World:
         name: str = None,
         parent: World = None,
         fn: Any = None,
-        args: tuple = None,
         kwargs: dict[str, Any] = None,
         done: bool = False,
         types: Set[Type] = None,
@@ -70,7 +68,6 @@ class World:
         self._parent = parent
         self._name = "" if name is None else name
         self._fn = None if fn is None else (getattr(self.db, fn) if type(fn) == str else fn)
-        self._args = () if args is None else args
         self._kwargs = {} if kwargs is None else kwargs
         self._done = done  # update node
         self._world_id = world_id
@@ -340,12 +337,12 @@ class World:
         res = query
         return res
 
-    def _execute(self, *args, **kwargs):
+    def _execute(self, **kwargs):
         # print("executing fn = {}, with args = {} and kwargs = {}".format(self.fn, self.args, self.kwargs))
         fn_spec = inspect.getfullargspec(self._fn)
         if 'world_id' in fn_spec.args or fn_spec.varkw is not None:
-            return self._fn(*self._args, *args, **{'world_id': self._world_id, **self._kwargs, **kwargs})
-        return self._fn(*self._args, *args, **{**self._kwargs, **kwargs})
+            return self._fn(**{'world_id': self._world_id, **self._kwargs, **kwargs})
+        return self._fn(**{**self._kwargs, **kwargs})
 
     def _print_til_root(self):
         curr = self
@@ -354,9 +351,7 @@ class World:
             curr = curr._parent
 
     def __str__(self):
-        return "fn={}\nargs={}\nkwargs={}\ndone={}\nworld_id={}\n".format(
-            self._fn, self._args, self._kwargs, self._done, self._world_id
-        )
+        return f"fn={self._fn}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
 
     @property
     def filename(self):
@@ -383,10 +378,6 @@ class World:
         return self._fn
 
     @property
-    def args(self):
-        return self._args
-
-    @property
     def kwargs(self):
         return self._kwargs
 
@@ -410,7 +401,6 @@ class World:
                 **({} if self._parent is None else {'parent': self._parent.filename}),
                 **({} if self._types == set() else {'types': set(map(int, self._types))}),
                 **({} if self._fn is None else {'fn': self._fn.__name__}),
-                **({} if self._args == () else {'args': pickle.dumps(self._args)}),
                 **({} if self._kwargs == {} else {'kwargs': pickle.dumps(self._kwargs)}),
                 **({} if not self._done else {'done': self._done}),
                 **({} if not self._materialized else {'materialized': self._materialized}),
@@ -454,25 +444,23 @@ def op_matched(
     file_content: dict[str, Any],
     types: set[Type],
     fn: Any,
-    args: tuple = None,
     kwargs: dict[str, Any] = None,
 ) -> bool:
     return (
         file_content.get("fn", None) == fn.__name__
-        and pickle.loads(file_content.get("args", DUMPED_EMPTY_TUPLE)) == args
         and pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT)) == kwargs
         and file_content.get("types", set()) == set(map(int, types))
     )
 
 
-def derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> World:
-    world = _derive_world_from_file(parent, types, fn, *args, **kwargs)
+def derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
+    world = _derive_world_from_file(parent, types, fn, **kwargs)
     if world is not None:
         return world
-    return _derive_world(parent, types, fn, *args, **kwargs)
+    return _derive_world(parent, types, fn, **kwargs)
 
 
-def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> World:
+def _derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
     log_file = filename(timestamp, world_id)
@@ -489,7 +477,6 @@ def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> 
             yaml.safe_dump(
                 {
                     "fn": fn.__name__,
-                    "args": pickle.dumps(args),
                     "kwargs": pickle.dumps(kwargs),
                     "parent": parent.filename,
                     "types": set(map(int, types)),
@@ -501,7 +488,6 @@ def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> 
         world_id,
         timestamp,
         fn=fn,
-        args=args,
         kwargs=kwargs,
         parent=parent,
         types=types,
@@ -509,7 +495,7 @@ def _derive_world(parent: World, types: set[Type], fn: Any, *args, **kwargs) -> 
 
 
 def _derive_world_from_file(
-    parent: World, types: set[Type], fn: Any, *args, **kwargs
+    parent: World, types: set[Type], fn: Any, **kwargs
 ) -> Optional[World]:
     with open(parent.filename, "r") as f:
         sibling_filenames: Iterable[str] = yaml.safe_load(f).get("children_filenames", [])
@@ -518,7 +504,7 @@ def _derive_world_from_file(
         with open(sibling_filename, "r") as sf:
             sibling_content = yaml.safe_load(sf)
 
-        if op_matched(sibling_content, types, fn, args, kwargs):
+        if op_matched(sibling_content, types, fn, kwargs):
             return World(
                 *split_filename(sibling_filename),
                 parent=parent,
@@ -548,9 +534,6 @@ def from_file(filename: str) -> World:
 def format_content(content: dict[str, Any]) -> dict[str, Any]:
     if 'types' in content:
         content['types'] = set(map(Type, content['types']))
-
-    if 'args' in content:
-        content['args'] = pickle.loads(content['args'])
 
     if 'kwargs' in content:
         content['kwargs'] = pickle.loads(content['kwargs'])

@@ -14,50 +14,48 @@ CAMERA_TABLE = "cameras"
 TRAJ_TABLE = "item_general_trajectory"
 BBOX_TABLE = "general_bbox"
 
-CLEAR_TABLES = True
-
 
 class Database:
-    def __init__(self):
+    def __init__(self, reset: bool = True):
         # should setup a postgres in docker first
         self.con = psycopg2.connect(
             dbname="mobilitydb", user="docker", host="localhost", port="25432", password="docker"
         )
         self.cur = self.con.cursor()
 
-        # create camera table
-        self._create_camera_table()
+        if reset:
+            # create camera table
+            self._create_camera_table()
 
-        # create bbox table
-        self._create_general_bbox_table()
+            # create bbox table
+            self._create_general_bbox_table()
 
-        # create traj table
-        self._create_item_general_trajectory_table()
+            # create traj table
+            self._create_item_general_trajectory_table()
 
         # The start time of the database access object
         self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
 
     def _create_camera_table(self):
-        if CLEAR_TABLES:
-            # drop old
-            q1 = Query.drop_table(CAMERA_TABLE).if_exists()
+        # drop old
+        q1 = Query.drop_table(CAMERA_TABLE).if_exists()
 
-            # create new
-            q2 = Query.create_table(CAMERA_TABLE).columns(
-                Column("cameraId", "TEXT"),
-                Column("worldId", "TEXT"),
-                Column("ratio", "real"),
-                Column("origin", "geometry"),
-                Column("focalpoints", "geometry"),
-                Column("fov", "INTEGER"),
-                Column("skev_factor", "real"),
-                Column("width", "integer"),
-                Column("height", "integer"),
-            )
+        # create new
+        q2 = Query.create_table(CAMERA_TABLE).columns(
+            Column("cameraId", "TEXT"),
+            Column("worldId", "TEXT"),
+            Column("ratio", "real"),
+            Column("origin", "geometry"),
+            Column("focalpoints", "geometry"),
+            Column("fov", "INTEGER"),
+            Column("skev_factor", "real"),
+            Column("width", "integer"),
+            Column("height", "integer"),
+        )
 
-            self.cur.execute(q1.get_sql())
-            self.cur.execute(q2.get_sql())
-            self.con.commit()
+        self.cur.execute(q1.get_sql())
+        self.cur.execute(q2.get_sql())
+        self.con.commit()
 
     def insert_cam(self, world_id: str, camera_node: Camera):
         cam = Table(CAMERA_TABLE)
@@ -145,16 +143,14 @@ class Database:
         return self.cur.fetchall()
 
     def _create_general_bbox_table(self):
-        if CLEAR_TABLES:
-            # already created in create_or_insert_general_trajectory
-            self.cur.execute("DROP TABLE IF EXISTS General_Bbox;")
-            self.con.commit()
+        # already created in create_or_insert_general_trajectory
+        self.cur.execute("DROP TABLE IF EXISTS General_Bbox;")
+        self.con.commit()
 
     def _create_item_general_trajectory_table(self):
-        if CLEAR_TABLES:
-            # already created in create_or_insert_general_trajectory
-            self.cur.execute("DROP TABLE IF EXISTS Item_General_Trajectory;")
-            self.con.commit()
+        # already created in create_or_insert_general_trajectory
+        self.cur.execute("DROP TABLE IF EXISTS Item_General_Trajectory;")
+        self.con.commit()
 
     def insert_bbox_traj(self, world_id: str, camera_node: Camera, recognition_area: BoundingBox):
         video_file, algo, lens = camera_node.video_file, "Yolo", camera_node.lens
