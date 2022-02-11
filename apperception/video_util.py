@@ -465,15 +465,11 @@ def insert_general_trajectory(
     traj_centroids = traj_centroids[:-1]
     traj_centroids += "}', "
     insert_trajectory += traj_centroids
-    insert_trajectory += (
-        "stbox 'STBOX Z((%s, %s, %s),"
-        % (
-            min_ltx,
-            min_lty,
-            min_ltz,
-        )
-        + "(%s, %s, %s))'); " % (max_brx, max_bry, max_brz)
-    )
+    insert_trajectory += "stbox 'STBOX Z((%s, %s, %s)," % (
+        min_ltx,
+        min_lty,
+        min_ltz,
+    ) + "(%s, %s, %s))'); " % (max_brx, max_bry, max_brz)
     cursor.execute(insert_trajectory)
     cursor.execute(insert_bbox_trajectory)
     # Commit your changes in the database

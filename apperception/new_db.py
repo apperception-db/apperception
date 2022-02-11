@@ -1,13 +1,13 @@
 import datetime
 
 import psycopg2
-from lens import PinholeLens
 from bounding_box import BoundingBox
+from lens import PinholeLens
 from new_util import create_camera, get_video, video_fetch_reformat
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
-from pypika.dialects import SnowflakeQuery, Query
+from pypika.dialects import Query, SnowflakeQuery
 from video_context import Camera
 from video_util import add_recognized_objs, get_video_dimension, recognize
 
@@ -65,7 +65,7 @@ class Database:
         lens = camera_node.lens
 
         if not isinstance(lens, PinholeLens):
-            raise Exception('Only accept a camera with PinholeLens')
+            raise Exception("Only accept a camera with PinholeLens")
 
         focal_x = str(lens.focal_x)
         focal_y = str(lens.focal_y)
