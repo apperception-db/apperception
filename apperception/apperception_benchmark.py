@@ -43,7 +43,7 @@ pt_id, cam_id, x, y, z, time, pt_type = (
     point_attrs["time"],
     point_attrs["type"],
 )
-location = point.Point(pt_id, cam_id, x, y, z, time, pt_type)
+location = point.Point(pt_id, cam_id, (x, y, z), time, pt_type)
 
 ratio = camera_attrs["ratio"]
 

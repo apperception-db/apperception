@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from math import radians
 
 import numpy as np
@@ -35,6 +37,9 @@ class Lens:
         Translate world coordinates to pixel coordinates
         """
         return None
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
 
 
 class VRLens(Lens):
@@ -217,6 +222,18 @@ class PinholeLens(Lens):
         )
         self.transform = np.matrix(
             [[self.focal_x, self.alpha, cam_x, 0], [0, self.focal_y, cam_y, 0], [0, 0, 1, 0]]
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, PinholeLens)
+            and self.fov == other.fov
+            and self.focal_x == other.focal_x
+            and self.focal_y == other.focal_y
+            and self.cam_origin == other.cam_origin
+            and self.alpha == other.alpha
+            and (self.inv_transform == other.inv_transform).all()
+            and (self.transform == other.transform).all()
         )
 
     def pixel_to_world(self, pixel_coord, depth):
