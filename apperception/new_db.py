@@ -1,12 +1,13 @@
 import datetime
 
 import psycopg2
+from lens import PinholeLens
 from bounding_box import BoundingBox
 from new_util import create_camera, get_video, video_fetch_reformat
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
-from pypika.dialects import SnowflakeQuery as Query
+from pypika.dialects import SnowflakeQuery, Query
 from video_context import Camera
 from video_util import add_recognized_objs, get_video_dimension, recognize
 
@@ -38,10 +39,10 @@ class Database:
 
     def _create_camera_table(self):
         # drop old
-        q1 = Query.drop_table(CAMERA_TABLE).if_exists()
+        q1 = SnowflakeQuery.drop_table(CAMERA_TABLE).if_exists()
 
         # create new
-        q2 = Query.create_table(CAMERA_TABLE).columns(
+        q2 = SnowflakeQuery.create_table(CAMERA_TABLE).columns(
             Column("cameraId", "TEXT"),
             Column("worldId", "TEXT"),
             Column("ratio", "real"),
@@ -62,6 +63,10 @@ class Database:
         cam_id = camera_node.cam_id
         cam_ratio = camera_node.ratio
         lens = camera_node.lens
+
+        if not isinstance(lens, PinholeLens):
+            raise Exception('Only accept a camera with PinholeLens')
+
         focal_x = str(lens.focal_x)
         focal_y = str(lens.focal_y)
         cam_x, cam_y, cam_z = (
@@ -70,9 +75,8 @@ class Database:
             str(lens.cam_origin[2]),
         )
         width, height = get_video_dimension(camera_node.video_file)
-        # width, height = camera_node.dimension
 
-        q = Query.into(cam).insert(
+        q = SnowflakeQuery.into(cam).insert(
             cam_id,
             world_id,
             cam_ratio,
@@ -103,14 +107,14 @@ class Database:
         Select cams with certain world id
         """
         cam = Table(CAMERA_TABLE)
-        q = Query.from_(cam).select("*").where(cam.worldId == world_id)
+        q = SnowflakeQuery.from_(cam).select("*").where(cam.worldId == world_id)
         return q
 
     def filter_cam(self, query: Query, condition: str):
         """
         Called when executing filter commands (predicate, interval ...etc)
         """
-        return Query.from_(query).select("*").where(eval(condition))
+        return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
     def get_cam(self, query: Query):
         """
@@ -161,12 +165,12 @@ class Database:
 
     def retrieve_bbox(self, query: Query = None, world_id: str = ""):
         bbox = Table(BBOX_TABLE)
-        q = Query.from_(bbox).select("*").where(bbox.worldId == world_id)
+        q = SnowflakeQuery.from_(bbox).select("*").where(bbox.worldId == world_id)
         return query + q if query else q  # UNION
 
     def retrieve_traj(self, query: Query = None, world_id: str = ""):
         traj = Table(TRAJ_TABLE)
-        q = Query.from_(traj).select("*").where(traj.worldId == world_id)
+        q = SnowflakeQuery.from_(traj).select("*").where(traj.worldId == world_id)
         return query + q if query else q  # UNION
 
     def get_bbox(self, query: Query):
@@ -185,7 +189,7 @@ class Database:
         return self.cur.fetchall()
 
     def get_traj_key(self, query: Query):
-        q = Query.from_(query).select("itemid")
+        q = SnowflakeQuery.from_(query).select("itemid")
         print("get_traj_key", q.get_sql())
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
@@ -198,7 +202,7 @@ class Database:
         Ymax = CustomFunction("Ymax", ["stbox"])
         Zmax = CustomFunction("Zmax", ["stbox"])
 
-        q = Query.from_(query).select(
+        q = SnowflakeQuery.from_(query).select(
             Xmin(query.trajBbox),
             Ymin(query.trajBbox),
             Zmin(query.trajBbox),
@@ -211,14 +215,14 @@ class Database:
 
     def get_time(self, query: Query):
         Tmin = CustomFunction("Tmin", ["stbox"])
-        q = Query.from_(query).select(Tmin(query.trajBbox))
+        q = SnowflakeQuery.from_(query).select(Tmin(query.trajBbox))
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
     def get_distance(self, query: Query, start: str, end: str):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
         cumulativeLength = CustomFunction("cumulativeLength", ["input"])
-        q = Query.from_(query).select(
+        q = SnowflakeQuery.from_(query).select(
             cumulativeLength(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
@@ -229,7 +233,7 @@ class Database:
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
         speed = CustomFunction("speed", ["input"])
 
-        q = Query.from_(query).select(
+        q = SnowflakeQuery.from_(query).select(
             speed(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
@@ -237,18 +241,18 @@ class Database:
         return self.cur.fetchall()
 
     def filter_traj_type(self, query: Query, object_type: str):
-        return Query.from_(query).select("*").where(query.objecttype == object_type)
+        return SnowflakeQuery.from_(query).select("*").where(query.objecttype == object_type)
 
     def filter_traj_volume(self, query: Query, volume: str):
         overlap = CustomFunction("overlap", ["bbox1", "bbox2"])
-        return Query.from_(query).select("*").where(overlap(query.largestBbox, volume))
+        return SnowflakeQuery.from_(query).select("*").where(overlap(query.largestBbox, volume))
 
     def interval(self, query, start, end):
         # https://pypika.readthedocs.io/en/latest/4_extending.html
         Tmin = CustomFunction("Tmin", ["stbox"])
         Tmax = CustomFunction("Tmax", ["stbox"])
         return (
-            Query.from_(query)
+            SnowflakeQuery.from_(query)
             .select("*")
             .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
         )
@@ -264,7 +268,7 @@ class Database:
         Tmin = CustomFunction("Tmin", ["stbox"])
 
         query = (
-            Query.from_(query)
+            SnowflakeQuery.from_(query)
             .inner_join(bbox)
             .using("itemid")
             .select(
