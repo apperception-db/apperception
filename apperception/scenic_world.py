@@ -7,7 +7,7 @@ from scenic_world_executer import ScenicWorldExecutor
 import matplotlib.pyplot as plt
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
-world_executor = ScenicWorldExecutor()
+scenic_world_executor = ScenicWorldExecutor()
 class ScenicWorld:
 
     def __init__(self, name, units, enable_tasm=False):
@@ -18,13 +18,13 @@ class ScenicWorld:
         self.enable_tasm = enable_tasm
         # self.AccessedVideoContext = False
     
-    def get_camera(self, cam_id=[]):
+    def get_camera(self, scene_name, frame_num):
         # Change depending if you're on docker or not 
         if self.enable_tasm:
-            world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
+            scenic_world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
         else:
-            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return world_executor.get_camera(cam_id)
+            scenic_world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+        return scenic_world_executor.get_camera(scene_name, frame_num)
     
 #########################
 ###   Video Context  ####
@@ -116,15 +116,15 @@ class ScenicWorld:
         return new_context
     
     def execute(self):
-        world_executor.create_world(self)
+        scenic_world_executor.create_world(self)
         if self.enable_tasm:
-            world_executor.enable_tasm()
+            scenic_world_executor.enable_tasm()
             print("successfully enable tasm during execution time")
         # Change depending if you're on docker or not 
-            world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
+            scenic_world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
         else:
-            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return world_executor.execute()
+            scenic_world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+        return scenic_world_executor.execute()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         print(self.VideoContext.camera_nodes)
@@ -152,9 +152,8 @@ class ScenicWorld:
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
     
-    def overlay_trajectory(self, cam_id, trajectory):
-        camera = self.VideoContext.get_camera(cam_id)
-        video_file = camera.video_file
+    def scenic_overlay_trajectory(self, scene_name, trajectory):
+        camera = self.get_camera(scene_name, frame_num)
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
             frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
