@@ -3,13 +3,55 @@ import psycopg2
 import numpy as np
 import datetime 
 import cv2
-from object_tracker import yolov4_deepsort_video_track
+# from object_tracker import yolov4_deepsort_video_track
 from video_util import *
 from pymongo import MongoClient
 from pyquaternion import Quaternion
 import json
 import os
 from scenic_box import Box
+import time
+import pandas as pd
+
+def fetch_camera_config(scene_name, sample_data):
+	'''
+	return 
+	[{
+		camera_id: scene name,
+		frame_id,
+		frame_num: the frame sequence number
+		filename: image file name,
+		camera_translation,
+		camera_rotation,
+		camera_intrinsic(since it's a matrix, save as a nested array),
+		ego_translation,
+		ego_rotation,
+		timestamp
+	},
+	...
+	]
+	''' 
+	camera_config = []
+
+	# TODO: different camera in one frame has same timestamp for same object
+	# how to store same scene in different cameras
+	all_frames = sample_data[(sample_data['scene_name'] == scene_name) & (sample_data['filename'].str.contains('/CAM_FRONT/', regex=False))]
+	
+	for idx, frame in all_frames.iterrows():
+		config = {}
+		config['camera_id'] = scene_name
+		config['frame_id'] = frame['sample_token']
+		config['frame_num'] = frame['frame_order']
+		config['filename'] = frame['filename']
+		config['camera_translation'] = frame['camera_translation']
+		config['camera_rotation'] = frame['camera_rotation']
+		config['camera_intrinsic'] = frame['camera_intrinsic']
+		config['ego_translation'] = frame['ego_translation']
+		config['ego_rotation'] = frame['ego_rotation']
+		config['timestamp'] = frame['timestamp']
+		camera_config.append(config)
+
+	return camera_config
 
 # Create a camera table
 def create_or_insert_scenic_camera_table(conn, world_name, camera):
@@ -18,35 +60,58 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 	'''
 	Create and Populate A camera table with the given camera object.
 	'''
-	### TODO: Modify the following codes to for scenic cameras
 	#Doping Cameras table if already exists.
-	cursor.execute("DROP TABLE IF EXISTS Cameras")
-	#Creating table with the first camera
-	sql = '''CREATE TABLE IF NOT EXISTS Scenic_Cameras(
+	cursor.execute("DROP TABLE IF EXISTS Scenic_Cameras")
+	# Formal_Scenic_cameras table stands for the formal table which won't be erased
+	sql = '''CREATE TABLE IF NOT EXISTS Formal_Scenic_Cameras(
 	cameraId TEXT,
 	worldId TEXT,
-	ratio real,
-	origin geometry,
-	focalpoints geometry,
-	fov INTEGER,
-	skev_factor real
+	frameId TEXT,
+	frameNum Int,
+	fileName TEXT,
+	cameraTranslation geometry,
+	cameraRotation geometry,
+	cameraIntrinsic real[][],
+	egoTranslation geometry,
+	egoRotation geometry,
+	timestamp TEXT
 	);'''
 	cursor.execute(sql)
 	print("Camera Table created successfully........")
-	# insert_scenic_camera(conn, world_name, camera)
+	insert_scenic_camera(conn, world_name, fetch_camera_config(camera.scenic_scene_name, camera.object_recognition.sample_data))
 	return sql
 
 # Helper function to insert the camera
-def insert_scenic_camera(conn, world_name, camera_node):
+def insert_scenic_camera(conn, world_name, camera_config):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
-	lens = camera_node.lens
-	focal_x = str(lens.focal_x)
-	focal_y = str(lens.focal_y)
-	cam_x, cam_y, cam_z = str(lens.cam_origin[0]), str(lens.cam_origin[1]), str(lens.cam_origin[2])
-	cursor.execute('''INSERT INTO Scenic_Cameras (cameraId, worldId, ratio, origin, focalpoints, fov, skev_factor) '''+ \
-			'''VALUES (\'%s\', \'%s\', %f, \'POINT Z (%s %s %s)\', \'POINT(%s %s)\', %s, %f);''' \
-			%(camera_node.cam_id, world_name, camera_node.ratio, cam_x, cam_y, cam_z, focal_x, focal_y, lens.fov, lens.alpha))
+	for config in camera_config:
+		cursor.execute('''INSERT INTO Formal_Scenic_Cameras (
+				cameraId, 
+				worldId, 
+				frameId, 
+				frameNum, 
+				fileName, 
+				cameraTranslation, 
+				cameraRotation,
+				cameraIntrinsic,
+				egoTranslation,
+				egoRotation,
+				timestamp
+				) '''+ \
+				'''VALUES (\'%s\', \'%s\', \'%s\', %s, \'%s\', \'POINT Z (%s %s %s)\', \'POINT Z (%s %s %s)\', 
+				\'{{%s, %s, %s}, {%s, %s, %s}, {%s, %s, %s}}\',
+				\'POINT Z (%s %s %s)\', \'POINT Z (%s %s %s)\', \'%s\');''' \
+				%(config['camera_id'], world_name, config['frame_id'], config['frame_num'], config['filename'],
+				config['camera_translation'][0], config['camera_translation'][1], config['camera_translation'][2],
+				config['camera_rotation'][0], config['camera_rotation'][1], config['camera_rotation'][2],
+				config['camera_intrinsic'][0][0], config['camera_intrinsic'][0][1], config['camera_intrinsic'][0][2],
+				config['camera_intrinsic'][1][0], config['camera_intrinsic'][1][1], config['camera_intrinsic'][1][2],
+				config['camera_intrinsic'][2][0], config['camera_intrinsic'][2][1], config['camera_intrinsic'][2][2],
+				config['ego_translation'][0], config['ego_translation'][1], config['ego_translation'][2],
+				config['ego_rotation'][0], config['ego_rotation'][1], config['ego_rotation'][2],
+				config['timestamp']
+				))
 	print("New camera inserted successfully.........")
 	conn.commit()
 
@@ -100,107 +165,89 @@ def transform_box(box: Box, camera, ego_pose):
 	box.translate(-np.array(camera['translation']))
 	box.rotate(Quaternion(camera['rotation']).inverse)
 
-def scenic_recognize(video_files, scenic_data_dir):
+# import matplotlib.pyplot as plt
+# def overlay_bbox(image, corners):
+# 	frame = cv2.imread(image)
+# 	frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+# 	for i in range(len(corners)):
+# 		current_coner = (corners[0][i], corners[1][i])
+# 		cv2.circle(frame,tuple([int(current_coner[0]), int(current_coner[1])]),4,(255,0,0),thickness=5)
+# 	plt.rcParams["figure.figsize"] = (20,20)
+# 	plt.figure()
+# 	plt.imshow(frame)
+# 	plt.show()
+
+def scenic_recognize(scene_name, sample_data, annotation):
 	"""
 	return:
-	video_frames: {
-		frame_id: {
-			frame_num: the frame sequence number
-			filename: image file name,
-			camera_config: {
-				token,
-				translation,
-				rotation,
-				camera_intrinsic,
-				ego_config: {
-					token,
-					translation,
-					rotation,
-					timestamp
-				}
-			}
-		}
-		...
-	}
 	annotations: {
 		object_id: {
 			bboxes: [[[x1, y1, z1], [x2, y2, z2]], ...]
 			object_type,
+			frame_num,
 			frame_id
 		}
 		...
 	}
 	"""
-	
-	# connect mongoDB
-	client = MongoClient("mongodb+srv://apperception:apperception@cluster0.gvxkh.mongodb.net/cluster0?retryWrites=true&w=majority")
-	db = client['apperception']
 
-	if len(db.list_collection_names()) == 0:
-		insert_scenic_data(scenic_data_dir, db)
-	else:
-		print('already exists')
-
-	video_frames = {}
 	annotations = {}
 
-	for img_name in video_files:
-		# get bboxes and categories of all the objects appeared in the image file
-		file_data = db['sample_data'].find_one({'filename': img_name})
-		if not file_data:
-			continue
-		sample_token = file_data['sample_token']
-		frame_num = db['frame_num'].find_one({'token': sample_token})['frame_num']
-		all_annotations = db['sample_annotation'].find({'sample_token': sample_token})
-		camera_info = db['calibrated_sensor'].find_one({'token': file_data['calibrated_sensor_token']})
-		ego_pose = db['ego_pose'].find_one({'token': file_data['ego_pose_token']})
-		del ego_pose['_id']
-		camera_info['ego_config'] = ego_pose
-		del camera_info['sensor_token']
-		del camera_info['_id']
-		video_frames[sample_token] = {'filename': img_name, 'frame_num': frame_num, 'camera_config': camera_info}
+	# TODO: different camera in one frame has same timestamp for same object
+	# how to store same scene in different cameras
+	img_files = sample_data[(sample_data['scene_name'] == scene_name) & (sample_data['filename'].str.contains('/CAM_FRONT/', regex=False))].sort_values(by='frame_order')
 
-		for annotation in all_annotations:
-			instance = db['instance'].find_one({'token': annotation['instance_token']})
-			if not instance:
-				continue
-			item_id = instance['token']
+	for _, img_file in img_files.iterrows():
+		# get bboxes and categories of all the objects appeared in the image file
+		sample_token = img_file['sample_token']
+		frame_num = img_file['frame_order']
+		all_annotations = annotation[annotation['sample_token'] == sample_token]
+		
+		for _, ann in all_annotations.iterrows():
+			item_id = ann['instance_token']
 			if item_id not in annotations:
-				annotations[item_id] = {'bboxes': []}
-				category = db['category'].find_one({'token': instance['category_token']})
-				annotations[item_id]['object_type'] = category['name']
+				annotations[item_id] = {'bboxes': [], 'frame_num': []}
+				annotations[item_id]['object_type'] = ann['category']
 				annotations[item_id]['frame_id'] = sample_token
 
-			box = Box(annotation['translation'], annotation['size'], Quaternion(annotation['rotation']))
-			# transform_box(box, camera_info, ego_pose)
-			# corners = box.map_2d(np.array(camera_info['camera_intrinsic']))
+			box = Box(ann['translation'], ann['size'], Quaternion(ann['rotation']))
+			
 			corners = box.corners()
+
+			# if item_id == '6dd2cbf4c24b4caeb625035869bca7b5':
+			# 	print("corners", corners)
+			# 	transform_box(box, camera_info, ego_pose)
+			# 	print("transformed box: ", box.corners())
+			# 	corners_2d = box.map_2d(np.array(camera_info['camera_intrinsic']))
+			# 	print("2d_corner: ", corners_2d)
+			# 	overlay_bbox("v1.0-mini/samples/CAM_FRONT/n015-2018-07-24-11-22-45+0800__CAM_FRONT__1532402927612460.jpg", corners_2d)
+
 			bbox = [corners[:, 1], corners[:, 7]]
 			annotations[item_id]['bboxes'].append(bbox)
+			annotations[item_id]['frame_num'].append(int(frame_num))
 
-	print(video_frames)
-	return {}
+	print("Recognization done, saving to database......")
+	return annotations
 
 def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth=True):
-	clean_tables(conn)
-	### TODO: Modify the following code to store the recognized formatted result into the database
-	### TODO: Update the database schema to include all new fields
+	clean_scenic_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
+		frame_id = formatted_result[item_id]["frame_id"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
-		tracked_cnt = formatted_result[item_id]["tracked_cnt"]
-		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1]))
-		if default_depth:
-			top_left_depths = np.ones(len(recognized_bboxes))
-		else:
-			top_left_depths = self.__get_depths_of_points(recognized_bboxes[:,0,0], recognized_bboxes[:,0,1])
+		tracked_cnt = formatted_result[item_id]["frame_num"]
+		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1], recognized_bboxes[:,0,2]))
+		# if default_depth:
+		# 	top_left_depths = np.ones(len(recognized_bboxes))
+		# else:
+		# 	top_left_depths = self.__get_depths_of_points(recognized_bboxes[:,0,0], recognized_bboxes[:,0,1])
 		
-		# Convert bottom right coordinates to world coordinates
-		bottom_right = np.vstack((recognized_bboxes[:,1,0], recognized_bboxes[:,1,1]))
-		if default_depth:
-			bottom_right_depths = np.ones(len(tracked_cnt))
-		else:
-			bottom_right_depths = self.__get_depths_of_points(recognized_bboxes[:,1,0], recognized_bboxes[:,1,1])
+		# # Convert bottom right coordinates to world coordinates
+		bottom_right = np.vstack((recognized_bboxes[:,1,0], recognized_bboxes[:,1,1], recognized_bboxes[:,1,2]))
+		# if default_depth:
+		# 	bottom_right_depths = np.ones(len(tracked_cnt))
+		# else:
+		# 	bottom_right_depths = self.__get_depths_of_points(recognized_bboxes[:,1,0], recognized_bboxes[:,1,1])
 		
 		top_left = np.array(top_left.T)
 		bottom_right = np.array(bottom_right.T)
@@ -210,12 +257,11 @@ def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth
 			current_br = bottom_right[i]
 			obj_traj.append([current_tl.tolist(), current_br.tolist()])      
 		
-		scenic_bboxes_to_postgres(conn, item_id, object_type, "default_color" if item_id not in properties['color'] else properties['color'][item_id], start_time, tracked_cnt, obj_traj, type="yolov4")
+		scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
 		# bbox_to_tasm()
 
 # Insert bboxes to postgres
-def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
-	### TODO: Modify the following codes to add recognized scenic objects to the database
+def scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, color, start_time, timestamps, bboxes, type='yolov3'):
 	if type == 'yolov3':
 		timestamps = range(timestamps)
 
@@ -226,12 +272,12 @@ def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, tim
 		pairs.append(meta_box[0])
 		deltas.append(meta_box[1:])
 	postgres_timestamps = convert_timestamps(start_time, timestamps)
-	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
-	print(f"{item_id} saved successfully")
+	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
+	# print(f"{item_id} saved successfully")
 
 
 # Create general trajectory table
-def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
+def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs):
 	cursor = conn.cursor()
 	'''
 	Create and Populate A Trajectory table using mobilityDB.
@@ -239,45 +285,45 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color
 	Then the timestamp should be the timestamp regarding the world starting time
 	'''
 	
-	### TODO: Modify the table fields to match scenic schema
-	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Scenic_Item_General_Trajectory(
+	# Formal_Scenic_Item_General_Trajectory table stands for the formal table which won't be erased
+	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Formal_Scenic_Item_General_Trajectory(
 	itemId TEXT,
 	objectType TEXT,
+	frameId TEXT,
 	color TEXT,
 	trajCentroids tgeompoint,
 	largestBbox stbox,
 	PRIMARY KEY (itemId)
 	);'''
 	cursor.execute(create_itemtraj_sql)
-	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Scenic_Item_General_Trajectory USING GiST(trajCentroids);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Formal_Scenic_Item_General_Trajectory USING GiST(trajCentroids);")
 	conn.commit()
-	#Creating table with the first item
-	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Scenic_General_Bbox(
+	# Formal_Scenic_General_Bbox table stands for the formal table which won't be erased
+	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Formal_Scenic_General_Bbox(
 	itemId TEXT,
 	trajBbox stbox,
 	FOREIGN KEY(itemId)
-		REFERENCES Scenic_Item_General_Trajectory(itemId)
+		REFERENCES Formal_Scenic_Item_General_Trajectory(itemId)
 	);'''
 	cursor.execute(create_bboxes_sql)
-	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON Scenic_General_Bbox(itemId);")
-	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Scenic_General_Bbox USING GiST(trajBbox);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON Formal_Scenic_General_Bbox(itemId);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Formal_Scenic_General_Bbox USING GiST(trajBbox);")
 	conn.commit()
 	#Insert the trajectory of the first item
-	insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
 
 
 # Insert general trajectory
-def insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
-    ### TODO: Modify the insert based on the new table schema
+def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	#Inserting bboxes into Bbox table
 	insert_bbox_trajectory = ""
-	insert_format = "INSERT INTO Scenic_General_Bbox (itemId, trajBbox) "+ \
+	insert_format = "INSERT INTO Formal_Scenic_General_Bbox (itemId, trajBbox) "+ \
 	"VALUES (\'%s\',"  % (item_id)
 	# Insert the item_trajectory separately
-	insert_trajectory = "INSERT INTO Scenic_Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "+ \
-	"VALUES (\'%s\', \'%s\', \'%s\', "  % (item_id, object_type, color)
+	insert_trajectory = "INSERT INTO Formal_Scenic_Item_General_Trajectory (itemId, objectType, frameId, color, trajCentroids, largestBbox) "+ \
+	"VALUES (\'%s\', \'%s\', \'%s\', \'%s\', "  % (item_id, object_type, frame_id, color)
 	traj_centroids = "\'{"
 	min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = float('inf'), float('inf'), float('inf'), float('-inf'), float('-inf'), float('-inf')
 	# max_ltx, max_lty, max_ltz, min_brx, min_bry, min_brz = float('-inf'), float('-inf'), float('-inf'), float('inf'), float('inf'), float('inf')
@@ -307,4 +353,9 @@ def insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres
 	cursor.execute(insert_bbox_trajectory)
 	# Commit your changes in the database
 	conn.commit()
-	
+
+def clean_scenic_tables(conn):
+	cursor = conn.cursor()
+	cursor.execute("DROP TABLE IF EXISTS scenic_General_Bbox;")
+	cursor.execute("DROP TABLE IF EXISTS scenic_Item_General_Trajectory;")
+	conn.commit()
