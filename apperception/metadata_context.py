@@ -51,7 +51,8 @@ class Column:
         return self
 
     def get_coordinates(self):
-        self.aggregate("asMFJSON", special_args=["coordinates"])
+        # self.aggregate("asMFJSON", special_args=["coordinates"])
+        self.aggregate("asMFJSON")
 
     def interval(self, starttime, endtime):
         self.aggregate("atPeriodSet", parameters=["\'{[%s, %s)}\'"%(starttime, endtime)])
@@ -64,7 +65,7 @@ class Aggregate:
 
 class asMFJSON(Aggregate):
 
-    def __init__(self, func_name="asMFJSON", parameters:list=[], interesting_fields = [""]):
+    def __init__(self, func_name="asMFJSON", parameters:list=[], interesting_fields = []):
         super().__init__(func_name, parameters)
         self.interesting_fields = interesting_fields
     # def function_map(self):

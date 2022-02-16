@@ -152,8 +152,33 @@ class ScenicWorld:
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
     
+    def scenic_trajectory_to_frame_num(self, trajectory):
+        '''
+        TODO: fetch the frame number from the trajectory
+        1. get the time stamp field from the trajectory
+        2. convert the time stamp to frame number
+            Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
+        3. return the frame number
+        '''
+    
+    def get_overlay_info(self, trajectory, camera_info):
+        '''
+        TODO: overlay each trajectory 3d coordinate on to the frame specified by the camera_info
+        1. for each trajectory, get the 3d coordinate
+        2. get the camera_info associated to it
+        3. implement the transformation function from 3d to 2d 
+            given the single centroid point and camera configuration
+            refer to TODO in "senic_utils.py"
+        4. return a list of (2d coordinate, frame name/filename)
+        '''
+        pass
+        
     def scenic_overlay_trajectory(self, scene_name, trajectory):
-        camera = self.get_camera(scene_name, frame_num)
+        frame_num = self.scenic_trajectory_to_frame_num(trajectory)
+        camera_info = self.get_camera(scene_name, frame_num)
+        assert len(camera_info) == len(frame_num)
+        overlay_info = self.get_overlay_info(trajectory, camera_info)
+        ### TODO: fix the following to overlay the 2d point onto the frame
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
             frame_points = camera.lens.world_to_pixels(current_trajectory.T).T

@@ -117,5 +117,6 @@ def translate_aggregation(aggr_node, aggregated):
             if len(aggr_node.interesting_fields) > 0:
                 interesting_field = aggr_node.interesting_fields[0]
                 aggregated = aggregated + "::json->" + "\'"+interesting_field+"\'"
-    
+            else:
+                aggregated = aggregated + "::json"
     return aggregated

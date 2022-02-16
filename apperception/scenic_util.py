@@ -287,7 +287,7 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	'''
 	
 	# Formal_Scenic_Item_General_Trajectory table stands for the formal table which won't be erased
- 	# Test for now
+	 # Test for now
 	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
 	itemId TEXT,
 	objectType TEXT,
@@ -357,8 +357,20 @@ def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color
 	# Commit your changes in the database
 	conn.commit()
  
+def transformation(centroid_3d, camera_config):
+	'''
+	TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
+	'''
+	pass 
+ 
 def fetch_camera(conn, scene_name, frame_num):
-    ### TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
+	'''
+	TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
+	scene_name: str
+	frame_num: int[]
+	return a list of metadata info for each frame_num
+	'''
+	
 	cursor = conn.cursor()
 	
 	if cam_id == []:
