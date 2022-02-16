@@ -63,7 +63,8 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 	#Doping Cameras table if already exists.
 	cursor.execute("DROP TABLE IF EXISTS Scenic_Cameras")
 	# Formal_Scenic_cameras table stands for the formal table which won't be erased
-	sql = '''CREATE TABLE IF NOT EXISTS Formal_Scenic_Cameras(
+	# Test for now
+	sql = '''CREATE TABLE IF NOT EXISTS Test_Scenic_Cameras(
 	cameraId TEXT,
 	worldId TEXT,
 	frameId TEXT,
@@ -86,7 +87,7 @@ def insert_scenic_camera(conn, world_name, camera_config):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	for config in camera_config:
-		cursor.execute('''INSERT INTO Formal_Scenic_Cameras (
+		cursor.execute('''INSERT INTO Test_Scenic_Cameras (
 				cameraId, 
 				worldId, 
 				frameId, 
@@ -286,7 +287,8 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	'''
 	
 	# Formal_Scenic_Item_General_Trajectory table stands for the formal table which won't be erased
-	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Formal_Scenic_Item_General_Trajectory(
+ 	# Test for now
+	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
 	itemId TEXT,
 	objectType TEXT,
 	frameId TEXT,
@@ -296,18 +298,19 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	PRIMARY KEY (itemId)
 	);'''
 	cursor.execute(create_itemtraj_sql)
-	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Formal_Scenic_Item_General_Trajectory USING GiST(trajCentroids);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Test_Scenic_Item_General_Trajectory USING GiST(trajCentroids);")
 	conn.commit()
 	# Formal_Scenic_General_Bbox table stands for the formal table which won't be erased
-	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Formal_Scenic_General_Bbox(
+	# Test for now
+	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Test_Scenic_General_Bbox(
 	itemId TEXT,
 	trajBbox stbox,
 	FOREIGN KEY(itemId)
-		REFERENCES Formal_Scenic_Item_General_Trajectory(itemId)
+		REFERENCES Test_Scenic_Item_General_Trajectory(itemId)
 	);'''
 	cursor.execute(create_bboxes_sql)
-	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON Formal_Scenic_General_Bbox(itemId);")
-	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Formal_Scenic_General_Bbox USING GiST(trajBbox);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON Test_Scenic_General_Bbox(itemId);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Test_Scenic_General_Bbox USING GiST(trajBbox);")
 	conn.commit()
 	#Insert the trajectory of the first item
 	insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
@@ -319,10 +322,10 @@ def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color
 	cursor = conn.cursor()
 	#Inserting bboxes into Bbox table
 	insert_bbox_trajectory = ""
-	insert_format = "INSERT INTO Formal_Scenic_General_Bbox (itemId, trajBbox) "+ \
+	insert_format = "INSERT INTO Test_Scenic_General_Bbox (itemId, trajBbox) "+ \
 	"VALUES (\'%s\',"  % (item_id)
 	# Insert the item_trajectory separately
-	insert_trajectory = "INSERT INTO Formal_Scenic_Item_General_Trajectory (itemId, objectType, frameId, color, trajCentroids, largestBbox) "+ \
+	insert_trajectory = "INSERT INTO Test_Scenic_Item_General_Trajectory (itemId, objectType, frameId, color, trajCentroids, largestBbox) "+ \
 	"VALUES (\'%s\', \'%s\', \'%s\', \'%s\', "  % (item_id, object_type, frame_id, color)
 	traj_centroids = "\'{"
 	min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = float('inf'), float('inf'), float('inf'), float('-inf'), float('-inf'), float('-inf')
@@ -353,9 +356,22 @@ def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color
 	cursor.execute(insert_bbox_trajectory)
 	# Commit your changes in the database
 	conn.commit()
+ 
+def fetch_camera(conn, scene_name, frame_num):
+    ### TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
+	cursor = conn.cursor()
+	
+	if cam_id == []:
+		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+		 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
+	else:
+		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+		 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
+	cursor.execute(query)
+	return cursor.fetchall()
 
 def clean_scenic_tables(conn):
 	cursor = conn.cursor()
-	cursor.execute("DROP TABLE IF EXISTS scenic_General_Bbox;")
-	cursor.execute("DROP TABLE IF EXISTS scenic_Item_General_Trajectory;")
+	cursor.execute("DROP TABLE IF EXISTS test_scenic_General_Bbox;")
+	cursor.execute("DROP TABLE IF EXISTS test_scenic_Item_General_Trajectory;")
 	conn.commit()
