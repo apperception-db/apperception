@@ -55,7 +55,8 @@ class Column:
         return self
 
     def get_coordinates(self):
-        self.aggregate("asMFJSON", special_args=["coordinates"])
+        # self.aggregate("asMFJSON", special_args=["coordinates"])
+        self.aggregate("asMFJSON")
 
     def interval(self, starttime, endtime):
         self.aggregate("atPeriodSet", parameters=["'{[%s, %s)}'" % (starttime, endtime)])
