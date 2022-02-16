@@ -37,16 +37,15 @@ class ScenicVideoContextExecutor:
         if camera_node.object_recognition is not None:
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
         if self.tasm:
-            video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.tasm)
+            video_data_to_tasm(camera_node, camera_node.metadata_id, self.tasm)
         return camera_sql
 
     def visit_obj_rec(self, camera_node, object_rec_node):
-        cam_id = camera_node.cam_id
-        video_file = camera_node.video_file
+        cam_id = camera_node.scenic_scene_name
 
         start_time = self.current_context.start_time
 
-        tracking_results = scenic_recognize(video_file, object_rec_node.scenic_data_dir)
+        tracking_results = scenic_recognize(cam_id, object_rec_node.sample_data, object_rec_node.annotation)
         add_scenic_recognized_objs(self.conn, tracking_results, start_time)
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)

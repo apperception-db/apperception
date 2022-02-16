@@ -10,11 +10,8 @@ import datetime
 
 # Camera node
 class ScenicCamera:
-    def __init__(self, cam_id, video_file, metadata_id):
-        self.cam_id = cam_id 
-        self.video_file = video_file
-        self.metadata_id = metadata_id
-        self.properties = {}
+    def __init__(self, scenic_scene_name):
+        self.scenic_scene_name = scenic_scene_name
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been 
@@ -33,16 +30,17 @@ class ScenicCamera:
         self.properties[property_type].append(new_prop)
 
     # Add a default add_recog_obj = True
-    def recognize(self, scenic_data_dir):
+    def recognize(self, sample_data, annotation):
         # Create object recognition node
-        object_rec_node = ScenicObjectRecognition(scenic_data_dir)
+        object_rec_node = ScenicObjectRecognition(sample_data, annotation)
         self.object_recognition = object_rec_node
         return object_rec_node
     
 # Object Recognition node
 class ScenicObjectRecognition:
-    def __init__(self, scenic_data_dir):
-        self.scenic_data_dir = scenic_data_dir
+    def __init__(self, sample_data, annotation):
+        self.sample_data = sample_data
+        self.annotation = annotation
         self.properties = {}
 
     def add_properties(self, properties):
@@ -72,11 +70,11 @@ class ScenicVideoContext:
         return self.units
 
     # Establish camera
-    def scenic_camera(self, cam_id, video_file, metadata_id):
-        camera_node = self.__get_camera(cam_id)
+    def scenic_camera(self, scenic_scene_name):
+        camera_node = self.__get_camera(scenic_scene_name)
         if not camera_node:
-            camera_node = ScenicCamera(cam_id, video_file, metadata_id)
-            self.__add_camera(cam_id, camera_node)
+            camera_node = ScenicCamera(scenic_scene_name)
+            self.__add_camera(scenic_scene_name, camera_node)
         return camera_node
 
     def properties(self, cam_id, properties, property_type):

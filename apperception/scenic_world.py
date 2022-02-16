@@ -43,9 +43,9 @@ class ScenicWorld:
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
 
-    def scenic_camera(self, cam_id, video_file, metadata_identifier):
+    def scenic_camera(self, scenic_scene_name):
         new_context = copy.deepcopy(self)
-        new_context.ScenicVideoContext.scenic_camera(cam_id, video_file, metadata_identifier)
+        new_context.ScenicVideoContext.scenic_camera(scenic_scene_name)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
@@ -53,9 +53,9 @@ class ScenicWorld:
         new_context.VideoContext.properties(cam_id, properties, property_type)
         return new_context
 
-    def recognize(self, cam_id, scenic_data_dir):
+    def recognize(self, cam_id, sample_data, annotation):
         new_context = copy.deepcopy(self)
-        new_context.ScenicVideoContext.camera_nodes[cam_id].recognize(scenic_data_dir)
+        new_context.ScenicVideoContext.camera_nodes[cam_id].recognize(sample_data, annotation)
         return new_context
 
 #########################
