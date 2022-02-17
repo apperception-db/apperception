@@ -128,8 +128,9 @@ class World:
         z_min = z + z_range[0]
         z_max = z + z_range[1]
 
-        return BASE_VOLUME_QUERY_TEXT.format(x1=x_min, y1=float("-inf"), z1=z_min,
-                x2=x_max, y2=float("inf"), z2=z_max)
+        return BASE_VOLUME_QUERY_TEXT.format(
+            x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
+        )
 
     def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
         assert cam_id in World.camera_nodes
