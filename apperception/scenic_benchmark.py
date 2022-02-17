@@ -51,17 +51,18 @@ recognized_world = traffic_world.recognize(cam_id)
 
 # Use case #1
 
-volume = traffic_world.select_by_range(cam_id=cam_id,
-            x_range=(0.01082532, 3.01034039), z_range=(0, 2))
-
-
-filtered_world = (
-    recognized_world.filter_traj_type("car").filter_traj_volume(volume)
+volume = traffic_world.select_by_range(
+    cam_id=cam_id, x_range=(0.01082532, 3.01034039), z_range=(0, 2)
 )
+
+
+filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume)
 filtered_ids = filtered_world.get_traj_key()
 print("filtered_ids are", filtered_ids)
 
 
-import pdb;pdb.set_trace()
+import pdb
+
+pdb.set_trace()
 trajectory = filtered_world.get_traj()
 print("trajectories are", trajectory)
