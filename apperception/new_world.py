@@ -44,7 +44,7 @@ class World:
 
     _parent: Optional[World]
     _name: str
-    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | None
+    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | str? | None
     _fn: Any
     _kwargs: dict[str, Any]
     _done: bool
@@ -516,16 +516,32 @@ def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
 DUMPED_EMPTY_DICT = pickle.dumps({})
 
 
+def double_equal(a, b):
+    return a == b
+
+
 def op_matched(
     file_content: dict[str, Any],
     types: set[Type],
     fn: Any,
     kwargs: dict[str, Any] = None,
 ) -> bool:
-    return (
-        file_content.get("fn", None) == fn.__name__
-        and pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT)) == kwargs
-        and file_content.get("types", set()) == set(map(int, types))
+    f_fn: str | None = file_content.get("fn", None)
+    f_types: set[int] = file_content.get("types", set())
+
+    if f_fn != fn.__name__ or f_types != set(map(int, types)):
+        return False
+
+    kwargs = {} if kwargs is None else kwargs
+    f_kwargs: dict[str, Any] = pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT))
+
+    if len(f_kwargs) != len(kwargs):
+        return False
+
+    cmps = fn.comparators if hasattr(fn, 'comparators') else {}
+    return all(
+        key in f_kwargs and cmps.get(key, double_equal)(f_kwargs[key], kwargs[key])
+        for key in kwargs
     )
 
 
