@@ -171,7 +171,7 @@ class World:
                 if current_pos[1] != prev_pos[1]:
                     heading[j] = np.arctan2(current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0])
                 heading[j] *= (180 / np.pi) # convert to degrees from radian
-                heading[j] = (heading[j] + 360) % 360  # converting to a 360 degree scale
+                heading[j] = (heading[j] + 360) % 360  # converting such that all headings are positive
             headings.append(heading)
         return headings
     
