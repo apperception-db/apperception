@@ -119,6 +119,18 @@ class World:
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
 
+    def select_by_range(self, cam_id, x_range: Tuple[float, float], z_range: Tuple[float, float]):
+        camera = self.camera_nodes[cam_id]
+        x, _, z = camera.point.coordinate
+
+        x_min = x + x_range[0]
+        x_max = x + x_range[1]
+        z_min = z + z_range[0]
+        z_max = z + z_range[1]
+
+        return BASE_VOLUME_QUERY_TEXT.format(x1=x_min, y1=float("-inf"), z1=z_min,
+                x2=x_max, y2=float("inf"), z2=z_max)
+
     def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
         assert cam_id in World.camera_nodes
 
