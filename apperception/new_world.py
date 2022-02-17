@@ -538,7 +538,7 @@ def op_matched(
     if len(f_kwargs) != len(kwargs):
         return False
 
-    cmps = fn.comparators if hasattr(fn, 'comparators') else {}
+    cmps = fn.comparators if hasattr(fn, "comparators") else {}
     return all(
         key in f_kwargs and cmps.get(key, double_equal)(f_kwargs[key], kwargs[key])
         for key in kwargs
