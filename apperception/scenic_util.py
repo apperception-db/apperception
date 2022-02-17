@@ -61,7 +61,7 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 	Create and Populate A camera table with the given camera object.
 	'''
 	#Doping Cameras table if already exists.
-	cursor.execute("DROP TABLE IF EXISTS Scenic_Cameras")
+	cursor.execute("DROP TABLE IF EXISTS Test_Scenic_Cameras")
 	# Formal_Scenic_cameras table stands for the formal table which won't be erased
 	# Test for now
 	sql = '''CREATE TABLE IF NOT EXISTS Test_Scenic_Cameras(
@@ -185,8 +185,7 @@ def scenic_recognize(scene_name, sample_data, annotation):
 		object_id: {
 			bboxes: [[[x1, y1, z1], [x2, y2, z2]], ...]
 			object_type,
-			frame_num,
-			frame_id
+			frame_num
 		}
 		...
 	}
@@ -209,7 +208,6 @@ def scenic_recognize(scene_name, sample_data, annotation):
 			if item_id not in annotations:
 				annotations[item_id] = {'bboxes': [], 'frame_num': []}
 				annotations[item_id]['object_type'] = ann['category']
-				annotations[item_id]['frame_id'] = sample_token
 
 			box = Box(ann['translation'], ann['size'], Quaternion(ann['rotation']))
 			
@@ -234,7 +232,6 @@ def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth
 	clean_scenic_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
-		frame_id = formatted_result[item_id]["frame_id"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
 		tracked_cnt = formatted_result[item_id]["frame_num"]
 		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1], recognized_bboxes[:,0,2]))
@@ -258,11 +255,11 @@ def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth
 			current_br = bottom_right[i]
 			obj_traj.append([current_tl.tolist(), current_br.tolist()])      
 		
-		scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
+		scenic_bboxes_to_postgres(conn, item_id, object_type, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
 		# bbox_to_tasm()
 
 # Insert bboxes to postgres
-def scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, color, start_time, timestamps, bboxes, type='yolov3'):
+def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
 	if type == 'yolov3':
 		timestamps = range(timestamps)
 
@@ -273,12 +270,12 @@ def scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, color, start
 		pairs.append(meta_box[0])
 		deltas.append(meta_box[1:])
 	postgres_timestamps = convert_timestamps(start_time, timestamps)
-	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
+	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 	# print(f"{item_id} saved successfully")
 
 
 # Create general trajectory table
-def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs):
+def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	cursor = conn.cursor()
 	'''
 	Create and Populate A Trajectory table using mobilityDB.
@@ -291,7 +288,6 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
 	itemId TEXT,
 	objectType TEXT,
-	frameId TEXT,
 	color TEXT,
 	trajCentroids tgeompoint,
 	largestBbox stbox,
@@ -313,11 +309,11 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Test_Scenic_General_Bbox USING GiST(trajBbox);")
 	conn.commit()
 	#Insert the trajectory of the first item
-	insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
+	insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 
 
 # Insert general trajectory
-def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs):
+def insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	#Inserting bboxes into Bbox table
@@ -325,8 +321,8 @@ def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color
 	insert_format = "INSERT INTO Test_Scenic_General_Bbox (itemId, trajBbox) "+ \
 	"VALUES (\'%s\',"  % (item_id)
 	# Insert the item_trajectory separately
-	insert_trajectory = "INSERT INTO Test_Scenic_Item_General_Trajectory (itemId, objectType, frameId, color, trajCentroids, largestBbox) "+ \
-	"VALUES (\'%s\', \'%s\', \'%s\', \'%s\', "  % (item_id, object_type, frame_id, color)
+	insert_trajectory = "INSERT INTO Test_Scenic_Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "+ \
+	"VALUES (\'%s\', \'%s\', \'%s\', "  % (item_id, object_type, color)
 	traj_centroids = "\'{"
 	min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = float('inf'), float('inf'), float('inf'), float('-inf'), float('-inf'), float('-inf')
 	# max_ltx, max_lty, max_ltz, min_brx, min_bry, min_brz = float('-inf'), float('-inf'), float('-inf'), float('inf'), float('inf'), float('inf')
