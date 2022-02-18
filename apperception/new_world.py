@@ -170,6 +170,24 @@ class World:
             self.db.get_traj_key,
         )._execute_from_root(Type.TRAJ)
 
+    def get_headings(self):
+        # TODO: Optimize operations with NumPy if possible
+        trajectories = self.get_traj()
+        headings = []
+        for traj in trajectories:
+            traj = traj[0]
+            heading = [None]
+            for j in range(1, len(traj)):
+                prev_pos = traj[j - 1]
+                current_pos = traj[j]
+                heading.append(0)
+                if current_pos[1] != prev_pos[1]:
+                    heading[j] = np.arctan2(current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0])
+                heading[j] *= (180 / np.pi) # convert to degrees from radian
+                heading[j] = (heading[j] + 360) % 360  # converting such that all headings are positive
+            headings.append(heading)
+        return headings
+    
     def get_distance(self, start: float, end: float):
         return derive_world(
             self,
@@ -514,12 +532,13 @@ def from_file(filename: str) -> World:
 
 
 def filename(timestamp: datetime.datetime, world_id: str, name: str = ""):
-    return f".apperception_cache/{timestamp}_{world_id}_{name}.ap.yaml"
+    return f".apperception_cache/{str(timestamp).replace(':', ';')}_{world_id}_{name}.ap.yaml"
 
 
 def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
+    filename = filename.replace("\\", "/")
     timestamp_str, world_id, name = filename[: -len(".ap.yaml")].split("/")[-1].split("_", 2)
-    return world_id, datetime.datetime.fromisoformat(timestamp_str), name
+    return world_id, datetime.datetime.fromisoformat(timestamp_str.replace(";", ":")), name
 
 
 DUMPED_EMPTY_DICT = pickle.dumps({})
