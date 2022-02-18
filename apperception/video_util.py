@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import datetime
+import random
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import cv2
-import random
 import numpy as np
 from bounding_box import WHOLE_FRAME, BoundingBox
 from lens import Lens
@@ -358,7 +358,15 @@ def clean_tables(conn):
 
 
 def create_or_insert_general_trajectory(
-    conn, item_id, object_type, color, heading, postgres_timestamps, bboxes, pairs, world_id="default"
+    conn,
+    item_id,
+    object_type,
+    color,
+    heading,
+    postgres_timestamps,
+    bboxes,
+    pairs,
+    world_id="default",
 ):
     """Create general trajectory table"""
     # Creating a cursor object using the cursor() method
@@ -404,7 +412,15 @@ def create_or_insert_general_trajectory(
 
 
 def insert_general_trajectory(
-    conn, item_id, object_type, color, heading, postgres_timestamps, bboxes, pairs, world_id="default"
+    conn,
+    item_id,
+    object_type,
+    color,
+    heading,
+    postgres_timestamps,
+    bboxes,
+    pairs,
+    world_id="default",
 ):
     """Insert general trajectory"""
     # Creating a cursor object using the cursor() method

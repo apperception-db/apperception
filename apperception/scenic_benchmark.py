@@ -70,7 +70,11 @@ volume = traffic_world.select_by_range(
 )
 
 
-filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume).filter_traj_heading(lessThan=8.5, greaterThan=-7.5)
+filtered_world = (
+    recognized_world.filter_traj_type("car")
+    .filter_traj_volume(volume)
+    .filter_traj_heading(lessThan=8.5, greaterThan=-7.5)
+)
 filtered_ids = filtered_world.get_traj_key()
 print("filtered_ids are", filtered_ids)
 
