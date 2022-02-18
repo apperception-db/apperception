@@ -60,9 +60,19 @@ filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(vol
 filtered_ids = filtered_world.get_traj_key()
 print("filtered_ids are", filtered_ids)
 
+trajectory = filtered_world.get_traj()
+print("trajectories are", trajectory)
 
-import pdb
+# Use case #2
 
-pdb.set_trace()
+volume = traffic_world.select_by_range(
+    cam_id=cam_id, x_range=(0.01082532, 3.01034039), z_range=(0, 2)
+)
+
+
+filtered_world = recognized_world.filter_traj_type("car").filter_traj_volume(volume).filter_traj_heading(lessThan=8.5, greaterThan=-7.5)
+filtered_ids = filtered_world.get_traj_key()
+print("filtered_ids are", filtered_ids)
+
 trajectory = filtered_world.get_traj()
 print("trajectories are", trajectory)
