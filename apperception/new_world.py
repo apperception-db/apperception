@@ -194,6 +194,9 @@ class World:
     def filter_traj_volume(self, volume: str):
         return derive_world(self, {Type.TRAJ}, self.db.filter_traj_volume, volume=volume)
 
+    def filter_traj_heading(self, lessThan=float('inf'), greaterThan=float('-inf')):
+        return derive_world(self, {Type.TRAJ}, self.db.filter_traj_heading, lessThan=lessThan, greaterThan=greaterThan)
+
     def add_camera(
         self,
         cam_id: str,

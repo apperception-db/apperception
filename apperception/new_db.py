@@ -242,6 +242,9 @@ class Database:
 
     def filter_traj_type(self, query: Query, object_type: str):
         return SnowflakeQuery.from_(query).select("*").where(query.objecttype == object_type)
+    
+    def filter_traj_heading(self, query: Query, lessThan=float('inf'), greaterThan=float('-inf')):
+        return SnowflakeQuery.from_(query).select("*").where(query.heading <= lessThan).where(query.heading >= greaterThan)
 
     def filter_traj_volume(self, query: Query, volume: str):
         overlap = CustomFunction("overlap", ["bbox1", "bbox2"])
