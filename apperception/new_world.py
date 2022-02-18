@@ -39,7 +39,7 @@ BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 
 class World:
     # all worlds share a db instance
-    db = Database(reset=True)
+    db = Database(reset=False)
     camera_nodes: Dict[str, Camera] = {}
 
     _parent: Optional[World]
