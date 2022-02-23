@@ -20,6 +20,7 @@ class ScenicWorld:
     
     def get_camera(self, scene_name, frame_num):
         # Change depending if you're on docker or not 
+        # TODO: fix get_camera in scenic_world_executor.py
         if self.enable_tasm:
             scenic_world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
         else:
@@ -175,7 +176,7 @@ class ScenicWorld:
         
     def scenic_overlay_trajectory(self, scene_name, trajectory):
         frame_num = self.scenic_trajectory_to_frame_num(trajectory)
-        camera_info = self.get_camera(scene_name, frame_num)
+        camera_info = self.get_camera(scene_name, frame_num) ### TODO: fetch_camera_info in scenic_utils.py
         assert len(camera_info) == len(frame_num)
         overlay_info = self.get_overlay_info(trajectory, camera_info)
         ### TODO: fix the following to overlay the 2d point onto the frame
