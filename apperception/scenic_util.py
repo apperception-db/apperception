@@ -159,12 +159,12 @@ def insert_scenic_data(scenic_data_dir, db):
 	db['frame_num'].insert_many(frame_num_json)
 	db['frame_num'].create_index('token')
 
-def transform_box(box: Box, camera, ego_pose): 
-	box.translate(-np.array(ego_pose['translation']))
-	box.rotate(Quaternion(ego_pose['rotation']).inverse)
+def transform_box(box: Box, camera): 
+	box.translate(-np.array(camera['egoTranslation']))
+	box.rotate(Quaternion(camera['egoRotation']).inverse)
 
-	box.translate(-np.array(camera['translation']))
-	box.rotate(Quaternion(camera['rotation']).inverse)
+	box.translate(-np.array(camera['cameraTranslation']))
+	box.rotate(Quaternion(camera['cameraRotation']).inverse)
 
 # import matplotlib.pyplot as plt
 # def overlay_bbox(image, corners):
@@ -202,7 +202,13 @@ def scenic_recognize(scene_name, sample_data, annotation):
 		sample_token = img_file['sample_token']
 		frame_num = img_file['frame_order']
 		all_annotations = annotation[annotation['sample_token'] == sample_token]
-		
+		# camera_info = {}
+		# camera_info['cameraTranslation'] = img_file['camera_translation']
+		# camera_info['cameraRotation'] = img_file['camera_rotation']
+		# camera_info['cameraIntrinsic'] = np.array(img_file['camera_intrinsic'])
+		# camera_info['egoRotation'] = img_file['ego_rotation']
+		# camera_info['egoTranslation'] = img_file['ego_translation']
+
 		for _, ann in all_annotations.iterrows():
 			item_id = ann['instance_token']
 			if item_id not in annotations:
@@ -214,10 +220,11 @@ def scenic_recognize(scene_name, sample_data, annotation):
 			corners = box.corners()
 
 			# if item_id == '6dd2cbf4c24b4caeb625035869bca7b5':
-			# 	print("corners", corners)
-			# 	transform_box(box, camera_info, ego_pose)
-			# 	print("transformed box: ", box.corners())
-			# 	corners_2d = box.map_2d(np.array(camera_info['camera_intrinsic']))
+			# 	# print("corners", corners)
+			# 	# transform_box(box, camera_info)
+			# 	# print("transformed box: ", box.corners())
+			# 	# corners_2d = box.map_2d(np.array(camera_info['cameraIntrinsic']))
+			# 	corners_2d = transformation(box.center, camera_info)
 			# 	print("2d_corner: ", corners_2d)
 			# 	overlay_bbox("v1.0-mini/samples/CAM_FRONT/n015-2018-07-24-11-22-45+0800__CAM_FRONT__1532402927612460.jpg", corners_2d)
 
@@ -357,7 +364,24 @@ def transformation(centroid_3d, camera_config):
 	'''
 	TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
 	'''
-	pass 
+	centroid_3d -= camera_config['egoTranslation']
+	centroid_3d = np.dot(Quaternion(camera_config['egoRotation']).inverse.rotation_matrix, centroid_3d)
+
+	centroid_3d -= camera_config['cameraTranslation']
+	centroid_3d = np.dot(Quaternion(camera_config['cameraRotation']).inverse.rotation_matrix, centroid_3d)
+
+	view = camera_config['cameraIntrinsic']
+	viewpad = np.eye(4)
+	viewpad[:view.shape[0], :view.shape[1]] = view
+
+	# Do operation in homogenous coordinates.
+	centroid_3d = centroid_3d.reshape((3, 1))
+	centroid_3d = np.concatenate((centroid_3d, np.ones((1, 1))))
+	centroid_3d = np.dot(viewpad, centroid_3d)
+	centroid_3d = centroid_3d[:3, :]
+
+	centroid_3d = centroid_3d / centroid_3d[2:3, :].repeat(3, 0).reshape(3, 1)
+	return centroid_3d[:2, :]
  
 def fetch_camera(conn, scene_name, frame_num):
 	'''
