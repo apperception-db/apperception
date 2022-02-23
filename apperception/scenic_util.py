@@ -92,7 +92,7 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 	Create and Populate A camera table with the given camera object.
 	'''
 	#Doping Cameras table if already exists.
-	cursor.execute("DROP TABLE IF EXISTS Scenic_Cameras")
+	cursor.execute("DROP TABLE IF EXISTS Test_Scenic_Cameras")
 	# Formal_Scenic_cameras table stands for the formal table which won't be erased
 	# Test for now
 	
@@ -178,12 +178,12 @@ def insert_scenic_data(scenic_data_dir, db):
 	db['frame_num'].insert_many(frame_num_json)
 	db['frame_num'].create_index('token')
 
-def transform_box(box: Box, camera, ego_pose): 
-	box.translate(-np.array(ego_pose['translation']))
-	box.rotate(Quaternion(ego_pose['rotation']).inverse)
+def transform_box(box: Box, camera): 
+	box.translate(-np.array(camera['egoTranslation']))
+	box.rotate(Quaternion(camera['egoRotation']).inverse)
 
-	box.translate(-np.array(camera['translation']))
-	box.rotate(Quaternion(camera['rotation']).inverse)
+	box.translate(-np.array(camera['cameraTranslation']))
+	box.rotate(Quaternion(camera['cameraRotation']).inverse)
 
 # import matplotlib.pyplot as plt
 # def overlay_bbox(image, corners):
@@ -204,8 +204,7 @@ def scenic_recognize(scene_name, sample_data, annotation):
 		object_id: {
 			bboxes: [[[x1, y1, z1], [x2, y2, z2]], ...]
 			object_type,
-			frame_num,
-			frame_id,
+			frame_num
 		}
 		...
 	}
@@ -222,23 +221,29 @@ def scenic_recognize(scene_name, sample_data, annotation):
 		sample_token = img_file['sample_token']
 		frame_num = img_file['frame_order']
 		all_annotations = annotation[annotation['sample_token'] == sample_token]
-		
+		# camera_info = {}
+		# camera_info['cameraTranslation'] = img_file['camera_translation']
+		# camera_info['cameraRotation'] = img_file['camera_rotation']
+		# camera_info['cameraIntrinsic'] = np.array(img_file['camera_intrinsic'])
+		# camera_info['egoRotation'] = img_file['ego_rotation']
+		# camera_info['egoTranslation'] = img_file['ego_translation']
+
 		for _, ann in all_annotations.iterrows():
 			item_id = ann['instance_token']
 			if item_id not in annotations:
 				annotations[item_id] = {'bboxes': [], 'frame_num': []}
 				annotations[item_id]['object_type'] = ann['category']
-				annotations[item_id]['frame_id'] = sample_token
 
 			box = Box(ann['translation'], ann['size'], Quaternion(ann['rotation']))
 			
 			corners = box.corners()
 
 			# if item_id == '6dd2cbf4c24b4caeb625035869bca7b5':
-			# 	print("corners", corners)
-			# 	transform_box(box, camera_info, ego_pose)
-			# 	print("transformed box: ", box.corners())
-			# 	corners_2d = box.map_2d(np.array(camera_info['camera_intrinsic']))
+			# 	# print("corners", corners)
+			# 	# transform_box(box, camera_info)
+			# 	# print("transformed box: ", box.corners())
+			# 	# corners_2d = box.map_2d(np.array(camera_info['cameraIntrinsic']))
+			# 	corners_2d = transformation(box.center, camera_info)
 			# 	print("2d_corner: ", corners_2d)
 			# 	overlay_bbox("v1.0-mini/samples/CAM_FRONT/n015-2018-07-24-11-22-45+0800__CAM_FRONT__1532402927612460.jpg", corners_2d)
 
@@ -253,7 +258,6 @@ def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth
 	clean_scenic_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
-		frame_id = formatted_result[item_id]["frame_id"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
 		tracked_cnt = formatted_result[item_id]["frame_num"]
 		top_left = np.vstack((recognized_bboxes[:,0,0], recognized_bboxes[:,0,1], recognized_bboxes[:,0,2]))
@@ -277,11 +281,11 @@ def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth
 			current_br = bottom_right[i]
 			obj_traj.append([current_tl.tolist(), current_br.tolist()])      
 		
-		scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
+		scenic_bboxes_to_postgres(conn, item_id, object_type, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
 		# bbox_to_tasm()
 
 # Insert bboxes to postgres
-def scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, color, start_time, timestamps, bboxes, type='yolov3'):
+def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
 	if type == 'yolov3':
 		timestamps = range(timestamps)
 
@@ -292,12 +296,12 @@ def scenic_bboxes_to_postgres(conn, item_id, object_type, frame_id, color, start
 		pairs.append(meta_box[0])
 		deltas.append(meta_box[1:])
 	postgres_timestamps = convert_timestamps(start_time, timestamps)
-	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
+	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 	# print(f"{item_id} saved successfully")
 
 
 # Create general trajectory table
-def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs):
+def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	cursor = conn.cursor()
 	'''
 	Create and Populate A Trajectory table using mobilityDB.
@@ -319,11 +323,11 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Test_Scenic_General_Bbox USING GiST(trajBbox);")
 	conn.commit()
 	#Insert the trajectory of the first item
-	insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs)
+	insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 
 
 # Insert general trajectory
-def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color, postgres_timestamps, bboxes, pairs):
+def insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	#Inserting bboxes into Bbox table
@@ -331,8 +335,8 @@ def insert_scenic_general_trajectory(conn, item_id, object_type, frame_id, color
 	insert_format = "INSERT INTO Test_Scenic_General_Bbox (itemId, trajBbox) "+ \
 	"VALUES (\'%s\',"  % (item_id)
 	# Insert the item_trajectory separately
-	insert_trajectory = "INSERT INTO Test_Scenic_Item_General_Trajectory (itemId, objectType, frameId, color, trajCentroids, largestBbox) "+ \
-	"VALUES (\'%s\', \'%s\', \'%s\', \'%s\', "  % (item_id, object_type, frame_id, color)
+	insert_trajectory = "INSERT INTO Test_Scenic_Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "+ \
+	"VALUES (\'%s\', \'%s\', \'%s\', "  % (item_id, object_type, color)
 	traj_centroids = "\'{"
 	min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = float('inf'), float('inf'), float('inf'), float('-inf'), float('-inf'), float('-inf')
 	# max_ltx, max_lty, max_ltz, min_brx, min_bry, min_brz = float('-inf'), float('-inf'), float('-inf'), float('inf'), float('inf'), float('inf')
@@ -367,7 +371,24 @@ def transformation(centroid_3d, camera_config):
 	'''
 	TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
 	'''
-	pass 
+	centroid_3d -= camera_config['egoTranslation']
+	centroid_3d = np.dot(Quaternion(camera_config['egoRotation']).inverse.rotation_matrix, centroid_3d)
+
+	centroid_3d -= camera_config['cameraTranslation']
+	centroid_3d = np.dot(Quaternion(camera_config['cameraRotation']).inverse.rotation_matrix, centroid_3d)
+
+	view = camera_config['cameraIntrinsic']
+	viewpad = np.eye(4)
+	viewpad[:view.shape[0], :view.shape[1]] = view
+
+	# Do operation in homogenous coordinates.
+	centroid_3d = centroid_3d.reshape((3, 1))
+	centroid_3d = np.concatenate((centroid_3d, np.ones((1, 1))))
+	centroid_3d = np.dot(viewpad, centroid_3d)
+	centroid_3d = centroid_3d[:3, :]
+
+	centroid_3d = centroid_3d / centroid_3d[2:3, :].repeat(3, 0).reshape(3, 1)
+	return centroid_3d[:2, :]
  
 def fetch_camera(conn, scene_name, frame_num):
 	'''
