@@ -13,6 +13,37 @@ from scenic_box import Box
 import time
 import pandas as pd
 
+CREATE_ITEMTRAJ_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
+	itemId TEXT,
+	objectType TEXT,
+	frameId TEXT,
+	color TEXT,
+	trajCentroids tgeompoint,
+	largestBbox stbox,
+	PRIMARY KEY (itemId)
+	);'''
+
+CREATE_BBOXES_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_General_Bbox(
+	itemId TEXT,
+	trajBbox stbox,
+	FOREIGN KEY(itemId)
+		REFERENCES Test_Scenic_Item_General_Trajectory(itemId)
+	);'''
+
+CREATE_CAMERA_SQL = '''CREATE TABLE IF NOT EXISTS Test_Scenic_Cameras(
+	cameraId TEXT,
+	worldId TEXT,
+	frameId TEXT,
+	frameNum Int,
+	fileName TEXT,
+	cameraTranslation geometry,
+	cameraRotation geometry,
+	cameraIntrinsic real[][],
+	egoTranslation geometry,
+	egoRotation geometry,
+	timestamp TEXT
+	);'''
+
 def fetch_camera_config(scene_name, sample_data):
 	'''
 	return 
@@ -64,23 +95,11 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 	cursor.execute("DROP TABLE IF EXISTS Scenic_Cameras")
 	# Formal_Scenic_cameras table stands for the formal table which won't be erased
 	# Test for now
-	sql = '''CREATE TABLE IF NOT EXISTS Test_Scenic_Cameras(
-	cameraId TEXT,
-	worldId TEXT,
-	frameId TEXT,
-	frameNum Int,
-	fileName TEXT,
-	cameraTranslation geometry,
-	cameraRotation geometry,
-	cameraIntrinsic real[][],
-	egoTranslation geometry,
-	egoRotation geometry,
-	timestamp TEXT
-	);'''
-	cursor.execute(sql)
+	
+	cursor.execute(CREATE_CAMERA_SQL)
 	print("Camera Table created successfully........")
 	insert_scenic_camera(conn, world_name, fetch_camera_config(camera.scenic_scene_name, camera.object_recognition.sample_data))
-	return sql
+	return CREATE_CAMERA_SQL
 
 # Helper function to insert the camera
 def insert_scenic_camera(conn, world_name, camera_config):
@@ -186,7 +205,7 @@ def scenic_recognize(scene_name, sample_data, annotation):
 			bboxes: [[[x1, y1, z1], [x2, y2, z2]], ...]
 			object_type,
 			frame_num,
-			frame_id
+			frame_id,
 		}
 		...
 	}
@@ -288,27 +307,14 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, frame
 	
 	# Formal_Scenic_Item_General_Trajectory table stands for the formal table which won't be erased
 	 # Test for now
-	create_itemtraj_sql ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
-	itemId TEXT,
-	objectType TEXT,
-	frameId TEXT,
-	color TEXT,
-	trajCentroids tgeompoint,
-	largestBbox stbox,
-	PRIMARY KEY (itemId)
-	);'''
-	cursor.execute(create_itemtraj_sql)
+	
+	cursor.execute(CREATE_ITEMTRAJ_SQL)
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Test_Scenic_Item_General_Trajectory USING GiST(trajCentroids);")
 	conn.commit()
 	# Formal_Scenic_General_Bbox table stands for the formal table which won't be erased
 	# Test for now
-	create_bboxes_sql ='''CREATE TABLE IF NOT EXISTS Test_Scenic_General_Bbox(
-	itemId TEXT,
-	trajBbox stbox,
-	FOREIGN KEY(itemId)
-		REFERENCES Test_Scenic_Item_General_Trajectory(itemId)
-	);'''
-	cursor.execute(create_bboxes_sql)
+	
+	cursor.execute(CREATE_BBOXES_SQL)
 	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON Test_Scenic_General_Bbox(itemId);")
 	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Test_Scenic_General_Bbox USING GiST(trajBbox);")
 	conn.commit()
@@ -372,7 +378,7 @@ def fetch_camera(conn, scene_name, frame_num):
 	'''
 	
 	cursor = conn.cursor()
-	
+
 	if cam_id == []:
 		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
 		 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
@@ -386,4 +392,48 @@ def clean_scenic_tables(conn):
 	cursor = conn.cursor()
 	cursor.execute("DROP TABLE IF EXISTS test_scenic_General_Bbox;")
 	cursor.execute("DROP TABLE IF EXISTS test_scenic_Item_General_Trajectory;")
+	conn.commit()
+ 
+def export_tables(conn):
+	# create a query to specify which values we want from the database.
+	s = "SELECT *"
+	s += " FROM "
+	s_trajectory = s + "Test_Scenic_Item_General_Trajectory"
+	s_bbox = s + "Test_Scenic_General_Bbox"
+	s_camera = s + "Test_Scenic_Cameras"
+
+	# set up our database connection.
+	db_cursor = conn.cursor()
+
+	# Use the COPY function on the SQL we created above.
+	SQL_trajectory_output = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(s_trajectory)
+	SQL_bbox_output = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(s_bbox)
+	SQL_camera_output = "COPY ({0}) TO STDOUT WITH CSV HEADER".format(s_camera)
+
+	# Set up a variable to store our file path and name.
+	trajectory_file = "test_trajectory.csv"
+	with open(trajectory_file, 'w') as trajectory_output:
+		db_cursor.copy_expert(SQL_trajectory_output, trajectory_output)
+
+	bbox_file = "test_bbox.csv"
+	with open(bbox_file, 'w') as bbox_output:
+		db_cursor.copy_expert(SQL_bbox_output, bbox_output)
+		
+	camera_file = "test_camera.csv"
+	with open(camera_file, 'w') as camera_output:
+		db_cursor.copy_expert(SQL_camera_output, camera_output)
+
+def import_tables(conn):
+    cur = conn.cursor()
+	cur.execute(CREATE_CAMERA_SQL)
+	cur.execute(CREATE_ITEMTRAJ_SQL)
+	cur.execute(CREATE_BBOXES_SQL)
+	conn.commit()
+	with open('test_camera.csv', 'r') as camera_f:
+		cur.copy_expert(file=camera_f, sql="COPY test_scenic_cameras FROM STDIN CSV HEADER DELIMITER as ','")
+	with open('test_trajectory.csv', 'r') as trajectory_f:
+		cur.copy_expert(file=trajectory_f, sql="COPY test_scenic_item_general_trajectory FROM STDIN CSV HEADER DELIMITER as ','")
+	with open('test_bbox.csv', 'r') as bbox_f:
+		cur.copy_expert(file=bbox_f, sql="COPY test_scenic_general_bbox FROM STDIN CSV HEADER DELIMITER as ','")
+
 	conn.commit()

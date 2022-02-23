@@ -54,7 +54,7 @@ class Box:
             The last four are the ones facing backwards.
         """
         w, l, h = self.wlh * wlh_factor
-
+        
         # 3D bounding box corners. (Convention: x points forward, y to the left, z up.)
         x_corners = l / 2 * np.array([1,  1,  1,  1, -1, -1, -1, -1])
         y_corners = w / 2 * np.array([1, -1, -1,  1,  1, -1, -1,  1])
