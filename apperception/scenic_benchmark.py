@@ -1,7 +1,7 @@
 import lens
 import point
-from new_world import empty_world
 from new_compute_lib import compute_heading
+from new_world import empty_world
 
 # Let's define some attribute for constructing the world first
 name = "traffic_scene"  # world name
