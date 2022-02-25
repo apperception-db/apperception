@@ -5,7 +5,6 @@ import datetime
 import cv2
 # from object_tracker import yolov4_deepsort_video_track
 from video_util import *
-from pymongo import MongoClient
 from pyquaternion import Quaternion
 import json
 import os
@@ -446,7 +445,7 @@ def export_tables(conn):
 		db_cursor.copy_expert(SQL_camera_output, camera_output)
 
 def import_tables(conn):
-    cur = conn.cursor()
+	cur = conn.cursor()
 	cur.execute(CREATE_CAMERA_SQL)
 	cur.execute(CREATE_ITEMTRAJ_SQL)
 	cur.execute(CREATE_BBOXES_SQL)
