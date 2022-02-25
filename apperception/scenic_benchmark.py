@@ -1,6 +1,7 @@
 import lens
 import point
 from new_world import empty_world
+from new_compute_lib import compute_heading
 
 # Let's define some attribute for constructing the world first
 name = "traffic_scene"  # world name
@@ -80,3 +81,6 @@ print("filtered_ids are", filtered_ids)
 
 trajectory = filtered_world.get_traj()
 print("trajectories are", trajectory)
+
+heading = compute_heading(trajectory)
+print("heading are", heading)

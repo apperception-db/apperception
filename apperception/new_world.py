@@ -39,7 +39,7 @@ BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 
 class World:
     # all worlds share a db instance
-    db = Database(reset=False)
+    db = Database(reset=True)
     camera_nodes: Dict[str, Camera] = {}
 
     _parent: Optional[World]
@@ -169,28 +169,6 @@ class World:
             {Type.TRAJ},
             self.db.get_traj_key,
         )._execute_from_root(Type.TRAJ)
-
-    def get_headings(self):
-        # TODO: Optimize operations with NumPy if possible
-        trajectories = self.get_traj()
-        headings = []
-        for traj in trajectories:
-            traj = traj[0]
-            heading = [None]
-            for j in range(1, len(traj)):
-                prev_pos = traj[j - 1]
-                current_pos = traj[j]
-                heading.append(0)
-                if current_pos[1] != prev_pos[1]:
-                    heading[j] = np.arctan2(
-                        current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0]
-                    )
-                heading[j] *= 180 / np.pi  # convert to degrees from radian
-                heading[j] = (
-                    heading[j] + 360
-                ) % 360  # converting such that all headings are positive
-            headings.append(heading)
-        return headings
 
     def get_distance(self, start: float, end: float):
         return derive_world(
