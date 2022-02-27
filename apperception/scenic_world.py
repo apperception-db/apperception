@@ -5,6 +5,7 @@ from scenic_context import *
 import copy
 from scenic_world_executer import ScenicWorldExecutor
 import matplotlib.pyplot as plt
+from scenic_util import *
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
 scenic_world_executor = ScenicWorldExecutor()
@@ -161,7 +162,14 @@ class ScenicWorld:
             Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
         3. return the frame number
         '''
-    
+        frame_num = []
+        start_time = self.MetadataContext.start_time
+        for traj in trajectory:
+            current_trajectory = traj[0]
+            date_times =current_trajectory['datetimes']
+            frame_num.append([(datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo = None) - start_time).total_seconds() for t in date_times])
+        return frame_num
+
     def get_overlay_info(self, trajectory, camera_info):
         '''
         TODO: overlay each trajectory 3d coordinate on to the frame specified by the camera_info
@@ -172,12 +180,40 @@ class ScenicWorld:
             refer to TODO in "senic_utils.py"
         4. return a list of (2d coordinate, frame name/filename)
         '''
-        pass
+        result = []
+        for traj_num in range(len(trajectory)):
+            traj_obj = trajectory[traj_num][0] # traj_obj means the trajectory of current object
+            traj_obj_3d = traj_obj['coordinates'] # 3d coordinate list of the object's trajectory
+            camera_info_obj = camera_info[traj_num] # camera info list corresponding the 3d coordinate
+            traj_obj_2d = [] # 2d coordinate list
+            for index in range(len(camera_info_obj)):
+                cur_camera_info = camera_info_obj[index] # camera info of the obejct in one point of the trajectory
+                centroid_3d = traj_obj_3d[index] # one point of the trajectory in 3d
+                # in order to fit into the function transformation, we develop a dictionary called camera_config
+                camera_config = {}
+                camera_config['egoTranslation'] = cur_camera_info[1]
+                print(type(camera_config["egoTranslation"]))
+                camera_config['egoRotation'] = cur_camera_info[2]
+                camera_config['cameraTranslation'] = cur_camera_info[3]
+                camera_config['cameraRotation'] = cur_camera_info[4]
+                camera_config['cameraIntrinsic'] =cur_camera_info[5]
+                traj_2d = transformation(centroid_3d, camera_config) # one point of the trajectory in 2d
+
+                framenum = cur_camera_info[6]
+                filename =  cur_camera_info[7]
+                traj_obj_2d.append((traj_2d, framenum, filename))
+            result.append(traj_obj_2d)
+        return result
+
         
     def scenic_overlay_trajectory(self, scene_name, trajectory):
         frame_num = self.scenic_trajectory_to_frame_num(trajectory)
-        camera_info = self.get_camera(scene_name, frame_num) ### TODO: fetch_camera_info in scenic_utils.py
+        # frame_num is int[[]], hence camera_info should also be [[]]
+        camera_info = []
+        for cur_frame_num in frame_num:
+            camera_info.append(self.get_camera(scene_name, cur_frame_num)) ### TODO: fetch_camera_info in scenic_utils.py
         assert len(camera_info) == len(frame_num)
+        assert len(camera_info[0]) == len(frame_num[0])
         overlay_info = self.get_overlay_info(trajectory, camera_info)
         ### TODO: fix the following to overlay the 2d point onto the frame
         for traj in trajectory:

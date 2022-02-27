@@ -5,6 +5,7 @@ import datetime
 import cv2
 # from object_tracker import yolov4_deepsort_video_track
 from video_util import *
+from pymongo import MongoClient
 from pyquaternion import Quaternion
 import json
 import os
@@ -398,13 +399,15 @@ def fetch_camera(conn, scene_name, frame_num):
 	'''
 	
 	cursor = conn.cursor()
-
-	if cam_id == []:
-		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
-		 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
-	else:
-		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
-		 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
+	# query = '''SELECT camera_info from camera_table where camera_table.camera_id == scene_name and camera_table.frame_num in frame_num'''
+	# if cam_id == []:
+	# 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+	# 	 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
+	# else:
+	# 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+	# 	 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
+	query = '''SELECT cameraId, egoTranslation, egoRotation, cameraTranslation, cameraRotation, cameraIntrinsic, frameNum, fileName ''' \
+		 + '''FROM Test_Scenic_Cameras WHERE cameraId = '{}' AND frameNum IN {};'''.format(scene_name, tuple(frame_num)	)
 	cursor.execute(query)
 	return cursor.fetchall()
 
