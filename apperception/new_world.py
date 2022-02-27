@@ -44,7 +44,7 @@ class World:
 
     _parent: Optional[World]
     _name: str
-    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | None
+    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | str? | None
     _fn: Any
     _kwargs: dict[str, Any]
     _done: bool
@@ -118,6 +118,19 @@ class World:
             print(br)
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
+
+    def select_by_range(self, cam_id, x_range: Tuple[float, float], z_range: Tuple[float, float]):
+        camera = self.camera_nodes[cam_id]
+        x, _, z = camera.point.coordinate
+
+        x_min = x + x_range[0]
+        x_max = x + x_range[1]
+        z_min = z + z_range[0]
+        z_max = z + z_range[1]
+
+        return BASE_VOLUME_QUERY_TEXT.format(
+            x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
+        )
 
     def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
         assert cam_id in World.camera_nodes
@@ -198,6 +211,15 @@ class World:
 
     def filter_traj_volume(self, volume: str):
         return derive_world(self, {Type.TRAJ}, self.db.filter_traj_volume, volume=volume)
+
+    def filter_traj_heading(self, lessThan=float("inf"), greaterThan=float("-inf")):
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.filter_traj_heading,
+            lessThan=lessThan,
+            greaterThan=greaterThan,
+        )
 
     def add_camera(
         self,
@@ -522,16 +544,32 @@ def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
 DUMPED_EMPTY_DICT = pickle.dumps({})
 
 
+def double_equal(a, b):
+    return a == b
+
+
 def op_matched(
     file_content: dict[str, Any],
     types: set[Type],
     fn: Any,
     kwargs: dict[str, Any] = None,
 ) -> bool:
-    return (
-        file_content.get("fn", None) == fn.__name__
-        and pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT)) == kwargs
-        and file_content.get("types", set()) == set(map(int, types))
+    f_fn: str | None = file_content.get("fn", None)
+    f_types: set[int] = file_content.get("types", set())
+
+    if f_fn != fn.__name__ or f_types != set(map(int, types)):
+        return False
+
+    kwargs = {} if kwargs is None else kwargs
+    f_kwargs: dict[str, Any] = pickle.loads(file_content.get("kwargs", DUMPED_EMPTY_DICT))
+
+    if len(f_kwargs) != len(kwargs):
+        return False
+
+    cmps = fn.comparators if hasattr(fn, "comparators") else {}
+    return all(
+        key in f_kwargs and cmps.get(key, double_equal)(f_kwargs[key], kwargs[key])
+        for key in kwargs
     )
 
 
