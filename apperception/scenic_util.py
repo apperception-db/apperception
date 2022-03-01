@@ -1,16 +1,9 @@
-import ast
-import psycopg2
 import numpy as np
-import datetime 
-import cv2
-# from object_tracker import yolov4_deepsort_video_track
-from video_util import *
+from video_util import bbox_to_data3d, convert_timestamps
 from pyquaternion import Quaternion
 import json
 import os
 from scenic_box import Box
-import time
-import pandas as pd
 
 CREATE_ITEMTRAJ_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
 	itemId TEXT,
@@ -36,10 +29,10 @@ CREATE_CAMERA_SQL = '''CREATE TABLE IF NOT EXISTS Test_Scenic_Cameras(
 	frameNum Int,
 	fileName TEXT,
 	cameraTranslation geometry,
-	cameraRotation geometry,
-	cameraIntrinsic real[][],
+	cameraRotation real[4],
+	cameraIntrinsic real[3][3],
 	egoTranslation geometry,
-	egoRotation geometry,
+	egoRotation real[4],
 	timestamp TEXT
 	);'''
 
@@ -104,33 +97,39 @@ def create_or_insert_scenic_camera_table(conn, world_name, camera):
 def insert_scenic_camera(conn, world_name, camera_config):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
+	values = []
 	for config in camera_config:
-		cursor.execute('''INSERT INTO Test_Scenic_Cameras (
-				cameraId, 
-				worldId, 
-				frameId, 
-				frameNum, 
-				fileName, 
-				cameraTranslation, 
-				cameraRotation,
-				cameraIntrinsic,
-				egoTranslation,
-				egoRotation,
-				timestamp
-				) '''+ \
-				'''VALUES (\'%s\', \'%s\', \'%s\', %s, \'%s\', \'POINT Z (%s %s %s)\', \'POINT Z (%s %s %s)\', 
-				\'{{%s, %s, %s}, {%s, %s, %s}, {%s, %s, %s}}\',
-				\'POINT Z (%s %s %s)\', \'POINT Z (%s %s %s)\', \'%s\');''' \
-				%(config['camera_id'], world_name, config['frame_id'], config['frame_num'], config['filename'],
-				config['camera_translation'][0], config['camera_translation'][1], config['camera_translation'][2],
-				config['camera_rotation'][0], config['camera_rotation'][1], config['camera_rotation'][2],
-				config['camera_intrinsic'][0][0], config['camera_intrinsic'][0][1], config['camera_intrinsic'][0][2],
-				config['camera_intrinsic'][1][0], config['camera_intrinsic'][1][1], config['camera_intrinsic'][1][2],
-				config['camera_intrinsic'][2][0], config['camera_intrinsic'][2][1], config['camera_intrinsic'][2][2],
-				config['ego_translation'][0], config['ego_translation'][1], config['ego_translation'][2],
-				config['ego_rotation'][0], config['ego_rotation'][1], config['ego_rotation'][2],
-				config['timestamp']
-				))
+		values.append(f'''(
+			'{config['camera_id']}',
+			'{world_name}',
+			'{config['frame_id']}',
+			{config['frame_num']},
+			'{config['filename']}',
+			'POINT Z ({' '.join(map(str, config['camera_translation']))})',
+			ARRAY{config['camera_rotation']}, 
+			ARRAY{config['camera_intrinsic']},
+			'POINT Z ({' '.join(map(str, config['ego_translation']))})',
+			ARRAY{config['ego_rotation']},
+			'{config['timestamp']}'
+		)''')
+
+	cursor.execute(f'''
+		INSERT INTO Test_Scenic_Cameras (
+			cameraId, 
+			worldId, 
+			frameId, 
+			frameNum, 
+			fileName, 
+			cameraTranslation, 
+			cameraRotation,
+			cameraIntrinsic,
+			egoTranslation,
+			egoRotation,
+			timestamp
+		)
+		VALUES {','.join(values)};'''
+	)
+
 	print("New camera inserted successfully.........")
 	conn.commit()
 
@@ -398,13 +397,35 @@ def fetch_camera(conn, scene_name, frame_num):
 	'''
 	
 	cursor = conn.cursor()
+	# query = '''SELECT camera_info from camera_table where camera_table.camera_id == scene_name and camera_table.frame_num in frame_num'''
+	# if cam_id == []:
+	# 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+	# 	 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
+	# else:
+	# 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+	# 	 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
+	# TODO: define ST_XYZ somewhere else
+	query = f'''
+	CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+		BEGIN
+			RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+		END;
+	$$ LANGUAGE plpgsql;
 
-	if cam_id == []:
-		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
-		 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
-	else:
-		query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
-		 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
+	SELECT
+		cameraId,
+		ST_XYZ(egoTranslation),
+		egoRotation,
+		ST_XYZ(cameraTranslation),
+		cameraRotation,
+		cameraIntrinsic,
+		frameNum,
+		fileName
+	FROM Test_Scenic_Cameras
+	WHERE
+		cameraId = '{scene_name}' AND
+		frameNum IN {tuple(frame_num)};
+	'''
 	cursor.execute(query)
 	return cursor.fetchall()
 
