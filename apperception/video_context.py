@@ -13,26 +13,16 @@ from video_util import Units
 
 
 class Camera:
-    """Camera node"""
-
-    def __init__(
-        self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens
-    ):
-        self.cam_id: str = cam_id
-        self.ratio: float = ratio
-        self.video_file: str = video_file
-        self.metadata_id: str = metadata_id
-        self.properties: Dict[str, list] = {}  # TODO: what is the type of properties?
+    def __init__(self, scenic_scene_name):
+        self.scenic_scene_name = scenic_scene_name
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been
         # stored in the backend. These are reserved for objects that users
         # have not added to the camera.
-        self.items: List[Item] = []
-        self.object_recognition: Optional[ObjectRecognition] = None
-        self.point: Point = point
-        self.lens: Lens = lens
-        self.dimension: Optional[Tuple[int, int]] = None
+        self.items = [] 
+        self.object_recognition = None
+
 
     def add_item(self, item: Item):
         # Add item
@@ -43,23 +33,12 @@ class Camera:
         # Add property
         self.properties[property_type].append(new_prop)
 
-    def add_lens(self, lens: Lens):
-        # Add lens
-        self.lens = lens
-
-    def recognize(
-        self,
-        algo: str = "Yolo",
-        tracker_type: str = "multi",
-        tracker: Optional[Tracker] = None,
-        recognition_area: BoundingBox = WHOLE_FRAME,
-    ):
-        # Add a default add_recog_obj = True (TODO?)
+    # Add a default add_recog_obj = True
+    def recognize(self, sample_data, annotation):
         # Create object recognition node
-        if not self.object_recognition:
-            self.object_recognition = ObjectRecognition(algo, tracker_type, tracker)
-        self.object_recognition.recognition_areas.append(recognition_area)
-        return self.object_recognition
+        object_rec_node = ObjectRecognition(sample_data, annotation)
+        self.object_recognition = object_rec_node
+        return object_rec_node
 
 
 @dataclass
@@ -72,18 +51,12 @@ class Item:
     properties: dict = field(default_factory=dict)  # TODO: what is the type of properties?
 
 
-@dataclass
+# Object Recognition node
 class ObjectRecognition:
-    """Object Recognition node"""
-
-    algo: str
-    tracker_type: str
-    tracker: Optional[Tracker] = None
-    bboxes: list = field(default_factory=list)  # TODO: what is the type of bboxes?
-    labels: Any = None  # TODO: what is the type of labels?
-    tracked_cnt: Any = None  # TODO: what is the type of tracked_cnt?
-    properties: Any = None  # TODO: what is the type of properties?
-    recognition_areas: List[BoundingBox] = field(default_factory=list)
+    def __init__(self, sample_data, annotation):
+        self.sample_data = sample_data
+        self.annotation = annotation
+        self.properties = {}
 
     def add_properties(self, properties):
         self.properties = properties
@@ -110,14 +83,12 @@ class VideoContext:
     def get_units(self):
         return self.units
 
-    def camera(
-        self, cam_id: str, point: Point, ratio: float, video_file: str, metadata_id: str, lens: Lens
-    ):
-        """Establish camera"""
-        camera_node = self.__get_camera(cam_id)
+    # Establish camera
+    def camera(self, scenic_scene_name):
+        camera_node = self.__get_camera(scenic_scene_name)
         if not camera_node:
-            camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
-            self.__add_camera(cam_id, camera_node)
+            camera_node = Camera(scenic_scene_name)
+            self.__add_camera(scenic_scene_name, camera_node)
         return camera_node
 
     def properties(self, cam_id: str, properties, property_type):

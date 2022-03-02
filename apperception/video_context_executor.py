@@ -1,14 +1,5 @@
-from typing import Any, Dict, List, Set
-
-from bounding_box import WHOLE_FRAME, BoundingBox
-from video_context import Camera, ObjectRecognition, VideoContext
-from video_util import (add_recognized_objs, create_or_insert_camera_table,
-                        create_or_insert_world_table, get_video_dimension,
-                        metadata_to_tasm, recognize, video_data_to_tasm)
-
-recognized_areas: Dict[str, Set[BoundingBox]] = {}
-visited_camera: Set[str] = set()
-created_world: Set[str] = set()
+from video_context import *
+from scenic_util import *
 
 
 class VideoContextExecutor:
@@ -57,40 +48,16 @@ class VideoContextExecutor:
         if camera_node.object_recognition is not None:
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
         if self.tasm:
-            video_data_to_tasm(camera_node.video_file, camera_node.metadata_id, self.tasm)
+            video_data_to_tasm(camera_node, camera_node.metadata_id, self.tasm)
         return camera_sql
 
-    def visit_obj_rec(self, camera_node: Camera, object_rec_node: ObjectRecognition):
-        lens = camera_node.lens
-        video_file = camera_node.video_file
+    def visit_obj_rec(self, camera_node, object_rec_node):
+        cam_id = camera_node.scenic_scene_name
 
         start_time = self.current_context.start_time
 
-        tracker = object_rec_node.tracker
-        tracker_type = object_rec_node.tracker_type
-        algo = object_rec_node.algo
-
-        recognition_areas = object_rec_node.recognition_areas
-
-        if to_recognize_whole_frame(recognition_areas):
-            tracking_results = recognize(video_file, algo, tracker_type, tracker)
-            # TODO: @mick remove other recognized object of this camera
-            add_recognized_objs(self.conn, lens, tracking_results, start_time)
-            recognized_areas[camera_node.cam_id] = {WHOLE_FRAME}
-        else:
-            recognition_areas = sorted(recognition_areas, key=lambda a: a.area, reverse=True)
-            for recognition_area in recognition_areas:
-                if is_area_recognized(recognition_area, recognized_areas[camera_node.cam_id]):
-                    continue
-
-                tracking_results = recognize(
-                    video_file, algo, tracker_type, tracker, recognition_area
-                )
-                add_recognized_objs(self.conn, lens, tracking_results, start_time)
-                # TODO: should remove recognized objects in overlapped areas
-
-                recognized_areas[camera_node.cam_id].add(recognition_area)
-
+        tracking_results = recognize(cam_id, object_rec_node.sample_data, object_rec_node.annotation)
+        add_recognized_objs(self.conn, tracking_results, start_time)
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
 
