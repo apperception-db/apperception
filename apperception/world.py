@@ -1,13 +1,17 @@
-from typing import Callable
-import psycopg2
-from metadata_context import *
-from video_context import *
+from metadata_context import MetadataContext
+from video_context import VideoContext
 import copy
 from world_executor import WorldExecutor
 import matplotlib.pyplot as plt
+from scenic_util import transformation
+import numpy as np
+import datetime
+import cv2
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
 world_executor = WorldExecutor()
+
+
 class World:
 
     def __init__(self, name, units, enable_tasm=False):
@@ -17,36 +21,36 @@ class World:
         self.GetVideo = False
         self.enable_tasm = enable_tasm
         # self.AccessedVideoContext = False
-    
-    def get_camera(self, cam_id=[]):
+
+    def get_camera(self, scene_name, frame_num):
         # Change depending if you're on docker or not 
+        # TODO: fix get_camera in scenic_world_executor.py
         if self.enable_tasm:
             world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
         else:
             world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return world_executor.get_camera(cam_id)
-    
+        return world_executor.get_camera(scene_name, frame_num)
+
 #########################
 ###   Video Context  ####
 #########################
-    # TODO(@Vanessa): Add a helper function
     def get_lens(self, cam_id=""):
         return self.get_camera(cam_id).lens
-    
+
     def get_name(self):
         return self.VideoContext.get_name()
 
     def get_units(self):
         return self.VideoContext.get_units()
- 
+
     def item(self, item_id, cam_id, item_type, location):
         new_context = copy.deepcopy(self)
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
-    
-    def camera(self, cam_id, location, ratio, video_file, metadata_identifier, lens):
+
+    def camera(self, scenic_scene_name: str):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
+        new_context.VideoContext.camera(scenic_scene_name)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
@@ -54,9 +58,9 @@ class World:
         new_context.VideoContext.properties(cam_id, properties, property_type)
         return new_context
 
-    def recognize(self, cam_id, algo ='Yolo', tracker_type = 'multi', tracker = None):
+    def recognize(self, cam_id, sample_data, annotation):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera_nodes[cam_id].recognize(algo, tracker_type, tracker)
+        new_context.VideoContext.camera_nodes[cam_id].recognize(sample_data, annotation)
         return new_context
 
 #########################
@@ -87,22 +91,22 @@ class World:
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.get_geo(interval, distinct)
         return new_context
-        
+
     def get_time(self, distinct = False):
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.get_time(distinct)
         return new_context  
-    
+
     def get_distance(self, interval = [], distinct = False):
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.distance(interval, distinct)
         return new_context
-        
+
     def get_speed(self, interval = [], distinct = False):
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.get_speed(interval, distinct)
         return new_context
-    
+
     def get_video(self, cam_id=[]):
         # Go through all the cameras in 'filtered' world and obtain videos 
         new_context = copy.deepcopy(self)
@@ -115,7 +119,7 @@ class World:
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.interval(time_interval)
         return new_context
-    
+
     def execute(self):
         world_executor.create_world(self)
         if self.enable_tasm:
@@ -152,10 +156,17 @@ class World:
             print(br)
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
-    
-    def overlay_trajectory(self, cam_id, trajectory):
-        camera = self.VideoContext.get_camera(cam_id)
-        video_file = camera.video_file
+
+    def overlay_trajectory(self, scene_name, trajectory):
+        frame_num = self.trajectory_to_frame_num(trajectory)
+        # frame_num is int[[]], hence camera_info should also be [[]]
+        camera_info = []
+        for cur_frame_num in frame_num:
+            camera_info.append(self.get_camera(scene_name, cur_frame_num)) ### TODO: fetch_camera_info in scenic_utils.py
+        assert len(camera_info) == len(frame_num)
+        assert len(camera_info[0]) == len(frame_num[0])
+        overlay_info = self.get_overlay_info(trajectory, camera_info)
+        ### TODO: fix the following to overlay the 2d point onto the frame
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
             frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
@@ -167,3 +178,54 @@ class World:
             plt.figure()
             plt.imshow(frame)
             plt.show()
+
+    def trajectory_to_frame_num(self, trajectory):
+        '''
+        TODO: fetch the frame number from the trajectory
+        1. get the time stamp field from the trajectory
+        2. convert the time stamp to frame number
+            Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
+        3. return the frame number
+        '''
+        frame_num = []
+        start_time = self.MetadataContext.start_time
+        for traj in trajectory:
+            current_trajectory = traj[0]
+            date_times = current_trajectory['datetimes']
+            frame_num.append([(datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo = None) - start_time).total_seconds() for t in date_times])
+        return frame_num
+
+    def get_overlay_info(self, trajectory, camera_info):
+        '''
+        TODO: overlay each trajectory 3d coordinate on to the frame specified by the camera_info
+        1. for each trajectory, get the 3d coordinate
+        2. get the camera_info associated to it
+        3. implement the transformation function from 3d to 2d 
+            given the single centroid point and camera configuration
+            refer to TODO in "senic_utils.py"
+        4. return a list of (2d coordinate, frame name/filename)
+        '''
+        result = []
+        for traj_num in range(len(trajectory)):
+            traj_obj = trajectory[traj_num][0] # traj_obj means the trajectory of current object
+            traj_obj_3d = traj_obj['coordinates'] # 3d coordinate list of the object's trajectory
+            camera_info_obj = camera_info[traj_num] # camera info list corresponding the 3d coordinate
+            traj_obj_2d = [] # 2d coordinate list
+            for index in range(len(camera_info_obj)):
+                cur_camera_info = camera_info_obj[index] # camera info of the obejct in one point of the trajectory
+                centroid_3d = np.array(traj_obj_3d[index]) # one point of the trajectory in 3d
+                # in order to fit into the function transformation, we develop a dictionary called camera_config
+                camera_config = {}
+                camera_config['egoTranslation'] = cur_camera_info[1]
+                print(type(camera_config["egoTranslation"]))
+                camera_config['egoRotation'] = np.array(cur_camera_info[2])
+                camera_config['cameraTranslation'] = cur_camera_info[3]
+                camera_config['cameraRotation'] = np.array(cur_camera_info[4])
+                camera_config['cameraIntrinsic'] = np.array(cur_camera_info[5])
+                traj_2d = transformation(centroid_3d, camera_config) # one point of the trajectory in 2d
+
+                framenum = cur_camera_info[6]
+                filename = cur_camera_info[7]
+                traj_obj_2d.append((traj_2d, framenum, filename))
+            result.append(traj_obj_2d)
+        return result

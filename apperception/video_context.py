@@ -10,12 +10,8 @@ import datetime
 
 # Camera node
 class Camera:
-    def __init__(self, cam_id, point, ratio, video_file, metadata_id, lens):
-        self.cam_id = cam_id 
-        self.ratio = ratio
-        self.video_file = video_file
-        self.metadata_id = metadata_id
-        self.properties = {}
+    def __init__(self, scenic_scene_name):
+        self.scenic_scene_name = scenic_scene_name
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been 
@@ -23,8 +19,7 @@ class Camera:
         # have not added to the camera.
         self.items = [] 
         self.object_recognition = None
-        self.point = point
-        self.lens = lens
+
 
     def add_item(self, item):
         # Add item
@@ -34,36 +29,19 @@ class Camera:
         # Add property
         self.properties[property_type].append(new_prop)
 
-    def add_lens(self, lens):
-        # Add lens
-        self.lens = lens
-
     # Add a default add_recog_obj = True
-    def recognize(self, algo = 'Yolo', tracker_type = 'multi', tracker = None):
+    def recognize(self, sample_data, annotation):
         # Create object recognition node
-        object_rec_node = ObjectRecognition(algo, tracker_type, tracker=None)
+        object_rec_node = ObjectRecognition(sample_data, annotation)
         self.object_recognition = object_rec_node
         return object_rec_node
-
-# Item node
-class Item:
-    def __init__(self, item_id, item_type, location):
-        self.item_id = item_id
-        self.item_type = item_type
-        self.location = location
-        self.properties = {}
-
-
+    
 # Object Recognition node
 class ObjectRecognition:
-    def __init__(self, algo, tracker_type, tracker = None):
-        self.algo = algo
-        self.tracker_type = tracker_type
-        self.tracker = tracker
-        # bounding boxes from object recognition
-        self.bboxes = []
-        self.labels = None
-        self.tracked_cnt = None
+    def __init__(self, sample_data, annotation):
+        self.sample_data = sample_data
+        self.annotation = annotation
+        self.properties = {}
 
     def add_properties(self, properties):
         self.properties = properties
@@ -92,11 +70,11 @@ class VideoContext:
         return self.units
 
     # Establish camera
-    def camera(self, cam_id, point, ratio, video_file, metadata_id, lens):
-        camera_node = self.__get_camera(cam_id)
+    def camera(self, scenic_scene_name):
+        camera_node = self.__get_camera(scenic_scene_name)
         if not camera_node:
-            camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
-            self.__add_camera(cam_id, camera_node)
+            camera_node = Camera(scenic_scene_name)
+            self.__add_camera(scenic_scene_name, camera_node)
         return camera_node
 
     def properties(self, cam_id, properties, property_type):
@@ -106,6 +84,8 @@ class VideoContext:
      
         camera_node.add_properties(properties, property_type)
        # Display error 
+    
+    
 
     def get_camera(self, cam_id):
         return self.__get_camera(cam_id)
