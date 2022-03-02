@@ -4,7 +4,6 @@ import os
 from typing import Callable
 import uncompyle6
 import psycopg2
-from video_util import *
 import datetime 
 
 

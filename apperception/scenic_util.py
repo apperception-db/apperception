@@ -1,11 +1,11 @@
 import numpy as np
-from video_util import bbox_to_data3d, convert_timestamps
 from pyquaternion import Quaternion
 import json
 import os
+import datetime
 from box import Box
 
-CREATE_ITEMTRAJ_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
+CREATE_ITEMTRAJ_SQL ='''CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
 	itemId TEXT,
 	objectType TEXT,
 	frameId TEXT,
@@ -15,14 +15,14 @@ CREATE_ITEMTRAJ_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Traj
 	PRIMARY KEY (itemId)
 	);'''
 
-CREATE_BBOXES_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_General_Bbox(
+CREATE_BBOXES_SQL ='''CREATE TABLE IF NOT EXISTS General_Bbox(
 	itemId TEXT,
 	trajBbox stbox,
 	FOREIGN KEY(itemId)
-		REFERENCES Test_Scenic_Item_General_Trajectory(itemId)
+		REFERENCES Item_General_Trajectory(itemId)
 	);'''
 
-CREATE_CAMERA_SQL = '''CREATE TABLE IF NOT EXISTS Test_Scenic_Cameras(
+CREATE_CAMERA_SQL = '''CREATE TABLE IF NOT EXISTS Cameras(
 	cameraId TEXT,
 	worldId TEXT,
 	frameId TEXT,
@@ -84,17 +84,17 @@ def create_or_insert_camera_table(conn, world_name, camera):
 	Create and Populate A camera table with the given camera object.
 	'''
 	#Doping Cameras table if already exists.
-	cursor.execute("DROP TABLE IF EXISTS Test_Scenic_Cameras")
+	cursor.execute("DROP TABLE IF EXISTS Cameras")
 	# Formal_Scenic_cameras table stands for the formal table which won't be erased
 	# Test for now
 	
 	cursor.execute(CREATE_CAMERA_SQL)
 	print("Camera Table created successfully........")
-	insert_scenic_camera(conn, world_name, fetch_camera_config(camera.scenic_scene_name, camera.object_recognition.sample_data))
+	insert_camera(conn, world_name, fetch_camera_config(camera.scenic_scene_name, camera.object_recognition.sample_data))
 	return CREATE_CAMERA_SQL
 
 # Helper function to insert the camera
-def insert_scenic_camera(conn, world_name, camera_config):
+def insert_camera(conn, world_name, camera_config):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	values = []
@@ -114,7 +114,7 @@ def insert_scenic_camera(conn, world_name, camera_config):
 		)''')
 
 	cursor.execute(f'''
-		INSERT INTO Test_Scenic_Cameras (
+		INSERT INTO Cameras (
 			cameraId, 
 			worldId, 
 			frameId, 
@@ -134,44 +134,44 @@ def insert_scenic_camera(conn, world_name, camera_config):
 	conn.commit()
 
 # create collections in db and set index for quick query
-def insert_scenic_data(scenic_data_dir, db):
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'sample_data.json')) as f:
+def insert_data(data_dir, db):
+	with open(os.path.join(data_dir, 'v1.0-mini', 'sample_data.json')) as f:
 		sample_data_json = json.load(f)
 	db['sample_data'].insert_many(sample_data_json)
 	db['sample_data'].create_index('token')
 	db['sample_data'].create_index('filename')
 	
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'attribute.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'attribute.json')) as f:
 		attribute_json = json.load(f)
 	db['attribute'].insert_many(attribute_json)
 	db['attribute'].create_index('token')
 
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'calibrated_sensor.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'calibrated_sensor.json')) as f:
 		calibrated_sensor_json = json.load(f)
 	db['calibrated_sensor'].insert_many(calibrated_sensor_json)
 	db['calibrated_sensor'].create_index('token')
 	
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'category.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'category.json')) as f:
 		category_json = json.load(f)
 	db['category'].insert_many(category_json)
 	db['category'].create_index('token')
 
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'ego_pose.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'ego_pose.json')) as f:
 		ego_pose_json = json.load(f)
 	db['ego_pose'].insert_many(ego_pose_json)
 	db['ego_pose'].create_index('token')
 
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'instance.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'instance.json')) as f:
 		instance_json = json.load(f)
 	db['instance'].insert_many(instance_json)
 	db['instance'].create_index('token')
 
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'sample_annotation.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'sample_annotation.json')) as f:
 		sample_annotation_json = json.load(f)
 	db['sample_annotation'].insert_many(sample_annotation_json)
 	db['sample_annotation'].create_index('token')
 
-	with open(os.path.join(scenic_data_dir, 'v1.0-mini', 'frame_num.json')) as f:
+	with open(os.path.join(data_dir, 'v1.0-mini', 'frame_num.json')) as f:
 		frame_num_json = json.load(f)
 	db['frame_num'].insert_many(frame_num_json)
 	db['frame_num'].create_index('token')
@@ -253,7 +253,7 @@ def recognize(scene_name, sample_data, annotation):
 	return annotations
 
 def add_recognized_objs(conn, formatted_result, start_time, default_depth=True):
-	clean_scenic_tables(conn)
+	clean_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
 		recognized_bboxes = np.array(formatted_result[item_id]["bboxes"])
@@ -279,11 +279,11 @@ def add_recognized_objs(conn, formatted_result, start_time, default_depth=True):
 			current_br = bottom_right[i]
 			obj_traj.append([current_tl.tolist(), current_br.tolist()])      
 		
-		scenic_bboxes_to_postgres(conn, item_id, object_type, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
+		bboxes_to_postgres(conn, item_id, object_type, "default_color", start_time, tracked_cnt, obj_traj, type="yolov4")
 		# bbox_to_tasm()
 
 # Insert bboxes to postgres
-def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
+def bboxes_to_postgres(conn, item_id, object_type, color, start_time, timestamps, bboxes, type='yolov3'):
 	if type == 'yolov3':
 		timestamps = range(timestamps)
 
@@ -294,12 +294,12 @@ def scenic_bboxes_to_postgres(conn, item_id, object_type, color, start_time, tim
 		pairs.append(meta_box[0])
 		deltas.append(meta_box[1:])
 	postgres_timestamps = convert_timestamps(start_time, timestamps)
-	create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 	# print(f"{item_id} saved successfully")
 
 
 # Create general trajectory table
-def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
+def create_or_insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	cursor = conn.cursor()
 	'''
 	Create and Populate A Trajectory table using mobilityDB.
@@ -311,29 +311,29 @@ def create_or_insert_scenic_general_trajectory(conn, item_id, object_type, color
 	 # Test for now
 	
 	cursor.execute(CREATE_ITEMTRAJ_SQL)
-	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Test_Scenic_Item_General_Trajectory USING GiST(trajCentroids);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);")
 	conn.commit()
 	# Formal_Scenic_General_Bbox table stands for the formal table which won't be erased
 	# Test for now
 	
 	cursor.execute(CREATE_BBOXES_SQL)
-	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON Test_Scenic_General_Bbox(itemId);")
-	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON Test_Scenic_General_Bbox USING GiST(trajBbox);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
+	cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);")
 	conn.commit()
 	#Insert the trajectory of the first item
-	insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
+	insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 
 
 # Insert general trajectory
-def insert_scenic_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
+def insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	#Inserting bboxes into Bbox table
 	insert_bbox_trajectory = ""
-	insert_format = "INSERT INTO Test_Scenic_General_Bbox (itemId, trajBbox) "+ \
+	insert_format = "INSERT INTO General_Bbox (itemId, trajBbox) "+ \
 	"VALUES (\'%s\',"  % (item_id)
 	# Insert the item_trajectory separately
-	insert_trajectory = "INSERT INTO Test_Scenic_Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "+ \
+	insert_trajectory = "INSERT INTO Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "+ \
 	"VALUES (\'%s\', \'%s\', \'%s\', "  % (item_id, object_type, color)
 	traj_centroids = "\'{"
 	min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = float('inf'), float('inf'), float('inf'), float('-inf'), float('-inf'), float('-inf')
@@ -421,7 +421,7 @@ def fetch_camera(conn, scene_name, frame_num):
 		cameraIntrinsic,
 		frameNum,
 		fileName
-	FROM Test_Scenic_Cameras
+	FROM Cameras
 	WHERE
 		cameraId = '{scene_name}' AND
 		frameNum IN {tuple(frame_num)};
@@ -429,19 +429,19 @@ def fetch_camera(conn, scene_name, frame_num):
 	cursor.execute(query)
 	return cursor.fetchall()
 
-def clean_scenic_tables(conn):
+def clean_tables(conn):
 	cursor = conn.cursor()
-	cursor.execute("DROP TABLE IF EXISTS test_scenic_General_Bbox;")
-	cursor.execute("DROP TABLE IF EXISTS test_scenic_Item_General_Trajectory;")
+	cursor.execute("DROP TABLE IF EXISTS General_Bbox;")
+	cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory;")
 	conn.commit()
  
 def export_tables(conn):
 	# create a query to specify which values we want from the database.
 	s = "SELECT *"
 	s += " FROM "
-	s_trajectory = s + "Test_Scenic_Item_General_Trajectory"
-	s_bbox = s + "Test_Scenic_General_Bbox"
-	s_camera = s + "Test_Scenic_Cameras"
+	s_trajectory = s + "Item_General_Trajectory"
+	s_bbox = s + "General_Bbox"
+	s_camera = s + "Cameras"
 
 	# set up our database connection.
 	db_cursor = conn.cursor()
@@ -471,10 +471,27 @@ def import_tables(conn):
 	cur.execute(CREATE_BBOXES_SQL)
 	conn.commit()
 	with open('test_camera.csv', 'r') as camera_f:
-		cur.copy_expert(file=camera_f, sql="COPY test_scenic_cameras FROM STDIN CSV HEADER DELIMITER as ','")
+		cur.copy_expert(file=camera_f, sql="COPY Cameras FROM STDIN CSV HEADER DELIMITER as ','")
 	with open('test_trajectory.csv', 'r') as trajectory_f:
-		cur.copy_expert(file=trajectory_f, sql="COPY test_scenic_item_general_trajectory FROM STDIN CSV HEADER DELIMITER as ','")
+		cur.copy_expert(file=trajectory_f, sql="COPY Item_General_Trajectory FROM STDIN CSV HEADER DELIMITER as ','")
 	with open('test_bbox.csv', 'r') as bbox_f:
-		cur.copy_expert(file=bbox_f, sql="COPY test_scenic_general_bbox FROM STDIN CSV HEADER DELIMITER as ','")
+		cur.copy_expert(file=bbox_f, sql="COPY General_Bbox FROM STDIN CSV HEADER DELIMITER as ','")
 
 	conn.commit()
+	
+# Helper function to convert the timestam to the timestamp formula pg-trajectory uses
+def convert_timestamps(start_time, timestamps):
+	return [str(start_time + datetime.timedelta(seconds=t)) for t in timestamps]
+
+# Helper function to convert trajectory to centroids
+def bbox_to_data3d(bbox):
+	'''
+	Compute the center, x, y, z delta of the bbox
+	'''
+	tl, br = bbox
+	x_delta = (br[0] - tl[0])/2
+	y_delta = (br[1] - tl[1])/2
+	z_delta = (br[2] - tl[2])/2
+	center = (tl[0] + x_delta, tl[1] + y_delta, tl[2] + z_delta)
+	
+	return center, x_delta, y_delta, z_delta
