@@ -3,14 +3,14 @@ from scenic_util import *
 
 import json
 
-class ScenicVideoContextExecutor:
-    def __init__(self, conn, new_video_context:ScenicVideoContext=None, tasm=None):
+class VideoContextExecutor:
+    def __init__(self, conn, new_video_context:VideoContext=None, tasm=None):
         if new_video_context:
             self.context(new_video_context)
         self.conn = conn
         self.tasm = tasm
 
-    def context(self, video_context:ScenicVideoContext):
+    def context(self, video_context:VideoContext):
         self.current_context = video_context
         return self
 
@@ -33,7 +33,7 @@ class ScenicVideoContextExecutor:
 
     def visit_camera(self, camera_node):
         world_name = self.current_context.name
-        camera_sql = create_or_insert_scenic_camera_table(self.conn, world_name, camera_node)
+        camera_sql = create_or_insert_camera_table(self.conn, world_name, camera_node)
         if camera_node.object_recognition is not None:
             self.visit_obj_rec(camera_node, camera_node.object_recognition)
         if self.tasm:
@@ -45,8 +45,8 @@ class ScenicVideoContextExecutor:
 
         start_time = self.current_context.start_time
 
-        tracking_results = scenic_recognize(cam_id, object_rec_node.sample_data, object_rec_node.annotation)
-        add_scenic_recognized_objs(self.conn, tracking_results, start_time)
+        tracking_results = recognize(cam_id, object_rec_node.sample_data, object_rec_node.annotation)
+        add_recognized_objs(self.conn, tracking_results, start_time)
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
         

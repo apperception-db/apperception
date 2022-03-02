@@ -3,7 +3,7 @@ from video_util import bbox_to_data3d, convert_timestamps
 from pyquaternion import Quaternion
 import json
 import os
-from scenic_box import Box
+from box import Box
 
 CREATE_ITEMTRAJ_SQL ='''CREATE TABLE IF NOT EXISTS Test_Scenic_Item_General_Trajectory(
 	itemId TEXT,
@@ -77,7 +77,7 @@ def fetch_camera_config(scene_name, sample_data):
 	return camera_config
 
 # Create a camera table
-def create_or_insert_scenic_camera_table(conn, world_name, camera):
+def create_or_insert_camera_table(conn, world_name, camera):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
 	'''
@@ -195,7 +195,7 @@ def transform_box(box: Box, camera):
 # 	plt.imshow(frame)
 # 	plt.show()
 
-def scenic_recognize(scene_name, sample_data, annotation):
+def recognize(scene_name, sample_data, annotation):
 	"""
 	return:
 	annotations: {
@@ -252,7 +252,7 @@ def scenic_recognize(scene_name, sample_data, annotation):
 	print("Recognization done, saving to database......")
 	return annotations
 
-def add_scenic_recognized_objs(conn, formatted_result, start_time, default_depth=True):
+def add_recognized_objs(conn, formatted_result, start_time, default_depth=True):
 	clean_scenic_tables(conn)
 	for item_id in formatted_result:
 		object_type = formatted_result[item_id]["object_type"]
