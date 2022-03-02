@@ -190,7 +190,7 @@ class World:
 
     def trajectory_to_frame_num(self, trajectory):
         '''
-        TODO: fetch the frame number from the trajectory
+        fetch the frame number from the trajectory
         1. get the time stamp field from the trajectory
         2. convert the time stamp to frame number
             Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
@@ -201,12 +201,16 @@ class World:
         for traj in trajectory:
             current_trajectory = traj[0]
             date_times = current_trajectory['datetimes']
-            frame_num.append([(datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo = None) - start_time).total_seconds() for t in date_times])
+            frame_num.append([
+                (datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo=None) - start_time).total_seconds()
+                for t
+                in date_times
+            ])
         return frame_num
 
     def get_overlay_info(self, trajectory, camera_info):
         '''
-        TODO: overlay each trajectory 3d coordinate on to the frame specified by the camera_info
+        overlay each trajectory 3d coordinate on to the frame specified by the camera_info
         1. for each trajectory, get the 3d coordinate
         2. get the camera_info associated to it
         3. implement the transformation function from 3d to 2d 
@@ -226,7 +230,6 @@ class World:
                 # in order to fit into the function transformation, we develop a dictionary called camera_config
                 camera_config = {}
                 camera_config['egoTranslation'] = cur_camera_info[1]
-                print(type(camera_config["egoTranslation"]))
                 camera_config['egoRotation'] = np.array(cur_camera_info[2])
                 camera_config['cameraTranslation'] = cur_camera_info[3]
                 camera_config['cameraRotation'] = np.array(cur_camera_info[4])
