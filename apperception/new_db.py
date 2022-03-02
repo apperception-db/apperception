@@ -251,6 +251,30 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
+    def filter_relative_to_type(self, query: Query, leftof, rightof, topof, bottomof, type: str):
+        cameras = Table(CAMERA_TABLE)
+        Xmin = CustomFunction("Xmin", ["stbox"])
+        Ymin = CustomFunction("Ymin", ["stbox"])
+        Zmin = CustomFunction("Zmin", ["stbox"])
+        Xmax = CustomFunction("Xmax", ["stbox"])
+        Ymax = CustomFunction("Ymax", ["stbox"])
+        Zmax = CustomFunction("Zmax", ["stbox"])
+        ST_X = CustomFunction("ST_X", ["geometry"])
+        ST_Z = CustomFunction("ST_Z", ["geometry"])
+        Abs = CustomFunction("ABS", ["number"])
+        q = (SnowflakeQuery.from_(query)
+                .join(cameras)
+                .cross()
+                .select(query.star)
+                .where(leftof <= (ST_X(cameras.origin) - ((Xmax(query.largestBbox) + Xmin(query.largestBbox)) / 2)))
+                .where((ST_X(cameras.origin) - ((Xmax(query.largestBbox) + Xmin(query.largestBbox)) / 2)) <= rightof)
+                .where(bottomof <= (ST_Z(cameras.origin) - ((Zmax(query.largestBbox) + Zmin(query.largestBbox)) / 2)))
+                .where((ST_Z(cameras.origin) - ((Zmax(query.largestBbox) + Zmin(query.largestBbox)) / 2)) <= topof)
+            )
+        print(str(q))
+        return q
+        
+
     def filter_traj_volume(self, query: Query, volume: str):
         overlap = CustomFunction("overlap", ["bbox1", "bbox2"])
         return SnowflakeQuery.from_(query).select("*").where(overlap(query.largestBbox, volume))
