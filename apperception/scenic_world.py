@@ -1,7 +1,7 @@
 from metadata_context import MetadataContext
-from scenic_context import ScenicVideoContext
+from scenic_context import VideoContext
 import copy
-from scenic_world_executer import ScenicWorldExecutor
+from scenic_world_executer import WorldExecutor
 import matplotlib.pyplot as plt
 from scenic_util import transformation
 import numpy as np
@@ -9,15 +9,15 @@ import datetime
 import cv2
 
 BASE_VOLUME_QUERY_TEXT = "stbox \'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))\'"
-scenic_world_executor = ScenicWorldExecutor()
+world_executor = WorldExecutor()
 
 
-class ScenicWorld:
+class World:
 
     def __init__(self, name, units, enable_tasm=False):
-        self.ScenicVideoContext = ScenicVideoContext(name, units)
+        self.VideoContext = VideoContext(name, units)
         self.MetadataContext = MetadataContext(single_mode=False)
-        self.MetadataContext.start_time = self.ScenicVideoContext.start_time
+        self.MetadataContext.start_time = self.VideoContext.start_time
         self.GetVideo = False
         self.enable_tasm = enable_tasm
         # self.AccessedVideoContext = False
@@ -26,10 +26,10 @@ class ScenicWorld:
         # Change depending if you're on docker or not 
         # TODO: fix get_camera in scenic_world_executor.py
         if self.enable_tasm:
-            scenic_world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
+            world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
         else:
-            scenic_world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return scenic_world_executor.get_camera(scene_name, frame_num)
+            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+        return world_executor.get_camera(scene_name, frame_num)
 
 #########################
 ###   Video Context  ####
@@ -48,9 +48,9 @@ class ScenicWorld:
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
 
-    def scenic_camera(self, scenic_scene_name):
+    def camera(self, scenic_scene_name: str):
         new_context = copy.deepcopy(self)
-        new_context.ScenicVideoContext.scenic_camera(scenic_scene_name)
+        new_context.VideoContext.camera(scenic_scene_name)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
@@ -60,7 +60,7 @@ class ScenicWorld:
 
     def recognize(self, cam_id, sample_data, annotation):
         new_context = copy.deepcopy(self)
-        new_context.ScenicVideoContext.camera_nodes[cam_id].recognize(sample_data, annotation)
+        new_context.VideoContext.camera_nodes[cam_id].recognize(sample_data, annotation)
         return new_context
 
 #########################
@@ -121,15 +121,15 @@ class ScenicWorld:
         return new_context
 
     def execute(self):
-        scenic_world_executor.create_world(self)
+        world_executor.create_world(self)
         if self.enable_tasm:
-            scenic_world_executor.enable_tasm()
+            world_executor.enable_tasm()
             print("successfully enable tasm during execution time")
         # Change depending if you're on docker or not 
-            scenic_world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
+            world_executor.connect_db(port=5432, user="docker", password="docker", database_name="mobilitydb")
         else:
-            scenic_world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return scenic_world_executor.execute()
+            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
+        return world_executor.execute()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         print(self.VideoContext.camera_nodes)
@@ -157,7 +157,29 @@ class ScenicWorld:
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
 
-    def scenic_trajectory_to_frame_num(self, trajectory):
+    def overlay_trajectory(self, scene_name, trajectory):
+        frame_num = self.trajectory_to_frame_num(trajectory)
+        # frame_num is int[[]], hence camera_info should also be [[]]
+        camera_info = []
+        for cur_frame_num in frame_num:
+            camera_info.append(self.get_camera(scene_name, cur_frame_num)) ### TODO: fetch_camera_info in scenic_utils.py
+        assert len(camera_info) == len(frame_num)
+        assert len(camera_info[0]) == len(frame_num[0])
+        overlay_info = self.get_overlay_info(trajectory, camera_info)
+        ### TODO: fix the following to overlay the 2d point onto the frame
+        for traj in trajectory:
+            current_trajectory = np.asarray(traj[0])
+            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+            vs = cv2.VideoCapture(video_file)
+            frame = vs.read()
+            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+            for point in frame_points.tolist():
+                cv2.circle(frame,tuple([int(point[0]), int(point[1])]),3,(255,0,0))
+            plt.figure()
+            plt.imshow(frame)
+            plt.show()
+
+    def trajectory_to_frame_num(self, trajectory):
         '''
         TODO: fetch the frame number from the trajectory
         1. get the time stamp field from the trajectory
@@ -207,25 +229,3 @@ class ScenicWorld:
                 traj_obj_2d.append((traj_2d, framenum, filename))
             result.append(traj_obj_2d)
         return result
-
-    def scenic_overlay_trajectory(self, scene_name, trajectory):
-        frame_num = self.scenic_trajectory_to_frame_num(trajectory)
-        # frame_num is int[[]], hence camera_info should also be [[]]
-        camera_info = []
-        for cur_frame_num in frame_num:
-            camera_info.append(self.get_camera(scene_name, cur_frame_num)) ### TODO: fetch_camera_info in scenic_utils.py
-        assert len(camera_info) == len(frame_num)
-        assert len(camera_info[0]) == len(frame_num[0])
-        overlay_info = self.get_overlay_info(trajectory, camera_info)
-        ### TODO: fix the following to overlay the 2d point onto the frame
-        for traj in trajectory:
-            current_trajectory = np.asarray(traj[0])
-            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-            for point in frame_points.tolist():
-                cv2.circle(frame,tuple([int(point[0]), int(point[1])]),3,(255,0,0))
-            plt.figure()
-            plt.imshow(frame)
-            plt.show()

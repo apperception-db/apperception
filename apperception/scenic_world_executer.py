@@ -4,7 +4,7 @@ from scenic_video_context_executor import *
 from scenic_util import *
 import numpy as np
 
-class ScenicWorldExecutor:
+class WorldExecutor:
     def __init__(self, world=None):
         if world:
             self.create_world(world)
@@ -91,7 +91,7 @@ class ScenicWorldExecutor:
         
     def execute(self):
         # Edit logic for execution here through checks of whether VideoContext or MetadataContext is being used 
-        video_executor = ScenicVideoContextExecutor(self.conn, self.curr_world.ScenicVideoContext, self.tasm)
+        video_executor = VideoContextExecutor(self.conn, self.curr_world.VideoContext, self.tasm)
         video_executor.execute()
 
         if self.curr_world.MetadataContext.scan.view == None:

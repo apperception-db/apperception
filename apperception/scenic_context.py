@@ -9,7 +9,7 @@ import datetime
 
 
 # Camera node
-class ScenicCamera:
+class Camera:
     def __init__(self, scenic_scene_name):
         self.scenic_scene_name = scenic_scene_name
 
@@ -32,12 +32,12 @@ class ScenicCamera:
     # Add a default add_recog_obj = True
     def recognize(self, sample_data, annotation):
         # Create object recognition node
-        object_rec_node = ScenicObjectRecognition(sample_data, annotation)
+        object_rec_node = ObjectRecognition(sample_data, annotation)
         self.object_recognition = object_rec_node
         return object_rec_node
     
 # Object Recognition node
-class ScenicObjectRecognition:
+class ObjectRecognition:
     def __init__(self, sample_data, annotation):
         self.sample_data = sample_data
         self.annotation = annotation
@@ -46,7 +46,7 @@ class ScenicObjectRecognition:
     def add_properties(self, properties):
         self.properties = properties
 
-class ScenicVideoContext:
+class VideoContext:
     def __init__(self, name, units):
         self.root = self
         self.name = name
@@ -70,10 +70,10 @@ class ScenicVideoContext:
         return self.units
 
     # Establish camera
-    def scenic_camera(self, scenic_scene_name):
+    def camera(self, scenic_scene_name):
         camera_node = self.__get_camera(scenic_scene_name)
         if not camera_node:
-            camera_node = ScenicCamera(scenic_scene_name)
+            camera_node = Camera(scenic_scene_name)
             self.__add_camera(scenic_scene_name, camera_node)
         return camera_node
 
