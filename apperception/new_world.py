@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import glob
 import inspect
-import pickle
+import dill as pickle
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
@@ -219,6 +219,18 @@ class World:
             self.db.filter_traj_heading,
             lessThan=lessThan,
             greaterThan=greaterThan,
+        )
+
+    def filter_relative_to_type(self, leftof, rightof, topof, bottomof, type: str):
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.filter_relative_to_type,
+            leftof=leftof,
+            rightof=rightof,
+            topof=topof,
+            bottomof=bottomof,
+            type=type,
         )
 
     def add_camera(
