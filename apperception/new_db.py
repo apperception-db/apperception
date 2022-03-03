@@ -1,4 +1,5 @@
 import datetime
+from typing import Tuple
 
 import psycopg2
 from bounding_box import BoundingBox
@@ -10,7 +11,6 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 from video_context import Camera
 from video_util import add_recognized_objs, get_video_dimension, recognize
-from typing import Tuple
 
 CAMERA_TABLE = "cameras"
 TRAJ_TABLE = "item_general_trajectory"
@@ -252,7 +252,14 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
-    def filter_relative_to_type(self, query: Query, x_range: Tuple[float, float], y_range: Tuple[float, float], z_range: Tuple[float, float], type: str):
+    def filter_relative_to_type(
+        self,
+        query: Query,
+        x_range: Tuple[float, float],
+        y_range: Tuple[float, float],
+        z_range: Tuple[float, float],
+        type: str,
+    ):
         # TODO: Make also work with objects of other types
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
@@ -262,21 +269,21 @@ class Database:
         ST_X = CustomFunction("ST_X", ["geometry"])
         ST_Y = CustomFunction("ST_Y", ["geometry"])
         ST_Z = CustomFunction("ST_Z", ["geometry"])
-        q = (SnowflakeQuery.from_(query)
-                .join(cameras)
-                .cross()
-                .select(query.star)
-                .distinct()
-                .where(x_range[0] <= (ST_X(cameras.origin) - getX(query.trajCentroids)))
-                .where((ST_X(cameras.origin) - getX(query.trajCentroids)) <= x_range[1])
-                .where(y_range[0] <= (ST_Y(cameras.origin) - getY(query.trajCentroids)))
-                .where((ST_Y(cameras.origin) - getY(query.trajCentroids)) <= y_range[1])
-                .where(z_range[0] <= (ST_Z(cameras.origin) - getZ(query.trajCentroids)))
-                .where((ST_Z(cameras.origin) - getZ(query.trajCentroids)) <= z_range[1])
-            )
+        q = (
+            SnowflakeQuery.from_(query)
+            .join(cameras)
+            .cross()
+            .select(query.star)
+            .distinct()
+            .where(x_range[0] <= (ST_X(cameras.origin) - getX(query.trajCentroids)))
+            .where((ST_X(cameras.origin) - getX(query.trajCentroids)) <= x_range[1])
+            .where(y_range[0] <= (ST_Y(cameras.origin) - getY(query.trajCentroids)))
+            .where((ST_Y(cameras.origin) - getY(query.trajCentroids)) <= y_range[1])
+            .where(z_range[0] <= (ST_Z(cameras.origin) - getZ(query.trajCentroids)))
+            .where((ST_Z(cameras.origin) - getZ(query.trajCentroids)) <= z_range[1])
+        )
         # print(str(q))
         return q
-        
 
     def filter_traj_volume(self, query: Query, volume: str):
         overlap = CustomFunction("overlap", ["bbox1", "bbox2"])

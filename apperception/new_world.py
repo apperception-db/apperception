@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import glob
 import inspect
-import dill as pickle
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
@@ -11,6 +10,7 @@ from os import makedirs, path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
+import dill as pickle
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,7 +20,6 @@ from lens import Lens
 from new_db import Database
 from point import Point
 from video_context import Camera
-from typing import Tuple
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
@@ -183,12 +182,16 @@ class World:
                 current_pos = traj[j]
                 heading.append(0)
                 if current_pos[1] != prev_pos[1]:
-                    heading[j] = np.arctan2(current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0])
-                heading[j] *= (180 / np.pi) # convert to degrees from radian
-                heading[j] = (heading[j] + 360) % 360  # converting such that all headings are positive
+                    heading[j] = np.arctan2(
+                        current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0]
+                    )
+                heading[j] *= 180 / np.pi  # convert to degrees from radian
+                heading[j] = (
+                    heading[j] + 360
+                ) % 360  # converting such that all headings are positive
             headings.append(heading)
         return headings
-    
+
     def get_distance(self, start: float, end: float):
         return derive_world(
             self,
@@ -222,7 +225,13 @@ class World:
             greaterThan=greaterThan,
         )
 
-    def filter_relative_to_type(self, x_range: Tuple[float, float], y_range: Tuple[float, float], z_range: Tuple[float, float], type: str):
+    def filter_relative_to_type(
+        self,
+        x_range: Tuple[float, float],
+        y_range: Tuple[float, float],
+        z_range: Tuple[float, float],
+        type: str,
+    ):
         return derive_world(
             self,
             {Type.TRAJ},
