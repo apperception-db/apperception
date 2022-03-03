@@ -20,6 +20,7 @@ from lens import Lens
 from new_db import Database
 from point import Point
 from video_context import Camera
+from typing import Tuple
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
@@ -221,15 +222,14 @@ class World:
             greaterThan=greaterThan,
         )
 
-    def filter_relative_to_type(self, leftof, rightof, topof, bottomof, type: str):
+    def filter_relative_to_type(self, x_range: Tuple[float, float], y_range: Tuple[float, float], z_range: Tuple[float, float], type: str):
         return derive_world(
             self,
             {Type.TRAJ},
             self.db.filter_relative_to_type,
-            leftof=leftof,
-            rightof=rightof,
-            topof=topof,
-            bottomof=bottomof,
+            x_range=x_range,
+            y_range=y_range,
+            z_range=z_range,
             type=type,
         )
 
