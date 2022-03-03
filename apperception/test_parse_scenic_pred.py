@@ -1,12 +1,14 @@
-import uncompyle6
 import ast
 import os
+
+import uncompyle6
 from astpretty import pprint as apprint
 
 
 def main():
-    pred = lambda obj: (cam.x - 10) <= obj.x <= (cam.x + 10) and \
-                        (cam.y - 15) <= obj.y <= (cam.y + 70)
+    def pred(obj):
+        return (cam.x - 10) <= obj.x <= (cam.x + 10) and (cam.y - 15) <= obj.y <= (cam.y + 70)
+
     s = uncompyle6.deparse_code2str(pred.__code__, out=open(os.devnull, "w"))
     tree = ast.parse(s)
     # print(pred.__code__)
@@ -31,7 +33,11 @@ def main():
             ops = cmp_node.ops
             comparators = cmp_node.comparators
 
-            if len(comparators) == 2 and isinstance(comparators[0], ast.Attribute) and comparators[0].attr == "x":
+            if (
+                len(comparators) == 2
+                and isinstance(comparators[0], ast.Attribute)
+                and comparators[0].attr == "x"
+            ):
                 if isinstance(left, ast.BinOp):
                     if isinstance(left.left, ast.Attribute) and left.left.attr == "x":
                         if isinstance(left.op, ast.Sub):
@@ -57,7 +63,11 @@ def main():
             ops = cmp_node.ops
             comparators = cmp_node.comparators
 
-            if len(comparators) == 2 and isinstance(comparators[0], ast.Attribute) and comparators[0].attr == "y":
+            if (
+                len(comparators) == 2
+                and isinstance(comparators[0], ast.Attribute)
+                and comparators[0].attr == "y"
+            ):
                 if isinstance(left, ast.BinOp):
                     if isinstance(left.left, ast.Attribute) and left.left.attr == "y":
                         if isinstance(left.op, ast.Sub):
@@ -80,6 +90,6 @@ def main():
     print(x_range)
     print(y_range)
 
+
 if __name__ == "__main__":
     main()
-
