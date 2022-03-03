@@ -10,6 +10,7 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 from video_context import Camera
 from video_util import add_recognized_objs, get_video_dimension, recognize
+from typing import Tuple
 
 CAMERA_TABLE = "cameras"
 TRAJ_TABLE = "item_general_trajectory"
@@ -251,27 +252,29 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
-    def filter_relative_to_type(self, query: Query, leftof, rightof, topof, bottomof, type: str):
+    def filter_relative_to_type(self, query: Query, x_range: Tuple[float, float], y_range: Tuple[float, float], z_range: Tuple[float, float], type: str):
+        # TODO: Make also work with objects of other types
         cameras = Table(CAMERA_TABLE)
-        Xmin = CustomFunction("Xmin", ["stbox"])
-        Ymin = CustomFunction("Ymin", ["stbox"])
-        Zmin = CustomFunction("Zmin", ["stbox"])
-        Xmax = CustomFunction("Xmax", ["stbox"])
-        Ymax = CustomFunction("Ymax", ["stbox"])
-        Zmax = CustomFunction("Zmax", ["stbox"])
+        getX = CustomFunction("getX", ["tgeompoint"])
+        getY = CustomFunction("getX", ["tgeompoint"])
+        getZ = CustomFunction("getX", ["tgeompoint"])
+
         ST_X = CustomFunction("ST_X", ["geometry"])
+        ST_Y = CustomFunction("ST_Y", ["geometry"])
         ST_Z = CustomFunction("ST_Z", ["geometry"])
-        Abs = CustomFunction("ABS", ["number"])
         q = (SnowflakeQuery.from_(query)
                 .join(cameras)
                 .cross()
                 .select(query.star)
-                .where(leftof <= (ST_X(cameras.origin) - ((Xmax(query.largestBbox) + Xmin(query.largestBbox)) / 2)))
-                .where((ST_X(cameras.origin) - ((Xmax(query.largestBbox) + Xmin(query.largestBbox)) / 2)) <= rightof)
-                .where(bottomof <= (ST_Z(cameras.origin) - ((Zmax(query.largestBbox) + Zmin(query.largestBbox)) / 2)))
-                .where((ST_Z(cameras.origin) - ((Zmax(query.largestBbox) + Zmin(query.largestBbox)) / 2)) <= topof)
+                .distinct()
+                .where(x_range[0] <= (ST_X(cameras.origin) - getX(query.trajCentroids)))
+                .where((ST_X(cameras.origin) - getX(query.trajCentroids)) <= x_range[1])
+                .where(y_range[0] <= (ST_Y(cameras.origin) - getY(query.trajCentroids)))
+                .where((ST_Y(cameras.origin) - getY(query.trajCentroids)) <= y_range[1])
+                .where(z_range[0] <= (ST_Z(cameras.origin) - getZ(query.trajCentroids)))
+                .where((ST_Z(cameras.origin) - getZ(query.trajCentroids)) <= z_range[1])
             )
-        print(str(q))
+        # print(str(q))
         return q
         
 
