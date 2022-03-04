@@ -3,11 +3,13 @@ from __future__ import annotations
 import datetime
 import glob
 import inspect
+from pyclbr import Function
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
 from os import makedirs, path
 from typing import Any, Dict, List, Optional, Set, Tuple
+from apperception.new_util import compile_lambda
 
 import cv2
 import dill as pickle
@@ -241,6 +243,22 @@ class World:
             y_range=y_range,
             z_range=z_range,
             type=type,
+        )
+
+    def filter_pred_relative_to_type(
+        self,
+        pred: Function
+    ):
+        x_range, y_range = compile_lambda(pred)
+
+        return derive_world(
+            self,
+            {Type.TRAJ},
+            self.db.filter_relative_to_type,
+            x_range=x_range,
+            y_range=y_range,
+            z_range=[float(-2**31), float(2**31)],
+            type='camera',
         )
 
     def add_camera(
