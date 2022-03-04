@@ -5,7 +5,9 @@ from video_util import (convert_datetime_to_frame_num, get_video_box,
                         get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
-
+import uncompyle6
+import ast
+import os
 
 def create_camera(cam_id, fov):
     # Let's define some attribute for constructing the world first
@@ -109,3 +111,81 @@ def get_video(metadata_results, cams, start_time, boxed):
             video_files.append(vid_fname)
     print("output video files", ",".join(video_files))
     return video_files
+
+def compile_lambda(pred):
+    s = uncompyle6.deparse_code2str(pred.__code__, out=open(os.devnull, "w"))
+    tree = ast.parse(s)
+    # print(pred.__code__)
+    # print(s)
+    # apprint(tree)
+    subtree = tree.body[0]
+    assert isinstance(subtree, ast.Return)
+
+    x_range = []
+    y_range = []
+
+    if isinstance(subtree.value, ast.BoolOp):
+        left_node = subtree.value.values[0]
+        right_node = subtree.value.values[1]
+
+        # parse left
+        if isinstance(left_node, ast.Compare):
+            cmp_node = left_node
+            left = cmp_node.left
+            ops = cmp_node.ops
+            comparators = cmp_node.comparators
+
+            if (
+                len(comparators) == 2
+                and isinstance(comparators[0], ast.Attribute)
+                and comparators[0].attr == "x"
+            ):
+                if isinstance(left, ast.BinOp):
+                    if isinstance(left.left, ast.Attribute) and left.left.attr == "x":
+                        if isinstance(left.op, ast.Sub):
+                            assert isinstance(left.right, ast.Num)
+                            x_range.append(-left.right.n)
+                        elif isinstance(left.op, ast.Add):
+                            assert isinstance(left.right, ast.Num)
+                            x_range.append(left.right.n)
+
+                if isinstance(comparators[-1], ast.BinOp):
+                    right = comparators[-1]
+                    if isinstance(right.left, ast.Attribute) and right.left.attr == "x":
+                        if isinstance(right.op, ast.Sub):
+                            assert isinstance(right.right, ast.Num)
+                            x_range.append(-right.right.n)
+                        elif isinstance(right.op, ast.Add):
+                            assert isinstance(right.right, ast.Num)
+                            x_range.append(right.right.n)
+
+        if isinstance(right_node, ast.Compare):
+            cmp_node = right_node
+            left = cmp_node.left
+            ops = cmp_node.ops
+            comparators = cmp_node.comparators
+
+            if (
+                len(comparators) == 2
+                and isinstance(comparators[0], ast.Attribute)
+                and comparators[0].attr == "y"
+            ):
+                if isinstance(left, ast.BinOp):
+                    if isinstance(left.left, ast.Attribute) and left.left.attr == "y":
+                        if isinstance(left.op, ast.Sub):
+                            assert isinstance(left.right, ast.Num)
+                            y_range.append(-left.right.n)
+                        elif isinstance(left.op, ast.Add):
+                            assert isinstance(left.right, ast.Num)
+                            y_range.append(left.right.n)
+
+                if isinstance(comparators[-1], ast.BinOp):
+                    right = comparators[-1]
+                    if isinstance(right.left, ast.Attribute) and right.left.attr == "y":
+                        if isinstance(right.op, ast.Sub):
+                            assert isinstance(right.right, ast.Num)
+                            y_range.append(-right.right.n)
+                        elif isinstance(right.op, ast.Add):
+                            assert isinstance(right.right, ast.Num)
+                            y_range.append(right.right.n)
+    return x_range, y_range
