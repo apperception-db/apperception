@@ -141,13 +141,13 @@ class World:
         node3 = node2._retrieve_traj(world_id=node1._world_id)
         return node3
 
-    def get_video(self, cam_ids: List[str] = [], boxed: bool=False):
+    def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
             self,
             {Type.TRAJ},
             self.db.get_video,
             cams=[World.camera_nodes[cam_id] for cam_id in cam_ids],
-            boxed=boxed
+            boxed=boxed,
         )._execute_from_root(Type.TRAJ)
 
     def get_bbox(self):
@@ -299,8 +299,6 @@ class World:
             {Type.CAM},
             self.db.get_cam,
         )._execute_from_root(Type.CAM)
-
-    
 
     def get_bbox_geo(self):
         return derive_world(

@@ -4,7 +4,7 @@ from typing import Tuple
 import psycopg2
 from bounding_box import BoundingBox
 from lens import PinholeLens
-from new_util import create_camera, get_video, get_video_box, video_fetch_reformat
+from new_util import create_camera, get_video, video_fetch_reformat
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
