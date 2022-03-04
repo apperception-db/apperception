@@ -3,13 +3,12 @@ from __future__ import annotations
 import datetime
 import glob
 import inspect
-from pyclbr import Function
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
 from os import makedirs, path
+from pyclbr import Function
 from typing import Any, Dict, List, Optional, Set, Tuple
-from apperception.new_util import compile_lambda
 
 import cv2
 import dill as pickle
@@ -22,6 +21,8 @@ from lens import Lens
 from new_db import Database
 from point import Point
 from video_context import Camera
+
+from apperception.new_util import compile_lambda
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
@@ -245,10 +246,7 @@ class World:
             type=type,
         )
 
-    def filter_pred_relative_to_type(
-        self,
-        pred: Function
-    ):
+    def filter_pred_relative_to_type(self, pred: Function):
         x_range, y_range = compile_lambda(pred)
 
         return derive_world(
@@ -257,8 +255,8 @@ class World:
             self.db.filter_relative_to_type,
             x_range=x_range,
             y_range=y_range,
-            z_range=[float(-2**31), float(2**31)],
-            type='camera',
+            z_range=[float(-(2**31)), float(2**31)],
+            type="camera",
         )
 
     def add_camera(
