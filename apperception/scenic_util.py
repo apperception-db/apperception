@@ -425,7 +425,7 @@ def fetch_camera(conn, scene_name, frame_num):
 	FROM Cameras
 	WHERE
 		cameraId = '{scene_name}' AND
-		frameNum IN {tuple(frame_num)};
+		frameNum IN ({",".join(map(str, frame_num))});
 	'''
 	cursor.execute(query)
 	return cursor.fetchall()

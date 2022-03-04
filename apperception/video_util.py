@@ -1,8 +1,11 @@
+from typing import Any, Dict
+
+
 def video_data_to_tasm(video_file, metadata_id, t):
     t.store(video_file, metadata_id)
 
 
-def metadata_to_tasm(formatted_result: Dict[str, TrackedObject], metadata_id, t):
+def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
     import tasm
 
     metadata_info = []

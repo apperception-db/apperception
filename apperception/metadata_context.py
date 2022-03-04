@@ -69,7 +69,7 @@ class Aggregate:
 
 
 class asMFJSON(Aggregate):
-    def __init__(self, func_name="asMFJSON", parameters: list = [], interesting_fields=[""]):
+    def __init__(self, func_name="asMFJSON", parameters: list = [], interesting_fields=[]):
         super().__init__(func_name, parameters)
         self.interesting_fields = interesting_fields
 
