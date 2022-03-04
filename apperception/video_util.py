@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import random
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -50,7 +50,124 @@ def metadata_to_tasm(formatted_result: Dict[str, TrackedObject], metadata_id, t)
     t.add_bulk_metadata(metadata_info)
 
 
-def create_or_insert_world_table(conn, name, units):
+def convert_datetime_to_frame_num(start_time, date_times):
+
+    return [(t.replace(tzinfo=None) - start_time).total_seconds() for t in date_times]
+
+
+def get_video_roi(file_name, cam_video_file, rois, times):
+    """
+    Get the region of interest from the video, based on bounding box points in
+    video coordinates.
+
+    Args:
+        file_name: String of file name to save video as
+        rois: A list of bounding boxes
+        time_intervals: A list of time intervals of which frames
+    """
+
+    rois = np.array(rois).T
+    print(rois.shape)
+    len_x, len_y = np.max(rois.T[2] - rois.T[0]), np.max(rois.T[3] - rois.T[1])
+    # len_x, len_y  = np.max(rois.T[0][1] - rois.T[0][0]), np.max(rois.T[1][1] - rois.T[1][0])
+
+    len_x = int(round(len_x))
+    len_y = int(round(len_y))
+    # print(len_x)
+    # print(len_y)
+    vid_writer = cv2.VideoWriter(
+        file_name, cv2.VideoWriter_fourcc("m", "p", "4", "v"), 30, (len_x, len_y)
+    )
+    # print("rois")
+    # print(rois)
+    start_time = int(times[0])
+    cap = cv2.VideoCapture(cam_video_file)
+    frame_cnt = 0
+    while cap.isOpened():
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        if frame_cnt in times and ret:
+            i = frame_cnt - start_time
+            if i >= len(rois):
+                print("incorrect length:", len(rois))
+                break
+            current_roi = rois[i]
+
+            b_x, b_y, e_x, e_y = current_roi
+            b_x, b_y = max(0, b_x), max(0, b_y)
+            # e_x, e_y = current_roi[1]
+            e_x, e_y = max(0, e_x), max(0, e_y)
+            diff_y, diff_x = int(abs(e_y - b_y)), int(abs(e_x - b_x))
+            pad_y = int((len_y - diff_y) // 2)
+            pad_x = int((len_x - diff_x) // 2)
+
+            # print("padding")
+            # print(pad_y)
+            # print(pad_x)
+            roi_byte = frame[int(b_y) : int(e_y), int(b_x) : int(e_x), :]
+
+            roi_byte = np.pad(
+                roi_byte,
+                pad_width=[
+                    (pad_y, len_y - diff_y - pad_y),
+                    (pad_x, len_x - diff_x - pad_x),
+                    (0, 0),
+                ],
+            )
+            frame = cv2.cvtColor(roi_byte, cv2.COLOR_RGB2BGR)
+
+            vid_writer.write(roi_byte)
+        frame_cnt += 1
+        if not ret:
+            break
+
+    vid_writer.release()
+
+def get_video_box(file_name: str, cam_video_file: str, rois: List[(int, int, int, int)], times: List[int]):
+    """
+    Get the frames of interest from the video, while boxing in the object at interest
+    with a box.
+
+    Args:
+        file_name: String of file name to save video as
+        rois: A list of bounding boxes
+        time_intervals: A list of time intervals of which frames
+    """
+
+    rois = np.array(rois).T
+    print(rois.shape)
+
+    cap = cv2.VideoCapture(cam_video_file)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    vid_writer = cv2.VideoWriter(
+        file_name, cv2.VideoWriter_fourcc("m", "p", "4", "v"), 30, (width, height)
+    )
+
+    start_time = int(times[0])
+    frame_cnt = 0
+    while cap.isOpened():
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        if frame_cnt in times and ret:
+            i = frame_cnt - start_time
+            if i >= len(rois):
+                print("incorrect length:", len(rois))
+                break
+            current_roi = rois[i]
+
+            x1, y1, x2, y2 = current_roi
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,255,0), 2)
+
+            vid_writer.write(frame)
+        frame_cnt += 1
+        if not ret:
+            break
+
+    vid_writer.release()
+
+
+def create_or_insert_world_table(conn, name, units: Units):
     # Creating a cursor object using the cursor() method
     cursor = conn.cursor()
     """
