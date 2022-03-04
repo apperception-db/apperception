@@ -32,26 +32,34 @@ END;
 $BODY$
 LANGUAGE 'plpgsql';
 
-DROP FUNCTION IF EXISTS reconcileTrajectory(int);
-CREATE OR REPLACE FUNCTION reconcileTrajectory(threshold int) RETURNS void AS
+DROP FUNCTION IF EXISTS reconcileTrajectory(boolean, int);
+CREATE OR REPLACE FUNCTION reconcileTrajectory(reconcile_on_id boolean, threshold int) RETURNS void AS
 $BODY$
 BEGIN
-  EXECUTE 'SELECT createAllTimeIntersectView();';
+  IF NOT reconcile_on_id then
+    EXECUTE 'SELECT createAllTimeIntersectView();';
 
-  EXECUTE 'SELECT createAllPairOfDistance();';
--- Create the pairs of trajectory to join
-  EXECUTE 'CREATE OR REPLACE VIEW join_pair AS  
-            SELECT all_pair_of_distance.mainId, tempId, min_distance.min  
-              FROM all_pair_of_distance,  
-                   (SELECT mainid, Min(nearestapproachdistance) FROM all_pair_of_distance GROUP BY mainId) AS min_distance  
-              WHERE all_pair_of_distance.nearestapproachdistance = min_distance.min  
-                AND min_distance.min < ' || $1 || ';'; 
--- Filter out the best pairs
-  EXECUTE 'CREATE TABLE min_join_pair AS
-            SELECT join_pair.mainId, join_pair.tempId 
-              FROM join_pair, 
-                  (SELECT tempId, Min(join_pair.min) FROM join_pair GROUP BY tempid) as min_pair 
-              WHERE join_pair.tempId = min_pair.tempId AND join_pair.min = min_pair.min;';
+    EXECUTE 'SELECT createAllPairOfDistance();';
+  -- Create the pairs of trajectory to join
+    EXECUTE 'CREATE OR REPLACE VIEW join_pair AS  
+              SELECT all_pair_of_distance.mainId, tempId, min_distance.min  
+                FROM all_pair_of_distance,  
+                    (SELECT mainid, Min(nearestapproachdistance) FROM all_pair_of_distance GROUP BY mainId) AS min_distance  
+                WHERE all_pair_of_distance.nearestapproachdistance = min_distance.min  
+                  AND min_distance.min < ' || $2 || ';'; 
+  -- Filter out the best pairs
+    EXECUTE 'CREATE TABLE min_join_pair AS
+              SELECT join_pair.mainId, join_pair.tempId 
+                FROM join_pair, 
+                    (SELECT tempId, Min(join_pair.min) FROM join_pair GROUP BY tempid) as min_pair 
+                WHERE join_pair.tempId = min_pair.tempId AND join_pair.min = min_pair.min;';
+  ELSE
+    EXECUTE 'CREATE TABLE min_join_pair AS
+              SELECT Distinct Main_Trajectory.itemId AS mainId, Temp_Trajectory.itemId AS tempId 
+                FROM Main_Trajectory, Temp_Trajectory
+                WHERE Main_Trajectory.itemId = Temp_Trajectory.itemId;';
+  END IF;
+
 -- UPDATE Trajectory Tables
   EXECUTE 'INSERT INTO Main_Trajectory  
             SELECT min_join_pair.mainId, Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
