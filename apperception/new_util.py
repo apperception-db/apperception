@@ -1,13 +1,15 @@
+import ast
+import os
+
 import lens
 import point
+import uncompyle6
 from video_context import Camera
 from video_util import (convert_datetime_to_frame_num, get_video_box,
                         get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
-import uncompyle6
-import ast
-import os
+
 
 def create_camera(cam_id, fov):
     # Let's define some attribute for constructing the world first
@@ -111,6 +113,7 @@ def get_video(metadata_results, cams, start_time, boxed):
             video_files.append(vid_fname)
     print("output video files", ",".join(video_files))
     return video_files
+
 
 def compile_lambda(pred):
     s = uncompyle6.deparse_code2str(pred.__code__, out=open(os.devnull, "w"))
