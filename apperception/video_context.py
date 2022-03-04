@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import datetime
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 import psycopg2
-import datetime 
 
 
 class Camera:
@@ -16,9 +15,8 @@ class Camera:
         # If user calls recognize, those items will have already been
         # stored in the backend. These are reserved for objects that users
         # have not added to the camera.
-        self.items = [] 
+        self.items = []
         self.object_recognition = None
-
 
     def add_item(self, item: Item):
         # Add item

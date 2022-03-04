@@ -2,8 +2,8 @@ import numpy as np
 import psycopg2
 from metadata_context import geometry, primarykey, time
 from metadata_context_executor import MetadataContextExecutor
+from scenic_util import fetch_camera
 from video_context_executor import VideoContextExecutor
-from scenic_util import (fetch_camera)
 
 
 class WorldExecutor:
@@ -29,11 +29,11 @@ class WorldExecutor:
 
         if not self.tasm:
             self.tasm = tasm.TASM()
-    
+
     def get_camera(self, scene_name, frame_num):
         assert self.curr_world, self.conn
         cameras = fetch_camera(self.conn, scene_name, frame_num)
-        ### each camera appear like:
+        # each camera appear like:
         ### (cameraId, ratio, origin3d, focalpoints2d, fov, skev_factor)
 
         return cameras
@@ -62,9 +62,9 @@ class WorldExecutor:
     def get_video(self, metadata_results):
         start_time = self.curr_world.VideoContext.start_time
         # print("Start time is", start_time)
-        ### The cam nodes are raw data from the database
-        ### TODO: I forget why we used the data from the db instead of directly fetch
-        ### from the world
+        # The cam nodes are raw data from the database
+        # TODO: I forget why we used the data from the db instead of directly fetch
+        # from the world
         cam_nodes = self.curr_world.get_video_cams
         video_files = []
         for i in range(len(cam_nodes)):

@@ -1,16 +1,14 @@
 import copy
+import datetime
 
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
-from bounding_box import WHOLE_FRAME, BoundingBox
 from metadata_context import MetadataContext
-from tracker import Tracker
+from scenic_util import transformation
 from video_context import VideoContext
 from world_executor import WorldExecutor
-from scenic_util import transformation
 
 matplotlib.use("Qt5Agg")
 
@@ -28,7 +26,7 @@ class World:
         # self.AccessedVideoContext = False
 
     def get_camera(self, scene_name, frame_num):
-        # Change depending if you're on docker or not 
+        # Change depending if you're on docker or not
         # TODO: fix get_camera in scenic_world_executor.py
         if self.enable_tasm:
             world_executor.connect_db(
@@ -38,9 +36,9 @@ class World:
             world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
         return world_executor.get_camera(scene_name, frame_num)
 
-#########################
-###   Video Context  ####
-#########################
+    #########################
+    ###   Video Context  ####
+    #########################
     def get_lens(self, cam_id=""):
         return self.get_camera(cam_id).lens
 
@@ -171,11 +169,13 @@ class World:
         # frame_num is int[[]], hence camera_info should also be [[]]
         camera_info = []
         for cur_frame_num in frame_num:
-            camera_info.append(self.get_camera(scene_name, cur_frame_num)) ### TODO: fetch_camera_info in scenic_utils.py
+            camera_info.append(
+                self.get_camera(scene_name, cur_frame_num)
+            )  # TODO: fetch_camera_info in scenic_utils.py
         assert len(camera_info) == len(frame_num)
         assert len(camera_info[0]) == len(frame_num[0])
         overlay_info = self.get_overlay_info(trajectory, camera_info)
-        ### TODO: fix the following to overlay the 2d point onto the frame
+        # TODO: fix the following to overlay the 2d point onto the frame
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
             frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
@@ -189,52 +189,62 @@ class World:
             plt.show()
 
     def trajectory_to_frame_num(self, trajectory):
-        '''
+        """
         fetch the frame number from the trajectory
         1. get the time stamp field from the trajectory
         2. convert the time stamp to frame number
             Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
         3. return the frame number
-        '''
+        """
         frame_num = []
         start_time = self.MetadataContext.start_time
         for traj in trajectory:
             current_trajectory = traj[0]
-            date_times = current_trajectory['datetimes']
-            frame_num.append([
-                (datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo=None) - start_time).total_seconds()
-                for t
-                in date_times
-            ])
+            date_times = current_trajectory["datetimes"]
+            frame_num.append(
+                [
+                    (
+                        datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo=None)
+                        - start_time
+                    ).total_seconds()
+                    for t in date_times
+                ]
+            )
         return frame_num
 
     def get_overlay_info(self, trajectory, camera_info):
-        '''
+        """
         overlay each trajectory 3d coordinate on to the frame specified by the camera_info
         1. for each trajectory, get the 3d coordinate
         2. get the camera_info associated to it
-        3. implement the transformation function from 3d to 2d 
+        3. implement the transformation function from 3d to 2d
             given the single centroid point and camera configuration
             refer to TODO in "senic_utils.py"
         4. return a list of (2d coordinate, frame name/filename)
-        '''
+        """
         result = []
         for traj_num in range(len(trajectory)):
-            traj_obj = trajectory[traj_num][0] # traj_obj means the trajectory of current object
-            traj_obj_3d = traj_obj['coordinates'] # 3d coordinate list of the object's trajectory
-            camera_info_obj = camera_info[traj_num] # camera info list corresponding the 3d coordinate
-            traj_obj_2d = [] # 2d coordinate list
+            traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
+            traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
+            camera_info_obj = camera_info[
+                traj_num
+            ]  # camera info list corresponding the 3d coordinate
+            traj_obj_2d = []  # 2d coordinate list
             for index in range(len(camera_info_obj)):
-                cur_camera_info = camera_info_obj[index] # camera info of the obejct in one point of the trajectory
-                centroid_3d = np.array(traj_obj_3d[index]) # one point of the trajectory in 3d
+                cur_camera_info = camera_info_obj[
+                    index
+                ]  # camera info of the obejct in one point of the trajectory
+                centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
                 # in order to fit into the function transformation, we develop a dictionary called camera_config
                 camera_config = {}
-                camera_config['egoTranslation'] = cur_camera_info[1]
-                camera_config['egoRotation'] = np.array(cur_camera_info[2])
-                camera_config['cameraTranslation'] = cur_camera_info[3]
-                camera_config['cameraRotation'] = np.array(cur_camera_info[4])
-                camera_config['cameraIntrinsic'] = np.array(cur_camera_info[5])
-                traj_2d = transformation(centroid_3d, camera_config) # one point of the trajectory in 2d
+                camera_config["egoTranslation"] = cur_camera_info[1]
+                camera_config["egoRotation"] = np.array(cur_camera_info[2])
+                camera_config["cameraTranslation"] = cur_camera_info[3]
+                camera_config["cameraRotation"] = np.array(cur_camera_info[4])
+                camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
+                traj_2d = transformation(
+                    centroid_3d, camera_config
+                )  # one point of the trajectory in 2d
 
                 framenum = cur_camera_info[6]
                 filename = cur_camera_info[7]

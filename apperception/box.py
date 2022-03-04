@@ -1,13 +1,11 @@
 import numpy as np
 from pyquaternion import Quaternion
 
-class Box:
-    """ Simple data class representing a 3d box including, label, score and velocity. """
 
-    def __init__(self,
-                 center,
-                 size,
-                 orientation: Quaternion):
+class Box:
+    """Simple data class representing a 3d box including, label, score and velocity."""
+
+    def __init__(self, center, size, orientation: Quaternion):
         """
         :param center: Center of box given as x, y, z.
         :param size: Size of box in width, length, height.
@@ -17,7 +15,7 @@ class Box:
         assert not np.any(np.isnan(size))
         assert len(center) == 3
         assert len(size) == 3
-        assert type(orientation) == Quaternion
+        assert isinstance(orientation, Quaternion)
 
         self.center = np.array(center)
         self.wlh = np.array(size)
@@ -54,11 +52,11 @@ class Box:
             The last four are the ones facing backwards.
         """
         w, l, h = self.wlh * wlh_factor
-        
+
         # 3D bounding box corners. (Convention: x points forward, y to the left, z up.)
-        x_corners = l / 2 * np.array([1,  1,  1,  1, -1, -1, -1, -1])
-        y_corners = w / 2 * np.array([1, -1, -1,  1,  1, -1, -1,  1])
-        z_corners = h / 2 * np.array([1,  1, -1, -1,  1,  1, -1, -1])
+        x_corners = l / 2 * np.array([1, 1, 1, 1, -1, -1, -1, -1])
+        y_corners = w / 2 * np.array([1, -1, -1, 1, 1, -1, -1, 1])
+        z_corners = h / 2 * np.array([1, 1, -1, -1, 1, 1, -1, -1])
         corners = np.vstack((x_corners, y_corners, z_corners))
 
         # Rotate
@@ -79,9 +77,9 @@ class Box:
         """
         return self.corners()[:, [2, 3, 7, 6]]
 
-    def view_points(self, points: np.ndarray, view: np.ndarray, normalize = True) -> np.ndarray:
+    def view_points(self, points: np.ndarray, view: np.ndarray, normalize=True) -> np.ndarray:
         viewpad = np.eye(4)
-        viewpad[:view.shape[0], :view.shape[1]] = view
+        viewpad[: view.shape[0], : view.shape[1]] = view
 
         nbr_points = points.shape[1]
 
@@ -95,9 +93,7 @@ class Box:
 
         return points
 
-    def map_2d(self,
-               view: np.ndarray = np.eye(3),
-               normalize: bool = True) -> np.ndarray:
+    def map_2d(self, view: np.ndarray = np.eye(3), normalize: bool = True) -> np.ndarray:
 
         corners = self.view_points(self.corners(), view, normalize)[:2, :]
 

@@ -34,30 +34,33 @@ def metadata_to_tasm(formatted_result: Dict[str, Any], metadata_id, t):
 
 
 def create_or_insert_world_table(conn, name, units):
-	#Creating a cursor object using the cursor() method
-	cursor = conn.cursor()
-	'''
+    # Creating a cursor object using the cursor() method
+    cursor = conn.cursor()
+    """
 	Create and Populate A world table with the given world object.
-	'''
-	#Doping Worlds table if already exists.
-	cursor.execute("DROP TABLE IF EXISTS Worlds;")
-	#Creating table with the first world
-	sql = '''CREATE TABLE IF NOT EXISTS Worlds(
+	"""
+    # Doping Worlds table if already exists.
+    cursor.execute("DROP TABLE IF EXISTS Worlds;")
+    # Creating table with the first world
+    sql = """CREATE TABLE IF NOT EXISTS Worlds(
 	worldId TEXT PRIMARY KEY,
 	units TEXT
-	);'''
-	cursor.execute(sql)
-	print("Worlds Table created successfully........")
-	insert_world(conn, name, units)
-	return sql
+	);"""
+    cursor.execute(sql)
+    print("Worlds Table created successfully........")
+    insert_world(conn, name, units)
+    return sql
+
 
 # Helper function to insert the world
+
+
 def insert_world(conn, name, units):
-	#Creating a cursor object using the cursor() method
-	cursor = conn.cursor()
-	cursor.execute('''INSERT INTO Worlds (worldId, units) '''+ \
-			'''VALUES (\'%s\',  \'%s\');''' \
-			%(name, units))
-	print("New world inserted successfully........")
-	#Insert the existing cameras of the current world into the camera table
-	conn.commit()
+    # Creating a cursor object using the cursor() method
+    cursor = conn.cursor()
+    cursor.execute(
+        """INSERT INTO Worlds (worldId, units) """ + """VALUES (\'%s\',  \'%s\');""" % (name, units)
+    )
+    print("New world inserted successfully........")
+    # Insert the existing cameras of the current world into the camera table
+    conn.commit()

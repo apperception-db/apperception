@@ -1,8 +1,11 @@
 from typing import Any, List, Set
+
 from bounding_box import BoundingBox
+from scenic_util import (add_recognized_objs, create_or_insert_camera_table,
+                         recognize)
 from video_context import Camera, VideoContext
-from video_util import create_or_insert_world_table, video_data_to_tasm, metadata_to_tasm
-from scenic_util import create_or_insert_camera_table, recognize, add_recognized_objs
+from video_util import (create_or_insert_world_table, metadata_to_tasm,
+                        video_data_to_tasm)
 
 
 class VideoContextExecutor:
@@ -23,7 +26,7 @@ class VideoContextExecutor:
         return video_query
 
     def visit_world(self):
-        # Query to store world in database 
+        # Query to store world in database
         name, units = self.current_context.name, self.current_context.units
         world_sql = create_or_insert_world_table(self.conn, name, units)
 
@@ -49,7 +52,9 @@ class VideoContextExecutor:
 
         start_time = self.current_context.start_time
 
-        tracking_results = recognize(cam_id, object_rec_node.sample_data, object_rec_node.annotation)
+        tracking_results = recognize(
+            cam_id, object_rec_node.sample_data, object_rec_node.annotation
+        )
         add_recognized_objs(self.conn, tracking_results, start_time)
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
