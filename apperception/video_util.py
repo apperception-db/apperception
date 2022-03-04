@@ -123,7 +123,10 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 
     vid_writer.release()
 
-def get_video_box(file_name: str, cam_video_file: str, rois: List[(int, int, int, int)], times: List[int]):
+
+def get_video_box(
+    file_name: str, cam_video_file: str, rois: List[(int, int, int, int)], times: List[int]
+):
     """
     Get the frames of interest from the video, while boxing in the object at interest
     with a box.
@@ -157,7 +160,7 @@ def get_video_box(file_name: str, cam_video_file: str, rois: List[(int, int, int
             current_roi = rois[i]
 
             x1, y1, x2, y2 = current_roi
-            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,255,0), 2)
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 255, 0), 2)
 
             vid_writer.write(frame)
         frame_cnt += 1

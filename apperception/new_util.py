@@ -1,7 +1,8 @@
 import lens
 import point
 from video_context import Camera
-from video_util import convert_datetime_to_frame_num, get_video_roi, get_video_box
+from video_util import (convert_datetime_to_frame_num, get_video_box,
+                        get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
 
@@ -103,7 +104,7 @@ def get_video(metadata_results, cams, start_time, boxed):
             # print(vid_fname)
             if boxed:
                 get_video_box(vid_fname, cam_video_file, cam_coords, vid_times)
-            else:    
+            else:
                 get_video_roi(vid_fname, cam_video_file, cam_coords, vid_times)
             video_files.append(vid_fname)
     print("output video files", ",".join(video_files))
