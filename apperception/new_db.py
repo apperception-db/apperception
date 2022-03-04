@@ -3,7 +3,7 @@ import datetime
 import psycopg2
 from bounding_box import BoundingBox
 from lens import PinholeLens
-from new_util import create_camera, get_video, video_fetch_reformat
+from new_util import create_camera, get_video, get_video_box, video_fetch_reformat
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
@@ -292,7 +292,7 @@ class Database:
             .where((start <= Tmin(query.trajBbox)) & (Tmax(query.trajBbox) < end))
         )
 
-    def get_video(self, query, cams):
+    def get_video(self, query, cams, boxed):
         bbox = Table(BBOX_TABLE)
         Xmin = CustomFunction("Xmin", ["stbox"])
         Ymin = CustomFunction("Ymin", ["stbox"])
@@ -321,7 +321,7 @@ class Database:
         self.cur.execute(query.get_sql())
         fetched_meta = self.cur.fetchall()
         fetched_meta = video_fetch_reformat(fetched_meta)
-        get_video(fetched_meta, cams, self.start_time)
+        get_video(fetched_meta, cams, self.start_time, boxed)
 
 
 if __name__ == "__main__":

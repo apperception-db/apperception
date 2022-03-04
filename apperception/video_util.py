@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import random
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -117,6 +117,49 @@ def get_video_roi(file_name, cam_video_file, rois, times):
             frame = cv2.cvtColor(roi_byte, cv2.COLOR_RGB2BGR)
 
             vid_writer.write(roi_byte)
+        frame_cnt += 1
+        if not ret:
+            break
+
+    vid_writer.release()
+
+def get_video_box(file_name: str, cam_video_file: str, rois: List[(int, int, int, int)], times: List[int]):
+    """
+    Get the frames of interest from the video, while boxing in the object at interest
+    with a box.
+
+    Args:
+        file_name: String of file name to save video as
+        rois: A list of bounding boxes
+        time_intervals: A list of time intervals of which frames
+    """
+
+    rois = np.array(rois).T
+    print(rois.shape)
+
+    cap = cv2.VideoCapture(cam_video_file)
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    vid_writer = cv2.VideoWriter(
+        file_name, cv2.VideoWriter_fourcc("m", "p", "4", "v"), 30, (width, height)
+    )
+
+    start_time = int(times[0])
+    frame_cnt = 0
+    while cap.isOpened():
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        if frame_cnt in times and ret:
+            i = frame_cnt - start_time
+            if i >= len(rois):
+                print("incorrect length:", len(rois))
+                break
+            current_roi = rois[i]
+
+            x1, y1, x2, y2 = current_roi
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255,255,0), 2)
+
+            vid_writer.write(frame)
         frame_cnt += 1
         if not ret:
             break
