@@ -7,36 +7,42 @@ import numpy as np
 from box import Box
 from pyquaternion import Quaternion
 
-CREATE_ITEMTRAJ_SQL = """CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
-	itemId TEXT,
-	objectType TEXT,
-	frameId TEXT,
-	color TEXT,
-	trajCentroids tgeompoint,
-	largestBbox stbox,
-	PRIMARY KEY (itemId)
-	);"""
+CREATE_ITEMTRAJ_SQL = """
+CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
+    itemId TEXT,
+    objectType TEXT,
+    frameId TEXT,
+    color TEXT,
+    trajCentroids tgeompoint,
+    largestBbox stbox,
+    PRIMARY KEY (itemId)
+);
+"""
 
-CREATE_BBOXES_SQL = """CREATE TABLE IF NOT EXISTS General_Bbox(
-	itemId TEXT,
-	trajBbox stbox,
-	FOREIGN KEY(itemId)
-		REFERENCES Item_General_Trajectory(itemId)
-	);"""
+CREATE_BBOXES_SQL = """
+CREATE TABLE IF NOT EXISTS General_Bbox(
+    itemId TEXT,
+    trajBbox stbox,
+    FOREIGN KEY(itemId)
+        REFERENCES Item_General_Trajectory(itemId)
+);
+"""
 
-CREATE_CAMERA_SQL = """CREATE TABLE IF NOT EXISTS Cameras(
-	cameraId TEXT,
-	worldId TEXT,
-	frameId TEXT,
-	frameNum Int,
-	fileName TEXT,
-	cameraTranslation geometry,
-	cameraRotation real[4],
-	cameraIntrinsic real[3][3],
-	egoTranslation geometry,
-	egoRotation real[4],
-	timestamp TEXT
-	);"""
+CREATE_CAMERA_SQL = """
+CREATE TABLE IF NOT EXISTS Cameras(
+    cameraId TEXT,
+    worldId TEXT,
+    frameId TEXT,
+    frameNum Int,
+    fileName TEXT,
+    cameraTranslation geometry,
+    cameraRotation real[4],
+    cameraIntrinsic real[3][3],
+    egoTranslation geometry,
+    egoRotation real[4],
+    timestamp TEXT
+);
+"""
 
 
 def fetch_camera_config(scene_name, sample_data):
@@ -90,8 +96,8 @@ def create_or_insert_camera_table(conn, world_name, camera):
     # Creating a cursor object using the cursor() method
     cursor = conn.cursor()
     """
-	Create and Populate A camera table with the given camera object.
-	"""
+    Create and Populate A camera table with the given camera object.
+    """
     # Doping Cameras table if already exists.
     cursor.execute("DROP TABLE IF EXISTS Cameras")
     # Formal_Scenic_cameras table stands for the formal table which won't be erased
@@ -117,36 +123,37 @@ def insert_camera(conn, world_name, camera_config):
     for config in camera_config:
         values.append(
             f"""(
-			'{config['camera_id']}',
-			'{world_name}',
-			'{config['frame_id']}',
-			{config['frame_num']},
-			'{config['filename']}',
-			'POINT Z ({' '.join(map(str, config['camera_translation']))})',
-			ARRAY{config['camera_rotation']},
-			ARRAY{config['camera_intrinsic']},
-			'POINT Z ({' '.join(map(str, config['ego_translation']))})',
-			ARRAY{config['ego_rotation']},
-			'{config['timestamp']}'
-		)"""
+                '{config['camera_id']}',
+                '{world_name}',
+                '{config['frame_id']}',
+                {config['frame_num']},
+                '{config['filename']}',
+                'POINT Z ({' '.join(map(str, config['camera_translation']))})',
+                ARRAY{config['camera_rotation']},
+                ARRAY{config['camera_intrinsic']},
+                'POINT Z ({' '.join(map(str, config['ego_translation']))})',
+                ARRAY{config['ego_rotation']},
+                '{config['timestamp']}'
+            )"""
         )
 
     cursor.execute(
         f"""
-		INSERT INTO Cameras (
-			cameraId,
-			worldId,
-			frameId,
-			frameNum,
-			fileName,
-			cameraTranslation,
-			cameraRotation,
-			cameraIntrinsic,
-			egoTranslation,
-			egoRotation,
-			timestamp
-		)
-		VALUES {','.join(values)};"""
+        INSERT INTO Cameras (
+            cameraId,
+            worldId,
+            frameId,
+            frameNum,
+            fileName,
+            cameraTranslation,
+            cameraRotation,
+            cameraIntrinsic,
+            egoTranslation,
+            egoRotation,
+            timestamp
+        )
+        VALUES {','.join(values)};
+        """
     )
 
     print("New camera inserted successfully.........")
@@ -354,10 +361,10 @@ def create_or_insert_general_trajectory(
 ):
     cursor = conn.cursor()
     """
-	Create and Populate A Trajectory table using mobilityDB.
-	Now the timestamp matches, the starting time should be the meta data of the world
-	Then the timestamp should be the timestamp regarding the world starting time
-	"""
+    Create and Populate A Trajectory table using mobilityDB.
+    Now the timestamp matches, the starting time should be the meta data of the world
+    Then the timestamp should be the timestamp regarding the world starting time
+    """
 
     # Formal_Scenic_Item_General_Trajectory table stands for the formal table which won't be erased
     # Test for now
@@ -411,15 +418,15 @@ def insert_general_trajectory(
         # Insert bbox
         insert_bbox_trajectories_builder.append(
             f"""
-			INSERT INTO General_Bbox (itemId, trajBbox)
-			VALUES (
-				'{item_id}',
-				STBOX 'STBOX ZT(
-					({join([*tl, timestamp])}),
-					({join([*br, timestamp])})
-				)'
-			);
-		"""
+            INSERT INTO General_Bbox (itemId, trajBbox)
+            VALUES (
+                '{item_id}',
+                STBOX 'STBOX ZT(
+                    ({join([*tl, timestamp])}),
+                    ({join([*br, timestamp])})
+                )'
+            );
+            """
         )
 
         # Construct trajectory
@@ -427,18 +434,18 @@ def insert_general_trajectory(
 
     # Insert the item_trajectory separately
     insert_trajectory = f"""
-		INSERT INTO Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox)
-		VALUES (
-			'{item_id}',
-			'{object_type}',
-			'{color}',
-			'{{{', '.join(traj_centroids)}}}',
-			STBOX 'STBOX Z(
-				({join(min_tl)}),
-				({join(max_br)})
-			)'
-		);
-	"""
+    INSERT INTO Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox)
+    VALUES (
+        '{item_id}',
+        '{object_type}',
+        '{color}',
+        '{{{', '.join(traj_centroids)}}}',
+        STBOX 'STBOX Z(
+            ({join(min_tl)}),
+            ({join(max_br)})
+        )'
+    );
+    """
 
     cursor.execute(insert_trajectory)
     cursor.execute("".join(insert_bbox_trajectories_builder))
@@ -493,26 +500,26 @@ def fetch_camera(conn, scene_name, frame_num):
     # 	 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
     # TODO: define ST_XYZ somewhere else
     query = f"""
-	CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
-		BEGIN
-			RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
-		END;
-	$$ LANGUAGE plpgsql;
+    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+        BEGIN
+            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+        END;
+    $$ LANGUAGE plpgsql;
 
-	SELECT
-		cameraId,
-		ST_XYZ(egoTranslation),
-		egoRotation,
-		ST_XYZ(cameraTranslation),
-		cameraRotation,
-		cameraIntrinsic,
-		frameNum,
-		fileName
-	FROM Cameras
-	WHERE
-		cameraId = '{scene_name}' AND
-		frameNum IN ({",".join(map(str, frame_num))});
-	"""
+    SELECT
+        cameraId,
+        ST_XYZ(egoTranslation),
+        egoRotation,
+        ST_XYZ(cameraTranslation),
+        cameraRotation,
+        cameraIntrinsic,
+        frameNum,
+        fileName
+    FROM Cameras
+    WHERE
+        cameraId = '{scene_name}' AND
+        frameNum IN ({",".join(map(str, frame_num))});
+    """
     cursor.execute(query)
     return cursor.fetchall()
 
