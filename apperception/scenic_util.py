@@ -1,3 +1,4 @@
+from typing import Iterable, List, Tuple, Union
 import numpy as np
 from pyquaternion import Quaternion
 import json
@@ -325,44 +326,67 @@ def create_or_insert_general_trajectory(conn, item_id, object_type, color, postg
 	insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 
 
+def join(array: Iterable, delim: str = ','):
+	return delim.join(map(str, array))
+
+
 # Insert general trajectory
-def insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs):
+def insert_general_trajectory(
+	conn,
+	item_id: str,
+	object_type: str,
+	color: str,
+	postgres_timestamps: List[str],
+	bboxes: List[List[List[float]]],  # TODO: should be (float, float, float), (float, float, float))[]
+	pairs: List[Tuple[float, float, float]]
+):
 	#Creating a cursor object using the cursor() method
 	cursor = conn.cursor()
+
 	#Inserting bboxes into Bbox table
-	insert_bbox_trajectory = ""
-	insert_format = "INSERT INTO General_Bbox (itemId, trajBbox) "+ \
-	"VALUES (\'%s\',"  % (item_id)
-	# Insert the item_trajectory separately
-	insert_trajectory = "INSERT INTO Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox) "+ \
-	"VALUES (\'%s\', \'%s\', \'%s\', "  % (item_id, object_type, color)
-	traj_centroids = "\'{"
-	min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = float('inf'), float('inf'), float('inf'), float('-inf'), float('-inf'), float('-inf')
-	# max_ltx, max_lty, max_ltz, min_brx, min_bry, min_brz = float('-inf'), float('-inf'), float('-inf'), float('inf'), float('inf'), float('inf')
-	for i in range(len(postgres_timestamps)):
-		postgres_timestamp = postgres_timestamps[i]
+	insert_bbox_trajectories_builder = []
+	min_tl = np.full(3, np.inf)
+	max_br = np.full(3, np.NINF)
+
+	traj_centroids = []
+
+	for timestamp, (tl, br), current_point in zip(postgres_timestamps, bboxes, pairs):
+		min_tl = np.minimum(tl, min_tl)
+		max_br = np.maximum(br, max_br)
+
 		### Insert bbox
-		# print(bboxes[i])
-		tl, br = bboxes[i]
-		min_ltx, min_lty, min_ltz, max_brx, max_bry, max_brz = min(tl[0], min_ltx), min(tl[1], min_lty), min(tl[2], min_ltz),\
-			max(br[0], max_brx), max(br[1], max_bry), max(br[2], max_brz)
-		# max_ltx, max_lty, max_ltz, min_brx, min_bry, min_brz = max(tl[0], max_ltx), max(tl[1], max_lty), max(tl[2], max_ltz),\
-		#     min(br[0], min_brx), min(br[1], min_bry), min(br[2], min_brz)
-		current_bbox_sql = "stbox \'STBOX ZT((%s, %s, %s, %s), (%s, %s, %s, %s))\');" \
-		%(tl[0], tl[1], tl[2], postgres_timestamp, br[0], br[1], br[2], postgres_timestamp)
-		insert_bbox_trajectory += insert_format + current_bbox_sql
+		insert_bbox_trajectories_builder.append(f"""
+			INSERT INTO General_Bbox (itemId, trajBbox)
+			VALUES (
+				'{item_id}',
+				STBOX 'STBOX ZT(
+					({join([*tl, timestamp])}),
+					({join([*br, timestamp])})
+				)'
+			);
+		""")
+
 		### Construct trajectory
-		current_point = pairs[i]
-		tg_pair_centroid = "POINT Z (%s %s %s)@%s," \
-		%(str(current_point[0]), str(current_point[1]), str(current_point[2]), postgres_timestamp)
-		traj_centroids += tg_pair_centroid
-	traj_centroids = traj_centroids[:-1]
-	traj_centroids += "}\', "
-	insert_trajectory += traj_centroids
-	insert_trajectory += "stbox \'STBOX Z((%s, %s, %s),"%(min_ltx, min_lty, min_ltz)\
-		+"(%s, %s, %s))\'); "%(max_brx, max_bry, max_brz)
+		traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
+
+	# Insert the item_trajectory separately
+	insert_trajectory = f"""
+		INSERT INTO Item_General_Trajectory (itemId, objectType, color, trajCentroids, largestBbox)
+		VALUES (
+			'{item_id}',
+			'{object_type}',
+			'{color}',
+			'{{{', '.join(traj_centroids)}}}',
+			STBOX 'STBOX Z(
+				({join(min_tl)}),
+				({join(max_br)})
+			)'
+		);
+	"""
+
 	cursor.execute(insert_trajectory)
-	cursor.execute(insert_bbox_trajectory)
+	cursor.execute(''.join(insert_bbox_trajectories_builder))
+
 	# Commit your changes in the database
 	conn.commit()
  
