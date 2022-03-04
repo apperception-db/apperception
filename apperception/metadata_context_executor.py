@@ -118,7 +118,7 @@ class MetadataContextExecutor:
 
 
 def translate_aggregation(aggr_node: Aggregate, aggregated: str):
-    aggregated = f"{aggr_node.func_name}({aggregated},{join(aggr_node.parameters)})"
+    aggregated = f"{aggr_node.func_name}({join([aggregated, *aggr_node.parameters])})"
 
     if isinstance(aggr_node, asMFJSON) and aggr_node.func_name in common_aggregation:
         if len(aggr_node.interesting_fields) > 0:
