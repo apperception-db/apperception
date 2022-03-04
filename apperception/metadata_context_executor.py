@@ -4,6 +4,7 @@ from metadata import View
 from metadata_context import (Aggregate, Column, Filter, MetadataContext,
                               Predicate, Project, Scan, asMFJSON)
 from metadata_util import common_aggregation, metadata_view
+from scenic_util import join
 
 
 class MetadataContextExecutor:
@@ -117,15 +118,12 @@ class MetadataContextExecutor:
 
 
 def translate_aggregation(aggr_node: Aggregate, aggregated: str):
-    aggregated = aggr_node.func_name + "(" + aggregated
-    for param in aggr_node.parameters:
-        aggregated = aggregated + "," + param
-    aggregated += ")"
-    if aggr_node.func_name in common_aggregation:
-        if isinstance(aggr_node, asMFJSON):
-            if len(aggr_node.interesting_fields) > 0:
-                interesting_field = aggr_node.interesting_fields[0]
-                aggregated = aggregated + "::json->" + "'" + interesting_field + "'"
-            else:
-                aggregated = aggregated + "::json"
+    aggregated = f"{aggr_node.func_name}({aggregated},{join(aggr_node.parameters)})"
+
+    if isinstance(aggr_node, asMFJSON) and aggr_node.func_name in common_aggregation:
+        if len(aggr_node.interesting_fields) > 0:
+            interesting_field = aggr_node.interesting_fields[0]
+            aggregated += f"::json->'{interesting_field}'"
+        else:
+            aggregated += "::json"
     return aggregated
