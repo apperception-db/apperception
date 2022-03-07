@@ -282,6 +282,7 @@ def recognize(
     from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
     from object_tracker_yolov5_deepsort import (YoloV5Opt,
                                                 yolov5_deepsort_video_track)
+
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
     if recognition_area.is_whole_frame():
