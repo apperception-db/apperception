@@ -226,8 +226,8 @@ class SSIM(nn.Module):
 
         self.refl = nn.ReflectionPad2d(1)
 
-        self.C1 = 0.01 ** 2
-        self.C2 = 0.03 ** 2
+        self.C1 = 0.01**2
+        self.C2 = 0.03**2
 
     def forward(self, x, y):
         x = self.refl(x)
@@ -236,12 +236,12 @@ class SSIM(nn.Module):
         mu_x = self.mu_x_pool(x)
         mu_y = self.mu_y_pool(y)
 
-        sigma_x = self.sig_x_pool(x ** 2) - mu_x ** 2
-        sigma_y = self.sig_y_pool(y ** 2) - mu_y ** 2
+        sigma_x = self.sig_x_pool(x**2) - mu_x**2
+        sigma_y = self.sig_y_pool(y**2) - mu_y**2
         sigma_xy = self.sig_xy_pool(x * y) - mu_x * mu_y
 
         SSIM_n = (2 * mu_x * mu_y + self.C1) * (2 * sigma_xy + self.C2)
-        SSIM_d = (mu_x ** 2 + mu_y ** 2 + self.C1) * (sigma_x + sigma_y + self.C2)
+        SSIM_d = (mu_x**2 + mu_y**2 + self.C1) * (sigma_x + sigma_y + self.C2)
 
         return torch.clamp((1 - SSIM_n / SSIM_d) / 2, 0, 1)
 
@@ -250,8 +250,8 @@ def compute_depth_errors(gt, pred):
     """Computation of error metrics between predicted and ground truth depths"""
     thresh = torch.max((gt / pred), (pred / gt))
     a1 = (thresh < 1.25).float().mean()
-    a2 = (thresh < 1.25 ** 2).float().mean()
-    a3 = (thresh < 1.25 ** 3).float().mean()
+    a2 = (thresh < 1.25**2).float().mean()
+    a3 = (thresh < 1.25**3).float().mean()
 
     rmse = (gt - pred) ** 2
     rmse = torch.sqrt(rmse.mean())

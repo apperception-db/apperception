@@ -5,3 +5,4 @@ yolov4-deepsort
 yolov5-deepsort
 .mypy_cache
 .idea
+.ipynb_checkpoints
