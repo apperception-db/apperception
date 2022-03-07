@@ -1,8 +1,12 @@
 __MACOSX
 __pycache__
+.DS_Store
+.ipynb_checkpoints
 
 yolov4-deepsort
 yolov5-deepsort
 .mypy_cache
 .idea
-.ipynb_checkpoints
+output
+.apperception_cache
+env
