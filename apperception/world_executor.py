@@ -2,9 +2,8 @@ import numpy as np
 import psycopg2
 from metadata_context import geometry, primarykey, time
 from metadata_context_executor import MetadataContextExecutor
+from scenic_util import fetch_camera
 from video_context_executor import VideoContextExecutor
-from video_util import (convert_datetime_to_frame_num, fetch_camera,
-                        get_video_roi)
 
 
 class WorldExecutor:
@@ -31,9 +30,9 @@ class WorldExecutor:
         if not self.tasm:
             self.tasm = tasm.TASM()
 
-    def get_camera(self, cam_id=[]):
+    def get_camera(self, scene_name, frame_num):
         assert self.curr_world, self.conn
-        cameras = fetch_camera(self.conn, self.curr_world.get_name(), cam_id)
+        cameras = fetch_camera(self.conn, scene_name, frame_num)
         # each camera appear like:
         ### (cameraId, ratio, origin3d, focalpoints2d, fov, skev_factor)
 
