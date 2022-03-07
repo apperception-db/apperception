@@ -40,6 +40,7 @@ BEGIN
     EXECUTE 'SELECT createAllTimeIntersectView();';
 
     EXECUTE 'SELECT createAllPairOfDistance();';
+
   -- Create the pairs of trajectory to join
     EXECUTE 'CREATE OR REPLACE VIEW join_pair AS  
               SELECT all_pair_of_distance.mainId, tempId, min_distance.min  
@@ -47,6 +48,7 @@ BEGIN
                     (SELECT mainid, Min(nearestapproachdistance) FROM all_pair_of_distance GROUP BY mainId) AS min_distance  
                 WHERE all_pair_of_distance.nearestapproachdistance = min_distance.min  
                   AND min_distance.min < ' || $2 || ';'; 
+
   -- Filter out the best pairs
     EXECUTE 'CREATE TABLE min_join_pair AS
               SELECT join_pair.mainId, join_pair.tempId 
@@ -83,41 +85,84 @@ BEGIN
                                             and min_join_pair.mainId = filtered_bbox.mainId))
             FROM (SELECT distinct min_join_pair.mainId FROM min_join_pair, Temp_Bbox WHERE min_join_pair.tempId = Temp_Bbox.itemId) as filtered_bbox;';
 
-  EXECUTE 'INSERT INTO MAIN_Trajectory 
-            SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId), Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
-              FROM Temp_Trajectory  
-              WHERE Temp_Trajectory.itemId NOT IN ( 
-                SELECT DISTINCT tempId 
-                FROM min_join_pair);';
+  IF reconcile_on_id THEN
+    EXECUTE 'INSERT INTO MAIN_Trajectory 
+              SELECT Temp_Trajectory.itemId, 
+                    Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
+                FROM Temp_Trajectory  
+                WHERE Temp_Trajectory.itemId NOT IN ( 
+                  SELECT DISTINCT tempId 
+                  FROM min_join_pair);';
+  ELSE
+    EXECUTE 'INSERT INTO MAIN_Trajectory 
+              SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', 
+                            Temp_Trajectory.itemId), 
+                    Temp_Trajectory.cameraId, Temp_Trajectory.trajCentroids  
+                FROM Temp_Trajectory  
+                WHERE Temp_Trajectory.itemId NOT IN ( 
+                  SELECT DISTINCT tempId 
+                  FROM min_join_pair);';
+  END IF;
   
-  EXECUTE 'SELECT materializeNewTrajectory(CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId),  Temp_Trajectory.trajCentroids)
-            FROM Temp_Trajectory  
-              WHERE Temp_Trajectory.itemId NOT IN ( 
-                SELECT DISTINCT tempId 
-                FROM min_join_pair);';
+  IF reconcile_on_id THEN
+    EXECUTE 'SELECT materializeNewTrajectory(Temp_Trajectory.itemId,  Temp_Trajectory.trajCentroids)
+              FROM Temp_Trajectory  
+                WHERE Temp_Trajectory.itemId NOT IN ( 
+                  SELECT DISTINCT tempId 
+                  FROM min_join_pair);';
+  ELSE
+    EXECUTE 'SELECT materializeNewTrajectory(CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId),  Temp_Trajectory.trajCentroids)
+              FROM Temp_Trajectory  
+                WHERE Temp_Trajectory.itemId NOT IN ( 
+                  SELECT DISTINCT tempId 
+                  FROM min_join_pair);';
+  END IF;
 
-  EXECUTE 'INSERT INTO MAIN_Bbox 
-            SELECT CONCAT(Temp_Bbox.cameraId, ' || E'\'_\'' || ', Temp_Bbox.itemId), Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
+  IF reconcile_on_id THEN
+    EXECUTE 'INSERT INTO MAIN_Bbox 
+            SELECT Temp_Bbox.itemId, Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
               FROM Temp_Bbox  
               WHERE Temp_Bbox.itemId NOT IN ( 
                 SELECT DISTINCT tempId 
                 FROM min_join_pair);';
+  ELSE
+    EXECUTE 'INSERT INTO MAIN_Bbox 
+              SELECT CONCAT(Temp_Bbox.cameraId, ' || E'\'_\'' || ', Temp_Bbox.itemId), Temp_Bbox.cameraId, Temp_Bbox.trajBbox  
+                FROM Temp_Bbox  
+                WHERE Temp_Bbox.itemId NOT IN ( 
+                  SELECT DISTINCT tempId 
+                  FROM min_join_pair);';
+  END IF;
 
-  EXECUTE 'SELECT materializeNewBbox();';
+  IF reconcile_on_id THEN
+    EXECUTE 'SELECT materializeNewBbox(TRUE);';
+  ELSE
+    EXECUTE 'SELECT materializeNewBbox(FALSE);';
+  END IF;
 
-  EXECUTE 'INSERT INTO Item_Meta  
-            SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId), 
-                   Temp_Trajectory.objectType, Temp_Trajectory.color, Temp_Trajectory.largestBbox 
-              FROM Temp_Trajectory  
-              WHERE Temp_Trajectory.itemId NOT IN ( 
-                SELECT DISTINCT tempId 
-                FROM min_join_pair);';
+  IF reconcile_on_id THEN
+    EXECUTE 'INSERT INTO Item_Meta  
+                SELECT Temp_Trajectory.itemId, Temp_Trajectory.objectType, 
+                       Temp_Trajectory.color, Temp_Trajectory.largestBbox 
+                  FROM Temp_Trajectory  
+                  WHERE Temp_Trajectory.itemId NOT IN ( 
+                    SELECT DISTINCT tempId 
+                    FROM min_join_pair);';
+  ELSE
+    EXECUTE 'INSERT INTO Item_Meta  
+              SELECT CONCAT(Temp_Trajectory.cameraId, ' || E'\'_\'' || ', Temp_Trajectory.itemId), 
+                    Temp_Trajectory.objectType, Temp_Trajectory.color, Temp_Trajectory.largestBbox 
+                FROM Temp_Trajectory  
+                WHERE Temp_Trajectory.itemId NOT IN ( 
+                  SELECT DISTINCT tempId 
+                  FROM min_join_pair);';
+  END IF;
 
   EXECUTE 'TRUNCATE TABLE Temp_Trajectory;';
   EXECUTE 'TRUNCATE TABLE Temp_Bbox;';
   EXECUTE 'DROP TABLE min_join_pair;';
 
   RETURN;
-END
+END;
 $BODY$
-LANGUAGE 'plpgsql' ;
+LANGUAGE 'plpgsql';
