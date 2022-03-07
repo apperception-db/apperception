@@ -15,3 +15,4 @@ pillow
 jupyter
 torch
 numpy
+nbstripout
