@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 import psycopg2
 
 
+@dataclass
 class Camera:
     def __init__(self, scenic_scene_name):
         self.scenic_scene_name = scenic_scene_name

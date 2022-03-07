@@ -48,6 +48,7 @@ class World:
     def get_units(self):
         return self.VideoContext.get_units()
 
+    # TODO: should be add_item / add_camera?
     def item(self, item_id, cam_id, item_type, location):
         new_context = copy.deepcopy(self)
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
