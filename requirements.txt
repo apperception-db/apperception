@@ -15,3 +15,5 @@ pillow
 jupyter
 torch
 numpy
+pyquaternion
+PyQt5
