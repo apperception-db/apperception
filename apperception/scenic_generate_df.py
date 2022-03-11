@@ -123,6 +123,10 @@ def scenic_generate_df():
     df_sample_annotation = df_sample_annotation[
         ["token", "sample_token", "instance_token", "translation", "size", "rotation"]
     ]
+    heading = []
+    for rotation in list(df_sample_annotation['rotation']):
+        heading.append((((Quaternion(rotation).yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360)
+    df_sample_annotation['heading'] = heading
 
     df_instance = pd.DataFrame(instance_json)
     df_category = pd.DataFrame(category_json)
