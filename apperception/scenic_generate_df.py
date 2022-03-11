@@ -1,7 +1,8 @@
 import json
 
 import pandas as pd
-
+from pyquaternion.quaternion import Quaternion
+import numpy as np
 
 def scenic_generate_df():
     with open("v1.0-mini/v1.0-mini/attribute.json") as f:
