@@ -310,7 +310,7 @@ def add_recognized_objs(
         recognized_bboxes = np.array(
             [bbox.to_tuples() for bbox in formatted_result[item_id].bboxes]
         )
-        tracked_cnt = formatted_result[item_id].tracked_cnt
+        tracked_cnt = formatted_result[item_id].frame_num
         top_left = np.vstack((recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]))
         if default_depth:
             top_left_depths = np.ones(len(recognized_bboxes))
