@@ -1,6 +1,14 @@
 import ast
+import datetime
 import os
+import time
+from typing import Dict, List, Tuple
+from tracked_object import TrackedObject
+from box import Box
+from camera_config import CameraConfig
+from pyquaternion import Quaternion
 
+import numpy as np
 import lens
 import point
 import uncompyle6
@@ -9,6 +17,7 @@ from video_util import (convert_datetime_to_frame_num, get_video_box,
                         get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
+from scenic_util import bbox_to_data3d, convert_timestamps, join
 
 
 def create_camera(cam_id, fov):
@@ -192,3 +201,211 @@ def compile_lambda(pred):
                             assert isinstance(right.right, ast.Num)
                             y_range.append(right.right.n)
     return x_range, y_range
+
+
+def recognize(camera_configs: List[CameraConfig], annotation):
+    annotation = annotation.head(500)
+    annotations: Dict[str, TrackedObject] = {}
+    # sample_token_to_frame_num: Dict[str, str] = {}
+    # for config in camera_configs:
+    #     if config.frame_id not in sample_token_to_frame_num:
+    #         sample_token_to_frame_num[config.frame_id] = []
+    #     sample_token_to_frame_num[config.frame_id].append(config.frame_num)
+    
+    # for a in annotation.itertuples(index=False):
+    #     sample_token = a.sample_token
+    #     if sample_token not in sample_token_to_frame_num:
+    #         continue
+    #     frame_nums = sample_token_to_frame_num[sample_token]
+    #     item_id = a.instance_token
+    #     if item_id not in annotations:
+    #         annotations[item_id] = TrackedObject(a.category, [], [])
+
+    #     box = Box(a.translation, a.size, Quaternion(a.rotation))
+
+    #     corners = box.corners()
+
+    #     bbox = np.transpose(corners[:, [3, 7]])
+    #     # print(sample_token, item_id)
+    #     # print(set(frame_nums))
+    #     for frame_num in set(frame_nums):
+    #         # TODO: fix this: why are there duplicates
+    #         annotations[item_id].bboxes.append(bbox)
+    #         annotations[item_id].frame_num.append(int(frame_num))
+    #         break
+    
+    # for item_id in annotations:
+    #     frame_num = np.array(annotations[item_id].frame_num)
+    #     bboxes = np.array(annotations[item_id].bboxes)
+
+    #     index = frame_num.argsort()
+
+    #     annotations[item_id].frame_num = frame_num[index].tolist()
+    #     annotations[item_id].bboxes = bboxes[index, :, :]
+
+    #     print(item_id, len(annotations[item_id].frame_num) == len(set(annotations[item_id].frame_num)))
+    for img_file in camera_configs:
+        # get bboxes and categories of all the objects appeared in the image file
+        sample_token = img_file.frame_id
+        frame_num = img_file.frame_num
+        all_annotations = annotation[annotation["sample_token"] == sample_token]
+        # camera_info = {}
+        # camera_info['cameraTranslation'] = img_file['camera_translation']
+        # camera_info['cameraRotation'] = img_file['camera_rotation']
+        # camera_info['cameraIntrinsic'] = np.array(img_file['camera_intrinsic'])
+        # camera_info['egoRotation'] = img_file['ego_rotation']
+        # camera_info['egoTranslation'] = img_file['ego_translation']
+
+        for _, ann in all_annotations.iterrows():
+            item_id = ann["instance_token"]
+            if item_id not in annotations:
+                # annotations[item_id] = {"bboxes": [], "frame_num": []}
+                # annotations[item_id]["object_type"] = ann["category"]
+                annotations[item_id] = TrackedObject(ann["category"], [], [])
+
+            box = Box(ann["translation"], ann["size"], Quaternion(ann["rotation"]))
+
+            corners = box.corners()
+
+            # if item_id == '6dd2cbf4c24b4caeb625035869bca7b5':
+            # 	# print("corners", corners)
+            # 	# transform_box(box, camera_info)
+            # 	# print("transformed box: ", box.corners())
+            # 	# corners_2d = box.map_2d(np.array(camera_info['cameraIntrinsic']))
+            # 	corners_2d = transformation(box.center, camera_info)
+            # 	print("2d_corner: ", corners_2d)
+            # 	overlay_bbox("v1.0-mini/samples/CAM_FRONT/n015-2018-07-24-11-22-45+0800__CAM_FRONT__1532402927612460.jpg", corners_2d)
+
+            bbox = [corners[:, 1], corners[:, 7]]
+            annotations[item_id].bboxes.append(bbox)
+            annotations[item_id].frame_num.append(int(frame_num))
+
+    print("Recognization done, saving to database......")
+    return annotations
+
+
+def add_recognized_objs(
+    conn,
+    formatted_result: Dict[str, TrackedObject],
+    start_time: datetime.datetime,
+    camera_id: str
+):
+    for item_id in formatted_result:
+        object_type = formatted_result[item_id].object_type
+        recognized_bboxes = np.array(formatted_result[item_id].bboxes)
+        tracked_cnt = formatted_result[item_id].frame_num
+
+        top_left = recognized_bboxes[:, 0, :]
+        bottom_right = recognized_bboxes[:, 1, :]
+
+        obj_traj = []
+        for i in range(len(top_left)):
+            current_tl = top_left[i]
+            current_br = bottom_right[i]
+            obj_traj.append([current_tl.tolist(), current_br.tolist()])
+
+        bboxes_to_postgres(
+            conn,
+            item_id,
+            object_type,
+            "default_color",
+            start_time,
+            tracked_cnt,
+            obj_traj,
+            camera_id,
+        )
+
+
+def bboxes_to_postgres(
+    conn,
+    item_id: str,
+    object_type: str,
+    color: str,
+    start_time: datetime.datetime,
+    timestamps: List[int],
+    bboxes: List[List[List[float]]],
+    camera_id: str,
+):
+    converted_bboxes = [bbox_to_data3d(bbox) for bbox in bboxes]
+    pairs = []
+    deltas = []
+    for meta_box in converted_bboxes:
+        pairs.append(meta_box[0])
+        deltas.append(meta_box[1:])
+    postgres_timestamps = convert_timestamps(start_time, timestamps)
+    insert_general_trajectory(
+        conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs, camera_id
+    )
+    # print(f"{item_id} saved successfully")
+
+
+# Insert general trajectory
+def insert_general_trajectory(
+    conn,
+    item_id: str,
+    object_type: str,
+    color: str,
+    postgres_timestamps: List[str],
+    bboxes: List[
+        List[List[float]]
+    ],  # TODO: should be ((float, float, float), (float, float, float))[]
+    pairs: List[Tuple[float, float, float]],
+    camera_id: str,
+):
+    # Creating a cursor object using the cursor() method
+    cursor = conn.cursor()
+
+    # Inserting bboxes into Bbox table
+    insert_bbox_trajectories_builder = []
+    min_tl = np.full(3, np.inf)
+    max_br = np.full(3, np.NINF)
+
+    traj_centroids = []
+
+    prevTimestamp = None
+    for timestamp, (tl, br), current_point in zip(postgres_timestamps, bboxes, pairs):
+        if prevTimestamp == timestamp:
+            continue
+        prevTimestamp = timestamp
+        min_tl = np.minimum(tl, min_tl)
+        max_br = np.maximum(br, max_br)
+
+        # Insert bbox
+        insert_bbox_trajectories_builder.append(
+            f"""
+            INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
+            VALUES (
+                '{item_id}',
+                '{camera_id}',
+                STBOX 'STBOX ZT(
+                    ({join([*tl, timestamp])}),
+                    ({join([*br, timestamp])})
+                )'
+            );
+            """
+        )
+
+        # Construct trajectory
+        traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
+
+    # Insert the item_trajectory separately
+    insert_trajectory = f"""
+    INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, color, trajCentroids, largestBbox)
+    VALUES (
+        '{item_id}',
+        '{camera_id}',
+        '{object_type}',
+        '{color}',
+        '{{{', '.join(traj_centroids)}}}',
+        STBOX 'STBOX Z(
+            ({join(min_tl)}),
+            ({join(max_br)})
+        )'
+    );
+    """
+
+    cursor.execute(insert_trajectory)
+    cursor.execute("".join(insert_bbox_trajectories_builder))
+
+    # Commit your changes in the database
+    conn.commit()

@@ -11,18 +11,16 @@ from pyclbr import Function
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
+from camera_config import CameraConfig
 import dill as pickle
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from bounding_box import WHOLE_FRAME, BoundingBox
-from lens import Lens
 from new_db import Database
-from point import Point
-from video_context import Camera
+from camera import Camera
 
-from apperception.new_util import compile_lambda
+from new_util import compile_lambda
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
@@ -42,7 +40,7 @@ BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
 
 class World:
     # all worlds share a db instance
-    db = Database(reset=True)
+    db = Database()
     camera_nodes: Dict[str, Camera] = {}
 
     _parent: Optional[World]
@@ -135,13 +133,10 @@ class World:
             x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
         )
 
-    def recognize(self, cam_id: str, recognition_area: BoundingBox = WHOLE_FRAME):
-        assert cam_id in World.camera_nodes
-
-        camera_node = World.camera_nodes[cam_id]
-        node1 = self._insert_bbox_traj(camera_node=camera_node, recognition_area=recognition_area)
-        node2 = node1._retrieve_bbox(world_id=node1._world_id)
-        node3 = node2._retrieve_traj(world_id=node1._world_id)
+    def recognize(self, camera: Camera, annotation):
+        node1 = self._insert_bbox_traj(camera=camera, annotation=annotation)
+        node2 = node1._retrieve_bbox(camera_id=camera.id)
+        node3 = node2._retrieve_traj(camera_id=camera.id)
         return node3
 
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
@@ -259,26 +254,14 @@ class World:
             type="camera",
         )
 
-    def add_camera(
-        self,
-        cam_id: str,
-        location: Point,
-        ratio: float,
-        video_file: str,
-        metadata_identifier: str,
-        lens: Lens,
-    ):
+    def add_camera(self, camera: Camera):
         """
         1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
         2. For the write node, never double write. (so we use done flag)
         ... -> [write] -> [retrive] -> ...
         """
-        # TODO: should let the user add a Camera instead of its fields
-        camera_node = Camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
-        World.camera_nodes[cam_id] = camera_node
-
-        node1 = self._insert_camera(camera_node=camera_node)
-        node2 = node1._retrieve_camera(world_id=node1._world_id)
+        node1 = self._insert_camera(camera=camera)
+        node2 = node1._retrieve_camera(camera_id=camera.id)
         return node2
 
     def interval(self, start, end):
@@ -330,38 +313,36 @@ class World:
             self.db.get_time,
         )._execute_from_root(Type.BBOX)
 
-    def _insert_camera(self, camera_node: Camera):
+    def _insert_camera(self, camera: Camera):
         return derive_world(
             self,
             {Type.CAM},
             self.db.insert_cam,
-            # does not pass in world_id because we want to use the world_id of the deriving world
-            camera_node=camera_node,
+            camera=camera,
         )
 
-    def _retrieve_camera(self, world_id: str):
+    def _retrieve_camera(self, camera_id: str):
         return derive_world(
             self,
             {Type.CAM},
             self.db.retrieve_cam,
-            world_id=world_id,
+            camera_id=camera_id,
         )
 
-    def _insert_bbox_traj(self, camera_node: Camera, recognition_area: BoundingBox):
+    def _insert_bbox_traj(self, camera: Camera, annotation):
         return derive_world(
             self,
             {Type.TRAJ, Type.BBOX},
             self.db.insert_bbox_traj,
-            # does not pass in world_id because we want to use the world_id of the deriving world
-            camera_node=camera_node,
-            recognition_area=recognition_area,
+            camera=camera,
+            annotation=annotation,
         )
 
-    def _retrieve_bbox(self, world_id: str):
-        return derive_world(self, {Type.BBOX}, self.db.retrieve_bbox, world_id=world_id)
+    def _retrieve_bbox(self, camera_id: str):
+        return derive_world(self, {Type.BBOX}, self.db.retrieve_bbox, camera_id=camera_id)
 
-    def _retrieve_traj(self, world_id: str):
-        return derive_world(self, {Type.TRAJ}, self.db.retrieve_traj, world_id=world_id)
+    def _retrieve_traj(self, camera_id: str):
+        return derive_world(self, {Type.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
 
     def _execute_from_root(self, type: Type):
         nodes: list[World] = []
@@ -384,13 +365,16 @@ class World:
                 continue
             # treat update method differently
             elif node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
+                print('execute:', node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
                     node._update_log_file()
             else:
+                print('execute:', node.fn.__name__)
                 # print(query)
                 query = node._execute(query=query)
+        print('done execute node')
 
         res = query
         return res
@@ -469,6 +453,7 @@ class World:
                     }
                 )
             )
+        pass
 
 
 def empty_world(name: str) -> World:
@@ -498,9 +483,9 @@ def _empty_world(name: str) -> World:
 
 
 def derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
-    world = _derive_world_from_file(parent, types, fn, **kwargs)
-    if world is not None:
-        return world
+    # world = _derive_world_from_file(parent, types, fn, **kwargs)
+    # if world is not None:
+    #     return world
     return _derive_world(parent, types, fn, **kwargs)
 
 
@@ -582,8 +567,8 @@ def split_filename(filename: str) -> Tuple[str, datetime.datetime, str]:
 DUMPED_EMPTY_DICT = pickle.dumps({})
 
 
-def double_equal(a, b):
-    return a == b
+def double_equal(a: Tuple[Any, Any]):
+    return a[0] == a[1]
 
 
 def op_matched(
@@ -605,10 +590,11 @@ def op_matched(
         return False
 
     cmps = fn.comparators if hasattr(fn, "comparators") else {}
-    return all(
-        key in f_kwargs and cmps.get(key, double_equal)(f_kwargs[key], kwargs[key])
+    a = all(
+        key in f_kwargs and cmps.get(key, double_equal)((f_kwargs[key], kwargs[key]))
         for key in kwargs
     )
+    return a
 
 
 def format_content(content: dict[str, Any]) -> dict[str, Any]:
