@@ -4,6 +4,7 @@ from typing import List, Tuple
 Float3 = Tuple[float, float, float]
 Float4 = Tuple[float, float, float, float]
 
+
 @dataclass(frozen=True)
 class CameraConfig:
     frame_id: str
@@ -35,6 +36,5 @@ def fetch_camera_config(scene_name: str, sample_data):
             ego_rotation=frame.ego_rotation,
             timestamp=frame.timestamp,
         )
-        for frame
-        in all_frames.itertuples(index=False)
+        for frame in all_frames.itertuples(index=False)
     ]
