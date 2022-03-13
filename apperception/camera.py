@@ -1,8 +1,9 @@
+import uuid
 from dataclasses import dataclass
 from typing import List, Optional
-import uuid
 
 from camera_config import CameraConfig
+
 
 @dataclass
 class Camera:

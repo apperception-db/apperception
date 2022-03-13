@@ -1,23 +1,22 @@
 import ast
 import datetime
 import os
-import time
 from typing import Dict, List, Tuple
-from tracked_object import TrackedObject
+
+import lens
+import numpy as np
+import point
+import uncompyle6
 from box import Box
 from camera_config import CameraConfig
 from pyquaternion import Quaternion
-
-import numpy as np
-import lens
-import point
-import uncompyle6
+from scenic_util import bbox_to_data3d, convert_timestamps, join
+from tracked_object import TrackedObject
 from video_context import Camera
 from video_util import (convert_datetime_to_frame_num, get_video_box,
                         get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
-from scenic_util import bbox_to_data3d, convert_timestamps, join
 
 
 def create_camera(cam_id, fov):
@@ -211,7 +210,7 @@ def recognize(camera_configs: List[CameraConfig], annotation):
     #     if config.frame_id not in sample_token_to_frame_num:
     #         sample_token_to_frame_num[config.frame_id] = []
     #     sample_token_to_frame_num[config.frame_id].append(config.frame_num)
-    
+
     # for a in annotation.itertuples(index=False):
     #     sample_token = a.sample_token
     #     if sample_token not in sample_token_to_frame_num:
@@ -233,7 +232,7 @@ def recognize(camera_configs: List[CameraConfig], annotation):
     #         annotations[item_id].bboxes.append(bbox)
     #         annotations[item_id].frame_num.append(int(frame_num))
     #         break
-    
+
     # for item_id in annotations:
     #     frame_num = np.array(annotations[item_id].frame_num)
     #     bboxes = np.array(annotations[item_id].bboxes)
@@ -285,10 +284,7 @@ def recognize(camera_configs: List[CameraConfig], annotation):
 
 
 def add_recognized_objs(
-    conn,
-    formatted_result: Dict[str, TrackedObject],
-    start_time: datetime.datetime,
-    camera_id: str
+    conn, formatted_result: Dict[str, TrackedObject], start_time: datetime.datetime, camera_id: str
 ):
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type

@@ -2,14 +2,13 @@ import datetime
 from typing import Tuple
 
 import psycopg2
-from bounding_box import BoundingBox
-from lens import PinholeLens
-from new_util import create_camera, get_video, video_fetch_reformat, add_recognized_objs, recognize
+from camera import Camera
+from new_util import (add_recognized_objs, get_video, recognize,
+                      video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
-from camera import Camera
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -26,7 +25,7 @@ class Database:
 
         # The start time of the database access object
         self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
-    
+
     def reset(self):
         self._create_camera_table()
         self._create_item_general_trajectory_table()
@@ -76,7 +75,7 @@ class Database:
 
     def _create_item_general_trajectory_table(self):
         # drop old
-        q1 = 'DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;'
+        q1 = "DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;"
 
         # create new
         q2 = """
@@ -95,24 +94,29 @@ class Database:
         self.cur.execute(q1)
         self.cur.execute(q2)
         self.con.commit()
-    
+
     def _create_index(self):
-        self.cur.execute("""
+        self.cur.execute(
+            """
             CREATE INDEX IF NOT EXISTS traj_idx
             ON Item_General_Trajectory
             USING GiST(trajCentroids);
-        """)
-        self.cur.execute("""
+        """
+        )
+        self.cur.execute(
+            """
             CREATE INDEX IF NOT EXISTS item_idx
             ON General_Bbox(itemId);
-        """)
-        self.cur.execute("""
+        """
+        )
+        self.cur.execute(
+            """
             CREATE INDEX IF NOT EXISTS traj_bbox_idx
             ON General_Bbox
             USING GiST(trajBbox);
-        """)
+        """
+        )
         self.con.commit()
-
 
     def insert_cam(self, camera: Camera):
         values = [
@@ -128,8 +132,7 @@ class Database:
                 ARRAY{config.ego_rotation},
                 '{config.timestamp}'
             )"""
-            for config
-            in camera.configs
+            for config in camera.configs
         ]
 
         self.cur.execute(
@@ -379,6 +382,4 @@ class Database:
         get_video(fetched_meta, cams, self.start_time, boxed)
 
 
-Database.insert_bbox_traj.comparators = {
-    'annotation': lambda df: df[0].equals(df[1])
-}
+Database.insert_bbox_traj.comparators = {"annotation": lambda df: df[0].equals(df[1])}

@@ -11,15 +11,13 @@ from pyclbr import Function
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
-from camera_config import CameraConfig
 import dill as pickle
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import yaml
-from new_db import Database
 from camera import Camera
-
+from new_db import Database
 from new_util import compile_lambda
 
 matplotlib.use("Qt5Agg")
@@ -365,16 +363,16 @@ class World:
                 continue
             # treat update method differently
             elif node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
-                print('execute:', node.fn.__name__)
+                print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
                     node._update_log_file()
             else:
-                print('execute:', node.fn.__name__)
+                print("execute:", node.fn.__name__)
                 # print(query)
                 query = node._execute(query=query)
-        print('done execute node')
+        print("done execute node")
 
         res = query
         return res
@@ -453,7 +451,6 @@ class World:
                     }
                 )
             )
-        pass
 
 
 def empty_world(name: str) -> World:
