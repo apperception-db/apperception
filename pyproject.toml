@@ -1,0 +1,9 @@
+[tool.black]
+line-length = 100
+verbose = true
+
+[tool.autopep8]
+in-place = true
+recursive = true
+aggressive = 3
+verbose = 2

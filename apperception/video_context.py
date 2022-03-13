@@ -1,133 +1,125 @@
-import ast
-import inspect
-import os
-from typing import Callable
-import uncompyle6
+from __future__ import annotations
+
+import datetime
+from dataclasses import dataclass, field
+from typing import Any, Dict, Optional
+
 import psycopg2
-from video_util import *
-import datetime 
 
 
-# Camera node
+@dataclass
 class Camera:
+<<<<<<< HEAD
     def __init__(self, cam_id, point, ratio, video_file, metadata_id, lens):
         self.cam_id = cam_id 
         self.ratio = ratio
         self.video_file = video_file
         self.metadata_id = metadata_id
         self.properties = {}
+=======
+    def __init__(self, id: str):
+        self.id = id
+>>>>>>> ab858401f8b733b6533d4883a9947cf1a7f6f4f0
 
         # Contain objects that still have yet to be added to the backend
-        # If user calls recognize, those items will have already been 
-        # stored in the backend. These are reserved for objects that users 
+        # If user calls recognize, those items will have already been
+        # stored in the backend. These are reserved for objects that users
         # have not added to the camera.
-        self.items = [] 
+        self.items = []
         self.object_recognition = None
-        self.point = point
-        self.lens = lens
 
-    def add_item(self, item):
+    def add_item(self, item: Item):
         # Add item
         self.items.append(item)
 
-    def add_property(self, properties, property_type, new_prop):
+    def add_property(self, properties, property_type: str, new_prop):
+        # TODO: add type annotation
         # Add property
         self.properties[property_type].append(new_prop)
 
-    def add_lens(self, lens):
-        # Add lens
-        self.lens = lens
-
     # Add a default add_recog_obj = True
-    def recognize(self, algo = 'Yolo', tracker_type = 'multi', tracker = None):
+    def recognize(self, sample_data, annotation):
         # Create object recognition node
-        object_rec_node = ObjectRecognition(algo, tracker_type, tracker=None)
+        object_rec_node = ObjectRecognition(sample_data, annotation)
         self.object_recognition = object_rec_node
         return object_rec_node
 
-# Item node
+
+@dataclass
 class Item:
-    def __init__(self, item_id, item_type, location):
-        self.item_id = item_id
-        self.item_type = item_type
-        self.location = location
-        self.properties = {}
+    """Item node"""
+
+    item_id: str
+    item_type: str
+    location: Any  # TODO: what is the type of location?
+    properties: dict = field(default_factory=dict)  # TODO: what is the type of properties?
 
 
 # Object Recognition node
 class ObjectRecognition:
-    def __init__(self, algo, tracker_type, tracker = None):
-        self.algo = algo
-        self.tracker_type = tracker_type
-        self.tracker = tracker
-        # bounding boxes from object recognition
-        self.bboxes = []
-        self.labels = None
-        self.tracked_cnt = None
+    def __init__(self, sample_data, annotation):
+        self.sample_data = sample_data
+        self.annotation = annotation
+        self.properties = {}
 
     def add_properties(self, properties):
         self.properties = properties
 
-class VideoContext:
-    def __init__(self, name, units):
-        self.root = self
-        self.name = name
-        self.units = units
-        self.camera_nodes = {}
-        self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
 
-    # Connect to the database
-    def connect_db(self, host='localhost', 
-                        user=None,
-                        password=None,
-                        port=5432,
-                        database_name=None):
-        self.conn = psycopg2.connect(database=database_name, user=user, 
-            password=password, host=host, port=port)
-        
+class VideoContext:
+    def __init__(self, name: str, units):
+        self.root: VideoContext = self
+        self.name: str = name
+        self.units: Units = units
+        self.camera_nodes: Dict[str, Camera] = {}
+        self.start_time: datetime.datetime = datetime.datetime(2021, 6, 8, 7, 10, 28)
+        self.conn: Optional[psycopg2.connection] = None
+
+    def connect_db(self, host="localhost", user=None, password=None, port=5432, database_name=None):
+        """Connect to the database"""
+        self.conn = psycopg2.connect(
+            database=database_name, user=user, password=password, host=host, port=port
+        )
+
     def get_name(self):
         return self.name
-    
+
     def get_units(self):
         return self.units
 
     # Establish camera
-    def camera(self, cam_id, point, ratio, video_file, metadata_id, lens):
-        camera_node = self.__get_camera(cam_id)
+    def camera(self, scenic_scene_name):
+        camera_node = self.__get_camera(scenic_scene_name)
         if not camera_node:
-            camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
-            self.__add_camera(cam_id, camera_node)
+            camera_node = Camera(scenic_scene_name)
+            self.__add_camera(scenic_scene_name, camera_node)
         return camera_node
 
-    def properties(self, cam_id, properties, property_type):
+    def properties(self, cam_id: str, properties, property_type):
         camera_node = self.__get_camera(cam_id)
         if not camera_node:
             return None
-     
-        camera_node.add_properties(properties, property_type)
-       # Display error 
 
-    def get_camera(self, cam_id):
+        camera_node.add_properties(properties, property_type)
+        # Display error
+
+    def get_camera(self, cam_id: str):
         return self.__get_camera(cam_id)
-    
-    # Get camera
-    def __get_camera(self, cam_id):
+
+    def __get_camera(self, cam_id: str):
+        """Get camera"""
         if cam_id in self.camera_nodes.keys():
-          return self.camera_nodes[cam_id]
+            return self.camera_nodes[cam_id]
         return None
 
-    # Add camera
-    def __add_camera(self, cam_id, camera_node):
+    def __add_camera(self, cam_id: str, camera_node: Camera):
+        """Add camera"""
         self.camera_nodes[cam_id] = camera_node
 
-    # Remove camera
-    def remove_camera(self, cam_id):
-        camera_node = self.__get_camera(cam_id)
-        self.camera_nodes.remove(camera_node)
+    def remove_camera(self, cam_id: str):
+        """Remove camera"""
+        del self.camera_nodes[cam_id]
 
-    # Clear
     def clear(self):
-        self.camera_nodes = []
-
-    
-
+        """Clear"""
+        self.camera_nodes = {}

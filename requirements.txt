@@ -13,3 +13,7 @@ easydict
 matplotlib
 pillow
 jupyter
+torch
+numpy
+pyquaternion
+PyQt5

@@ -1,10 +1,11 @@
 import ast
 import datetime
-from metadata import *
+
+from metadata import metadata_view
 
 common_geo = ["Xmin", "Ymin", "Zmin", "Xmax", "Ymax", "Zmax"]
 common_aggregation = ["asMFJSON", common_geo]
-    
+
 
 # Map to translate ast comparators to SQL comparators
 comparator_map = {
@@ -13,14 +14,11 @@ comparator_map = {
     ast.Lt: "<",
     ast.LtE: "<=",
     ast.Gt: ">",
-    ast.GtE: ">="
+    ast.GtE: ">=",
 }
 
 # Map to translate ast propositions to SQL propositions
-propositional_map = {
-    ast.And: "AND",
-    ast.Or: "OR"
-}
+propositional_map = {ast.And: "AND", ast.Or: "OR"}
 
 
 def decompile_comparator(comparator, evaluated_var, view):
@@ -35,10 +33,10 @@ def decompile_comparator(comparator, evaluated_var, view):
         for arg in args:
             if isinstance(arg, ast.Attribute):
                 table_name = arg.value.id
-                table_attr= arg.attr
+                table_attr = arg.attr
                 view_context, table_name, column_name = resolve_default_view(table_attr, view)
                 # TODO: else not default
-                result_comparator += table_name +"." + column_name
+                result_comparator += table_name + "." + column_name
             elif isinstance(arg, ast.Str):
                 result_comparator += arg.s
             elif isinstance(arg, ast.Name):
@@ -47,30 +45,31 @@ def decompile_comparator(comparator, evaluated_var, view):
                 else:
                     result_comparator += arg.id
             result_comparator += ","
-        result_comparator = result_comparator[:-1]+")"
+        result_comparator = result_comparator[:-1] + ")"
     elif isinstance(comparator, ast.Attribute):
         table_name = comparator.value.id
-        table_attr= comparator.attr
-        #TODO: if view == None:
-        ### TODO: unresolved, dynamically determine the scan views based on both predicates and select
+        table_attr = comparator.attr
+        # TODO: if view == None:
+        # TODO: unresolved, dynamically determine the scan views based on both predicates and select
         view_context, table_name, column_name = resolve_default_view(table_attr, view)
-        result_comparator = table_name+"."+ column_name
+        result_comparator = table_name + "." + column_name
     elif isinstance(comparator, ast.Str):
-        result_comparator = "\'"+comparator.s+"\'"
+        result_comparator = "'" + comparator.s + "'"
     elif isinstance(comparator, ast.Name):
         if comparator.id in evaluated_var:
             evaluated_variable = evaluated_var[comparator.id]
         else:
             evaluated_variable = comparator.id
-        result_comparator =  evaluated_variable
+        result_comparator = evaluated_variable
     else:
         print(comparator)
-        
+
     return result_comparator, view_context
+
 
 def resolve_default_view(attr_name, view):
     view_context = view
-    if view == None:
+    if view is None:
         column_name = metadata_view.trajectory_view.resolve_key(attr_name)
         if column_name:
             view_context = metadata_view.trajectory_view
@@ -90,8 +89,9 @@ def resolve_default_view(attr_name, view):
                 table_name = metadata_view.map_view(column_name).view_name
             else:
                 table_name = view.view_name
-    
+
     return view_context, table_name, column_name
+
 
 def decompile_filter(ast_tree, evaluated_var, view):
     print(ast.dump(ast_tree))
@@ -112,36 +112,44 @@ def decompile_filter(ast_tree, evaluated_var, view):
                 attribute, left_comebine_view = decompile_comparator(left, evaluated_var, view)
                 right = value.comparators[0]
                 comparator, right_combine_view = decompile_comparator(right, evaluated_var, view)
-                
+
                 op = value.ops[0]
                 if type(op) in comparator_map:
                     operation = comparator_map[type(op)]
-                elif type(op) == ast.In:
+                elif isinstance(op, ast.In):
                     if isinstance(comparator, list):
                         operation = " IN "
                     elif isinstance(comparator, str):
                         operation = "overlap"
-                
-                
+
                 if operation == "overlap":
-                    attribute = "overlap(%s, %s)"%(attribute, comparator)
+                    attribute = "overlap(%s, %s)" % (attribute, comparator)
                     operation = "="
                     comparator = "true"
                 elif operation == " IN ":
                     comparator = list_to_str(comparator)
-                
+
                 attributes.append(attribute)
                 operations.append(operation)
                 comparators.append(comparator)
-                
-        return attributes, operations, comparators, bool_ops, cast_types, left_comebine_view or right_combine_view
+
+        return (
+            attributes,
+            operations,
+            comparators,
+            bool_ops,
+            cast_types,
+            left_comebine_view or right_combine_view,
+        )
+
 
 def list_to_str(lst):
     result = "("
     for s in lst:
-        result = result + "\'" + s + "\'" + ","
+        result = result + "'" + s + "'" + ","
     result = result[:-1] + ")"
     return result
+
 
 def convert_time(start, interval=[]):
     if len(interval) == 0:
@@ -153,21 +161,21 @@ def convert_time(start, interval=[]):
     return starttime, endtime
 
 
-
-# Translate the overlap function to psql overlap function
 def overlap(stbox1, stbox2):
-  return "Overlap(%s, %s)"%(stbox1, stbox2)
+    """Translate the overlap function to psql overlap function"""
+    return "Overlap(%s, %s)" % (stbox1, stbox2)
 
 
-# Translate the Tmin function to psql Tmin function
 def Tmin(stbox):
+    """Translate the Tmin function to psql Tmin function"""
     return "Tmin"
 
-# Translate the Tmax function to psql Tmax function
+
 def Tmax(stbox):
+    """Translate the Tmax function to psql Tmax function"""
     return "Tmax"
 
-# SQL Count
-def COUNT(key):
-    return "COUNT(%s)"%key
 
+def COUNT(key):
+    """SQL Count"""
+    return "COUNT(%s)" % key
