@@ -216,7 +216,7 @@ def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox =
                 formatted_result[item_id].bboxes.append(
                     BoundingBox(int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3]))
                 )
-                formatted_result[item_id].tracked_cnt.append(frame_num)
+                formatted_result[item_id].frame_num.append(frame_num)
 
         else:
             break

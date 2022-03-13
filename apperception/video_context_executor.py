@@ -48,7 +48,7 @@ class VideoContextExecutor:
         return camera_sql
 
     def visit_obj_rec(self, camera_node, object_rec_node):
-        cam_id = camera_node.scenic_scene_name
+        cam_id = camera_node.id
 
         start_time = self.current_context.start_time
 

@@ -108,7 +108,7 @@ def create_or_insert_camera_table(conn, world_name, camera):
     insert_camera(
         conn,
         world_name,
-        fetch_camera_config(camera.scenic_scene_name, camera.object_recognition.sample_data),
+        fetch_camera_config(camera.id, camera.object_recognition.sample_data),
     )
     return CREATE_CAMERA_SQL
 
@@ -520,6 +520,7 @@ def fetch_camera(conn, scene_name, frame_num):
         cameraId = '{scene_name}' AND
         frameNum IN ({",".join(map(str, frame_num))});
     """
+    print(query)
     cursor.execute(query)
     return cursor.fetchall()
 
@@ -583,14 +584,14 @@ def import_tables(conn):
 # Helper function to convert the timestam to the timestamp formula pg-trajectory uses
 
 
-def convert_timestamps(start_time, timestamps):
+def convert_timestamps(start_time: datetime.datetime, timestamps: Iterable[int]):
     return [str(start_time + datetime.timedelta(seconds=t)) for t in timestamps]
 
 
 # Helper function to convert trajectory to centroids
 
 
-def bbox_to_data3d(bbox):
+def bbox_to_data3d(bbox: List[List[float]]):
     """
     Compute the center, x, y, z delta of the bbox
     """

@@ -9,8 +9,8 @@ import psycopg2
 
 @dataclass
 class Camera:
-    def __init__(self, scenic_scene_name):
-        self.scenic_scene_name = scenic_scene_name
+    def __init__(self, id: str):
+        self.id = id
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been

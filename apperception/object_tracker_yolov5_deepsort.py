@@ -179,7 +179,7 @@ def detect(opt: YoloV5Opt):
                     formatted_result[item_id] = TrackedObject(object_type=names[c])
 
                 formatted_result[item_id].bboxes.append(bboxes)
-                formatted_result[item_id].tracked_cnt.append(frame_idx)
+                formatted_result[item_id].frame_num.append(frame_idx)
 
     return formatted_result
 
