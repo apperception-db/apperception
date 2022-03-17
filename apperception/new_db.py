@@ -1,11 +1,12 @@
 import datetime
 import string
+from types import FunctionType
 from typing import Tuple
 
 import psycopg2
 from camera import Camera
 from new_util import (add_recognized_objs, get_video, recognize,
-                      video_fetch_reformat)
+                      video_fetch_reformat, parse_predicate)
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
@@ -185,6 +186,10 @@ class Database:
         """
         Called when executing filter commands (predicate, interval ...etc)
         """
+        return SnowflakeQuery.from_(query).select("*").where(eval(condition))
+
+    def predicate(self, query: Query, func: FunctionType):
+        condition = parse_predicate(query, func)
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
     def get_cam(self, query: Query):

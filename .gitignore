@@ -17,3 +17,4 @@ maps
 samples
 sweeps
 v1.0-mini
+*.pickle

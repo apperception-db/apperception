@@ -5,6 +5,7 @@ import pandas as pd
 import cv2
 import psycopg2
 import pickle
+from pypika.dialects import Query, SnowflakeQuery
 
 sys.path.append("./apperception")
 
@@ -34,8 +35,16 @@ def main():
         world = world.recognize(camera, df_ann)
 
     car_trajectories = world.filter_traj_type(object_type='vehicle.car').get_traj()
+    print(car_trajectories)
+    car_trajectories = world.predicate(lambda obj: obj.object_type == "vehicle.car").get_traj()
+    print(car_trajectories)
+
+    # these two result are the same
 
 def parse():
+    '''
+    unit test
+    '''
     import metadata
     import metadata_util
     import metadata_context
@@ -52,7 +61,28 @@ def parse():
         comp = comparator[i]
         bool_op = bool_ops[i]
         predicate_query += bool_op + attr + op + comp
-    print(predicate_query)
+
+def parse_pypika():
+    '''
+    unit test
+    '''
+    import metadata
+    import metadata_util
+    import metadata_context
+    f = lambda obj: obj.object_type == "vehicle.car"
+
+    pred = metadata_context.Predicate(f)
+    pred.new_decompile()
+
+    attribute, operation, comparator, bool_ops, cast_types = pred.get_compile()
+
+    query = SnowflakeQuery.from_("TMP_TABLE").select("*")
+    table, attr = attribute[0].split('.')
+    comp = comparator[0]
+
+    return SnowflakeQuery.from_(query).select("*").where(eval(f"query.{attr}=={comp}")) # query.objectType == xxx
 
 if __name__ == "__main__":
-    parse()
+    main()
+    # parse()
+    # print(parse_pypika())

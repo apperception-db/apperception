@@ -1,6 +1,7 @@
 import ast
 import datetime
 import os
+from types import FunctionType
 from typing import Dict, List, Tuple
 
 import lens
@@ -17,7 +18,7 @@ from video_util import (convert_datetime_to_frame_num, get_video_box,
                         get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
-
+from pypika.dialects import Query, SnowflakeQuery
 
 def create_camera(cam_id, fov):
     # Let's define some attribute for constructing the world first
@@ -383,3 +384,19 @@ def insert_general_trajectory(
 
     # Commit your changes in the database
     conn.commit()
+
+
+def parse_predicate(query: SnowflakeQuery, f: FunctionType):
+    import metadata
+    import metadata_util
+    import metadata_context
+
+    pred = metadata_context.Predicate(f)
+    pred.new_decompile()
+
+    attribute, operation, comparator, bool_ops, cast_types = pred.get_compile()
+
+    table, attr = attribute[0].split('.')
+    comp = comparator[0]
+
+    return f"query.{attr}=={comp}" # query.objectType == xxx
