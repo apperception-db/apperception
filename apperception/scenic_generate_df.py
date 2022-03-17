@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 from pyquaternion.quaternion import Quaternion
-
+import pickle
 
 def scenic_generate_df():
     with open("v1.0-mini/v1.0-mini/attribute.json") as f:
@@ -169,9 +169,15 @@ def scenic_generate_df():
 
     return df_sample_data, df_sample_annotation
 
-
 def get_heading(q):
     q = Quaternion(q)
     v = np.dot(q.rotation_matrix, np.array([1, 0, 0]))
     yaw = np.arctan2(v[1], v[0])
     return yaw
+
+if __name__ == '__main__':
+    data, anno = scenic_generate_df()
+    with open('df_sample_data.pickle', 'wb') as f:
+        pickle.dump(data, f)
+    with open('df_annotation.pickle', 'wb') as f:
+        pickle.dump(anno, f)

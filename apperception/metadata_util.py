@@ -9,7 +9,7 @@ common_aggregation = ["asMFJSON", common_geo]
 
 # Map to translate ast comparators to SQL comparators
 comparator_map = {
-    ast.Eq: "=",
+    ast.Eq: "==", # pypika takes in python function, so it should be `==` not `=`
     ast.NotEq: ">=",
     ast.Lt: "<",
     ast.LtE: "<=",

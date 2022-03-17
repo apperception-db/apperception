@@ -275,12 +275,13 @@ class World:
         # TODO: Should we add this to DB instead of the global object?
         self.camera_nodes[cam_id].add_property(properties, property_type, new_prop)
 
-    def predicate(self, condition: str):
+    def predicate(self, func: Function):
+
         return derive_world(
             self,
-            {Type.CAM},
-            self.db.filter_cam,
-            condition=condition,
+            {Type.TRAJ, Type.BBOX},
+            self.db.predicate,
+            func=func,
         )
 
     def get_len(self):
