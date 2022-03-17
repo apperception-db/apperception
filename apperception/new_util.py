@@ -10,6 +10,7 @@ import point
 import uncompyle6
 from box import Box
 from camera_config import CameraConfig
+from pypika.dialects import SnowflakeQuery
 from pyquaternion import Quaternion
 from scenic_util import bbox_to_data3d, convert_timestamps, join
 from tracked_object import TrackedObject
@@ -18,7 +19,7 @@ from video_util import (convert_datetime_to_frame_num, get_video_box,
                         get_video_roi)
 from world_executor import (create_transform_matrix,
                             reformat_fetched_world_coords, world_to_pixel)
-from pypika.dialects import Query, SnowflakeQuery
+
 
 def create_camera(cam_id, fov):
     # Let's define some attribute for constructing the world first
@@ -387,8 +388,6 @@ def insert_general_trajectory(
 
 
 def parse_predicate(query: SnowflakeQuery, f: FunctionType):
-    import metadata
-    import metadata_util
     import metadata_context
 
     pred = metadata_context.Predicate(f)
@@ -396,7 +395,7 @@ def parse_predicate(query: SnowflakeQuery, f: FunctionType):
 
     attribute, operation, comparator, bool_ops, cast_types = pred.get_compile()
 
-    table, attr = attribute[0].split('.')
+    table, attr = attribute[0].split(".")
     comp = comparator[0]
 
-    return f"query.{attr}=={comp}" # query.objectType == xxx
+    return f"query.{attr}=={comp}"  # query.objectType == xxx
