@@ -4,8 +4,8 @@ from typing import Tuple
 
 import psycopg2
 from camera import Camera
-from new_util import (add_recognized_objs, get_video, recognize,
-                      video_fetch_reformat, parse_predicate)
+from new_util import (add_recognized_objs, get_video, parse_predicate,
+                      recognize, video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db

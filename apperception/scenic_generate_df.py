@@ -1,9 +1,10 @@
 import json
+import pickle
 
 import numpy as np
 import pandas as pd
 from pyquaternion.quaternion import Quaternion
-import pickle
+
 
 def scenic_generate_df():
     with open("v1.0-mini/v1.0-mini/attribute.json") as f:
@@ -175,9 +176,9 @@ def get_heading(q):
     yaw = np.arctan2(v[1], v[0])
     return yaw
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     data, anno = scenic_generate_df()
-    with open('df_sample_data.pickle', 'wb') as f:
+    with open("df_sample_data.pickle", "wb") as f:
         pickle.dump(data, f)
-    with open('df_annotation.pickle', 'wb') as f:
+    with open("df_annotation.pickle", "wb") as f:
         pickle.dump(anno, f)
