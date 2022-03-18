@@ -4,15 +4,15 @@ conn = psycopg2.connect(
     database="mobilitydb", user="docker", password="docker", host="localhost", port=25432
 )
 
-CREATE_POLYGON_SQL = '''
+CREATE_POLYGON_SQL = """
 CREATE TABLE IF NOT EXISTS Polygon(
     elementId TEXT,
     elementPolygon geometry,
     PRIMARY KEY (elementId)
 );
-'''
+"""
 
-CREATE_SEGMENT_SQL = '''
+CREATE_SEGMENT_SQL = """
 CREATE TABLE IF NOT EXISTS Segment(
     segmentId SERIAL,
     elementId TEXT,
@@ -20,100 +20,99 @@ CREATE TABLE IF NOT EXISTS Segment(
     endPoint geometry,
     heading real
 );
-'''
+"""
 
-CREATE_LANESECTION_SQL = '''
+CREATE_LANESECTION_SQL = """
 CREATE TABLE IF NOT EXISTS LaneSection(
     id Text,
-    laneToLeft Text, 
-    laneToRight Text, 
-    fasterLane Text, 
+    laneToLeft Text,
+    laneToRight Text,
+    fasterLane Text,
     slowerLane Text,
     isForward boolean,
     PRIMARY KEY (id)
 );
-'''
+"""
 
-CREATE_LANE_SQL = '''
+CREATE_LANE_SQL = """
 CREATE TABLE IF NOT EXISTS Lane(
     id Text,
     PRIMARY KEY (id)
 );
-'''
+"""
 
-CREATE_LANE_LANESEC_SQL = '''
+CREATE_LANE_LANESEC_SQL = """
 CREATE TABLE IF NOT EXISTS Lane_LaneSection(
     laneId TEXT,
     laneSectionId TEXT
 );
-'''
+"""
 
-CREATE_LANEGROUP_SQL = '''
+CREATE_LANEGROUP_SQL = """
 CREATE TABLE IF NOT EXISTS LaneGroup(
     id Text,
     PRIMARY KEY (id)
 );
-'''
+"""
 
-CREATE_LANEGROUP_LANE_SQL = '''
+CREATE_LANEGROUP_LANE_SQL = """
 CREATE TABLE IF NOT EXISTS LaneGroup_Lane(
     laneGroupId TEXT,
     laneId TEXT
 );
-'''
+"""
 
-CREATE_OPPOSITE_LANEGROUP_SQL = '''
+CREATE_OPPOSITE_LANEGROUP_SQL = """
 CREATE TABLE IF NOT EXISTS Opposite_LaneGroup(
     laneGroupId TEXT,
     oppositeId TEXT
 );
-'''
+"""
 
-CREATE_ROAD_SQL = '''
+CREATE_ROAD_SQL = """
 CREATE TABLE IF NOT EXISTS Road(
     id Text,
     forwardLane Text,
 	backwardLane Text,
     PRIMARY KEY (id)
 );
-'''
+"""
 
-CREATE_ROAD_LANEGROUP_SQL = '''
+CREATE_ROAD_LANEGROUP_SQL = """
 CREATE TABLE IF NOT EXISTS Road_LaneGroup(
     roadId TEXT,
     laneGroupId TEXT
 );
-'''
+"""
 
-CREATE_ROAD_ROADSECTION_SQL = '''
+CREATE_ROAD_ROADSECTION_SQL = """
 CREATE TABLE IF NOT EXISTS Road_RoadSection(
     roadId TEXT,
     roadSectionId TEXT
 );
-'''
+"""
 
-CREATE_ROADSECTION_SQL = '''
+CREATE_ROADSECTION_SQL = """
 CREATE TABLE IF NOT EXISTS RoadSection(
     id TEXT,
     forwardLanes text[],
 	backwardLanes text[]
 );
-'''
+"""
 
-CREATE_ROADSEC_LANESEC_SQL = '''
+CREATE_ROADSEC_LANESEC_SQL = """
 CREATE TABLE IF NOT EXISTS RoadSection_LaneSection(
     roadSectionId TEXT,
     laneSectionId TEXT
 );
-'''
+"""
+
 
 def create_polygon_table(polygons):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Polygon")
     cursor.execute(CREATE_POLYGON_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS element_idx ON Polygon(elementId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON Polygon(elementId);")
 
     values = []
     for poly in polygons:
@@ -136,13 +135,12 @@ def create_polygon_table(polygons):
 
     conn.commit()
 
+
 def create_segment_table(segments):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Segment")
     cursor.execute(CREATE_SEGMENT_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS element_idx ON Segment(elementId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON Segment(elementId);")
 
     values = []
     for seg in segments:
@@ -169,22 +167,21 @@ def create_segment_table(segments):
 
     conn.commit()
 
+
 def create_lanesection_table(laneSections):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS LaneSection")
     cursor.execute(CREATE_LANESECTION_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS lanesec_idx ON LaneSection(id);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS lanesec_idx ON LaneSection(id);")
 
     values = []
     for lanesec in laneSections:
         values.append(
             f"""(
                 '{lanesec['id']}',
-                '{lanesec['laneToLeft']}', 
-                '{lanesec['laneToRight']}', 
-                '{lanesec['fasterLane']}', 
+                '{lanesec['laneToLeft']}',
+                '{lanesec['laneToRight']}',
+                '{lanesec['fasterLane']}',
                 '{lanesec['slowerLane']}',
                 '{lanesec['isForward']}'
             )"""
@@ -206,13 +203,12 @@ def create_lanesection_table(laneSections):
 
     conn.commit()
 
+
 def create_lane_table(lanes):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Lane")
     cursor.execute(CREATE_LANE_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS lane_idx ON Lane(id);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS lane_idx ON Lane(id);")
 
     values = []
     for lane in lanes:
@@ -233,16 +229,13 @@ def create_lane_table(lanes):
 
     conn.commit()
 
+
 def create_lane_lanesec_table(lane_lanesec):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Lane_LaneSection")
     cursor.execute(CREATE_LANE_LANESEC_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS lane_idx ON Lane_LaneSection(laneId);"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS laneSection_idx ON Lane_LaneSection(laneSectionId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS lane_idx ON Lane_LaneSection(laneId);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS laneSection_idx ON Lane_LaneSection(laneSectionId);")
 
     values = []
     for ll in lane_lanesec:
@@ -265,13 +258,12 @@ def create_lane_lanesec_table(lane_lanesec):
 
     conn.commit()
 
+
 def create_lanegroup_table(laneGroups):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS LaneGroup")
     cursor.execute(CREATE_LANEGROUP_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);")
 
     values = []
     for lg in laneGroups:
@@ -292,16 +284,13 @@ def create_lanegroup_table(laneGroups):
 
     conn.commit()
 
+
 def create_lanegroup_lane_table(lanegroup_lane):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS LaneGroup_Lane")
     cursor.execute(CREATE_LANEGROUP_LANE_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS lane_idx ON LaneGroup_Lane(laneId);"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON LaneGroup_Lane(laneGroupId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS lane_idx ON LaneGroup_Lane(laneId);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS laneGroup_idx ON LaneGroup_Lane(laneGroupId);")
 
     values = []
     for ll in lanegroup_lane:
@@ -324,13 +313,12 @@ def create_lanegroup_lane_table(lanegroup_lane):
 
     conn.commit()
 
+
 def create_lanegroup_table(laneGroups):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS LaneGroup")
     cursor.execute(CREATE_LANEGROUP_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);")
 
     values = []
     for lg in laneGroups:
@@ -351,16 +339,13 @@ def create_lanegroup_table(laneGroups):
 
     conn.commit()
 
+
 def create_opposite_lanegroup_table(opposite_lanegroup):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Opposite_LaneGroup")
     cursor.execute(CREATE_OPPOSITE_LANEGROUP_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS opposite_idx ON Opposite_LaneGroup(oppositeId);"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON Opposite_LaneGroup(laneGroupId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS opposite_idx ON Opposite_LaneGroup(oppositeId);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS laneGroup_idx ON Opposite_LaneGroup(laneGroupId);")
 
     values = []
     for oppo in opposite_lanegroup:
@@ -388,9 +373,7 @@ def create_road_table(roads):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Road")
     cursor.execute(CREATE_ROAD_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS road_idx ON Road(id);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS road_idx ON Road(id);")
 
     values = []
     for road in roads:
@@ -415,16 +398,13 @@ def create_road_table(roads):
 
     conn.commit()
 
+
 def create_road_lanegroup_table(road_lanegroup):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Road_LaneGroup")
     cursor.execute(CREATE_ROAD_LANEGROUP_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS road_idx ON Road_LaneGroup(roadId);"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON Road_LaneGroup(laneGroupId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS road_idx ON Road_LaneGroup(roadId);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS laneGroup_idx ON Road_LaneGroup(laneGroupId);")
 
     values = []
     for rl in road_lanegroup:
@@ -447,16 +427,13 @@ def create_road_lanegroup_table(road_lanegroup):
 
     conn.commit()
 
+
 def create_road_roadsec_table(road_roadsec):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS Road_RoadSection")
     cursor.execute(CREATE_ROAD_ROADSECTION_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS road_idx ON Road_RoadSection(roadId);"
-    )
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS roadsec_idx ON Road_RoadSection(roadSectionId);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS road_idx ON Road_RoadSection(roadId);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS roadsec_idx ON Road_RoadSection(roadSectionId);")
 
     values = []
     for rr in road_roadsec:
@@ -484,16 +461,14 @@ def create_roadsection_table(roadSections):
     cursor = conn.cursor()
     cursor.execute("DROP TABLE IF EXISTS RoadSection")
     cursor.execute(CREATE_ROADSECTION_SQL)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS roadsec_idx ON RoadSection(id);"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS roadsec_idx ON RoadSection(id);")
 
     values = []
     for roadsec in roadSections:
-        if (len(roadsec['forwardLanes']) == 0):
-            roadsec['forwardLanes'] = '[]::text[]'
-        if (len(roadsec['backwardLanes']) == 0):
-            roadsec['backwardLanes'] = '[]::text[]'
+        if len(roadsec["forwardLanes"]) == 0:
+            roadsec["forwardLanes"] = "[]::text[]"
+        if len(roadsec["backwardLanes"]) == 0:
+            roadsec["backwardLanes"] = "[]::text[]"
 
         values.append(
             f"""(
@@ -515,6 +490,7 @@ def create_roadsection_table(roadSections):
     )
 
     conn.commit()
+
 
 def create_roadsec_lanesec_table(roadsec_lanesec):
     cursor = conn.cursor()
