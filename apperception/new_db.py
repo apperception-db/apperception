@@ -48,6 +48,7 @@ class Database:
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
             Column("timestamp", "TEXT"),
+            Column("heading", "real"),    
         )
 
         self.cur.execute(q1.get_sql())
@@ -130,7 +131,8 @@ class Database:
                 ARRAY{config.camera_intrinsic},
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
-                '{config.timestamp}'
+                '{config.timestamp}',
+                {config.heading}
             )"""
             for config in camera.configs
         ]
@@ -147,14 +149,15 @@ class Database:
                 cameraIntrinsic,
                 egoTranslation,
                 egoRotation,
-                timestamp
+                timestamp,
+                heading
             )
             VALUES {','.join(values)};
             """
         )
 
         print("New camera inserted successfully.........")
-        self.conn.commit()
+        self.con.commit()
 
     def retrieve_cam(self, query: Query = None, camera_id: str = ""):
         """
@@ -172,7 +175,7 @@ class Database:
         Select cams with certain world id
         """
         cam = Table(CAMERA_TABLE)
-        q = SnowflakeQuery.from_(cam).select("*").where(cam.id == camera_id)
+        q = SnowflakeQuery.from_(cam).select("*").where(cam.cameraId == camera_id)
         return q
 
     def filter_cam(self, query: Query, condition: str):
@@ -188,7 +191,7 @@ class Database:
 
         # hack
         q = (
-            "SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
+            "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading"
             + f" FROM ({query.get_sql()}) AS final"
         )
 
