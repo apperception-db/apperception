@@ -150,4 +150,13 @@ def scenic_generate_df():
         df_sample_annotation, df_instance, on="instance_token", how="left"
     )
 
+    df_sample_annotation["camera_heading"] = df_sample_annotation.apply(lambda x: get_heading(x.rotation) % 360, axis=1)
+    df_sample_data["camera_heading"] = df_sample_data.apply(lambda x: (get_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1)
+
     return df_sample_data, df_sample_annotation
+
+def get_heading(q):
+    q = Quaternion(q)
+    v = np.dot(q.rotation_matrix, np.array([1, 0, 0]))
+    yaw = np.arctan2(v[1], v[0])
+    return yaw
