@@ -34,10 +34,12 @@ def main():
         df_ann = df_annotation.join(df_config.set_index('sample_token'), on='sample_token', how='inner')
         world = world.recognize(camera, df_ann)
 
-    car_trajectories = world.filter_traj_type(object_type='vehicle.car').get_traj()
-    print(car_trajectories)
+    # car_trajectories = world.filter_traj_type(object_type='vehicle.car').get_traj()
     car_trajectories = world.predicate(lambda obj: obj.object_type == "vehicle.car").get_traj()
     print(car_trajectories)
+    car_and_ped_trajs = world.predicate(
+            lambda obj: obj.object_type == "vehicle.car" or obj.object_type == "human.pedestrian.adult").get_traj()
+    print(car_and_ped_trajs)
 
     # these two result are the same
 

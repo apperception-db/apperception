@@ -142,6 +142,88 @@ def decompile_filter(ast_tree, evaluated_var, view):
             left_comebine_view or right_combine_view,
         )
 
+def new_decompile_filter(ast_tree, evaluated_var, view):
+    import astpretty as ap
+    print(ast.dump(ast_tree))
+    attributes = []
+    operations = []
+    comparators = []
+    bool_ops = []
+    cast_types = []
+    result_view = view
+
+    for ast_node in ast.walk(ast_tree):
+        module_body = ast_node.body[0]
+        if isinstance(module_body, ast.Return):
+            value = module_body.value
+            if isinstance(value, ast.BoolOp):
+                assert isinstance(value.op, ast.Or)
+                bool_ops.append("|")
+                for cmp in value.values:
+                    assert isinstance(cmp, ast.Compare)
+
+                    left = cmp.left
+                    attribute, left_comebine_view = decompile_comparator(left, evaluated_var, view)
+                    right = cmp.comparators[0]
+                    comparator, right_combine_view = decompile_comparator(right, evaluated_var, view)
+
+                    op = cmp.ops[0]
+                    if type(op) in comparator_map:
+                        operation = comparator_map[type(op)]
+                    elif isinstance(op, ast.In):
+                        if isinstance(comparator, list):
+                            operation = " IN "
+                        elif isinstance(comparator, str):
+                            operation = "overlap"
+
+                    if operation == "overlap":
+                        attribute = "overlap(%s, %s)" % (attribute, comparator)
+                        operation = "="
+                        comparator = "true"
+                    elif operation == " IN ":
+                        comparator = list_to_str(comparator)
+
+                    attributes.append(attribute)
+                    operations.append(operation)
+                    comparators.append(comparator)
+
+            # case where we allow multiple constraints in a single filter, usually for OR
+            elif isinstance(value, ast.Compare):
+                left = value.left
+                attribute, left_comebine_view = decompile_comparator(left, evaluated_var, view)
+                right = value.comparators[0]
+                comparator, right_combine_view = decompile_comparator(right, evaluated_var, view)
+
+                op = value.ops[0]
+                if type(op) in comparator_map:
+                    operation = comparator_map[type(op)]
+                elif isinstance(op, ast.In):
+                    if isinstance(comparator, list):
+                        operation = " IN "
+                    elif isinstance(comparator, str):
+                        operation = "overlap"
+
+                if operation == "overlap":
+                    attribute = "overlap(%s, %s)" % (attribute, comparator)
+                    operation = "="
+                    comparator = "true"
+                elif operation == " IN ":
+                    comparator = list_to_str(comparator)
+
+                attributes.append(attribute)
+                operations.append(operation)
+                comparators.append(comparator)
+
+        return (
+            attributes,
+            operations,
+            comparators,
+            bool_ops,
+            cast_types,
+            left_comebine_view or right_combine_view,
+        )
+
+
 
 def list_to_str(lst):
     result = "("
