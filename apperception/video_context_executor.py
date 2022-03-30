@@ -54,7 +54,7 @@ class VideoContextExecutor:
 
         
         tracking_results = recognize(video_file, algo, tracker_type, tracker)
-        add_recognized_objs(self.conn, lens, tracking_results, start_time)
+        add_recognized_objs(self.conn, cam_id, lens, tracking_results, start_time)
         if self.tasm:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
         

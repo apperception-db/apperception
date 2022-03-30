@@ -44,9 +44,9 @@ class World:
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
 
-    def camera(self, cam_id, location, ratio, video_file, metadata_identifier, lens):
+    def camera(self, cam_id, video_file, metadata_identifier, lens):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
+        new_context.VideoContext.camera(cam_id, video_file, metadata_identifier, lens)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
@@ -81,6 +81,16 @@ class World:
     def get_trajectory(self, interval = [], distinct = False):
         new_context = copy.deepcopy(self)
         new_context.MetadataContext.get_trajectory(interval, distinct)
+        return new_context
+    
+    def get_merged_trajectory(self, interval = []):
+        new_context = copy.deepcopy(self)
+        new_context.MetadataContext.get_merged_trajectory(interval)
+        return new_context
+    
+    def get_merged_geo(self, interval = []):
+        new_context = copy.deepcopy(self)
+        new_context.MetadataContext.get_merged_geo(interval)
         return new_context
 
     def get_geo(self, interval = [], distinct = False):
