@@ -1,8 +1,9 @@
 import json
 
+import numpy as np
 import pandas as pd
 from pyquaternion.quaternion import Quaternion
-import numpy as np
+
 
 def scenic_generate_df():
     with open("v1.0-mini/v1.0-mini/attribute.json") as f:
@@ -125,9 +126,9 @@ def scenic_generate_df():
         ["token", "sample_token", "instance_token", "translation", "size", "rotation"]
     ]
     heading = []
-    for rotation in list(df_sample_annotation['rotation']):
+    for rotation in list(df_sample_annotation["rotation"]):
         heading.append((((Quaternion(rotation).yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360)
-    df_sample_annotation['heading'] = heading
+    df_sample_annotation["heading"] = heading
 
     df_instance = pd.DataFrame(instance_json)
     df_category = pd.DataFrame(category_json)
