@@ -21,15 +21,16 @@ class TrajectoryView(View):
     object_type = "objectType"
     color = "color"
     trajectory = "trajCentroids"
-    table_name = "Item_General_Trajectory"
+    table_name = "Item_meta"
     def __init__(self):
         super().__init__(self.table_name)
         self.default = True
     
 class LocationView(View):
     location = "trajBbox"
+    object_id = 'itemId'
     timestamp = "timestamp"
-    table_name = "General_Bbox"
+    table_name = "Main_Bbox"
     def __init__(self):
         super().__init__(self.table_name)
         self.default = True
