@@ -8,7 +8,7 @@ from typing import Callable, List, Optional
 import uncompyle6
 from metadata import MetadataView, View, metadata_view
 from metadata_util import (COUNT, Tmax, Tmin, common_aggregation, common_geo,
-                           convert_time, decompile_filter)
+                           convert_time, decompile_filter, new_decompile_filter)
 
 
 class Project:
@@ -130,7 +130,7 @@ class Predicate:
             self.bool_ops,
             self.cast_types,
             self.view_context,
-        ) = decompile_filter(self.t, self.evaluated_var, None)
+        ) = new_decompile_filter(self.t, self.evaluated_var, None)
 
     def get_compile(self):
         return self.attribute, self.operation, self.comparator, self.bool_ops, self.cast_types
