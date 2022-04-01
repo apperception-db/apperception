@@ -30,6 +30,10 @@ class TrackedObject:
         s_indices = s_frame_num.argsort()
         o_indices = o_frame_num.argsort()
 
-        return np.array_equal(s_frame_num[s_indices], o_frame_num[o_indices]) and np.array_equal(
-            np.array(self.bboxes)[s_indices], np.array(other.bboxes)[o_indices]
-        ) and np.array_equal(np.array(self.itemHeading)[s_indices], np.array(other.itemHeading)[o_indices])
+        return (
+            np.array_equal(s_frame_num[s_indices], o_frame_num[o_indices])
+            and np.array_equal(np.array(self.bboxes)[s_indices], np.array(other.bboxes)[o_indices])
+            and np.array_equal(
+                np.array(self.itemHeading)[s_indices], np.array(other.itemHeading)[o_indices]
+            )
+        )

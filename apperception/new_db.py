@@ -48,7 +48,7 @@ class Database:
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
             Column("timestamp", "TEXT"),
-            Column("heading", "real"),    
+            Column("heading", "real"),
         )
 
         self.cur.execute(q1.get_sql())
