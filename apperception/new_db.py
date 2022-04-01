@@ -88,6 +88,7 @@ class Database:
             color TEXT,
             trajCentroids tgeompoint,
             largestBbox stbox,
+            itemHeading TEXT,
             PRIMARY KEY (itemId)
         );
         """
