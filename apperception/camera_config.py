@@ -36,7 +36,7 @@ def fetch_camera_config(scene_name: str, sample_data):
             ego_translation=frame.ego_translation,
             ego_rotation=frame.ego_rotation,
             timestamp=frame.timestamp,
-            heading=frame.heading
+            heading=frame.heading,
         )
         for frame in all_frames.itertuples(index=False)
     ]
