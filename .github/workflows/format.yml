@@ -46,6 +46,11 @@ jobs:
           pip install isort
           python -m isort apperception
       
+      - name: Cleanup ipynb output
+        run: |
+          pip install notebook
+          python -m jupyter nbconvert --clear-output --inplace benchmarks/*.ipynb
+      
       - name: Commit linted and formatted changes
         run: |
           git config --global user.name 'Github Actions Bot'
