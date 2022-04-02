@@ -45,6 +45,7 @@ def scenic_generate_df():
             "filename",
             "prev",
             "next",
+            "is_key_frame",
         ]
     ]
     df_sample_data = df_sample_data[df_sample_data["fileformat"] == "jpg"]
@@ -157,6 +158,14 @@ def scenic_generate_df():
     df_sample_data["heading"] = df_sample_data.apply(
         lambda x: (get_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1
     )
+
+    df_sample_data_keyframe = df_sample_data[df_sample_data["is_key_frame"]][
+        ["token", "sample_token"]
+    ]
+    df_sample_annotation = df_sample_annotation.set_index("sample_token").join(
+        df_sample_data_keyframe.set_index("sample_token"), on="sample_token", rsuffix="_sample_data"
+    )
+    print(list(df_sample_data.columns))
 
     return df_sample_data, df_sample_annotation
 

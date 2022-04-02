@@ -84,11 +84,10 @@ class Database:
             itemId TEXT,
             cameraId TEXT,
             objectType TEXT,
-            frameId TEXT,
             color TEXT,
             trajCentroids tgeompoint,
             largestBbox stbox,
-            itemHeadings TEXT,
+            itemHeadings real[],
             PRIMARY KEY (itemId)
         );
         """
@@ -236,7 +235,7 @@ class Database:
     def get_traj(self, query: Query):
         # hack
         query = (
-            "SELECT asMFJSON(trajCentroids)::json->'coordinates'"
+            "SELECT asMFJSON(trajCentroids)::json->'sequences'"
             + f" FROM ({query.get_sql()}) as final"
         )
 
