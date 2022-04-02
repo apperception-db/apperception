@@ -7,7 +7,7 @@ on:
 
 jobs:
   format:
-    name: Format and Lint
+    name: Clean up ipynb
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
