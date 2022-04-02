@@ -435,22 +435,23 @@ class World:
         return self._materialized
 
     def _update_log_file(self):
-        with open(self.filename, "r") as f:
-            children = yaml.safe_load(f).get("children_filenames", None)
-        with open(self.filename, "w") as f:
-            f.write(
-                yaml.safe_dump(
-                    {
-                        **({} if self._parent is None else {"parent": self._parent.filename}),
-                        **({} if self._types == set() else {"types": set(map(int, self._types))}),
-                        **({} if self._fn is None else {"fn": self._fn.__name__}),
-                        **({} if self._kwargs == {} else {"kwargs": pickle.dumps(self._kwargs)}),
-                        **({} if not self._done else {"done": self._done}),
-                        **({} if not self._materialized else {"materialized": self._materialized}),
-                        **({} if children is None else {"children_filenames": children}),
-                    }
-                )
-            )
+        # with open(self.filename, "r") as f:
+        #     children = yaml.safe_load(f).get("children_filenames", None)
+        # with open(self.filename, "w") as f:
+        #     f.write(
+        #         yaml.safe_dump(
+        #             {
+        #                 **({} if self._parent is None else {"parent": self._parent.filename}),
+        #                 **({} if self._types == set() else {"types": set(map(int, self._types))}),
+        #                 **({} if self._fn is None else {"fn": self._fn.__name__}),
+        #                 **({} if self._kwargs == {} else {"kwargs": pickle.dumps(self._kwargs)}),
+        #                 **({} if not self._done else {"done": self._done}),
+        #                 **({} if not self._materialized else {"materialized": self._materialized}),
+        #                 **({} if children is None else {"children_filenames": children}),
+        #             }
+        #         )
+        #     )
+        pass
 
 
 def empty_world(name: str) -> World:
@@ -489,26 +490,26 @@ def derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
 def _derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
-    log_file = filename(timestamp, world_id)
+    # log_file = filename(timestamp, world_id)
 
-    with open(parent.filename, "r") as pf:
-        content = yaml.safe_load(pf)
-    with open(parent.filename, "w") as pf:
-        content["children_filenames"] = content.get("children_filenames", set())
-        content["children_filenames"].add(log_file)
-        pf.write(yaml.safe_dump(content))
+    # with open(parent.filename, "r") as pf:
+    #     content = yaml.safe_load(pf)
+    # with open(parent.filename, "w") as pf:
+    #     content["children_filenames"] = content.get("children_filenames", set())
+    #     content["children_filenames"].add(log_file)
+    #     pf.write(yaml.safe_dump(content))
 
-    with open(log_file, "w") as f:
-        f.write(
-            yaml.safe_dump(
-                {
-                    "fn": fn.__name__,
-                    "kwargs": pickle.dumps(kwargs),
-                    "parent": parent.filename,
-                    "types": set(map(int, types)),
-                }
-            )
-        )
+    # with open(log_file, "w") as f:
+    #     f.write(
+    #         yaml.safe_dump(
+    #             {
+    #                 "fn": fn.__name__,
+    #                 "kwargs": pickle.dumps(kwargs),
+    #                 "parent": parent.filename,
+    #                 "types": set(map(int, types)),
+    #             }
+    #         )
+    #     )
 
     return World(
         world_id,

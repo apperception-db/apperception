@@ -203,82 +203,41 @@ def compile_lambda(pred):
 
 
 def recognize(camera_configs: List[CameraConfig], annotation):
-    annotation = annotation.head(500)
     annotations: Dict[str, TrackedObject] = {}
-    # sample_token_to_frame_num: Dict[str, str] = {}
-    # for config in camera_configs:
-    #     if config.frame_id not in sample_token_to_frame_num:
-    #         sample_token_to_frame_num[config.frame_id] = []
-    #     sample_token_to_frame_num[config.frame_id].append(config.frame_num)
+    sample_token_to_frame_num: Dict[str, str] = {}
+    for config in camera_configs:
+        if config.frame_id in sample_token_to_frame_num:
+            raise Exception('duplicate frame_id')
+        sample_token_to_frame_num[config.frame_id] = config.frame_num
 
-    # for a in annotation.itertuples(index=False):
-    #     sample_token = a.sample_token
-    #     if sample_token not in sample_token_to_frame_num:
-    #         continue
-    #     frame_nums = sample_token_to_frame_num[sample_token]
-    #     item_id = a.instance_token
-    #     if item_id not in annotations:
-    #         annotations[item_id] = TrackedObject(a.category, [], [])
+    for a in annotation.itertuples(index=False):
+        sample_data_token = a.token_sample_data
+        if sample_data_token not in sample_token_to_frame_num:
+            continue
+        frame_num = sample_token_to_frame_num[sample_data_token]
+        item_id = a.instance_token
+        if item_id not in annotations:
+            annotations[item_id] = TrackedObject(a.category, [], [])
 
-    #     box = Box(a.translation, a.size, Quaternion(a.rotation))
+        box = Box(a.translation, a.size, Quaternion(a.rotation))
 
-    #     corners = box.corners()
+        corners = box.corners()
+        bbox = np.transpose(corners[:, [3, 7]])
 
-    #     bbox = np.transpose(corners[:, [3, 7]])
-    #     # print(sample_token, item_id)
-    #     # print(set(frame_nums))
-    #     for frame_num in set(frame_nums):
-    #         # TODO: fix this: why are there duplicates
-    #         annotations[item_id].bboxes.append(bbox)
-    #         annotations[item_id].frame_num.append(int(frame_num))
-    #         break
+        annotations[item_id].bboxes.append(bbox)
+        annotations[item_id].frame_num.append(int(frame_num))
+        annotations[item_id].itemHeading.append(a.heading)
 
-    # for item_id in annotations:
-    #     frame_num = np.array(annotations[item_id].frame_num)
-    #     bboxes = np.array(annotations[item_id].bboxes)
+    for item_id in annotations:
+        frame_num = np.array(annotations[item_id].frame_num)
+        bboxes = np.array(annotations[item_id].bboxes)
+        itemHeading = np.array(annotations[item_id].itemHeading)
 
-    #     index = frame_num.argsort()
+        index = frame_num.argsort()
 
-    #     annotations[item_id].frame_num = frame_num[index].tolist()
-    #     annotations[item_id].bboxes = bboxes[index, :, :]
-
-    #     print(item_id, len(annotations[item_id].frame_num) == len(set(annotations[item_id].frame_num)))
-    for img_file in camera_configs:
-        # get bboxes and categories of all the objects appeared in the image file
-        sample_token = img_file.frame_id
-        frame_num = img_file.frame_num
-        all_annotations = annotation[annotation["sample_token"] == sample_token]
-        # camera_info = {}
-        # camera_info['cameraTranslation'] = img_file['camera_translation']
-        # camera_info['cameraRotation'] = img_file['camera_rotation']
-        # camera_info['cameraIntrinsic'] = np.array(img_file['camera_intrinsic'])
-        # camera_info['egoRotation'] = img_file['ego_rotation']
-        # camera_info['egoTranslation'] = img_file['ego_translation']
-
-        for _, ann in all_annotations.iterrows():
-            item_id = ann["instance_token"]
-            if item_id not in annotations:
-                # annotations[item_id] = {"bboxes": [], "frame_num": []}
-                # annotations[item_id]["object_type"] = ann["category"]
-                annotations[item_id] = TrackedObject(ann["category"], [], [])
-
-            box = Box(ann["translation"], ann["size"], Quaternion(ann["rotation"]))
-
-            corners = box.corners()
-
-            # if item_id == '6dd2cbf4c24b4caeb625035869bca7b5':
-            # 	# print("corners", corners)
-            # 	# transform_box(box, camera_info)
-            # 	# print("transformed box: ", box.corners())
-            # 	# corners_2d = box.map_2d(np.array(camera_info['cameraIntrinsic']))
-            # 	corners_2d = transformation(box.center, camera_info)
-            # 	print("2d_corner: ", corners_2d)
-            # 	overlay_bbox("v1.0-mini/samples/CAM_FRONT/n015-2018-07-24-11-22-45+0800__CAM_FRONT__1532402927612460.jpg", corners_2d)
-
-            bbox = [corners[:, 1], corners[:, 7]]
-            annotations[item_id].bboxes.append(bbox)
-            annotations[item_id].frame_num.append(int(frame_num))
-            annotations[item_id].itemHeading.append(int(ann["heading"]))
+        annotations[item_id].frame_num = frame_num[index].tolist()
+        annotations[item_id].bboxes = bboxes[index, :, :]
+        annotations[item_id].itemHeading = itemHeading[index].tolist()
 
     print("Recognization done, saving to database......")
     return annotations
@@ -409,17 +368,18 @@ def insert_general_trajectory(
         '{camera_id}',
         '{object_type}',
         '{color}',
-        '{{{', '.join(traj_centroids)}}}',
+        '{{[{', '.join(traj_centroids)}]}}',
         STBOX 'STBOX Z(
             ({join(min_tl)}),
             ({join(max_br)})
         )',
-        '{','.join(itemHeadings)}'
+        '{{{','.join(itemHeadings)}}}'
     );
     """
 
     cursor.execute(insert_trajectory)
-    cursor.execute("".join(insert_bbox_trajectories_builder))
+    if len(insert_bbox_trajectories_builder):
+        cursor.execute("".join(insert_bbox_trajectories_builder))
 
     # Commit your changes in the database
     conn.commit()
