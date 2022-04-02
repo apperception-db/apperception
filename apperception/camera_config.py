@@ -27,7 +27,7 @@ def fetch_camera_config(scene_name: str, sample_data):
 
     return [
         CameraConfig(
-            frame_id=frame.sample_token,
+            frame_id=frame.token,
             frame_num=frame.frame_order,
             filename=frame.filename,
             camera_translation=frame.camera_translation,
