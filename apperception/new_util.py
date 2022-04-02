@@ -207,7 +207,7 @@ def recognize(camera_configs: List[CameraConfig], annotation):
     sample_token_to_frame_num: Dict[str, str] = {}
     for config in camera_configs:
         if config.frame_id in sample_token_to_frame_num:
-            raise Exception('duplicate frame_id')
+            raise Exception("duplicate frame_id")
         sample_token_to_frame_num[config.frame_id] = config.frame_num
 
     for a in annotation.itertuples(index=False):
