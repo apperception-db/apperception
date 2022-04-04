@@ -1,4 +1,4 @@
-name: Format and Lint
+name: Clean Up Python Notebooks
 on:
   push:
     branches-ignore:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   format:
-    name: Clean up ipynb
+    name: Clean Up Python Notebooks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
