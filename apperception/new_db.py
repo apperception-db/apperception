@@ -48,6 +48,7 @@ class Database:
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
             Column("timestamp", "TEXT"),
+            Column("heading", "real"),
         )
 
         self.cur.execute(q1.get_sql())
@@ -83,10 +84,10 @@ class Database:
             itemId TEXT,
             cameraId TEXT,
             objectType TEXT,
-            frameId TEXT,
             color TEXT,
             trajCentroids tgeompoint,
             largestBbox stbox,
+            itemHeadings real[],
             PRIMARY KEY (itemId)
         );
         """
@@ -130,7 +131,8 @@ class Database:
                 ARRAY{config.camera_intrinsic},
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
-                '{config.timestamp}'
+                '{config.timestamp}',
+                {config.heading}
             )"""
             for config in camera.configs
         ]
@@ -147,14 +149,15 @@ class Database:
                 cameraIntrinsic,
                 egoTranslation,
                 egoRotation,
-                timestamp
+                timestamp,
+                heading
             )
             VALUES {','.join(values)};
             """
         )
 
         print("New camera inserted successfully.........")
-        self.conn.commit()
+        self.con.commit()
 
     def retrieve_cam(self, query: Query = None, camera_id: str = ""):
         """
@@ -172,7 +175,7 @@ class Database:
         Select cams with certain world id
         """
         cam = Table(CAMERA_TABLE)
-        q = SnowflakeQuery.from_(cam).select("*").where(cam.id == camera_id)
+        q = SnowflakeQuery.from_(cam).select("*").where(cam.cameraId == camera_id)
         return q
 
     def filter_cam(self, query: Query, condition: str):
@@ -188,7 +191,7 @@ class Database:
 
         # hack
         q = (
-            "SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor"
+            "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading"
             + f" FROM ({query.get_sql()}) AS final"
         )
 
@@ -232,7 +235,7 @@ class Database:
     def get_traj(self, query: Query):
         # hack
         query = (
-            "SELECT asMFJSON(trajCentroids)::json->'coordinates'"
+            "SELECT asMFJSON(trajCentroids)::json->'sequences'"
             + f" FROM ({query.get_sql()}) as final"
         )
 
@@ -326,12 +329,12 @@ class Database:
             .cross()
             .select(query.star)
             .distinct()
-            .where(x_range[0] <= (ST_X(cameras.origin) - getX(query.trajCentroids)))
-            .where((ST_X(cameras.origin) - getX(query.trajCentroids)) <= x_range[1])
-            .where(y_range[0] <= (ST_Y(cameras.origin) - getY(query.trajCentroids)))
-            .where((ST_Y(cameras.origin) - getY(query.trajCentroids)) <= y_range[1])
-            .where(z_range[0] <= (ST_Z(cameras.origin) - getZ(query.trajCentroids)))
-            .where((ST_Z(cameras.origin) - getZ(query.trajCentroids)) <= z_range[1])
+            .where(x_range[0] <= (ST_X(cameras.egoTranslation) - getX(query.trajCentroids)))
+            .where((ST_X(cameras.egoTranslation) - getX(query.trajCentroids)) <= x_range[1])
+            .where(y_range[0] <= (ST_Y(cameras.egoTranslation) - getY(query.trajCentroids)))
+            .where((ST_Y(cameras.egoTranslation) - getY(query.trajCentroids)) <= y_range[1])
+            .where(z_range[0] <= (ST_Z(cameras.egoTranslation) - getZ(query.trajCentroids)))
+            .where((ST_Z(cameras.egoTranslation) - getZ(query.trajCentroids)) <= z_range[1])
         )
         # print(str(q))
         return q

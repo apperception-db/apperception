@@ -10,3 +10,10 @@ yolov5-deepsort
 output
 .apperception_cache
 env
+
+*.csv
+*.pickle
+maps
+samples
+sweeps
+v1.0-mini

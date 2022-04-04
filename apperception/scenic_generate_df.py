@@ -1,8 +1,9 @@
 import json
 
+import numpy as np
 import pandas as pd
 from pyquaternion.quaternion import Quaternion
-import numpy as np
+
 
 def scenic_generate_df():
     with open("v1.0-mini/v1.0-mini/attribute.json") as f:
@@ -44,6 +45,7 @@ def scenic_generate_df():
             "filename",
             "prev",
             "next",
+            "is_key_frame",
         ]
     ]
     df_sample_data = df_sample_data[df_sample_data["fileformat"] == "jpg"]
@@ -125,9 +127,9 @@ def scenic_generate_df():
         ["token", "sample_token", "instance_token", "translation", "size", "rotation"]
     ]
     heading = []
-    for rotation in list(df_sample_annotation['rotation']):
+    for rotation in list(df_sample_annotation["rotation"]):
         heading.append((((Quaternion(rotation).yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360)
-    df_sample_annotation['heading'] = heading
+    df_sample_annotation["heading"] = heading
 
     df_instance = pd.DataFrame(instance_json)
     df_category = pd.DataFrame(category_json)
@@ -150,4 +152,26 @@ def scenic_generate_df():
         df_sample_annotation, df_instance, on="instance_token", how="left"
     )
 
+    df_sample_annotation["camera_heading"] = df_sample_annotation.apply(
+        lambda x: get_heading(x.rotation) % 360, axis=1
+    )
+    df_sample_data["heading"] = df_sample_data.apply(
+        lambda x: (get_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1
+    )
+
+    df_sample_data_keyframe = df_sample_data[df_sample_data["is_key_frame"]][
+        ["token", "sample_token"]
+    ]
+    df_sample_annotation = df_sample_annotation.set_index("sample_token").join(
+        df_sample_data_keyframe.set_index("sample_token"), on="sample_token", rsuffix="_sample_data"
+    )
+    print(list(df_sample_data.columns))
+
     return df_sample_data, df_sample_annotation
+
+
+def get_heading(q):
+    q = Quaternion(q)
+    v = np.dot(q.rotation_matrix, np.array([1, 0, 0]))
+    yaw = np.arctan2(v[1], v[0])
+    return yaw
