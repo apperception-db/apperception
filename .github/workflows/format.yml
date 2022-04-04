@@ -10,24 +10,39 @@ jobs:
     name: Format and Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
         with:
-          python-version: 3.7
+          python-version: 3.8
 
-      - name: Install dependencies
+      - name: Install Poetry
+        uses: dschep/install-poetry-action@v1.2
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Set Poetry config
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          poetry config settings.virtualenvs.in-project false
+          poetry config settings.virtualenvs.path ~/.virtualenvs
+
+      - name: Install Dependencies
+        run: poetry install
+        if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
         run: |
-          pip install autoflake
-          python -m autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
+          poetry run autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
       
       - name: Fix lint with autopep8
         id: autopep8
@@ -43,8 +58,7 @@ jobs:
       
       - name: Sort imports with isort
         run: |
-          pip install isort
-          python -m isort apperception
+          poetry run isort apperception
       
       - name: Commit linted and formatted changes
         run: |
@@ -56,11 +70,9 @@ jobs:
       - name: Analyze the code with flake8
         if: always()
         run: |
-          pip install flake8
-          python -m flake8 apperception
+          poetry run flake8 apperception
       
       - name: Type Check with mypy
         if: always()
         run: |
-          pip install mypy
-          yes | python -m mypy --install-types apperception ; python -m mypy apperception
+          yes | poetry run mypy --install-types apperception ; poetry run mypy apperception
