@@ -9,8 +9,12 @@ import psycopg2
 
 @dataclass
 class Camera:
-    def __init__(self, id: str):
-        self.id = id
+    def __init__(self, cam_id, point, ratio, video_file, metadata_id, lens):
+        self.cam_id = cam_id 
+        self.ratio = ratio
+        self.video_file = video_file
+        self.metadata_id = metadata_id
+        self.properties = {}
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been
