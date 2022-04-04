@@ -10,7 +10,7 @@ import psycopg2
 @dataclass
 class Camera:
     def __init__(self, cam_id, point, ratio, video_file, metadata_id, lens):
-        self.cam_id = cam_id 
+        self.cam_id = cam_id
         self.ratio = ratio
         self.video_file = video_file
         self.metadata_id = metadata_id
