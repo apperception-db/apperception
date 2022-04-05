@@ -17,6 +17,8 @@ matplotlib = "^3.5.1"
 uncompyle6 = "^3.8.0"
 Pillow = "^9.1.0"
 torch = "^1.11.0"
+opencv-python = "^4.5.5"
+pandas = "^1.4.2"
 
 [tool.poetry.dev-dependencies]
 jupyterlab = "^3.3.2"
@@ -26,6 +28,9 @@ isort = "^5.10.1"
 autopep8 = "^1.6.0"
 flake8 = "^4.0.1"
 mypy = "^0.942"
+types-PyYAML = "^6.0.5"
+types-psycopg2 = "^2.9.9"
+pyright = "^1.1.235"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

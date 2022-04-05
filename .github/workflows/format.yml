@@ -10,41 +10,44 @@ jobs:
     name: Format and Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Set up Python 3.7
-        uses: actions/setup-python@v2
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
         with:
-          python-version: 3.7
+          python-version: 3.8
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-path: ~/virtualenvs
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Dependencies
+        run: poetry install
+        if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
-        run: |
-          pip install autoflake
-          python -m autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
-      
+        run: poetry run autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
+
       - name: Fix lint with autopep8
-        id: autopep8
-        uses: peter-evans/autopep8@v1
-        with:
-          args: apperception
+        run: poetry run autopep8 --recursive --in-place --aggressive --aggressive apperception
         
       - name: Format with black
-        uses: psf/black@stable
-        with:
-          options: --config pyproject.toml
-          src: apperception
+        run: poetry run black --config pyproject.toml apperception
       
       - name: Sort imports with isort
-        run: |
-          pip install isort
-          python -m isort apperception
+        run: poetry run isort apperception
       
       - name: Commit linted and formatted changes
         run: |
@@ -55,12 +58,12 @@ jobs:
       
       - name: Analyze the code with flake8
         if: always()
-        run: |
-          pip install flake8
-          python -m flake8 apperception
+        run: poetry run flake8 apperception
       
       - name: Type Check with mypy
         if: always()
-        run: |
-          pip install mypy
-          yes | python -m mypy --install-types apperception ; python -m mypy apperception
+        run: yes | poetry run mypy --install-types apperception ; poetry run mypy apperception
+      
+      - name: Type Check with pyright
+        if: always()
+        run: poetry run pyright apperception
