@@ -38,24 +38,16 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
-        run: |
-          poetry run autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
-      
+        run: poetry run autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
+
       - name: Fix lint with autopep8
-        id: autopep8
-        uses: peter-evans/autopep8@v1
-        with:
-          args: apperception
+        run: poetry run autopep8 --recursive --in-place --aggressive --aggressive apperception
         
       - name: Format with black
-        uses: psf/black@stable
-        with:
-          options: --config pyproject.toml
-          src: apperception
+        run: poetry run black --config pyproject.toml apperception
       
       - name: Sort imports with isort
-        run: |
-          poetry run isort apperception
+        run: poetry run isort apperception
       
       - name: Commit linted and formatted changes
         run: |
@@ -66,10 +58,8 @@ jobs:
       
       - name: Analyze the code with flake8
         if: always()
-        run: |
-          poetry run flake8 apperception
+        run: poetry run flake8 apperception
       
       - name: Type Check with mypy
         if: always()
-        run: |
-          yes | poetry run mypy --install-types apperception ; poetry run mypy apperception
+        run: yes | poetry run mypy --install-types apperception ; poetry run mypy apperception
