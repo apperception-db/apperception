@@ -142,8 +142,8 @@ def decompile_filter(ast_tree, evaluated_var, view):
             left_comebine_view or right_combine_view,
         )
 
+
 def new_decompile_filter(ast_tree, evaluated_var, view):
-    import astpretty as ap
     print(ast.dump(ast_tree))
     attributes = []
     operations = []
@@ -165,7 +165,9 @@ def new_decompile_filter(ast_tree, evaluated_var, view):
                     left = cmp.left
                     attribute, left_comebine_view = decompile_comparator(left, evaluated_var, view)
                     right = cmp.comparators[0]
-                    comparator, right_combine_view = decompile_comparator(right, evaluated_var, view)
+                    comparator, right_combine_view = decompile_comparator(
+                        right, evaluated_var, view
+                    )
 
                     op = cmp.ops[0]
                     if type(op) in comparator_map:
@@ -222,7 +224,6 @@ def new_decompile_filter(ast_tree, evaluated_var, view):
             cast_types,
             left_comebine_view or right_combine_view,
         )
-
 
 
 def list_to_str(lst):

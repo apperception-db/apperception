@@ -410,8 +410,8 @@ def parse_predicate(query: SnowflakeQuery, f: FunctionType):
         q_str = f"(query.{attr}=={comp})"
         for i in range(len(bool_ops)):
             q_str += " " + bool_ops[i] + " "
-            _, attr = attribute[i+1].split(".")
-            comp = comparator[i+1]
+            _, attr = attribute[i + 1].split(".")
+            comp = comparator[i + 1]
             q_str += f"(query.{attr} == {comp})"
 
         return q_str
