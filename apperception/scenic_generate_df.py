@@ -170,11 +170,13 @@ def scenic_generate_df():
 
     return df_sample_data, df_sample_annotation
 
+
 def get_heading(q):
     q = Quaternion(q)
     v = np.dot(q.rotation_matrix, np.array([1, 0, 0]))
     yaw = np.arctan2(v[1], v[0])
     return yaw
+
 
 if __name__ == "__main__":
     data, anno = scenic_generate_df()
