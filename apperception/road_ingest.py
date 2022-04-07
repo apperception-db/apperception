@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS Segment(
     elementId TEXT,
     startPoint geometry,
     endPoint geometry,
-    heading real
+    heading real,
+    FOREIGN KEY(elementId)
+        REFERENCES Polygon(elementId)
 );
 """
 
@@ -30,14 +32,18 @@ CREATE TABLE IF NOT EXISTS LaneSection(
     fasterLane Text,
     slowerLane Text,
     isForward boolean,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY(id)
+        REFERENCES Polygon(elementId)
 );
 """
 
 CREATE_LANE_SQL = """
 CREATE TABLE IF NOT EXISTS Lane(
     id Text,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY(id)
+        REFERENCES Polygon(elementId)
 );
 """
 
@@ -51,7 +57,9 @@ CREATE TABLE IF NOT EXISTS Lane_LaneSection(
 CREATE_LANEGROUP_SQL = """
 CREATE TABLE IF NOT EXISTS LaneGroup(
     id Text,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY(id)
+        REFERENCES Polygon(elementId)
 );
 """
 
@@ -74,7 +82,9 @@ CREATE TABLE IF NOT EXISTS Road(
     id Text,
     forwardLane Text,
 	backwardLane Text,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    FOREIGN KEY(id)
+        REFERENCES Polygon(elementId)
 );
 """
 
@@ -96,7 +106,9 @@ CREATE_ROADSECTION_SQL = """
 CREATE TABLE IF NOT EXISTS RoadSection(
     id TEXT,
     forwardLanes text[],
-	backwardLanes text[]
+	backwardLanes text[],
+    FOREIGN KEY(id)
+        REFERENCES Polygon(elementId)
 );
 """
 
@@ -111,7 +123,7 @@ CREATE TABLE IF NOT EXISTS RoadSection_LaneSection(
 def create_polygon_table(polygons, drop=True):
     cursor = conn.cursor()
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Polygon")
+        cursor.execute("DROP TABLE IF EXISTS Polygon CASCADE")
     cursor.execute(CREATE_POLYGON_SQL)
     cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON Polygon(elementId);")
 
