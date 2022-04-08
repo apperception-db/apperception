@@ -358,16 +358,17 @@ class World:
             # root
             if node.fn is None:
                 continue
-            # if different type => pass
-            if type not in node.types:
-                continue
-            # treat update method differently
-            elif node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
+
+            if node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
                 print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
                     node._update_log_file()
+            # if different type => pass
+            elif type not in node.types:
+                continue
+            # treat update method differently
             else:
                 print("execute:", node.fn.__name__)
                 # print(query)
