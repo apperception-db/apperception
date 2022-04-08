@@ -76,24 +76,27 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    # def overlay_trajectory(self, cam_id, trajectory):
-    #     matplotlib.use(
-    #         "Qt5Agg"
-    #     )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
-    #     print("get backend", matplotlib.get_backend())
-    #     camera = World.camera_nodes[cam_id]
-    #     video_file = camera.video_file
-    #     for traj in trajectory:
-    #         current_trajectory = np.asarray(traj[0])
-    #         frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-    #         vs = cv2.VideoCapture(video_file)
-    #         frame = vs.read()
-    #         frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-    #         for point in frame_points.tolist():
-    #             cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-    #         plt.figure()
-    #         plt.imshow(frame)
-    #         plt.show()
+    def road_direction(self, x, y):
+        return self.db.get_heading_from_a_point(x, y)
+        
+    def overlay_trajectory(self, cam_id, trajectory):
+        matplotlib.use(
+            "Qt5Agg"
+        )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
+        print("get backend", matplotlib.get_backend())
+        camera = World.camera_nodes[cam_id]
+        video_file = camera.video_file
+        for traj in trajectory:
+            current_trajectory = np.asarray(traj[0])
+            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+            vs = cv2.VideoCapture(video_file)
+            frame = vs.read()
+            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+            for point in frame_points.tolist():
+                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
+            plt.figure()
+            plt.imshow(frame)
+            plt.show()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         camera = self.camera_nodes[cam_id]
