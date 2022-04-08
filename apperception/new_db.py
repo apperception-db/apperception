@@ -389,5 +389,14 @@ class Database:
         fetched_meta = video_fetch_reformat(fetched_meta)
         get_video(fetched_meta, cams, self.start_time, boxed)
 
+    def get_heading_from_a_point(self, x, y):
+        query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"
+        self.cur.execute(query)
+        return self.cur.fetchall()
 
 Database.insert_bbox_traj.comparators = {"annotation": lambda df: df[0].equals(df[1])}
+
+if __name__ == "__main__":
+    x, y = 1317, 1463
+    db = Database()
+    print(db.get_heading_from_a_point(x, y))
