@@ -518,7 +518,8 @@ def fetch_camera(conn, scene_name, frame_num):
     FROM Cameras
     WHERE
         cameraId = '{scene_name}' AND
-        frameNum IN ({",".join(map(str, frame_num))});
+        frameNum IN ({",".join(map(str, frame_num))})
+    ORDER BY cameraId ASC, frameNum ASC;
     """
     print(query)
     cursor.execute(query)

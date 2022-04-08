@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import glob
 import inspect
+import string
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
@@ -19,6 +20,7 @@ import yaml
 from camera import Camera
 from new_db import Database
 from new_util import compile_lambda
+from scenic_util import transformation, fetch_camera
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
@@ -74,24 +76,24 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    def overlay_trajectory(self, cam_id, trajectory):
-        matplotlib.use(
-            "Qt5Agg"
-        )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
-        print("get backend", matplotlib.get_backend())
-        camera = World.camera_nodes[cam_id]
-        video_file = camera.video_file
-        for traj in trajectory:
-            current_trajectory = np.asarray(traj[0])
-            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-            for point in frame_points.tolist():
-                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-            plt.figure()
-            plt.imshow(frame)
-            plt.show()
+    # def overlay_trajectory(self, cam_id, trajectory):
+    #     matplotlib.use(
+    #         "Qt5Agg"
+    #     )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
+    #     print("get backend", matplotlib.get_backend())
+    #     camera = World.camera_nodes[cam_id]
+    #     video_file = camera.video_file
+    #     for traj in trajectory:
+    #         current_trajectory = np.asarray(traj[0])
+    #         frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+    #         vs = cv2.VideoCapture(video_file)
+    #         frame = vs.read()
+    #         frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+    #         for point in frame_points.tolist():
+    #             cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
+    #         plt.figure()
+    #         plt.imshow(frame)
+    #         plt.show()
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         camera = self.camera_nodes[cam_id]
@@ -130,6 +132,120 @@ class World:
         return BASE_VOLUME_QUERY_TEXT.format(
             x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
         )
+
+    def overlay_trajectory(self, scene_name: string, trajectory, object_id: string):
+        frame_num = self.trajectory_to_frame_num(trajectory)
+        # frame_num is int[[]], hence camera_info should also be [[]]
+        camera_info = [] # camera_info is a list of mappings from frameNum to list of cameras
+        for index, cur_frame_num in enumerate(frame_num):
+            current_cameras = self.db.fetch_camera(scene_name, cur_frame_num)
+            camera_info.append({})
+            for x in current_cameras:
+                if x[6] in camera_info[index]:
+                    camera_info[index][x[6]].append(x)
+                else:
+                    camera_info[index][x[6]] = [x]
+        camera_info = [[x[y] for y in sorted(x)] for x in camera_info] # [x.values() for x in sorted(camera_info, key=lambda x: x[6])]
+        
+        # assert len(camera_info) == len(frame_num)
+        # assert len(camera_info[0]) == len(frame_num[0])
+        # print(camera_info, np.asarray(camera_info).shape) # (1, 30, 8)
+        # print(trajectory, np.asarray(trajectory).shape) # (1, 1)
+        overlay_info = self.get_overlay_info(trajectory, camera_info)
+        # TODO: fix the following to overlay the 2d point onto the frame
+        results = []
+        frame_width = None
+        frame_height = None
+        for i, traj in enumerate(overlay_info):
+            results.append({})
+            for frame_num in traj:
+                for frame in frame_num:
+                    if frame_width == None:
+                        frame_im = cv2.imread(frame[2])
+                        frame_height, frame_width = frame_im.shape[:2]
+                    file_suffix = "/".join(frame[2].split("/")[:-1])
+                    if file_suffix in results[i]:
+                        results[i][file_suffix].append(frame)
+                    else:
+                        results[i][file_suffix] = [frame]
+
+        for i in range(len(results)):
+            for file_suffix in results[i]:
+                vid_writer = cv2.VideoWriter(
+                    "./output/" + object_id + "".join(file_suffix.split("/")) + ".mp4", cv2.VideoWriter_fourcc("m", "p", "4", "v"), 10, (frame_width, frame_height)
+                )
+                for frame in results[i][file_suffix]:
+                    frame_im = cv2.imread(frame[2])  
+                    cv2.circle(frame_im, tuple([int(frame[0][0][0]), int(frame[0][1][0])]), 10, (0, 255, 0), -1)
+                    vid_writer.write(frame_im)
+                vid_writer.release()
+
+    def trajectory_to_frame_num(self, trajectory):
+        """
+        fetch the frame number from the trajectory
+        1. get the time stamp field from the trajectory
+        2. convert the time stamp to frame number
+            Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
+        3. return the frame number
+        """
+        frame_num = []
+        start_time = self.db.start_time
+        for traj in trajectory:
+            current_trajectory = traj[0]
+            date_times = current_trajectory["datetimes"]
+            frame_num.append(
+                [
+                    (
+                        datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo=None)
+                        - start_time
+                    ).total_seconds()
+                    for t in date_times
+                ]
+            )
+        return frame_num
+
+    def get_overlay_info(self, trajectory, camera_info):
+        """
+        overlay each trajectory 3d coordinate on to the frame specified by the camera_info
+        1. for each trajectory, get the 3d coordinate
+        2. get the camera_info associated to it
+        3. implement the transformation function from 3d to 2d
+            given the single centroid point and camera configuration
+            refer to TODO in "senic_utils.py"
+        4. return a list of (2d coordinate, frame name/filename)
+        """
+        result = []
+        for traj_num in range(len(trajectory)):
+            traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
+            traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
+            camera_info_objs = camera_info[
+                traj_num
+            ]  # camera info list corresponding the 3d coordinate
+            traj_obj_2d = []  # 2d coordinate list
+            for index in range(len(camera_info_objs)):
+                cur_camera_infos = camera_info_objs[
+                    index
+                ]  # camera info of the obejct in one point of the trajectory
+                centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
+                # in order to fit into the function transformation, we develop a dictionary called camera_config
+                frame_traj_obj_2d = []
+                for cur_camera_info in cur_camera_infos:
+                    camera_config = {}
+                    camera_config["egoTranslation"] = cur_camera_info[1]
+                    camera_config["egoRotation"] = np.array(cur_camera_info[2])
+                    camera_config["cameraTranslation"] = cur_camera_info[3]
+                    camera_config["cameraRotation"] = np.array(cur_camera_info[4])
+                    camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
+                    traj_2d = transformation(
+                        centroid_3d, camera_config
+                    )  # one point of the trajectory in 2d
+
+                    framenum = cur_camera_info[6]
+                    filename = cur_camera_info[7]
+                    frame_traj_obj_2d.append((traj_2d, framenum, filename))
+                traj_obj_2d.append(frame_traj_obj_2d)
+            result.append(traj_obj_2d)
+        return result
 
     def recognize(self, camera: Camera, annotation):
         node1 = self._insert_bbox_traj(camera=camera, annotation=annotation)

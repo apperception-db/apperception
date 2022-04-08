@@ -1,4 +1,5 @@
 import datetime
+import string
 from typing import Tuple
 
 import psycopg2
@@ -9,6 +10,7 @@ from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
+from scenic_util import fetch_camera as su_fetch_camera
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -199,6 +201,9 @@ class Database:
 
         self.cur.execute(q)
         return self.cur.fetchall()
+
+    def fetch_camera(self, scene_name: string, frame_num: int):
+        return su_fetch_camera(self.con, scene_name, frame_num)
 
     def get_len(self, query: Query):
         """
