@@ -22,7 +22,9 @@ class CameraConfig:
 def fetch_camera_config(scene_name: str, sample_data):
     all_frames = sample_data[
         (sample_data["scene_name"] == scene_name)
-            & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False)) # temporary while debugging
+        & (
+            sample_data["filename"].str.contains("/CAM_FRONT/", regex=False)
+        )  # temporary while debugging
     ].sort_values(by="frame_order")
 
     return [
