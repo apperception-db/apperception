@@ -7,10 +7,10 @@ from camera import Camera
 from new_util import (add_recognized_objs, get_video, recognize,
                       video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
-from pypika.functions import Cast
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
+from pypika.functions import Cast
 from scenic_util import fetch_camera as su_fetch_camera
 
 CAMERA_TABLE = "Cameras"
@@ -338,10 +338,34 @@ class Database:
             .cross()
             .select(query.star)
             .distinct()
-            .where(x_range[0] <= (ST_X(ST_Centroid(cameras.egoTranslation)) - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
-            .where((ST_X(ST_Centroid(cameras.egoTranslation)) - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= x_range[1])
-            .where(y_range[0] <= (ST_Y(ST_Centroid(cameras.egoTranslation)) - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
-            .where((ST_Y(ST_Centroid(cameras.egoTranslation)) - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= y_range[1])
+            .where(
+                x_range[0]
+                <= (
+                    ST_X(ST_Centroid(cameras.egoTranslation))
+                    - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+            )
+            .where(
+                (
+                    ST_X(ST_Centroid(cameras.egoTranslation))
+                    - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+                <= x_range[1]
+            )
+            .where(
+                y_range[0]
+                <= (
+                    ST_Y(ST_Centroid(cameras.egoTranslation))
+                    - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+            )
+            .where(
+                (
+                    ST_Y(ST_Centroid(cameras.egoTranslation))
+                    - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+                <= y_range[1]
+            )
             # .where(z_range[0] <= (ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
             # .where((ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= z_range[1])
         )

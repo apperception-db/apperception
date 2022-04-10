@@ -20,9 +20,9 @@ class CameraConfig:
 
 
 def fetch_camera_config(scene_name: str, sample_data):
-    all_frames = sample_data[
-        (sample_data["scene_name"] == scene_name)
-    ].sort_values(by="frame_order")
+    all_frames = sample_data[(sample_data["scene_name"] == scene_name)].sort_values(
+        by="frame_order"
+    )
 
     return [
         CameraConfig(
