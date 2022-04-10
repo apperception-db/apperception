@@ -1,4 +1,5 @@
 import datetime
+import string
 from typing import Tuple
 
 import psycopg2
@@ -9,6 +10,8 @@ from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
+from pypika.functions import Cast
+from scenic_util import fetch_camera as su_fetch_camera
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -200,6 +203,9 @@ class Database:
         self.cur.execute(q)
         return self.cur.fetchall()
 
+    def fetch_camera(self, scene_name: string, frame_num: int):
+        return su_fetch_camera(self.con, scene_name, frame_num)
+
     def get_len(self, query: Query):
         """
         Execute sql command rapidly
@@ -315,6 +321,7 @@ class Database:
         type: str,
     ):
         # TODO: Make also work with objects of other types
+        # TODO: Fix Up Local Coordinate Frame Stuff
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
         getY = CustomFunction("getX", ["tgeompoint"])
@@ -323,19 +330,54 @@ class Database:
         ST_X = CustomFunction("ST_X", ["geometry"])
         ST_Y = CustomFunction("ST_Y", ["geometry"])
         ST_Z = CustomFunction("ST_Z", ["geometry"])
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+
         q = (
             SnowflakeQuery.from_(query)
             .join(cameras)
             .cross()
             .select(query.star)
             .distinct()
-            .where(x_range[0] <= (ST_X(cameras.egoTranslation) - getX(query.trajCentroids)))
-            .where((ST_X(cameras.egoTranslation) - getX(query.trajCentroids)) <= x_range[1])
-            .where(y_range[0] <= (ST_Y(cameras.egoTranslation) - getY(query.trajCentroids)))
-            .where((ST_Y(cameras.egoTranslation) - getY(query.trajCentroids)) <= y_range[1])
-            .where(z_range[0] <= (ST_Z(cameras.egoTranslation) - getZ(query.trajCentroids)))
-            .where((ST_Z(cameras.egoTranslation) - getZ(query.trajCentroids)) <= z_range[1])
+            .where(
+                x_range[0]
+                <= (
+                    ST_X(ST_Centroid(cameras.egoTranslation))
+                    - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+            )
+            .where(
+                (
+                    ST_X(ST_Centroid(cameras.egoTranslation))
+                    - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+                <= x_range[1]
+            )
+            .where(
+                y_range[0]
+                <= (
+                    ST_Y(ST_Centroid(cameras.egoTranslation))
+                    - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+            )
+            .where(
+                (
+                    ST_Y(ST_Centroid(cameras.egoTranslation))
+                    - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))
+                )
+                <= y_range[1]
+            )
+            # .where(z_range[0] <= (ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
+            # .where((ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= z_range[1])
         )
+
+        # q2 = (
+        #     SnowflakeQuery.from_(query)
+        #     .join(cameras)
+        #     .cross()
+        #     .select(ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry"))), (ST_Y(ST_Centroid(cameras.egoTranslation)) - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
+        # )
+        # self.cur.execute(q2.get_sql())
+        # [print(x) for x in self.cur.fetchall()]
         # print(str(q))
         return q
 
