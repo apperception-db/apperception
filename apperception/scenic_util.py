@@ -454,10 +454,12 @@ def insert_general_trajectory(
     conn.commit()
 
 
-def transformation(centroid_3d, camera_config):
+def transformation(copy_centroid_3d, camera_config):
     """
     TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
     """
+    centroid_3d = np.copy(copy_centroid_3d)
+                
     centroid_3d -= camera_config["egoTranslation"]
     centroid_3d = np.dot(
         Quaternion(camera_config["egoRotation"]).inverse.rotation_matrix, centroid_3d
@@ -521,7 +523,7 @@ def fetch_camera(conn, scene_name, frame_num):
         frameNum IN ({",".join(map(str, frame_num))})
     ORDER BY cameraId ASC, frameNum ASC;
     """
-    print(query)
+    # print(query)
     cursor.execute(query)
     return cursor.fetchall()
 

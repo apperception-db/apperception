@@ -163,7 +163,7 @@ class World:
                     if frame_width == None:
                         frame_im = cv2.imread(frame[2])
                         frame_height, frame_width = frame_im.shape[:2]
-                    file_suffix = "/".join(frame[2].split("/")[:-1])
+                    file_suffix = frame[2].split("/")[1]
                     if file_suffix in results[i]:
                         results[i][file_suffix].append(frame)
                     else:
@@ -172,7 +172,7 @@ class World:
         for i in range(len(results)):
             for file_suffix in results[i]:
                 vid_writer = cv2.VideoWriter(
-                    "./output/" + object_id + "".join(file_suffix.split("/")) + ".mp4", cv2.VideoWriter_fourcc("m", "p", "4", "v"), 10, (frame_width, frame_height)
+                    "./output/" + object_id + "." + file_suffix + ".mp4", cv2.VideoWriter_fourcc("m", "p", "4", "v"), 30, (frame_width, frame_height)
                 )
                 for frame in results[i][file_suffix]:
                     frame_im = cv2.imread(frame[2])  
@@ -239,7 +239,6 @@ class World:
                     traj_2d = transformation(
                         centroid_3d, camera_config
                     )  # one point of the trajectory in 2d
-
                     framenum = cur_camera_info[6]
                     filename = cur_camera_info[7]
                     frame_traj_obj_2d.append((traj_2d, framenum, filename))
