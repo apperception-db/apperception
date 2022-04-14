@@ -78,7 +78,7 @@ class World:
 
     def road_direction(self, x, y):
         return self.db.get_heading_from_a_point(x, y)
-        
+
     def overlay_trajectory(self, cam_id, trajectory):
         matplotlib.use(
             "Qt5Agg"
