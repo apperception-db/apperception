@@ -25,8 +25,4 @@ jobs:
           python -m jupyter nbconvert --clear-output --inplace benchmarks/*.ipynb
       
       - name: Commit linted and formatted changes
-        run: |
-          git config --global user.name 'Github Actions Bot'
-          git config --global user.email 'apperception-actions-bot@users.noreply.github.com'
-          git commit -am "Automated ipynb cleanup"
-          git push
+        run: ./scripts/commit-and-push.sh "[CI] cleanup python notebooks"
