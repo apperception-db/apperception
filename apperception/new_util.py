@@ -1,6 +1,7 @@
 import ast
 import datetime
 import os
+from types import FunctionType
 from typing import Dict, List, Tuple
 
 import lens
@@ -9,6 +10,7 @@ import point
 import uncompyle6
 from box import Box
 from camera_config import CameraConfig
+from pypika.dialects import SnowflakeQuery
 from pyquaternion import Quaternion
 from scenic_util import bbox_to_data3d, convert_timestamps, join
 from tracked_object import TrackedObject
@@ -383,3 +385,33 @@ def insert_general_trajectory(
 
     # Commit your changes in the database
     conn.commit()
+
+
+def parse_predicate(query: SnowflakeQuery, f: FunctionType):
+    import metadata_context
+
+    pred = metadata_context.Predicate(f)
+    pred.new_decompile()
+
+    attribute, operation, comparator, bool_ops, cast_types = pred.get_compile()
+
+    if len(bool_ops) == 0:
+        table, attr = attribute[0].split(".")
+        comp = comparator[0]
+
+        return f"query.{attr}=={comp}"  # query.objectType == xxx
+
+    else:
+        assert len(bool_ops) + 1 == len(attribute)
+        # import pdb; pdb.set_trace()
+        table, attr = attribute[0].split(".")
+        comp = comparator[0]
+
+        q_str = f"(query.{attr}=={comp})"
+        for i in range(len(bool_ops)):
+            q_str += " " + bool_ops[i] + " "
+            _, attr = attribute[i + 1].split(".")
+            comp = comparator[i + 1]
+            q_str += f"(query.{attr} == {comp})"
+
+        return q_str
