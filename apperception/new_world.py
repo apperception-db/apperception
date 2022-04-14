@@ -20,9 +20,11 @@ from camera import Camera
 from new_db import Database
 from new_util import compile_lambda
 from scenic_util import transformation
+from pypika.dialects import SnowflakeQuery
+from pypika import Table
 
-matplotlib.use("Qt5Agg")
-print("get backend", matplotlib.get_backend())
+# matplotlib.use("Qt5Agg")
+# print("get backend", matplotlib.get_backend())
 
 makedirs("./.apperception_cache", exist_ok=True)
 
@@ -472,6 +474,21 @@ class World:
         curr: Optional[World] = self
         res = None
         query = ""
+
+        if type is Type.CAM:
+            query = (SnowflakeQuery
+                        .from_(Table("cameras"))
+                        .select("*"))
+        elif type is Type.BBOX:
+            query = (SnowflakeQuery
+                        .from_(Table("general_bbox"))
+                        .select("*"))
+        elif type is Type.TRAJ:
+            query = (SnowflakeQuery
+                        .from_(Table("item_general_trajectory"))
+                        .select("*"))
+        else:
+            query = ""
 
         # collect all the nodes til the root
         while curr:
