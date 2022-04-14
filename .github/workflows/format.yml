@@ -50,11 +50,7 @@ jobs:
         run: poetry run isort apperception
       
       - name: Commit linted and formatted changes
-        run: |
-          git config --global user.name 'Github Actions Bot'
-          git config --global user.email 'apperception-actions-bot@users.noreply.github.com'
-          git commit -am "Automated lint and format fixes"
-          git push
+        run: ./scripts/commit-and-push.sh "[CI] format"
       
       - name: Analyze the code with flake8
         if: always()
