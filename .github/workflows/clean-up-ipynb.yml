@@ -21,7 +21,7 @@ jobs:
 
       - name: Cleanup ipynb output
         run: |
-          pip install notebook
+          pip install nbconvert
           python -m jupyter nbconvert --clear-output --inplace benchmarks/*.ipynb
       
       - name: Commit linted and formatted changes
