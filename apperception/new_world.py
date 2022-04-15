@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
 import dill as pickle
+import matplotlib
 import numpy as np
 import yaml
 from camera import Camera
