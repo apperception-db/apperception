@@ -390,7 +390,11 @@ class Database:
         get_video(fetched_meta, cams, self.start_time, boxed)
 
     def get_heading_from_a_point(self, x, y):
-        query = f"select heading from segment, st_point({x}, {y}) as point, st_distance(st_makeline(startPoint, endPoint), point) as dis order by dis limit 1;"
+        query = f"""
+            select heading from segment, st_point({x}, {y}) as point, st_distance(st_makeline(startPoint, endPoint), point) as dis
+            order by dis asc
+            limit 1;
+        """
         self.cur.execute(query)
         return self.cur.fetchall()
 
