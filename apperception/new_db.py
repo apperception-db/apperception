@@ -398,6 +398,7 @@ class Database:
         self.cur.execute(query)
         return self.cur.fetchall()
 
+
 Database.insert_bbox_traj.comparators = {"annotation": lambda df: df[0].equals(df[1])}
 
 if __name__ == "__main__":
