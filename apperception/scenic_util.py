@@ -4,9 +4,9 @@ import os
 from typing import Iterable, List, Tuple
 
 import numpy as np
+import pandas as pd
 from box import Box
 from pyquaternion import Quaternion
-import pandas as pd
 
 CREATE_ITEMTRAJ_SQL = """
 CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
@@ -587,13 +587,13 @@ def import_tables(conn):
 
     # Current Version:
     # Import CSV
-    data_Cameras = pd.read_csv (r"test_camera.csv")   
+    data_Cameras = pd.read_csv(r"test_camera.csv")
     df_Cameras = pd.DataFrame(data_Cameras)
 
-    data_Item_General_Trajectory = pd.read_csv (r"test_trajectory.csv")   
+    data_Item_General_Trajectory = pd.read_csv(r"test_trajectory.csv")
     df_Item_General_Trajectory = pd.DataFrame(data_Item_General_Trajectory)
 
-    data_General_Bbox = pd.read_csv (r"test_bbox.csv")   
+    data_General_Bbox = pd.read_csv(r"test_bbox.csv")
     df_General_Bbox = pd.DataFrame(data_General_Bbox)
 
     # Connect to SQL Server
@@ -604,7 +604,8 @@ def import_tables(conn):
     cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
     cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
 
-    cursor.execute('''
+    cursor.execute(
+        """
 		    CREATE TABLE Cameras (
 			    cameraId TEXT,
                 frameId TEXT,
@@ -618,9 +619,11 @@ def import_tables(conn):
                 timestamp TEXT,
                 heading real
 			    )
-    ''')
+    """
+    )
 
-    cursor.execute('''
+    cursor.execute(
+        """
 		    CREATE TABLE Item_General_Trajectory (
 			    itemId TEXT,
                 cameraId TEXT,
@@ -631,9 +634,11 @@ def import_tables(conn):
                 itemHeadings real[],
                 PRIMARY KEY (itemId)
 			    )
-    ''')
+    """
+    )
 
-    cursor.execute('''
+    cursor.execute(
+        """
 		    CREATE TABLE General_Bbox (
 			    itemId TEXT,
                 cameraId TEXT,
@@ -641,36 +646,39 @@ def import_tables(conn):
                 FOREIGN KEY(itemId)
                     REFERENCES Item_General_Trajectory(itemId)
 			    )
-    ''')
+    """
+    )
 
     # Insert DataFrame to Table
     # for i,row in irisData.iterrows():
     #         sql = "INSERT INTO irisdb.iris VALUES (%s,%s,%s,%s,%s)"
     #         cursor.execute(sql, tuple(row))
     for i, row in df_Cameras.iterrows():
-        cursor.execute('''
+        cursor.execute(
+            """
                     INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                    ''',
-                    tuple(row)
-                    )
-    
+                    """,
+            tuple(row),
+        )
+
     for i, row in df_Item_General_Trajectory.iterrows():
-        cursor.execute('''
+        cursor.execute(
+            """
                     INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, color, trajCentroids, largestBbox, itemHeadings)
                     VALUES (%s,%s,%s,%s,%s,%s,%s)
-                    ''',
-                    tuple(row)
-                    )
-    
+                    """,
+            tuple(row),
+        )
+
     for i, row in df_General_Bbox.iterrows():
-        cursor.execute('''
+        cursor.execute(
+            """
                     INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
                     VALUES (%s,%s,%s)
-                    ''',
-                    tuple(row)
-                    )
-
+                    """,
+            tuple(row),
+        )
 
     conn.commit()
 
