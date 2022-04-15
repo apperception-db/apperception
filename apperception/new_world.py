@@ -14,13 +14,12 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import cv2
 import dill as pickle
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from camera import Camera
 from new_db import Database
 from new_util import compile_lambda
-from scenic_util import transformation, fetch_camera
+from scenic_util import transformation
 
 matplotlib.use("Qt5Agg")
 print("get backend", matplotlib.get_backend())
@@ -136,7 +135,7 @@ class World:
     def overlay_trajectory(self, scene_name: string, trajectory, object_id: string):
         frame_num = self.trajectory_to_frame_num(trajectory)
         # frame_num is int[[]], hence camera_info should also be [[]]
-        camera_info = [] # camera_info is a list of mappings from frameNum to list of cameras
+        camera_info = []  # camera_info is a list of mappings from frameNum to list of cameras
         for index, cur_frame_num in enumerate(frame_num):
             current_cameras = self.db.fetch_camera(scene_name, cur_frame_num)
             camera_info.append({})
@@ -145,8 +144,10 @@ class World:
                     camera_info[index][x[6]].append(x)
                 else:
                     camera_info[index][x[6]] = [x]
-        camera_info = [[x[y] for y in sorted(x)] for x in camera_info] # [x.values() for x in sorted(camera_info, key=lambda x: x[6])]
-        
+        camera_info = [
+            [x[y] for y in sorted(x)] for x in camera_info
+        ]  # [x.values() for x in sorted(camera_info, key=lambda x: x[6])]
+
         # assert len(camera_info) == len(frame_num)
         # assert len(camera_info[0]) == len(frame_num[0])
         # print(camera_info, np.asarray(camera_info).shape) # (1, 30, 8)
@@ -160,7 +161,7 @@ class World:
             results.append({})
             for frame_num in traj:
                 for frame in frame_num:
-                    if frame_width == None:
+                    if frame_width is None:
                         frame_im = cv2.imread(frame[2])
                         frame_height, frame_width = frame_im.shape[:2]
                     file_suffix = frame[2].split("/")[1]
@@ -172,11 +173,20 @@ class World:
         for i in range(len(results)):
             for file_suffix in results[i]:
                 vid_writer = cv2.VideoWriter(
-                    "./output/" + object_id + "." + file_suffix + ".mp4", cv2.VideoWriter_fourcc("m", "p", "4", "v"), 30, (frame_width, frame_height)
+                    "./output/" + object_id + "." + file_suffix + ".mp4",
+                    cv2.VideoWriter_fourcc("m", "p", "4", "v"),
+                    30,
+                    (frame_width, frame_height),
                 )
                 for frame in results[i][file_suffix]:
-                    frame_im = cv2.imread(frame[2])  
-                    cv2.circle(frame_im, tuple([int(frame[0][0][0]), int(frame[0][1][0])]), 10, (0, 255, 0), -1)
+                    frame_im = cv2.imread(frame[2])
+                    cv2.circle(
+                        frame_im,
+                        tuple([int(frame[0][0][0]), int(frame[0][1][0])]),
+                        10,
+                        (0, 255, 0),
+                        -1,
+                    )
                     vid_writer.write(frame_im)
                 vid_writer.release()
 

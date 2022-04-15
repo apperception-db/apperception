@@ -7,10 +7,10 @@ from camera import Camera
 from new_util import (add_recognized_objs, get_video, recognize,
                       video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
-from pypika.functions import Cast
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
+from pypika.functions import Cast
 from scenic_util import fetch_camera as su_fetch_camera
 
 CAMERA_TABLE = "Cameras"
@@ -245,13 +245,13 @@ class Database:
             + f" FROM ({query.get_sql()}) as final"
         )
 
-        print("get_traj") # print("get_traj", query)
+        print("get_traj")  # print("get_traj", query)
         self.cur.execute(query)
         return self.cur.fetchall()
 
     def get_traj_key(self, query: Query):
         q = SnowflakeQuery.from_(query).select("itemid")
-        print("get_traj_key") # print("get_traj_key", q.get_sql())
+        print("get_traj_key")  # print("get_traj_key", q.get_sql())
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
@@ -336,10 +336,16 @@ class Database:
         ATAN2 = CustomFunction("ATAN2", ["number", "number"])
         POWER = CustomFunction("POWER", ["number", "number"])
         PI = CustomFunction("PI", [])
-        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum*Cast("1 second", "interval")
+        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
+            "1 second", "interval"
+        )
 
-        subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(ST_Centroid(cameras.egoTranslation))
-        subtract_y = valueAtTimestamp(getY(query.trajCentroids), camera_time) - ST_Y(ST_Centroid(cameras.egoTranslation))
+        subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_y = valueAtTimestamp(getY(query.trajCentroids), camera_time) - ST_Y(
+            ST_Centroid(cameras.egoTranslation)
+        )
         subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
         q = (
             SnowflakeQuery.from_(query)
@@ -347,10 +353,26 @@ class Database:
             .cross()
             .select(query.star)
             .distinct()
-	        .where(x_range[0] <= (subtract_mag * COS(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))))
-            .where((subtract_mag * COS(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))) <= x_range[1])
-            .where(y_range[0] <= (subtract_mag * SIN(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))))
-            .where((subtract_mag * SIN(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))) <= y_range[1])
+            .where(
+                x_range[0]
+                <= (
+                    subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                )
+            )
+            .where(
+                (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                <= x_range[1]
+            )
+            .where(
+                y_range[0]
+                <= (
+                    subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                )
+            )
+            .where(
+                (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                <= y_range[1]
+            )
         )
 
         # q2 = (
