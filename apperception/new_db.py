@@ -324,37 +324,47 @@ class Database:
         # TODO: Fix Up Local Coordinate Frame Stuff
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
-        getY = CustomFunction("getX", ["tgeompoint"])
-        getZ = CustomFunction("getX", ["tgeompoint"])
+        getY = CustomFunction("getY", ["tgeompoint"])
+        valueAtTimestamp = CustomFunction("valueAtTimestamp", ["tfloat", "timestamptz"])
 
         ST_X = CustomFunction("ST_X", ["geometry"])
         ST_Y = CustomFunction("ST_Y", ["geometry"])
-        ST_Z = CustomFunction("ST_Z", ["geometry"])
         ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+        SQRT = CustomFunction("SQRT", ["number"])
+        COS = CustomFunction("COS", ["number"])
+        SIN = CustomFunction("SIN", ["number"])
+        ATAN = CustomFunction("ATAN", ["number"])
+        POWER = CustomFunction("POWER", ["number", "number"])
+        PI = CustomFunction("PI", [])
+        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum*Cast("1 second", "interval")
 
+        subtract_x = ST_X(ST_Centroid(cameras.egoTranslation)) - valueAtTimestamp(getX(query.trajCentroids), camera_time)
+        subtract_y = ST_Y(ST_Centroid(cameras.egoTranslation)) - valueAtTimestamp(getY(query.trajCentroids), camera_time)
+        subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
         q = (
             SnowflakeQuery.from_(query)
             .join(cameras)
             .cross()
             .select(query.star)
             .distinct()
-            .where(x_range[0] <= (ST_X(ST_Centroid(cameras.egoTranslation)) - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
-            .where((ST_X(ST_Centroid(cameras.egoTranslation)) - ST_X(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= x_range[1])
-            .where(y_range[0] <= (ST_Y(ST_Centroid(cameras.egoTranslation)) - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
-            .where((ST_Y(ST_Centroid(cameras.egoTranslation)) - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= y_range[1])
-            # .where(z_range[0] <= (ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
-            # .where((ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry")))) <= z_range[1])
+	        .where(x_range[0] <= (subtract_mag * COS(PI()*cameras.heading/180 + ATAN(subtract_y / subtract_x))))
+            .where((subtract_mag * COS(PI()*cameras.heading/180 + ATAN(subtract_y / subtract_x))) <= x_range[1])
+            .where(y_range[0] <= (subtract_mag * SIN(PI()*cameras.heading/180 + ATAN(subtract_y / subtract_x))))
+            .where((subtract_mag * SIN(PI()*cameras.heading/180 + ATAN(subtract_y / subtract_x))) <= y_range[1])
         )
 
         # q2 = (
         #     SnowflakeQuery.from_(query)
         #     .join(cameras)
         #     .cross()
-        #     .select(ST_Z(ST_Centroid(cameras.egoTranslation)) - ST_Z(ST_Centroid(Cast(query.trajCentroids, "geometry"))), (ST_Y(ST_Centroid(cameras.egoTranslation)) - ST_Y(ST_Centroid(Cast(query.trajCentroids, "geometry")))))
+        #     .select(query.itemId, camera_time, ST_X(ST_Centroid(cameras.egoTranslation)), valueAtTimestamp(getX(query.trajCentroids), camera_time), 
+        #                                        ST_Y(ST_Centroid(cameras.egoTranslation)), valueAtTimestamp(getY(query.trajCentroids), camera_time))
+        #     .where(query.itemId == "c1958768d48640948f6053d04cffd35b")
         # )
         # self.cur.execute(q2.get_sql())
         # [print(x) for x in self.cur.fetchall()]
         # print(str(q))
+
         return q
 
     def filter_traj_volume(self, query: Query, volume: str):
