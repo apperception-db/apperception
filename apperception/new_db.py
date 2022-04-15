@@ -1,11 +1,12 @@
 import datetime
 import string
+from types import FunctionType
 from typing import Tuple
 
 import psycopg2
 from camera import Camera
-from new_util import (add_recognized_objs, get_video, recognize,
-                      video_fetch_reformat)
+from new_util import (add_recognized_objs, get_video, parse_predicate,
+                      recognize, video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
@@ -187,6 +188,10 @@ class Database:
         """
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
+    def predicate(self, query: Query, func: FunctionType):
+        condition = parse_predicate(query, func)
+        return SnowflakeQuery.from_(query).select("*").where(eval(condition))
+
     def get_cam(self, query: Query):
         """
         Execute sql command rapidly
@@ -347,6 +352,9 @@ class Database:
             ST_Centroid(cameras.egoTranslation)
         )
         subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
+        ST_Z = CustomFunction("ST_Z", ["geometry"])
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+
         q = (
             SnowflakeQuery.from_(query)
             .join(cameras)
@@ -434,5 +442,15 @@ class Database:
         fetched_meta = video_fetch_reformat(fetched_meta)
         get_video(fetched_meta, cams, self.start_time, boxed)
 
+    def get_heading_from_a_point(self, x, y):
+        query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"
+        self.cur.execute(query)
+        return self.cur.fetchall()
+
 
 Database.insert_bbox_traj.comparators = {"annotation": lambda df: df[0].equals(df[1])}
+
+if __name__ == "__main__":
+    x, y = 1317, 1463
+    db = Database()
+    print(db.get_heading_from_a_point(x, y))

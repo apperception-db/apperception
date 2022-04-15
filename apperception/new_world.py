@@ -19,10 +19,12 @@ import yaml
 from camera import Camera
 from new_db import Database
 from new_util import compile_lambda
+from pypika import Table
+from pypika.dialects import SnowflakeQuery
 from scenic_util import transformation
 
-matplotlib.use("Qt5Agg")
-print("get backend", matplotlib.get_backend())
+# matplotlib.use("Qt5Agg")
+# print("get backend", matplotlib.get_backend())
 
 makedirs("./.apperception_cache", exist_ok=True)
 
@@ -75,25 +77,28 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    # def overlay_trajectory(self, cam_id, trajectory):
-    #     matplotlib.use(
-    #         "Qt5Agg"
-    #     )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
-    #     print("get backend", matplotlib.get_backend())
-    #     camera = World.camera_nodes[cam_id]
-    #     video_file = camera.video_file
-    #     for traj in trajectory:
-    #         current_trajectory = np.asarray(traj[0])
-    #         frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-    #         vs = cv2.VideoCapture(video_file)
-    #         frame = vs.read()
-    #         frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-    #         for point in frame_points.tolist():
-    #             cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-    #         plt.figure()
-    #         plt.imshow(frame)
-    #         plt.show()
+    def road_direction(self, x, y):
+        return self.db.get_heading_from_a_point(x, y)
 
+    def overlay_trajectory(self, cam_id, trajectory):
+        matplotlib.use(
+            "Qt5Agg"
+        )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
+        print("get backend", matplotlib.get_backend())
+        camera = World.camera_nodes[cam_id]
+        video_file = camera.video_file
+        for traj in trajectory:
+            current_trajectory = np.asarray(traj[0])
+            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+            vs = cv2.VideoCapture(video_file)
+            frame = vs.read()
+            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+            for point in frame_points.tolist():
+                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
+            plt.figure()
+            plt.imshow(frame)
+            plt.show()
+            
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         camera = self.camera_nodes[cam_id]
         video_file = camera.video_file
@@ -400,12 +405,13 @@ class World:
         # TODO: Should we add this to DB instead of the global object?
         self.camera_nodes[cam_id].add_property(properties, property_type, new_prop)
 
-    def predicate(self, condition: str):
+    def predicate(self, func: Function):
+
         return derive_world(
             self,
-            {Type.CAM},
-            self.db.filter_cam,
-            condition=condition,
+            {Type.TRAJ, Type.BBOX},
+            self.db.predicate,
+            func=func,
         )
 
     def get_len(self):
@@ -473,6 +479,15 @@ class World:
         res = None
         query = ""
 
+        if type is Type.CAM:
+            query = SnowflakeQuery.from_(Table("cameras")).select("*")
+        elif type is Type.BBOX:
+            query = SnowflakeQuery.from_(Table("general_bbox")).select("*")
+        elif type is Type.TRAJ:
+            query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
+        else:
+            query = ""
+
         # collect all the nodes til the root
         while curr:
             nodes.append(curr)
@@ -483,16 +498,17 @@ class World:
             # root
             if node.fn is None:
                 continue
-            # if different type => pass
-            if type not in node.types:
-                continue
-            # treat update method differently
-            elif node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
+
+            if node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
                 print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
                     node._update_log_file()
+            # if different type => pass
+            elif type not in node.types:
+                continue
+            # treat update method differently
             else:
                 print("execute:", node.fn.__name__)
                 # print(query)
