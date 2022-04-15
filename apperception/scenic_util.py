@@ -6,6 +6,7 @@ from typing import Iterable, List, Tuple
 import numpy as np
 from box import Box
 from pyquaternion import Quaternion
+import pandas as pd
 
 CREATE_ITEMTRAJ_SQL = """
 CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
@@ -566,20 +567,110 @@ def export_tables(conn):
 
 
 def import_tables(conn):
-    cur = conn.cursor()
-    cur.execute(CREATE_CAMERA_SQL)
-    cur.execute(CREATE_ITEMTRAJ_SQL)
-    cur.execute(CREATE_BBOXES_SQL)
-    conn.commit()
-    with open("test_camera.csv", "r") as camera_f:
-        cur.copy_expert(file=camera_f, sql="COPY Cameras FROM STDIN CSV HEADER DELIMITER as ','")
-    with open("test_trajectory.csv", "r") as trajectory_f:
-        cur.copy_expert(
-            file=trajectory_f,
-            sql="COPY Item_General_Trajectory FROM STDIN CSV HEADER DELIMITER as ','",
-        )
-    with open("test_bbox.csv", "r") as bbox_f:
-        cur.copy_expert(file=bbox_f, sql="COPY General_Bbox FROM STDIN CSV HEADER DELIMITER as ','")
+    # # Old Version:
+    # cur = conn.cursor()
+    # cur.execute(CREATE_CAMERA_SQL)
+    # cur.execute(CREATE_ITEMTRAJ_SQL)
+    # cur.execute(CREATE_BBOXES_SQL)
+    # conn.commit()
+    # with open("test_camera.csv", "r") as camera_f:
+    #     cur.copy_expert(file=camera_f, sql="COPY Cameras FROM STDIN CSV HEADER DELIMITER as ','")
+    # with open("test_trajectory.csv", "r") as trajectory_f:
+    #     cur.copy_expert(
+    #         file=trajectory_f,
+    #         sql="COPY Item_General_Trajectory FROM STDIN CSV HEADER DELIMITER as ','",
+    #     )
+    # with open("test_bbox.csv", "r") as bbox_f:
+    #     cur.copy_expert(file=bbox_f, sql="COPY General_Bbox FROM STDIN CSV HEADER DELIMITER as ','")
+
+    # conn.commit()
+
+    # Current Version:
+    # Import CSV
+    data_Cameras = pd.read_csv (r"test_camera.csv")   
+    df_Cameras = pd.DataFrame(data_Cameras)
+
+    data_Item_General_Trajectory = pd.read_csv (r"test_trajectory.csv")   
+    df_Item_General_Trajectory = pd.DataFrame(data_Item_General_Trajectory)
+
+    data_General_Bbox = pd.read_csv (r"test_bbox.csv")   
+    df_General_Bbox = pd.DataFrame(data_General_Bbox)
+
+    # Connect to SQL Server
+    cursor = conn.cursor()
+
+    # Create Table
+    cursor.execute("DROP TABLE IF EXISTS Cameras CASCADE;")
+    cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
+    cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
+
+    cursor.execute('''
+		    CREATE TABLE Cameras (
+			    cameraId TEXT,
+                frameId TEXT,
+                frameNum Int,
+                fileName TEXT,
+                cameraTranslation geometry,
+                cameraRotation real[4],
+                cameraIntrinsic real[3][3],
+                egoTranslation geometry,
+                egoRotation real[4],
+                timestamp TEXT,
+                heading real
+			    )
+    ''')
+
+    cursor.execute('''
+		    CREATE TABLE Item_General_Trajectory (
+			    itemId TEXT,
+                cameraId TEXT,
+                objectType TEXT,
+                color TEXT,
+                trajCentroids tgeompoint,
+                largestBbox stbox,
+                itemHeadings real[],
+                PRIMARY KEY (itemId)
+			    )
+    ''')
+
+    cursor.execute('''
+		    CREATE TABLE General_Bbox (
+			    itemId TEXT,
+                cameraId TEXT,
+                trajBbox stbox,
+                FOREIGN KEY(itemId)
+                    REFERENCES Item_General_Trajectory(itemId)
+			    )
+    ''')
+
+    # Insert DataFrame to Table
+    # for i,row in irisData.iterrows():
+    #         sql = "INSERT INTO irisdb.iris VALUES (%s,%s,%s,%s,%s)"
+    #         cursor.execute(sql, tuple(row))
+    for i, row in df_Cameras.iterrows():
+        cursor.execute('''
+                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    ''',
+                    tuple(row)
+                    )
+    
+    for i, row in df_Item_General_Trajectory.iterrows():
+        cursor.execute('''
+                    INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, color, trajCentroids, largestBbox, itemHeadings)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s)
+                    ''',
+                    tuple(row)
+                    )
+    
+    for i, row in df_General_Bbox.iterrows():
+        cursor.execute('''
+                    INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
+                    VALUES (%s,%s,%s)
+                    ''',
+                    tuple(row)
+                    )
+
 
     conn.commit()
 
