@@ -98,7 +98,7 @@ class World:
             plt.figure()
             plt.imshow(frame)
             plt.show()
-            
+
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         camera = self.camera_nodes[cam_id]
         video_file = camera.video_file
