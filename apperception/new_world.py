@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import glob
 import inspect
-import string
 import uuid
 from collections.abc import Iterable
 from enum import IntEnum
@@ -13,16 +12,19 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import cv2
 import dill as pickle
-import matplotlib
 import numpy as np
 import yaml
 from camera import Camera
 from new_db import Database
 from new_util import compile_lambda
+from pypika import Table
+from pypika.dialects import SnowflakeQuery
 from scenic_util import transformation
 
-matplotlib.use("Qt5Agg")
-print("get backend", matplotlib.get_backend())
+from apperception.scenic_util import FetchCameraTuple
+
+# matplotlib.use("Qt5Agg")
+# print("get backend", matplotlib.get_backend())
 
 makedirs("./.apperception_cache", exist_ok=True)
 
@@ -75,24 +77,8 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    # def overlay_trajectory(self, cam_id, trajectory):
-    #     matplotlib.use(
-    #         "Qt5Agg"
-    #     )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
-    #     print("get backend", matplotlib.get_backend())
-    #     camera = World.camera_nodes[cam_id]
-    #     video_file = camera.video_file
-    #     for traj in trajectory:
-    #         current_trajectory = np.asarray(traj[0])
-    #         frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-    #         vs = cv2.VideoCapture(video_file)
-    #         frame = vs.read()
-    #         frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-    #         for point in frame_points.tolist():
-    #             cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-    #         plt.figure()
-    #         plt.imshow(frame)
-    #         plt.show()
+    def road_direction(self, x, y):
+        return self.db.get_heading_from_a_point(x, y)
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         camera = self.camera_nodes[cam_id]
@@ -132,10 +118,11 @@ class World:
             x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
         )
 
-    def overlay_trajectory(self, scene_name: string, trajectory, object_id: string):
+    def overlay_trajectory(self, scene_name: str, trajectory, object_id: str):
         frame_num = self.trajectory_to_frame_num(trajectory)
         # frame_num is int[[]], hence camera_info should also be [[]]
-        camera_info = []  # camera_info is a list of mappings from frameNum to list of cameras
+        # camera_info is a list of mappings from frameNum to list of cameras
+        camera_info: List[Dict[int, List["FetchCameraTuple"]]] = []
         for index, cur_frame_num in enumerate(frame_num):
             current_cameras = self.db.fetch_camera(scene_name, cur_frame_num)
             camera_info.append({})
@@ -144,7 +131,7 @@ class World:
                     camera_info[index][x[6]].append(x)
                 else:
                     camera_info[index][x[6]] = [x]
-        camera_info = [
+        camera_info_2 = [
             [x[y] for y in sorted(x)] for x in camera_info
         ]  # [x.values() for x in sorted(camera_info, key=lambda x: x[6])]
 
@@ -152,9 +139,9 @@ class World:
         # assert len(camera_info[0]) == len(frame_num[0])
         # print(camera_info, np.asarray(camera_info).shape) # (1, 30, 8)
         # print(trajectory, np.asarray(trajectory).shape) # (1, 1)
-        overlay_info = self.get_overlay_info(trajectory, camera_info)
+        overlay_info = self.get_overlay_info(trajectory, camera_info_2)
         # TODO: fix the following to overlay the 2d point onto the frame
-        results = []
+        results: List[Dict[str, List[Tuple[np.ndarray, int, str]]]] = []
         frame_width = None
         frame_height = None
         for i, traj in enumerate(overlay_info):
@@ -214,7 +201,7 @@ class World:
             )
         return frame_num
 
-    def get_overlay_info(self, trajectory, camera_info):
+    def get_overlay_info(self, trajectory, camera_info: List[List[List["FetchCameraTuple"]]]):
         """
         overlay each trajectory 3d coordinate on to the frame specified by the camera_info
         1. for each trajectory, get the 3d coordinate
@@ -224,21 +211,21 @@ class World:
             refer to TODO in "senic_utils.py"
         4. return a list of (2d coordinate, frame name/filename)
         """
-        result = []
+        result: List[List[List[Tuple[np.ndarray, int, str]]]] = []
         for traj_num in range(len(trajectory)):
             traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
             traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
             camera_info_objs = camera_info[
                 traj_num
             ]  # camera info list corresponding the 3d coordinate
-            traj_obj_2d = []  # 2d coordinate list
+            traj_obj_2d: List[List[Tuple[np.ndarray, int, str]]] = []  # 2d coordinate list
             for index in range(len(camera_info_objs)):
                 cur_camera_infos = camera_info_objs[
                     index
                 ]  # camera info of the obejct in one point of the trajectory
                 centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
                 # in order to fit into the function transformation, we develop a dictionary called camera_config
-                frame_traj_obj_2d = []
+                frame_traj_obj_2d: List[Tuple[np.ndarray, int, str]] = []
                 for cur_camera_info in cur_camera_infos:
                     camera_config = {}
                     camera_config["egoTranslation"] = cur_camera_info[1]
@@ -347,6 +334,11 @@ class World:
             greaterThan=greaterThan,
         )
 
+    def filter_distance_to_type(self, distance: float, type: string):
+        return derive_world(
+            self, {Type.TRAJ}, self.db.filter_distance_to_type, distance=distance, type=type
+        )
+
     def filter_relative_to_type(
         self,
         x_range: Tuple[float, float],
@@ -396,16 +388,13 @@ class World:
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
         )
 
-    def add_properties(self, cam_id: str, properties: Any, property_type: str, new_prop):
-        # TODO: Should we add this to DB instead of the global object?
-        self.camera_nodes[cam_id].add_property(properties, property_type, new_prop)
+    def predicate(self, func: Function):
 
-    def predicate(self, condition: str):
         return derive_world(
             self,
-            {Type.CAM},
-            self.db.filter_cam,
-            condition=condition,
+            {Type.TRAJ, Type.BBOX},
+            self.db.predicate,
+            func=func,
         )
 
     def get_len(self):
@@ -472,6 +461,15 @@ class World:
         curr: Optional[World] = self
         res = None
         query = ""
+
+        if type is Type.CAM:
+            query = SnowflakeQuery.from_(Table("cameras")).select("*")
+        elif type is Type.BBOX:
+            query = SnowflakeQuery.from_(Table("general_bbox")).select("*")
+        elif type is Type.TRAJ:
+            query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
+        else:
+            query = ""
 
         # collect all the nodes til the root
         while curr:

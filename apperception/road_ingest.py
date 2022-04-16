@@ -81,7 +81,7 @@ CREATE_ROAD_SQL = """
 CREATE TABLE IF NOT EXISTS Road(
     id Text,
     forwardLane Text,
-	backwardLane Text,
+    backwardLane Text,
     PRIMARY KEY (id),
     FOREIGN KEY(id)
         REFERENCES Polygon(elementId)
@@ -106,7 +106,7 @@ CREATE_ROADSECTION_SQL = """
 CREATE TABLE IF NOT EXISTS RoadSection(
     id TEXT,
     forwardLanes text[],
-	backwardLanes text[],
+    backwardLanes text[],
     FOREIGN KEY(id)
         REFERENCES Polygon(elementId)
 );
@@ -285,17 +285,11 @@ def create_lanegroup_table(laneGroups, drop=True):
 
     values = []
     for lg in laneGroups:
-        values.append(
-            f"""(
-                '{lg['id']}'
-            )"""
-        )
+        values.append(f"('{lg['id']}')")
 
     cursor.execute(
         f"""
-        INSERT INTO LaneGroup (
-            id
-        )
+        INSERT INTO LaneGroup (id)
         VALUES {','.join(values)};
         """
     )
@@ -325,33 +319,6 @@ def create_lanegroup_lane_table(lanegroup_lane, drop=True):
         INSERT INTO LaneGroup_Lane (
             laneGroupId,
             laneId
-        )
-        VALUES {','.join(values)};
-        """
-    )
-
-    conn.commit()
-
-
-def create_lanegroup_table(laneGroups, drop=True):
-    cursor = conn.cursor()
-    if drop:
-        cursor.execute("DROP TABLE IF EXISTS LaneGroup")
-    cursor.execute(CREATE_LANEGROUP_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);")
-
-    values = []
-    for lg in laneGroups:
-        values.append(
-            f"""(
-                '{lg['id']}'
-            )"""
-        )
-
-    cursor.execute(
-        f"""
-        INSERT INTO LaneGroup (
-            id
         )
         VALUES {','.join(values)};
         """

@@ -28,7 +28,7 @@ class VideoContextExecutor:
     def visit_world(self):
         # Query to store world in database
         name, units = self.current_context.name, self.current_context.units
-        world_sql = create_or_insert_world_table(self.conn, name, units)
+        create_or_insert_world_table(self.conn, name, units)
 
         all_sqls = []
         cameras = self.current_context.camera_nodes
@@ -60,7 +60,7 @@ class VideoContextExecutor:
             metadata_to_tasm(tracking_results, camera_node.metadata_id, self.tasm)
 
     def execute(self):
-        query = self.visit()
+        return self.visit()
 
 
 def is_area_recognized(area: BoundingBox, recognized: Set[BoundingBox]):

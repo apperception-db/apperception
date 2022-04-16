@@ -1,4 +1,5 @@
 import json
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -6,9 +7,6 @@ from pyquaternion.quaternion import Quaternion
 
 
 def scenic_generate_df():
-    with open("v1.0-mini/v1.0-mini/attribute.json") as f:
-        attribute_json = json.load(f)
-
     with open("v1.0-mini/v1.0-mini/calibrated_sensor.json") as f:
         calibrated_sensor_json = json.load(f)
 
@@ -152,13 +150,13 @@ def scenic_generate_df():
         df_sample_annotation, df_instance, on="instance_token", how="left"
     )
 
+    # Probably not necassary
     df_sample_annotation["camera_heading"] = df_sample_annotation.apply(
         lambda x: get_heading(x.rotation) % 360, axis=1
     )
     df_sample_data["heading"] = df_sample_data.apply(
         lambda x: (get_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1
     )
-
     df_sample_data_keyframe = df_sample_data[df_sample_data["is_key_frame"]][
         ["token", "sample_token"]
     ]
@@ -170,8 +168,14 @@ def scenic_generate_df():
     return df_sample_data, df_sample_annotation
 
 
-def get_heading(q):
-    q = Quaternion(q)
-    v = np.dot(q.rotation_matrix, np.array([1, 0, 0]))
-    yaw = np.arctan2(v[1], v[0])
-    return yaw
+def get_heading(rotation):
+    q = Quaternion(rotation)
+    return (((q.yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360
+
+
+if __name__ == "__main__":
+    data, anno = scenic_generate_df()
+    with open("df_sample_data.pickle", "wb") as f:
+        pickle.dump(data, f)
+    with open("df_annotation.pickle", "wb") as f:
+        pickle.dump(anno, f)

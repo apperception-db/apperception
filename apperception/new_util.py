@@ -1,6 +1,7 @@
 import ast
 import datetime
 import os
+from types import FunctionType
 from typing import Dict, List, Tuple
 
 import lens
@@ -9,6 +10,7 @@ import point
 import uncompyle6
 from box import Box
 from camera_config import CameraConfig
+from pypika.dialects import SnowflakeQuery
 from pyquaternion import Quaternion
 from scenic_util import bbox_to_data3d, convert_timestamps, join
 from tracked_object import TrackedObject
@@ -34,7 +36,7 @@ def create_camera(cam_id, fov):
         "type": "pos",
     }
     camera_attrs = {"ratio": 0.5}
-    fps = 30
+    # fps = 30
 
     fov, res, cam_origin, skew_factor = (
         lens_attrs["fov"],
@@ -89,15 +91,11 @@ def get_video(metadata_results, cams, start_time, boxed):
 
     video_files = []
     for cam in cams:
-        cam_id, ratio, cam_x, cam_y, cam_z, focal_x, focal_y, fov, skew_factor = (
-            cam.cam_id,
-            cam.ratio,
+        cam_x, cam_y, focal_x, focal_y, skew_factor = (
             cam.lens.cam_origin[0],
             cam.lens.cam_origin[1],
-            cam.lens.cam_origin[2],
             cam.lens.focal_x,
             cam.lens.focal_y,
-            cam.lens.fov,
             cam.lens.alpha,
         )
         cam_video_file = cam.video_file
@@ -143,7 +141,7 @@ def compile_lambda(pred):
         if isinstance(left_node, ast.Compare):
             cmp_node = left_node
             left = cmp_node.left
-            ops = cmp_node.ops
+            # ops = cmp_node.ops
             comparators = cmp_node.comparators
 
             if (
@@ -173,7 +171,7 @@ def compile_lambda(pred):
         if isinstance(right_node, ast.Compare):
             cmp_node = right_node
             left = cmp_node.left
-            ops = cmp_node.ops
+            # ops = cmp_node.ops
             comparators = cmp_node.comparators
 
             if (
@@ -204,7 +202,7 @@ def compile_lambda(pred):
 
 def recognize(camera_configs: List[CameraConfig], annotation):
     annotations: Dict[str, TrackedObject] = {}
-    sample_token_to_frame_num: Dict[str, str] = {}
+    sample_token_to_frame_num: Dict[str, int] = {}
     for config in camera_configs:
         if config.frame_id in sample_token_to_frame_num:
             raise Exception("duplicate frame_id")
@@ -225,19 +223,19 @@ def recognize(camera_configs: List[CameraConfig], annotation):
         bbox = np.transpose(corners[:, [3, 7]])
 
         annotations[item_id].bboxes.append(bbox)
-        annotations[item_id].frame_num.append(int(frame_num))
+        annotations[item_id].frame_num.append(frame_num)
         annotations[item_id].itemHeading.append(a.heading)
 
     for item_id in annotations:
-        frame_num = np.array(annotations[item_id].frame_num)
+        frame_nums = np.array(annotations[item_id].frame_num)
         bboxes = np.array(annotations[item_id].bboxes)
-        itemHeading = np.array(annotations[item_id].itemHeading)
+        itemHeadings = np.array(annotations[item_id].itemHeading)
 
-        index = frame_num.argsort()
+        index = frame_nums.argsort()
 
-        annotations[item_id].frame_num = frame_num[index].tolist()
-        annotations[item_id].bboxes = bboxes[index, :, :]
-        annotations[item_id].itemHeading = itemHeading[index].tolist()
+        annotations[item_id].frame_num = frame_nums[index].tolist()
+        annotations[item_id].bboxes = [bboxes[i, :, :] for i in index]
+        annotations[item_id].itemHeading = itemHeadings[index].tolist()
 
     print("Recognization done, saving to database......")
     return annotations
@@ -383,3 +381,33 @@ def insert_general_trajectory(
 
     # Commit your changes in the database
     conn.commit()
+
+
+def parse_predicate(query: SnowflakeQuery, f: FunctionType):
+    import metadata_context
+
+    pred = metadata_context.Predicate(f)
+    pred.new_decompile()
+
+    attribute, operation, comparator, bool_ops, cast_types = pred.get_compile()
+
+    if len(bool_ops) == 0:
+        table, attr = attribute[0].split(".")
+        comp = comparator[0]
+
+        return f"query.{attr}=={comp}"  # query.objectType == xxx
+
+    else:
+        assert len(bool_ops) + 1 == len(attribute)
+        # import pdb; pdb.set_trace()
+        table, attr = attribute[0].split(".")
+        comp = comparator[0]
+
+        q_str = f"(query.{attr}=={comp})"
+        for i in range(len(bool_ops)):
+            q_str += " " + bool_ops[i] + " "
+            _, attr = attribute[i + 1].split(".")
+            comp = comparator[i + 1]
+            q_str += f"(query.{attr} == {comp})"
+
+        return q_str
