@@ -317,6 +317,43 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
+    def filter_distance_to_type(
+        self,
+        query: Query,
+        distance: float,
+        type: string
+    ):
+        # TODO: Implement Types
+        cameras = Table(CAMERA_TABLE)
+        getX = CustomFunction("getX", ["tgeompoint"])
+        getY = CustomFunction("getY", ["tgeompoint"])
+        valueAtTimestamp = CustomFunction("valueAtTimestamp", ["tfloat", "timestamptz"])
+
+        ST_X = CustomFunction("ST_X", ["geometry"])
+        ST_Y = CustomFunction("ST_Y", ["geometry"])
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+        SQRT = CustomFunction("SQRT", ["number"])
+        POWER = CustomFunction("POWER", ["number", "number"])
+        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
+            "1 second", "interval"
+        )
+        subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_y = valueAtTimestamp(getY(query.trajCentroids), camera_time) - ST_Y(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
+        q = (
+            SnowflakeQuery.from_(query)
+            .join(cameras)
+            .cross()
+            .select(query.star)
+            .distinct()
+            .where(subtract_mag <= distance)
+        )
+        return q
+
     def filter_relative_to_type(
         self,
         query: Query,
@@ -387,13 +424,32 @@ class Database:
         #     SnowflakeQuery.from_(query)
         #     .join(cameras)
         #     .cross()
-        #     .select(query.itemId, (subtract_mag * COS(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))), (subtract_mag * SIN(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))))
-        #     # .where(query.itemId == "c1958768d48640948f6053d04cffd35b")
+        #     .select(query.itemId, cameras.filename, cameras.heading, (subtract_mag * COS(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))), (subtract_mag * SIN(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))))
+        #     .where(
+        #         x_range[0]
+        #         <= (
+        #             subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+        #         )
+        #     )
+        #     .where(
+        #         (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+        #         <= x_range[1]
+        #     )
+        #     .where(
+        #         y_range[0]
+        #         <= (
+        #             subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+        #         )
+        #     )
+        #     .where(
+        #         (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+        #         <= y_range[1]
+        #     )
         # )
         # print("yeeee boy")
         # self.cur.execute(q2.get_sql())
-        # [print(x) for x in self.cur.fetchall()]
-        # print(str(q))
+        # [print(x) for x in self.cur.fetchall() if "/CAM_FRONT/" in x[1]]
+        print(str(q))
 
         return q
 
@@ -443,7 +499,12 @@ class Database:
         get_video(fetched_meta, cams, self.start_time, boxed)
 
     def get_heading_from_a_point(self, x, y):
-        query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"
+        # query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"
+        query = f"""
+            select heading from segment, st_point({x}, {y}) as point, st_distance(st_makeline(startPoint, endPoint), point) as dis
+            order by dis asc
+            limit 1;
+        """
         self.cur.execute(query)
         return self.cur.fetchall()
 
