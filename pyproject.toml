@@ -31,6 +31,7 @@ mypy = "^0.942"
 types-PyYAML = "^6.0.5"
 types-psycopg2 = "^2.9.9"
 pyright = "^1.1.235"
+astpretty = "^2.1.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

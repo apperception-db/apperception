@@ -100,7 +100,6 @@ def decompile_filter(ast_tree, evaluated_var, view):
     comparators = []
     bool_ops = [""]
     cast_types = []
-    result_view = view
     for ast_node in ast.walk(ast_tree):
         module_body = ast_node.body[0]
         if isinstance(module_body, ast.Return):
@@ -150,7 +149,6 @@ def new_decompile_filter(ast_tree, evaluated_var, view):
     comparators = []
     bool_ops = []
     cast_types = []
-    result_view = view
 
     for ast_node in ast.walk(ast_tree):
         module_body = ast_node.body[0]
