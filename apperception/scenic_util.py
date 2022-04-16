@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-from typing import Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
@@ -455,11 +455,11 @@ def insert_general_trajectory(
     conn.commit()
 
 
-def transformation(copy_centroid_3d, camera_config):
+def transformation(copy_centroid_3d: np.ndarray, camera_config: Dict[str, Any]) -> np.ndarray:
     """
     TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
     """
-    centroid_3d = np.copy(copy_centroid_3d)
+    centroid_3d: np.ndarray = np.copy(copy_centroid_3d)
 
     centroid_3d -= camera_config["egoTranslation"]
     centroid_3d = np.dot(
@@ -471,7 +471,7 @@ def transformation(copy_centroid_3d, camera_config):
         Quaternion(camera_config["cameraRotation"]).inverse.rotation_matrix, centroid_3d
     )
 
-    view = camera_config["cameraIntrinsic"]
+    view = np.array(camera_config["cameraIntrinsic"])
     viewpad = np.eye(4)
     viewpad[: view.shape[0], : view.shape[1]] = view
 
@@ -485,7 +485,10 @@ def transformation(copy_centroid_3d, camera_config):
     return centroid_3d[:2, :]
 
 
-def fetch_camera(conn, scene_name, frame_num):
+FetchCameraTuple = Tuple[str, List[float], List[float], List[float], List[float], List[List[float]], int, str]
+
+
+def fetch_camera(conn, scene_name, frame_num) -> List["FetchCameraTuple"]:
     """
     TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
     scene_name: str
@@ -606,8 +609,8 @@ def import_tables(conn):
 
     cursor.execute(
         """
-		    CREATE TABLE Cameras (
-			    cameraId TEXT,
+            CREATE TABLE Cameras (
+                cameraId TEXT,
                 frameId TEXT,
                 frameNum Int,
                 fileName TEXT,
@@ -618,14 +621,14 @@ def import_tables(conn):
                 egoRotation real[4],
                 timestamp TEXT,
                 heading real
-			    )
+                )
     """
     )
 
     cursor.execute(
         """
-		    CREATE TABLE Item_General_Trajectory (
-			    itemId TEXT,
+            CREATE TABLE Item_General_Trajectory (
+                itemId TEXT,
                 cameraId TEXT,
                 objectType TEXT,
                 color TEXT,
@@ -633,19 +636,19 @@ def import_tables(conn):
                 largestBbox stbox,
                 itemHeadings real[],
                 PRIMARY KEY (itemId)
-			    )
+                )
     """
     )
 
     cursor.execute(
         """
-		    CREATE TABLE General_Bbox (
-			    itemId TEXT,
+            CREATE TABLE General_Bbox (
+                itemId TEXT,
                 cameraId TEXT,
                 trajBbox stbox,
                 FOREIGN KEY(itemId)
                     REFERENCES Item_General_Trajectory(itemId)
-			    )
+                )
     """
     )
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import random
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -125,7 +125,7 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 
 
 def get_video_box(
-    file_name: str, cam_video_file: str, rois: List[(int, int, int, int)], times: List[int]
+    file_name: str, cam_video_file: str, rois: List[Tuple[int, int, int, int]], times: List[int]
 ):
     """
     Get the frames of interest from the video, while boxing in the object at interest
@@ -137,8 +137,8 @@ def get_video_box(
         time_intervals: A list of time intervals of which frames
     """
 
-    rois = np.array(rois).T
-    print(rois.shape)
+    np_rois = np.array(rois).T
+    print(np_rois.shape)
 
     cap = cv2.VideoCapture(cam_video_file)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -154,10 +154,10 @@ def get_video_box(
         ret, frame = cap.read()
         if frame_cnt in times and ret:
             i = frame_cnt - start_time
-            if i >= len(rois):
-                print("incorrect length:", len(rois))
+            if i >= len(np_rois):
+                print("incorrect length:", len(np_rois))
                 break
-            current_roi = rois[i]
+            current_roi = np_rois[i]
 
             x1, y1, x2, y2 = current_roi
             cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (255, 255, 0), 2)
@@ -174,15 +174,15 @@ def create_or_insert_world_table(conn, name, units: Units):
     # Creating a cursor object using the cursor() method
     cursor = conn.cursor()
     """
-	Create and Populate A world table with the given world object.
-	"""
+    Create and Populate A world table with the given world object.
+    """
     # Doping Worlds table if already exists.
     cursor.execute("DROP TABLE IF EXISTS Worlds;")
     # Creating table with the first world
     sql = """CREATE TABLE IF NOT EXISTS Worlds(
-	worldId TEXT PRIMARY KEY,
-	units TEXT
-	);"""
+    worldId TEXT PRIMARY KEY,
+    units TEXT
+    );"""
     cursor.execute(sql)
     print("Worlds Table created successfully........")
     insert_world(conn, name, units)
@@ -308,26 +308,26 @@ def add_recognized_objs(
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(
-            [bbox.to_tuples() for bbox in formatted_result[item_id].bboxes]
+            [bbox.tolist() for bbox in formatted_result[item_id].bboxes]
         )
         tracked_cnt = formatted_result[item_id].frame_num
         top_left = np.vstack((recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]))
         if default_depth:
             top_left_depths = np.ones(len(recognized_bboxes))
-        else:
-            top_left_depths = self.__get_depths_of_points(
-                recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]
-            )
+        # else:
+        #     top_left_depths = self.__get_depths_of_points(
+        #         recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]
+        #     )
         top_left = lens.pixels_to_world(top_left, top_left_depths)
 
         # Convert bottom right coordinates to world coordinates
         bottom_right = np.vstack((recognized_bboxes[:, 1, 0], recognized_bboxes[:, 1, 1]))
         if default_depth:
             bottom_right_depths = np.ones(len(tracked_cnt))
-        else:
-            bottom_right_depths = self.__get_depths_of_points(
-                recognized_bboxes[:, 1, 0], recognized_bboxes[:, 1, 1]
-            )
+        # else:
+        #     bottom_right_depths = self.__get_depths_of_points(
+        #         recognized_bboxes[:, 1, 0], recognized_bboxes[:, 1, 1]
+        #     )
         bottom_right = lens.pixels_to_world(bottom_right, bottom_right_depths)
 
         top_left = np.array(top_left.T)
