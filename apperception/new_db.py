@@ -1,5 +1,4 @@
 import datetime
-import string
 from types import FunctionType
 from typing import Tuple
 
@@ -208,7 +207,8 @@ class Database:
         self.cur.execute(q)
         return self.cur.fetchall()
 
-    def fetch_camera(self, scene_name: string, frame_num: int):
+    def fetch_camera(self, scene_name: str, frame_num: int):
+        # TODO: more specific return type: Any, List[...]
         return su_fetch_camera(self.con, scene_name, frame_num)
 
     def get_len(self, query: Query):
@@ -384,7 +384,7 @@ class Database:
             ST_Centroid(cameras.egoTranslation)
         )
         subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
-        ST_Z = CustomFunction("ST_Z", ["geometry"])
+        # ST_Z = CustomFunction("ST_Z", ["geometry"])
         ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
 
         q = (
@@ -504,7 +504,7 @@ class Database:
         return self.cur.fetchall()
 
 
-Database.insert_bbox_traj.comparators = {"annotation": lambda df: df[0].equals(df[1])}
+setattr(Database.insert_bbox_traj, "comparators", {"annotation": lambda df: df[0].equals(df[1])})
 
 if __name__ == "__main__":
     x, y = 1317, 1463
