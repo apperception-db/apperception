@@ -65,7 +65,7 @@ class VideoContext:
     def __init__(self, name: str, units):
         self.root: VideoContext = self
         self.name: str = name
-        self.units: Units = units
+        self.units = units
         self.camera_nodes: Dict[str, Camera] = {}
         self.start_time: datetime.datetime = datetime.datetime(2021, 6, 8, 7, 10, 28)
         self.conn: Optional[psycopg2.connection] = None

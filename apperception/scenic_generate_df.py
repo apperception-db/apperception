@@ -7,9 +7,6 @@ from pyquaternion.quaternion import Quaternion
 
 
 def scenic_generate_df():
-    with open("v1.0-mini/v1.0-mini/attribute.json") as f:
-        attribute_json = json.load(f)
-
     with open("v1.0-mini/v1.0-mini/calibrated_sensor.json") as f:
         calibrated_sensor_json = json.load(f)
 
