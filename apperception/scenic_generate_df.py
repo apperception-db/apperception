@@ -153,7 +153,7 @@ def scenic_generate_df():
         df_sample_annotation, df_instance, on="instance_token", how="left"
     )
 
-    # Probably not necassary 
+    # Probably not necassary
     df_sample_annotation["camera_heading"] = df_sample_annotation.apply(
         lambda x: get_heading(x.rotation) % 360, axis=1
     )

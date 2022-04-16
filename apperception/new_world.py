@@ -354,11 +354,7 @@ class World:
 
     def filter_distance_to_type(self, distance: float, type: string):
         return derive_world(
-            self,
-            {Type.TRAJ},
-            self.db.filter_distance_to_type,
-            distance=distance,
-            type=type
+            self, {Type.TRAJ}, self.db.filter_distance_to_type, distance=distance, type=type
         )
 
     def filter_relative_to_type(
