@@ -307,9 +307,7 @@ def add_recognized_objs(
     # clean_tables(conn)
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
-        recognized_bboxes = np.array(
-            [bbox.tolist() for bbox in formatted_result[item_id].bboxes]
-        )
+        recognized_bboxes = np.array([bbox.tolist() for bbox in formatted_result[item_id].bboxes])
         tracked_cnt = formatted_result[item_id].frame_num
         top_left = np.vstack((recognized_bboxes[:, 0, 0], recognized_bboxes[:, 0, 1]))
         if default_depth:

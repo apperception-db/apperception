@@ -485,7 +485,9 @@ def transformation(copy_centroid_3d: np.ndarray, camera_config: Dict[str, Any]) 
     return centroid_3d[:2, :]
 
 
-FetchCameraTuple = Tuple[str, List[float], List[float], List[float], List[float], List[List[float]], int, str]
+FetchCameraTuple = Tuple[
+    str, List[float], List[float], List[float], List[float], List[List[float]], int, str
+]
 
 
 def fetch_camera(conn, scene_name, frame_num) -> List["FetchCameraTuple"]:

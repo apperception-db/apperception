@@ -2,9 +2,9 @@ import numpy as np
 import psycopg2
 from metadata_context import geometry, primarykey, time
 from metadata_context_executor import MetadataContextExecutor
-from video_util import convert_datetime_to_frame_num, get_video_roi
 from scenic_util import fetch_camera
 from video_context_executor import VideoContextExecutor
+from video_util import convert_datetime_to_frame_num, get_video_roi
 
 
 class WorldExecutor:
