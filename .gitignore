@@ -10,6 +10,7 @@ yolov5-deepsort
 output
 .apperception_cache
 env
+.venv
 
 *.csv
 *.pickle

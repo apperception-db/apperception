@@ -334,7 +334,7 @@ class World:
             greaterThan=greaterThan,
         )
 
-    def filter_distance_to_type(self, distance: float, type: string):
+    def filter_distance_to_type(self, distance: float, type: str):
         return derive_world(
             self, {Type.TRAJ}, self.db.filter_distance_to_type, distance=distance, type=type
         )
@@ -499,6 +499,7 @@ class World:
         print("done execute node")
 
         res = query
+        print(query)
         return res
 
     def _execute(self, **kwargs):
