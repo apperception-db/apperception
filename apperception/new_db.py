@@ -51,7 +51,8 @@ class Database:
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
             Column("timestamp", "TEXT"),
-            Column("heading", "real"),
+            Column("cameraHeading", "real"),
+            Column("egoHeading", "real"),
         )
 
         self.cur.execute(q1.get_sql())
@@ -135,7 +136,8 @@ class Database:
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
                 '{config.timestamp}',
-                {config.heading}
+                {config.cameraHeading},
+                {config.egoHeading}
             )"""
             for config in camera.configs
         ]
@@ -153,7 +155,8 @@ class Database:
                 egoTranslation,
                 egoRotation,
                 timestamp,
-                heading
+                cameraHeading,
+                egoHeading
             )
             VALUES {','.join(values)};
             """
@@ -198,7 +201,7 @@ class Database:
 
         # hack
         q = (
-            "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading"
+            "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading"
             + f" FROM ({query.get_sql()}) AS final"
         )
 
@@ -317,7 +320,7 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
-    def filter_distance_to_type(self, query: Query, distance: float, type: string):
+    def filter_distance_to_type(self, query: Query, distance: float, type: str):
         # TODO: Implement Types
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
@@ -396,21 +399,21 @@ class Database:
             .where(
                 x_range[0]
                 <= (
-                    subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                    subtract_mag * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
                 )
             )
             .where(
-                (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                (subtract_mag * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x)))
                 <= x_range[1]
             )
             .where(
                 y_range[0]
                 <= (
-                    subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                    subtract_mag * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
                 )
             )
             .where(
-                (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                (subtract_mag * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x)))
                 <= y_range[1]
             )
         )
