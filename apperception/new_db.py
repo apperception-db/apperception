@@ -399,21 +399,29 @@ class Database:
             .where(
                 x_range[0]
                 <= (
-                    subtract_mag * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
+                    subtract_mag
+                    * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
                 )
             )
             .where(
-                (subtract_mag * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x)))
+                (
+                    subtract_mag
+                    * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
+                )
                 <= x_range[1]
             )
             .where(
                 y_range[0]
                 <= (
-                    subtract_mag * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
+                    subtract_mag
+                    * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
                 )
             )
             .where(
-                (subtract_mag * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x)))
+                (
+                    subtract_mag
+                    * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
+                )
                 <= y_range[1]
             )
         )
