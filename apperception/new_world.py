@@ -19,9 +19,7 @@ from new_db import Database
 from new_util import compile_lambda
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
-from scenic_util import transformation
-
-from apperception.scenic_util import FetchCameraTuple
+from scenic_util import transformation, FetchCameraTuple
 
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())

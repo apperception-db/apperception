@@ -43,7 +43,8 @@ def add_sample(df_sample_data, df_annotation, camera_id, cam_x, cam_y, cam_z, ca
                                                 "ego_translation": [cam_x, cam_y, cam_z], 
                                                 "scene_name": camera_id, 
                                                 "frame_order": 0, 
-                                                "heading": cam_heading}, ignore_index=True)
+                                                "ego_heading": cam_heading,
+                                                "camera_heading": 0}, ignore_index=True)
     
     df_annotation = df_annotation.append({
                                          "sample_token": camera_id,
