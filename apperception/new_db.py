@@ -317,7 +317,7 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
-    def filter_distance_to_type(self, query: Query, distance: float, type: string):
+    def filter_distance_to_type(self, query: Query, distance: float, type: str):
         # TODO: Implement Types
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
