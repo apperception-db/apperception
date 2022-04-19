@@ -184,7 +184,7 @@ class World:
             Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
         3. return the frame number
         """
-        return [traj[0][0]['datetimes'] for traj in trajectory] 
+        return [traj[0][0]["datetimes"] for traj in trajectory]
 
     def get_overlay_info(self, trajectory, camera_info: List[List[List["FetchCameraTuple"]]]):
         """
