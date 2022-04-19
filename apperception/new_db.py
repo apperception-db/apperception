@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from types import FunctionType
 from typing import Tuple
 
@@ -26,9 +26,6 @@ class Database:
         )
         self.cur = self.con.cursor()
 
-        # The start time of the database access object
-        self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
-
     def reset(self):
         self._create_camera_table()
         self._create_item_general_trajectory_table()
@@ -50,10 +47,9 @@ class Database:
             Column("cameraIntrinsic", "real[3][3]"),
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
-            Column("timestamp", "TEXT"),
+            Column("timestamp", "timestamptz"),
             Column("heading", "real"),
         )
-
         self.cur.execute(q1.get_sql())
         self.cur.execute(q2.get_sql())
         self.con.commit()
@@ -90,7 +86,7 @@ class Database:
             color TEXT,
             trajCentroids tgeompoint,
             largestBbox stbox,
-            itemHeadings real[],
+            itemHeadings tfloat,
             PRIMARY KEY (itemId)
         );
         """
@@ -134,7 +130,7 @@ class Database:
                 ARRAY{config.camera_intrinsic},
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
-                '{config.timestamp}',
+                '{datetime.fromtimestamp(config.timestamp/1000000.0)}',
                 {config.heading}
             )"""
             for config in camera.configs
@@ -207,9 +203,9 @@ class Database:
         self.cur.execute(q)
         return self.cur.fetchall()
 
-    def fetch_camera(self, scene_name: str, frame_num: int):
+    def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
         # TODO: more specific return type: Any, List[...]
-        return su_fetch_camera(self.con, scene_name, frame_num)
+        return su_fetch_camera(self.con, scene_name, frame_timestamp)
 
     def get_len(self, query: Query):
         """
@@ -227,7 +223,7 @@ class Database:
 
     def insert_bbox_traj(self, camera: Camera, annotation):
         tracking_results = recognize(camera.configs, annotation)
-        add_recognized_objs(self.con, tracking_results, self.start_time, camera.id)
+        add_recognized_objs(self.con, tracking_results, camera.id)
 
     def retrieve_bbox(self, query: Query = None, camera_id: str = ""):
         bbox = Table(BBOX_TABLE)

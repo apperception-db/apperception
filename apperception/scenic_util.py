@@ -490,7 +490,7 @@ FetchCameraTuple = Tuple[
 ]
 
 
-def fetch_camera(conn, scene_name, frame_num) -> List["FetchCameraTuple"]:
+def fetch_camera(conn, scene_name, frame_timestamps) -> List["FetchCameraTuple"]:
     """
     TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
     scene_name: str
@@ -526,7 +526,7 @@ def fetch_camera(conn, scene_name, frame_num) -> List["FetchCameraTuple"]:
     FROM Cameras
     WHERE
         cameraId = '{scene_name}' AND
-        frameNum IN ({",".join(map(str, frame_num))})
+        timestamp IN ({",".join(map(str, frame_timestamps))})
     ORDER BY cameraId ASC, frameNum ASC;
     """
     # print(query)
