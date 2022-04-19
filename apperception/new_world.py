@@ -119,12 +119,11 @@ class World:
         )
 
     def overlay_trajectory(self, scene_name: str, trajectory, object_id: str):
-        frame_num = self.trajectory_to_frame_num(trajectory)
-        # frame_num is int[[]], hence camera_info should also be [[]]
-        # camera_info is a list of mappings from frameNum to list of cameras
+        frame_timestamps = self.trajectory_to_timestamp(trajectory)
+        # camera_info is a list of mappings from timestamps to list of (frame_num, cameras)
         camera_info: List[Dict[int, List["FetchCameraTuple"]]] = []
-        for index, cur_frame_num in enumerate(frame_num):
-            current_cameras = self.db.fetch_camera(scene_name, cur_frame_num)
+        for index, cur_frame_timestamp in enumerate(frame_timestamps):
+            current_cameras = self.db.fetch_camera(scene_name, cur_frame_timestamp)
             camera_info.append({})
             for x in current_cameras:
                 if x[6] in camera_info[index]:
@@ -177,7 +176,7 @@ class World:
                     vid_writer.write(frame_im)
                 vid_writer.release()
 
-    def trajectory_to_frame_num(self, trajectory):
+    def trajectory_to_timestamp(self, trajectory):
         """
         fetch the frame number from the trajectory
         1. get the time stamp field from the trajectory
@@ -185,21 +184,7 @@ class World:
             Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
         3. return the frame number
         """
-        frame_num = []
-        start_time = self.db.start_time
-        for traj in trajectory:
-            current_trajectory = traj[0]
-            date_times = current_trajectory["datetimes"]
-            frame_num.append(
-                [
-                    (
-                        datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo=None)
-                        - start_time
-                    ).total_seconds()
-                    for t in date_times
-                ]
-            )
-        return frame_num
+        return [traj[0][0]["datetimes"] for traj in trajectory]
 
     def get_overlay_info(self, trajectory, camera_info: List[List[List["FetchCameraTuple"]]]):
         """
@@ -499,7 +484,7 @@ class World:
         print("done execute node")
 
         res = query
-        print(query)
+        # print(query)
         return res
 
     def _execute(self, **kwargs):
