@@ -1,4 +1,4 @@
-name: Format and Lint
+name: Test and Lint
 on:
   push:
     branches-ignore:
@@ -6,8 +6,8 @@ on:
       - 'dev'
 
 jobs:
-  format:
-    name: Format and Lint
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -37,20 +37,38 @@ jobs:
         run: poetry install
         if: steps.cache.outputs.cache-hit != 'true'
       
-      - name: Fix lint with autoflake
-        run: poetry run autoflake --recursive --in-place --remove-all-unused-imports --ignore-init-module-imports --expand-star-imports apperception
+      - name: Unit Test
+        run: poetry run pytest tests
+  check:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Fix lint with autopep8
-        run: poetry run autopep8 --verbose --recursive --in-place --aggressive --aggressive apperception
-        
-      - name: Format with black
-        run: poetry run black --config pyproject.toml apperception
-      
-      - name: Sort imports with isort
-        run: poetry run isort apperception
-      
-      - name: Commit linted and formatted changes
-        run: ./scripts/commit-and-push.sh "[CI] format"
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-path: ~/virtualenvs
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Dependencies
+        run: poetry install
+        if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Analyze the code with flake8
         if: always()
