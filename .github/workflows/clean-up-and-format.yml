@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python 3.8
         uses: actions/setup-python@v3
         with:
-          python-version: 3.x
+          python-version: 3.8
 
       - name: Cleanup ipynb output
         run: |
@@ -42,6 +42,7 @@ jobs:
       - name: Install and configure Poetry
         uses: snok/install-poetry@v1
         with:
+          version: 1.2.0b1
           virtualenvs-path: ~/virtualenvs
 
       - name: Cache Poetry virtualenv
@@ -54,7 +55,7 @@ jobs:
             poetry-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
-        run: poetry install --only dev
+        run: poetry install --only format
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
