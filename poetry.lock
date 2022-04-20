@@ -254,6 +254,18 @@ optional = false
 python-versions = ">=3.7"
 
 [[package]]
+name = "decompyle3"
+version = "3.8.0"
+description = "Python cross-version byte-code decompiler"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+spark-parser = ">=1.8.9,<1.9.0"
+xdis = ">=6.0.3,<6.1.0"
+
+[[package]]
 name = "decorator"
 version = "5.1.1"
 description = "Decorators for Humans"
@@ -1494,7 +1506,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "b04f2dda324f1abc9d8a6a265d965498dac6c462039436eadbbae6d1dbb81de9"
+content-hash = "33a15eb565c4ef639b322bca029f02a66ac1a974c8234f7ad87854b45e0a5a9b"
 
 [metadata.files]
 anyio = [
@@ -1683,6 +1695,12 @@ debugpy = [
     {file = "debugpy-1.6.0-cp39-cp39-win_amd64.whl", hash = "sha256:30abefefd2ff5a5481162d613cb70e60e2fa80a5eb4c994717c0f008ed25d2e1"},
     {file = "debugpy-1.6.0-py2.py3-none-any.whl", hash = "sha256:4de7777842da7e08652f2776c552070bbdd758557fdec73a15d7be0e4aab95ce"},
     {file = "debugpy-1.6.0.zip", hash = "sha256:7b79c40852991f7b6c3ea65845ed0f5f6b731c37f4f9ad9c61e2ab4bd48a9275"},
+]
+decompyle3 = [
+    {file = "decompyle3-3.8.0-py3-none-any.whl", hash = "sha256:eddf9838de7e6b8f1ea7ac174f815f300344cf4b8177c88055ccf66d6a26e8f2"},
+    {file = "decompyle3-3.8.0-py3.7.egg", hash = "sha256:f4e899750f5bffa73aafe963415b7e37867634c50a0581aa4d9400172d7d8eb7"},
+    {file = "decompyle3-3.8.0-py3.8.egg", hash = "sha256:f51d7d42d5e8849ba505648d0523dd01c02cfae378435b846811b25225084cb4"},
+    {file = "decompyle3-3.8.0.tar.gz", hash = "sha256:690ab288e62d66f3412176994e81cb102b2d33bfba67d04bba30d3b9e3b49ebc"},
 ]
 decorator = [
     {file = "decorator-5.1.1-py3-none-any.whl", hash = "sha256:b8c3f85900b9dc423225913c5aace94729fe1fa9763b38939a95226f02d37186"},
