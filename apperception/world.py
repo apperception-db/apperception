@@ -3,7 +3,6 @@ import datetime
 
 import cv2
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 from metadata_context import MetadataContext
 from scenic_util import transformation

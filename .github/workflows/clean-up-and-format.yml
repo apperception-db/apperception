@@ -24,7 +24,7 @@ jobs:
           pip install nbconvert
           python -m jupyter nbconvert --clear-output --inplace benchmarks/**/*.ipynb benchmarks/*.ipynb
       
-      - name: Commit linted and formatted changes
+      - name: Commit clean up changes
         run: ./scripts/commit-and-push.sh "[CI] cleanup python notebooks"
   format:
     name: Format
@@ -54,7 +54,7 @@ jobs:
             poetry-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
-        run: poetry install
+        run: poetry install --dev-only
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
@@ -69,5 +69,5 @@ jobs:
       - name: Sort imports with isort
         run: poetry run isort apperception
       
-      - name: Commit linted and formatted changes
+      - name: Commit formatted changes
         run: ./scripts/commit-and-push.sh "[CI] format"
