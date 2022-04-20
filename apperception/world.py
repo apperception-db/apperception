@@ -177,17 +177,18 @@ class World:
         assert len(camera_info[0]) == len(frame_num[0])
         # overlay_info = self.get_overlay_info(trajectory, camera_info)
         # TODO: fix the following to overlay the 2d point onto the frame
-        for traj in trajectory:
-            current_trajectory = np.asarray(traj[0])
-            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-            for point in frame_points.tolist():
-                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-            plt.figure()
-            plt.imshow(frame)
-            plt.show()
+        # TODO: clean up: this for loop does not work anymore because we are not passing in camera
+        # for traj in trajectory:
+        #     current_trajectory = np.asarray(traj[0])
+        #     frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+        #     vs = cv2.VideoCapture(video_file)
+        #     frame = vs.read()
+        #     frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+        #     for point in frame_points.tolist():
+        #         cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
+        #     plt.figure()
+        #     plt.imshow(frame)
+        #     plt.show()
 
     def trajectory_to_frame_num(self, trajectory):
         """

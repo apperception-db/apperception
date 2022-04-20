@@ -5,15 +5,14 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), "../yolov4-deepsort"))
-import time
 
 import tensorflow as tf
 
 physical_devices = tf.config.experimental.list_physical_devices("GPU")
 if len(physical_devices) > 0:
     tf.config.experimental.set_memory_growth(physical_devices[0], True)
-from collections import namedtuple
 from typing import Dict
+from dataclasses import dataclass
 
 # from absl import app, flags, logging
 # from absl.flags import FLAGS
@@ -27,16 +26,28 @@ from core.config import cfg
 from deep_sort import nn_matching, preprocessing
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
-from PIL import Image
+# from PIL import Image
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
 from tracked_object import TrackedObject
 
-FLAGS = namedtuple(
-    "Flags",
-    ["framework", "weights", "size", "tiny", "model", "iou", "score", "dont_show", "info", "count"],
-)(
+
+@dataclass
+class Flags:
+    framework: str
+    weights: str
+    size: int
+    tiny: bool
+    model: str
+    iou: float
+    score: float
+    dont_show: bool
+    info: bool
+    count: bool
+
+
+FLAGS = Flags(
     framework="tf",
     weights=os.path.join(
         os.path.dirname(os.path.realpath(__file__)), "../yolov4-deepsort/checkpoints/yolov4-416"
@@ -89,7 +100,9 @@ def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox =
     # load configuration for object detector
     config = ConfigProto()
     config.gpu_options.allow_growth = True
-    session = InteractiveSession(config=config)
+    # TODO: when to use session
+    # session = InteractiveSession(config=config)
+    InteractiveSession(config=config)
     STRIDES, ANCHORS, NUM_CLASS, XYSCALE = utils.load_config(FLAGS)
     input_size = 416
 
@@ -101,14 +114,16 @@ def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox =
         # Capture frame-by-frame
         ret, frame = cap.read()
         if ret:
-            image = Image.fromarray(frame)
+            # TODO: when to use image
+            # image = Image.fromarray(frame)
             frame_num += 1
             # print('Frame #: ', frame_num)
-            frame_size = frame.shape[:2]
+            # TODO: when to use frame_size
+            # frame_size = frame.shape[:2]
             image_data = cv2.resize(frame, (input_size, input_size))
             image_data = image_data / 255.0
             image_data = image_data[np.newaxis, ...].astype(np.float32)
-            start_time = time.time()
+            # start_time = time.time()
 
             batch_data = tf.constant(image_data)
             pred_bbox = infer(batch_data)
@@ -151,7 +166,7 @@ def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox =
             # allowed_classes = ['person']
 
             # loop through objects and use class index to get class name, allow only classes in allowed_classes list
-            names = []
+            _names = []
             deleted_indx = []
             for i in range(num_objects):
                 class_indx = int(classes[i])
@@ -159,8 +174,8 @@ def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox =
                 if class_name not in allowed_classes:
                     deleted_indx.append(i)
                 else:
-                    names.append(class_name)
-            names = np.array(names)
+                    _names.append(class_name)
+            names = np.array(_names)
             if FLAGS.count:
                 cv2.putText(
                     frame,
@@ -185,7 +200,9 @@ def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox =
 
             # initialize color map
             cmap = plt.get_cmap("tab20b")
-            colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
+            # TODO: when to use colors
+            # colors = [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
+            [cmap(i)[:3] for i in np.linspace(0, 1, 20)]
 
             # run non-maxima supression
             boxs = np.array([d.tlwh for d in detections])
