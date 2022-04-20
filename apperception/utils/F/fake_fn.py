@@ -4,14 +4,17 @@ if TYPE_CHECKING:
     from ..fn_to_sql import GenSqlVisitor
 
 
-T1 = TypeVar('T1')
-class FakeFn(Generic[T1]):  # noqa: E302
-    _fn: Tuple[Callable[["GenSqlVisitor", T1], str]]
+CT = TypeVar('CT')
+FT = TypeVar('FT')
 
-    def __init__(self, fn: Callable[["GenSqlVisitor", T1], str]):
+
+class FakeFn(Generic[CT]):
+    _fn: Tuple[Callable[["GenSqlVisitor", CT], str]]
+
+    def __init__(self, fn: Callable[["GenSqlVisitor", CT], str]):
         self._fn = (fn,)
 
-    def __call__(self, *_: T1) -> Any:
+    def __call__(self, *_: CT) -> Any:
         return None
 
     @property
@@ -19,6 +22,5 @@ class FakeFn(Generic[T1]):  # noqa: E302
         return self._fn[0]
 
 
-T2 = TypeVar('T2')
-def fake_fn(fn: Callable[["GenSqlVisitor", T2], str]) -> FakeFn[T2]:  # noqa: E302
+def fake_fn(fn: Callable[["GenSqlVisitor", FT], str]) -> FakeFn[FT]:
     return FakeFn(fn)
