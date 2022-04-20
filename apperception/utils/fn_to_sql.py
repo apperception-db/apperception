@@ -15,7 +15,7 @@ else:
 
 from . import F
 
-POSTGRES_FUNC: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
+POSTGRES_MACROS: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
     "convert_camera": F.convert_camera.fn
 }
 
@@ -52,7 +52,6 @@ def validate(predicate: str, argspec: FullArgSpec):
     return (
         isinstance(predicate, str)
         and predicate.startswith("return ")
-        and len([*filter(lambda line: line != "", predicate.splitlines())]) == 1
         and argspec.varargs is None
         and argspec.varkw is None
         and argspec.defaults is None
@@ -177,11 +176,10 @@ class GenSqlVisitor(ast.NodeVisitor):
         else:
             raise Exception("Unsupported function")
 
-        if func not in POSTGRES_FUNC:
-            raise Exception("Unsupported function: ", func)
+        if func not in POSTGRES_MACROS:
+            return f"{func}({', '.join(map(self.visit, node.args))})"
 
-        # args = [self.visit(arg) for arg in node.args]
-        return POSTGRES_FUNC[func](self, node.args)
+        return POSTGRES_MACROS[func](self, node.args)
 
     def visit_Constant(self, node: ast.Constant) -> str:
         value = node.value

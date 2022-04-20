@@ -20,11 +20,13 @@ def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
 
         camera_attr = arg_object.attr
         if camera_attr == "traj":
-            object_positions = f"{visitor.eval_vars[value.id]}.trajCentroid"
+            object_positions = f"{visitor.eval_vars[value.id]}.trajCentroids"
+        elif camera_attr == "bbox":
+            raise Exception("We do not support bbox yet")
         else:
             raise Exception("First argument of convert_camera should be trajectory")
     elif isinstance(arg_object, ast.Name):
-        raise Exception("First argument of convert_camera should be trajectory")
+        object_positions = f"{visitor.eval_vars[arg_object.id]}.trajCentroids"
     else:
         raise Exception("First argument of convert_camera should be trajectory", str(arg_object))
 
@@ -35,10 +37,10 @@ def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
         name = value.id
         if arg_camera.attr != "ego":
             raise Exception("Second argument of convert_camera should be camera or its ego car")
-        camera_attr = arg_camera.attr
+        camera_attr = "egoTranslation"
     elif isinstance(arg_camera, ast.Name):
         name = arg_camera.id
-        camera_attr = "camera_translation"
+        camera_attr = "cameraTranslation"
     else:
         raise Exception("Second argument of convert_camera should be camera or its ego car")
 
