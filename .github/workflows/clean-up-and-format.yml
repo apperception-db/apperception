@@ -1,0 +1,73 @@
+name: Clean Up and Format
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'dev'
+
+jobs:
+  clean-up:
+    name: Clean Up Python Notebooks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.x
+
+      - name: Cleanup ipynb output
+        run: |
+          pip install nbconvert
+          python -m jupyter nbconvert --clear-output --inplace benchmarks/**/*.ipynb benchmarks/*.ipynb
+      
+      - name: Commit linted and formatted changes
+        run: ./scripts/commit-and-push.sh "[CI] cleanup python notebooks"
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Set up Python 3.8
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.8
+
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-path: ~/virtualenvs
+
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: ~/.virtualenvs
+          key: poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            poetry-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Dependencies
+        run: poetry install
+        if: steps.cache.outputs.cache-hit != 'true'
+      
+      - name: Fix lint with autoflake
+        run: poetry run autoflake --recursive --in-place --remove-all-unused-imports --ignore-init-module-imports --expand-star-imports apperception
+
+      - name: Fix lint with autopep8
+        run: poetry run autopep8 --verbose --recursive --in-place --aggressive --aggressive apperception
+        
+      - name: Format with black
+        run: poetry run black --config pyproject.toml apperception
+      
+      - name: Sort imports with isort
+        run: poetry run isort apperception
+      
+      - name: Commit linted and formatted changes
+        run: ./scripts/commit-and-push.sh "[CI] format"
