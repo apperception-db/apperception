@@ -9,9 +9,36 @@ if TYPE_CHECKING:
 
 
 @fake_fn
-def convert_camera(visitor: "PredicateVisitor", args: Tuple[ast.AST, ast.AST, ast.AST]):
-    [_from, cam] = visitor.tables
-    [geometry_type, camera_type, timestamp] = args
-    geometry_table = f"{_from}.trajCentroid" if geometry_type == "obj.traj" else "general_bbox.bbox"
-    camera_config = "cameras.ego_translation" if camera_type == "ego_cam" else "cameras.camera_translation"
-    return f"ConvertCamera({geometry_table}, {camera_config}, cameras.timestamp)"
+def convert_camera(visitor: "PredicateVisitor", args: Tuple[ast.AST, ast.AST]):
+    arg_object, arg_camera = args
+
+    if isinstance(arg_object, ast.Attribute):
+        value = arg_object.value
+        if not isinstance(value, ast.Name):
+            raise Exception("First argument of convert_camera should be trajectory")
+
+        camera_attr = arg_object.attr
+        if camera_attr == "traj":
+            object_positions = f"{visitor.eval_vars[value.id]}.trajCentroid"
+        else:
+            raise Exception("First argument of convert_camera should be trajectory")
+    elif isinstance(arg_object, ast.Name):
+        raise Exception("First argument of convert_camera should be trajectory")
+    else:
+        raise Exception("First argument of convert_camera should be trajectory", str(arg_object))
+
+    if isinstance(arg_camera, ast.Attribute):
+        value = arg_camera.value
+        if not isinstance(value, ast.Name):
+            raise Exception()
+        name = value.id
+        if arg_camera.attr != 'ego':
+            raise Exception("Second argument of convert_camera should be camera or its ego car")
+        camera_attr = arg_camera.attr
+    elif isinstance(arg_camera, ast.Name):
+        name = arg_camera.id
+        camera_attr = "camera_translation"
+    else:
+        raise Exception("Second argument of convert_camera should be camera or its ego car")
+
+    return f"ConvertCamera({object_positions}, {visitor.eval_vars[name]}.{camera_attr}, {visitor.eval_vars[name]}.timestamp)"

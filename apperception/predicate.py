@@ -2,8 +2,16 @@ from __future__ import annotations
 import ast
 import os
 from typing import Any, Callable, Dict, List, Union
+from sys import version_info
+from inspect import getfullargspec, FullArgSpec
 
-from uncompyle6 import deparse_code2str
+if version_info.major != 3:
+    raise Exception("Only support python3")
+if version_info.minor < 7:
+    from uncompyle6 import deparse_code2str
+else:
+    from decompyle3 import deparse_code2str
+
 from . import F
 
 
@@ -18,17 +26,42 @@ class Predicate:
 
     def __init__(self, predicate: Union[str, Callable], eval_vars: Dict[str, Any] = {}):
         if not isinstance(predicate, str):
-            predicate = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
-            assert isinstance(predicate, str)
+            predicate = to_lambda_str(predicate)
 
         self._ast = ast.parse(predicate)
         self._vars = eval_vars
 
     def to_sql(self, tables: List[str], eval_vars: Dict[str, Any] = {}):
         expr = self._ast.body[0]
+
         if not isinstance(expr, ast.Expr):
-            raise Exception("")
+            raise Exception("Predicate should produce an ast.Expr: ", expr)
         return PredicateVisitor(tables, {**self._vars, **eval_vars}).visit(expr.value)
+
+
+def to_lambda_str(predicate: Callable) -> str:
+    """
+    Parse a lambda or a one-line def-function into a string of lambda
+    The output from deparse_code2str does not include function signture.
+    For example, lambda x : x + 1 will be deparsed into 'return x + 1'
+    """
+    argspec = getfullargspec(predicate)
+    predicate_str = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
+    if not validate(predicate_str, argspec):
+        raise Exception()
+    return f"lambda {', '.join(argspec.args)} :{predicate_str[len('return '):]}"
+
+
+def validate(predicate: str, argspec: FullArgSpec):
+    return (
+        isinstance(predicate, str)
+        and predicate.startswith("return ")
+        and len([*filter(lambda line: line != "", predicate.splitlines())]) == 1
+        and argspec.varargs is None
+        and argspec.varkw is None
+        and argspec.defaults is None
+        and len(argspec.kwonlyargs) == 0
+    )
 
 
 class PredicateVisitor(ast.NodeVisitor):
@@ -87,7 +120,7 @@ class PredicateVisitor(ast.NodeVisitor):
 
         if isinstance(node.func, ast.Attribute):
             value = node.func.value
-            if not isinstance(value, ast.Name) or value.id != "fn":
+            if not isinstance(value, ast.Name) or value.id != "F":
                 raise Exception("Only allow custom functions from fn module")
             func = node.func.attr
         elif isinstance(node.func, ast.Name):
@@ -98,8 +131,8 @@ class PredicateVisitor(ast.NodeVisitor):
         if func not in POSTGRES_FUNC:
             raise Exception("Unsupported function: ", func)
 
-        args = [self.visit(arg) for arg in node.args]
-        return POSTGRES_FUNC[func](self, args)
+        # args = [self.visit(arg) for arg in node.args]
+        return POSTGRES_FUNC[func](self, node.args)
 
     def visit_Constant(self, node: ast.Constant) -> str:
         value = node.value
