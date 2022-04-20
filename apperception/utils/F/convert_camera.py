@@ -1,15 +1,15 @@
 from __future__ import annotations
 import ast
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, List
 
 from .fake_fn import fake_fn
 
 if TYPE_CHECKING:
-    from ..predicate import PredicateVisitor
+    from ..fn_to_sql import GenSqlVisitor
 
 
 @fake_fn
-def convert_camera(visitor: "PredicateVisitor", args: Tuple[ast.AST, ast.AST]):
+def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_object, arg_camera = args
 
     if isinstance(arg_object, ast.Attribute):

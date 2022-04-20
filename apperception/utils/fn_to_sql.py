@@ -15,28 +15,24 @@ else:
 from . import F
 
 
-POSTGRES_FUNC: Dict[str, Callable[[PredicateVisitor, List[str]], str]] = {
+POSTGRES_FUNC: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
     "convert_camera": F.convert_camera.fn
 }
 
 
-class Predicate:
-    _ast: ast.Module
-    _vars: Dict[str, Any]
+def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
+    if not isinstance(predicate, str):
+        predicate = to_lambda_str(predicate)
 
-    def __init__(self, predicate: Union[str, Callable], eval_vars: Dict[str, Any] = {}):
-        if not isinstance(predicate, str):
-            predicate = to_lambda_str(predicate)
+    body = ast.parse(predicate).body
+    if len(body) > 1:
+        raise Exception("Predicate should be a one-line function or a lambda")
 
-        self._ast = ast.parse(predicate)
-        self._vars = eval_vars
+    expr = body[0]
+    if not isinstance(expr, ast.Expr):
+        raise Exception("Predicate should produce an ast.Expr: ", expr)
 
-    def to_sql(self, tables: List[str], eval_vars: Dict[str, Any] = {}):
-        expr = self._ast.body[0]
-
-        if not isinstance(expr, ast.Expr):
-            raise Exception("Predicate should produce an ast.Expr: ", expr)
-        return PredicateVisitor(tables, {**self._vars, **eval_vars}).visit(expr.value)
+    return GenSqlVisitor(tables, eval_vars).visit(expr.value)
 
 
 def to_lambda_str(predicate: Callable) -> str:
@@ -64,7 +60,60 @@ def validate(predicate: str, argspec: FullArgSpec):
     )
 
 
-class PredicateVisitor(ast.NodeVisitor):
+CMP_OP = {
+    ast.Eq: "=",
+    ast.NotEq: "<>",
+    ast.Lt: "<",
+    ast.LtE: "<=",
+    ast.Gt: ">",
+    ast.GtE: ">=",
+    ast.In: " IN ",
+}
+UNARY_OP = {
+    ast.UAdd: "+",
+    ast.USub: "-",
+    ast.Not: "NOT ",
+}
+BOOL_OP = {
+    ast.And: " AND ",
+    ast.Or: " OR ",
+}
+BIN_OP = {
+    ast.Add: "+",
+    ast.Div: "/",
+    ast.Mod: "%",
+    ast.Mult: "*",
+    ast.Sub: "-",
+}
+
+
+def cmp_op(op: ast.cmpop) -> str:
+    if isinstance(op, ast.NotIn):
+        raise Exception("'x not in y' is not supported, use 'not (x in y)' instead")
+    if op.__class__ not in CMP_OP:
+        raise Exception("Operation not supported: ", op)
+    return CMP_OP[op.__class__]
+
+
+def unary_op(op: ast.unaryop) -> str:
+    if op.__class__ not in UNARY_OP:
+        raise Exception("Operation not supported: ", op)
+    return UNARY_OP[op.__class__]
+
+
+def bool_op(op: ast.boolop) -> str:
+    if op.__class__ not in BOOL_OP:
+        raise Exception("Operation not supported: ", op)
+    return BOOL_OP[op.__class__]
+
+
+def bin_op(op: ast.operator) -> str:
+    if op.__class__ not in BIN_OP:
+        raise Exception("Operation not supported: ", op)
+    return BIN_OP[op.__class__]
+
+
+class GenSqlVisitor(ast.NodeVisitor):
     tables: List[str]
     eval_vars: Dict[str, Any]
 
@@ -177,55 +226,3 @@ class PredicateVisitor(ast.NodeVisitor):
 
     def visit_Index(self, node: ast.Index) -> str:
         return self.visit(node.value)
-
-
-def cmp_op(op: ast.cmpop) -> str:
-    if isinstance(op, ast.Eq):
-        return "="
-    if isinstance(op, ast.NotEq):
-        return "<>"
-    if isinstance(op, ast.Lt):
-        return "<"
-    if isinstance(op, ast.LtE):
-        return "<="
-    if isinstance(op, ast.Gt):
-        return ">"
-    if isinstance(op, ast.GtE):
-        return ">="
-    if isinstance(op, ast.In):
-        return " IN "
-    if isinstance(op, ast.NotIn):
-        raise Exception("'x not in y' is not supported, use 'not (x in y)' instead")
-    raise Exception("Operation not supported: ", op)
-
-
-def unary_op(op: ast.unaryop) -> str:
-    if isinstance(op, ast.UAdd):
-        return '+'
-    if isinstance(op, ast.USub):
-        return '-'
-    if isinstance(op, ast.Not):
-        return 'NOT '
-    raise Exception("Operation not supported: ", op)
-
-
-def bool_op(op: ast.boolop) -> str:
-    if isinstance(op, ast.And):
-        return ' AND '
-    if isinstance(op, ast.Or):
-        return ' OR '
-    raise Exception("Operation not supported: ", op)
-
-
-def bin_op(op: ast.operator) -> str:
-    if isinstance(op, ast.Add):
-        return '+'
-    if isinstance(op, ast.Div):
-        return '/'
-    if isinstance(op, ast.Mod):
-        return '%'
-    if isinstance(op, ast.Mult):
-        return '*'
-    if isinstance(op, ast.Sub):
-        return '-'
-    raise Exception("Operation not supported: ", op)
