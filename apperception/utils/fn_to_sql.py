@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import ast
 import os
-from typing import Any, Callable, Dict, List, Union
+from inspect import FullArgSpec, getfullargspec
 from sys import version_info
-from inspect import getfullargspec, FullArgSpec
+from typing import Any, Callable, Dict, List, Union
 
 if version_info.major != 3:
     raise Exception("Only support python3")
@@ -13,7 +14,6 @@ else:
     from decompyle3 import deparse_code2str
 
 from . import F
-
 
 POSTGRES_FUNC: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
     "convert_camera": F.convert_camera.fn
@@ -207,10 +207,8 @@ class GenSqlVisitor(ast.NodeVisitor):
         return self.eval_vars[node.id]
 
     def visit_List(self, node: ast.List) -> str:
-        elts = ','.join(
-            self.visit(elt)[5 if isinstance(elt, ast.List) else 0:]
-            for elt
-            in node.elts
+        elts = ",".join(
+            self.visit(elt)[5 if isinstance(elt, ast.List) else 0 :] for elt in node.elts
         )
         return f"ARRAY[{elts}]"
 

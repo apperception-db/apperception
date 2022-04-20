@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import ast
 from typing import TYPE_CHECKING, List
 
@@ -32,7 +33,7 @@ def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
         if not isinstance(value, ast.Name):
             raise Exception()
         name = value.id
-        if arg_camera.attr != 'ego':
+        if arg_camera.attr != "ego":
             raise Exception("Second argument of convert_camera should be camera or its ego car")
         camera_attr = arg_camera.attr
     elif isinstance(arg_camera, ast.Name):

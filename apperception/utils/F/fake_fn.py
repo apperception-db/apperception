@@ -4,8 +4,8 @@ if TYPE_CHECKING:
     from ..fn_to_sql import GenSqlVisitor
 
 
-CT = TypeVar('CT')
-FT = TypeVar('FT')
+CT = TypeVar("CT")
+FT = TypeVar("FT")
 
 
 class FakeFn(Generic[CT]):
