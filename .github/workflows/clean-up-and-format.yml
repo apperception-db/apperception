@@ -54,7 +54,7 @@ jobs:
             poetry-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
-        run: poetry install --dev-only
+        run: poetry install --only dev
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
