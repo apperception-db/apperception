@@ -38,10 +38,10 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
       
       - name: Fix lint with autoflake
-        run: poetry run autoflake --recursive --in-place --remove-all-unused-imports --expand-star-imports apperception
+        run: poetry run autoflake --recursive --in-place --remove-all-unused-imports --ignore-init-module-imports --expand-star-imports apperception
 
       - name: Fix lint with autopep8
-        run: poetry run autopep8 --recursive --in-place --aggressive --aggressive apperception
+        run: poetry run autopep8 --verbose --recursive --in-place --aggressive --aggressive apperception
         
       - name: Format with black
         run: poetry run black --config pyproject.toml apperception
