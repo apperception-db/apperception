@@ -1,17 +1,20 @@
 from datetime import datetime
-from types import FunctionType
-from typing import Tuple
+from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
+from query_type import QueryType
+from utils import fn_to_sql, query_to_str
 from camera import Camera
-from new_util import (add_recognized_objs, get_video, parse_predicate,
-                      recognize, video_fetch_reformat)
+from new_util import add_recognized_objs, get_video, recognize, video_fetch_reformat
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
 from scenic_util import fetch_camera as su_fetch_camera
+
+if TYPE_CHECKING:
+    from .new_world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -183,9 +186,23 @@ class Database:
         """
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
-    def predicate(self, query: Query, func: FunctionType):
-        condition = parse_predicate(query, func)
-        return SnowflakeQuery.from_(query).select("*").where(eval(condition))
+    def filter(self, query: Query, predicate: Union[str, Callable]):
+        table = 'table_name'
+        return f"""
+        SELECT DISTINCT {table}.*
+        FROM ({query_to_str(query)}) as {table}
+        JOIN Cameras ON Cameras.cameraId = {table}.cameraId
+        WHERE {fn_to_sql(predicate, [table, "Cameras"])}
+        """
+
+    def exclude(self, query: Query, world: "World"):
+        return f"""
+        SELECT *
+        FROM ({query_to_str(query)}) as __query__
+        EXCEPT
+        SELECT *
+        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __except__
+        """
 
     def get_cam(self, query: Query):
         """
@@ -198,13 +215,10 @@ class Database:
             + f" FROM ({query.get_sql()}) AS final"
         )
 
-        # print(q)
-
         self.cur.execute(q)
         return self.cur.fetchall()
 
     def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
-        # TODO: more specific return type: Any, List[...]
         return su_fetch_camera(self.con, scene_name, frame_timestamp)
 
     def get_len(self, query: Query):
@@ -241,10 +255,10 @@ class Database:
 
     def get_traj(self, query: Query):
         # hack
-        query = (
-            "SELECT asMFJSON(trajCentroids)::json->'sequences'"
-            + f" FROM ({query.get_sql()}) as final"
-        )
+        query = f"""
+        SELECT asMFJSON(trajCentroids)::json->'sequences'
+        FROM ({query_to_str(query)}) as final
+        """
 
         print("get_traj")  # print("get_traj", query)
         self.cur.execute(query)

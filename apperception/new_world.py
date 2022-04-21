@@ -5,10 +5,9 @@ import glob
 import inspect
 import uuid
 from collections.abc import Iterable
-from enum import IntEnum
 from os import makedirs, path
 from pyclbr import Function
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import cv2
 import dill as pickle
@@ -20,6 +19,7 @@ from new_util import compile_lambda
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 from scenic_util import transformation
+from query_type import QueryType
 
 from apperception.scenic_util import FetchCameraTuple
 
@@ -27,13 +27,6 @@ from apperception.scenic_util import FetchCameraTuple
 # print("get backend", matplotlib.get_backend())
 
 makedirs("./.apperception_cache", exist_ok=True)
-
-
-class Type(IntEnum):
-    # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
-    # recognize(), we should not execute it because the inserted object must not be in the final result. we use enum
-    # type to determine whether we should execute this node
-    CAM, BBOX, TRAJ = 0, 1, 2
 
 
 BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
@@ -46,13 +39,12 @@ class World:
 
     _parent: Optional[World]
     _name: str
-    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | str? | None
-    _fn: Any
+    _fn: Tuple[Optional[Callable]]
     _kwargs: dict[str, Any]
     _done: bool
     _world_id: str
     _timestamp: datetime.datetime
-    _types: set[Type]
+    _types: set[QueryType]
     _materialized: bool
 
     def __init__(
@@ -61,15 +53,15 @@ class World:
         timestamp: datetime.datetime,
         name: str = None,
         parent: World = None,
-        fn: Any = None,
+        fn: Union[str, Callable] = None,
         kwargs: dict[str, Any] = None,
         done: bool = False,
-        types: Set[Type] = None,
+        types: Set[QueryType] = None,
         materialized: bool = False,
     ):
         self._parent = parent
         self._name = "" if name is None else name
-        self._fn = None if fn is None else (getattr(self.db, fn) if isinstance(fn, str) else fn)
+        self._fn = (fn if fn is None else (getattr(self.db, fn) if isinstance(fn, str) else fn),)
         self._kwargs = {} if kwargs is None else kwargs
         self._done = done  # update node
         self._world_id = world_id
@@ -237,32 +229,32 @@ class World:
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_video,
             cams=[World.camera_nodes[cam_id] for cam_id in cam_ids],
             boxed=boxed,
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_bbox(self):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.get_bbox,
-        )._execute_from_root(Type.BBOX)
+        )._execute_from_root(QueryType.BBOX)
 
     def get_traj(self):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_traj,
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_traj_key(self):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_traj_key,
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_headings(self):
         # TODO: Optimize operations with NumPy if possible
@@ -289,31 +281,31 @@ class World:
     def get_distance(self, start: float, end: float):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_distance,
             start=str(self.db.start_time + datetime.timedelta(seconds=start)),
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_speed(self, start, end):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_speed,
             start=str(self.db.start_time + datetime.timedelta(seconds=start)),
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def filter_traj_type(self, object_type: str):
-        return derive_world(self, {Type.TRAJ}, self.db.filter_traj_type, object_type=object_type)
+        return derive_world(self, {QueryType.TRAJ}, self.db.filter_traj_type, object_type=object_type)
 
     def filter_traj_volume(self, volume: str):
-        return derive_world(self, {Type.TRAJ}, self.db.filter_traj_volume, volume=volume)
+        return derive_world(self, {QueryType.TRAJ}, self.db.filter_traj_volume, volume=volume)
 
     def filter_traj_heading(self, lessThan=float("inf"), greaterThan=float("-inf")):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.filter_traj_heading,
             lessThan=lessThan,
             greaterThan=greaterThan,
@@ -321,7 +313,7 @@ class World:
 
     def filter_distance_to_type(self, distance: float, type: str):
         return derive_world(
-            self, {Type.TRAJ}, self.db.filter_distance_to_type, distance=distance, type=type
+            self, {QueryType.TRAJ}, self.db.filter_distance_to_type, distance=distance, type=type
         )
 
     def filter_relative_to_type(
@@ -333,7 +325,7 @@ class World:
     ):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.filter_relative_to_type,
             x_range=x_range,
             y_range=y_range,
@@ -346,7 +338,7 @@ class World:
 
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.filter_relative_to_type,
             x_range=x_range,
             y_range=y_range,
@@ -367,53 +359,60 @@ class World:
     def interval(self, start, end):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.interval,
             start=str(self.db.start_time + datetime.timedelta(seconds=start)),
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
         )
 
-    def predicate(self, func: Function):
-
+    def filter(self, predicate: Union[str, Callable]):
         return derive_world(
             self,
-            {Type.TRAJ, Type.BBOX},
-            self.db.predicate,
-            func=func,
+            {QueryType.TRAJ, QueryType.BBOX},
+            self.db.filter,
+            predicate=predicate,
+        )
+
+    def exclude(self, world: World):
+        return derive_world(
+            self,
+            {QueryType.TRAJ, QueryType.BBOX},
+            self.db.exclude,
+            world=world
         )
 
     def get_len(self):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.get_len,
-        )._execute_from_root(Type.CAM)
+        )._execute_from_root(QueryType.CAM)
 
     def get_camera(self):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.get_cam,
-        )._execute_from_root(Type.CAM)
+        )._execute_from_root(QueryType.CAM)
 
     def get_bbox_geo(self):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.get_bbox_geo,
-        )._execute_from_root(Type.BBOX)
+        )._execute_from_root(QueryType.BBOX)
 
     def get_time(self):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.get_time,
-        )._execute_from_root(Type.BBOX)
+        )._execute_from_root(QueryType.BBOX)
 
     def _insert_camera(self, camera: Camera):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.insert_cam,
             camera=camera,
         )
@@ -421,7 +420,7 @@ class World:
     def _retrieve_camera(self, camera_id: str):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.retrieve_cam,
             camera_id=camera_id,
         )
@@ -429,29 +428,29 @@ class World:
     def _insert_bbox_traj(self, camera: Camera, annotation):
         return derive_world(
             self,
-            {Type.TRAJ, Type.BBOX},
+            {QueryType.TRAJ, QueryType.BBOX},
             self.db.insert_bbox_traj,
             camera=camera,
             annotation=annotation,
         )
 
     def _retrieve_bbox(self, camera_id: str):
-        return derive_world(self, {Type.BBOX}, self.db.retrieve_bbox, camera_id=camera_id)
+        return derive_world(self, {QueryType.BBOX}, self.db.retrieve_bbox, camera_id=camera_id)
 
     def _retrieve_traj(self, camera_id: str):
-        return derive_world(self, {Type.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
+        return derive_world(self, {QueryType.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
 
-    def _execute_from_root(self, type: Type):
+    def _execute_from_root(self, _type: QueryType):
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
         query = ""
 
-        if type is Type.CAM:
+        if _type is QueryType.CAM:
             query = SnowflakeQuery.from_(Table("cameras")).select("*")
-        elif type is Type.BBOX:
+        elif _type is QueryType.BBOX:
             query = SnowflakeQuery.from_(Table("general_bbox")).select("*")
-        elif type is Type.TRAJ:
+        elif _type is QueryType.TRAJ:
             query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
         else:
             query = ""
@@ -474,7 +473,7 @@ class World:
                     node._done = True
                     node._update_log_file()
             # if different type => pass
-            elif type not in node.types:
+            elif _type not in node.types:
                 continue
             # treat update method differently
             else:
@@ -488,10 +487,10 @@ class World:
         return res
 
     def _execute(self, **kwargs):
-        fn_spec = inspect.getfullargspec(self._fn)
+        fn_spec = inspect.getfullargspec(self._fn[0])
         if "world_id" in fn_spec.args or fn_spec.varkw is not None:
-            return self._fn(**{"world_id": self._world_id, **self._kwargs, **kwargs})
-        return self._fn(**{**self._kwargs, **kwargs})
+            return self._fn[0](**{"world_id": self._world_id, **self._kwargs, **kwargs})
+        return self._fn[0](**{**self._kwargs, **kwargs})
 
     def _print_lineage(self):
         curr = self
@@ -501,7 +500,7 @@ class World:
 
     def __str__(self):
         return (
-            f"fn={self._fn}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
+            f"fn={self._fn[0]}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
         )
 
     @property
@@ -526,7 +525,7 @@ class World:
 
     @property
     def fn(self):
-        return self._fn
+        return self._fn[0]
 
     @property
     def kwargs(self):
@@ -590,14 +589,14 @@ def _empty_world(name: str) -> World:
     return World(world_id, timestamp, name)
 
 
-def derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
+def derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> World:
     # world = _derive_world_from_file(parent, types, fn, **kwargs)
     # if world is not None:
     #     return world
     return _derive_world(parent, types, fn, **kwargs)
 
 
-def _derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
+def _derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
     # log_file = filename(timestamp, world_id)
@@ -631,7 +630,7 @@ def _derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
     )
 
 
-def _derive_world_from_file(parent: World, types: set[Type], fn: Any, **kwargs) -> Optional[World]:
+def _derive_world_from_file(parent: World, types: set[QueryType], fn: Any, **kwargs) -> Optional[World]:
     with open(parent.filename, "r") as f:
         sibling_filenames: Iterable[str] = yaml.safe_load(f).get("children_filenames", [])
 
@@ -681,7 +680,7 @@ def double_equal(a: Tuple[Any, Any]):
 
 def op_matched(
     file_content: dict[str, Any],
-    types: set[Type],
+    types: set[QueryType],
     fn: Any,
     kwargs: dict[str, Any] = None,
 ) -> bool:
@@ -707,7 +706,7 @@ def op_matched(
 
 def format_content(content: dict[str, Any]) -> dict[str, Any]:
     if "types" in content:
-        content["types"] = set(map(Type, content["types"]))
+        content["types"] = set(map(QueryType, content["types"]))
 
     if "kwargs" in content:
         content["kwargs"] = pickle.loads(content["kwargs"])
