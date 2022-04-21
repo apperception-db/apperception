@@ -134,7 +134,7 @@ class Database:
                 ARRAY{config.camera_intrinsic},
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
-                '{datetime.fromtimestamp(config.timestamp/1000000.0)}',
+                '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.heading}
             )"""
             for config in camera.configs
