@@ -119,6 +119,15 @@ CREATE TABLE IF NOT EXISTS RoadSection_LaneSection(
 );
 """
 
+CREATE_INTERSECTION_SQL = """
+CREATE TABLE IF NOT EXISTS Intersection(
+    id TEXT,
+    road TEXT,
+    PRIMARY KEY (id),
+    FOREIGN KEY(id)
+        REFERENCES Polygon(elementId)
+);
+"""
 
 def create_polygon_table(polygons, drop=True):
     cursor = conn.cursor()
@@ -543,6 +552,34 @@ def create_roadsec_lanesec_table(roadsec_lanesec, drop=True):
         INSERT INTO RoadSection_LaneSection (
             roadSectionId,
             laneSectionId
+        )
+        VALUES {','.join(values)};
+        """
+    )
+
+    conn.commit()
+
+def create_intersection_table(intersections, drop=True):
+    cursor = conn.cursor()
+    if drop:
+        cursor.execute("DROP TABLE IF EXISTS Intersection")
+    cursor.execute(CREATE_INTERSECTION_SQL)
+    cursor.execute("CREATE INDEX IF NOT EXISTS intersec_idx ON Intersection(id);")
+
+    values = []
+    for intersec in intersections:
+        values.append(
+            f"""(
+                '{intersec['id']}',
+                '{intersec['road']}'
+            )"""
+        )
+
+    cursor.execute(
+        f"""
+        INSERT INTO Intersection (
+            id,
+            road
         )
         VALUES {','.join(values)};
         """
