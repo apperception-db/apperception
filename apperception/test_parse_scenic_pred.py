@@ -6,7 +6,7 @@ from astpretty import pprint as apprint
 
 
 def main():
-    def pred(obj):
+    def pred(obj, cam):
         return (cam.x - 10) <= obj.x <= (cam.x + 10) and (cam.y - 15) <= obj.y <= (cam.y + 70)
 
     s = uncompyle6.deparse_code2str(pred.__code__, out=open(os.devnull, "w"))
@@ -30,7 +30,7 @@ def main():
         if isinstance(left_node, ast.Compare):
             cmp_node = left_node
             left = cmp_node.left
-            ops = cmp_node.ops
+            # ops = cmp_node.ops
             comparators = cmp_node.comparators
 
             if (
@@ -60,7 +60,7 @@ def main():
         if isinstance(right_node, ast.Compare):
             cmp_node = right_node
             left = cmp_node.left
-            ops = cmp_node.ops
+            # ops = cmp_node.ops
             comparators = cmp_node.comparators
 
             if (

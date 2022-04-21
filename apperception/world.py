@@ -3,7 +3,6 @@ import datetime
 
 import cv2
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 from metadata_context import MetadataContext
 from scenic_util import transformation
@@ -165,7 +164,7 @@ class World:
             x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
 
-    def overlay_trajectory(self, scene_name, trajectory):
+    def overlay_trajectory(self, scene_name, trajectory, video_file: str):
         frame_num = self.trajectory_to_frame_num(trajectory)
         # frame_num is int[[]], hence camera_info should also be [[]]
         camera_info = []
@@ -175,19 +174,20 @@ class World:
             )  # TODO: fetch_camera_info in scenic_utils.py
         assert len(camera_info) == len(frame_num)
         assert len(camera_info[0]) == len(frame_num[0])
-        overlay_info = self.get_overlay_info(trajectory, camera_info)
+        # overlay_info = self.get_overlay_info(trajectory, camera_info)
         # TODO: fix the following to overlay the 2d point onto the frame
-        for traj in trajectory:
-            current_trajectory = np.asarray(traj[0])
-            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-            for point in frame_points.tolist():
-                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-            plt.figure()
-            plt.imshow(frame)
-            plt.show()
+        # TODO: clean up: this for loop does not work anymore because we are not passing in camera
+        # for traj in trajectory:
+        #     current_trajectory = np.asarray(traj[0])
+        #     frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+        #     vs = cv2.VideoCapture(video_file)
+        #     frame = vs.read()
+        #     frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
+        #     for point in frame_points.tolist():
+        #         cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
+        #     plt.figure()
+        #     plt.imshow(frame)
+        #     plt.show()
 
     def trajectory_to_frame_num(self, trajectory):
         """

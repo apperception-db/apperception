@@ -13,13 +13,13 @@ from torchvision import transforms
 # Create depth frames for each frame from a video.
 
 
-def create_depth_frames(video_byte_array, model_name="mono+stereo_640x192"):
+def create_depth_frames(video_byte_array, model_name="mono+stereo_640x192", no_cuda=False):
     """Function to predict for a video."""
     assert (
         model_name is not None
     ), "You must specify the --model_name parameter; see README.md for an example"
 
-    if torch.cuda.is_available() and not args.no_cuda:
+    if torch.cuda.is_available() and not no_cuda:
         device = torch.device("cuda")
     else:
         device = torch.device("cpu")

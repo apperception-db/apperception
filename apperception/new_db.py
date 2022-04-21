@@ -1,5 +1,5 @@
-import datetime
-from typing import Tuple
+from datetime import datetime
+from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
 from camera import Camera
@@ -9,6 +9,13 @@ from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
+from pypika.functions import Cast
+from query_type import QueryType
+from scenic_util import fetch_camera as su_fetch_camera
+from utils import fn_to_sql, query_to_str
+
+if TYPE_CHECKING:
+    from .new_world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -22,9 +29,6 @@ class Database:
             dbname="mobilitydb", user="docker", host="localhost", port="25432", password="docker"
         )
         self.cur = self.con.cursor()
-
-        # The start time of the database access object
-        self.start_time = datetime.datetime(2021, 6, 8, 7, 10, 28)
 
     def reset(self):
         self._create_camera_table()
@@ -47,10 +51,9 @@ class Database:
             Column("cameraIntrinsic", "real[3][3]"),
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
-            Column("timestamp", "TEXT"),
+            Column("timestamp", "timestamptz"),
             Column("heading", "real"),
         )
-
         self.cur.execute(q1.get_sql())
         self.cur.execute(q2.get_sql())
         self.con.commit()
@@ -87,7 +90,7 @@ class Database:
             color TEXT,
             trajCentroids tgeompoint,
             largestBbox stbox,
-            itemHeadings real[],
+            itemHeadings tfloat,
             PRIMARY KEY (itemId)
         );
         """
@@ -131,7 +134,7 @@ class Database:
                 ARRAY{config.camera_intrinsic},
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
-                '{config.timestamp}',
+                '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.heading}
             )"""
             for config in camera.configs
@@ -184,6 +187,24 @@ class Database:
         """
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
+    def filter(self, query: Query, predicate: Union[str, Callable]):
+        table = "table_name"
+        return f"""
+        SELECT DISTINCT {table}.*
+        FROM ({query_to_str(query)}) as {table}
+        JOIN Cameras ON Cameras.cameraId = {table}.cameraId
+        WHERE {fn_to_sql(predicate, [table, "Cameras"])}
+        """
+
+    def exclude(self, query: Query, world: "World"):
+        return f"""
+        SELECT *
+        FROM ({query_to_str(query)}) as __query__
+        EXCEPT
+        SELECT *
+        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __except__
+        """
+
     def get_cam(self, query: Query):
         """
         Execute sql command rapidly
@@ -195,10 +216,11 @@ class Database:
             + f" FROM ({query.get_sql()}) AS final"
         )
 
-        # print(q)
-
         self.cur.execute(q)
         return self.cur.fetchall()
+
+    def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
+        return su_fetch_camera(self.con, scene_name, frame_timestamp)
 
     def get_len(self, query: Query):
         """
@@ -216,7 +238,7 @@ class Database:
 
     def insert_bbox_traj(self, camera: Camera, annotation):
         tracking_results = recognize(camera.configs, annotation)
-        add_recognized_objs(self.con, tracking_results, self.start_time, camera.id)
+        add_recognized_objs(self.con, tracking_results, camera.id)
 
     def retrieve_bbox(self, query: Query = None, camera_id: str = ""):
         bbox = Table(BBOX_TABLE)
@@ -234,18 +256,18 @@ class Database:
 
     def get_traj(self, query: Query):
         # hack
-        query = (
-            "SELECT asMFJSON(trajCentroids)::json->'sequences'"
-            + f" FROM ({query.get_sql()}) as final"
-        )
+        query = f"""
+        SELECT asMFJSON(trajCentroids)::json->'sequences'
+        FROM ({query_to_str(query)}) as final
+        """
 
-        print("get_traj", query)
+        print("get_traj")  # print("get_traj", query)
         self.cur.execute(query)
         return self.cur.fetchall()
 
     def get_traj_key(self, query: Query):
         q = SnowflakeQuery.from_(query).select("itemid")
-        print("get_traj_key", q.get_sql())
+        print("get_traj_key")  # print("get_traj_key", q.get_sql())
         self.cur.execute(q.get_sql())
         return self.cur.fetchall()
 
@@ -306,6 +328,38 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
+    def filter_distance_to_type(self, query: Query, distance: float, type: str):
+        # TODO: Implement Types
+        cameras = Table(CAMERA_TABLE)
+        getX = CustomFunction("getX", ["tgeompoint"])
+        getY = CustomFunction("getY", ["tgeompoint"])
+        valueAtTimestamp = CustomFunction("valueAtTimestamp", ["tfloat", "timestamptz"])
+
+        ST_X = CustomFunction("ST_X", ["geometry"])
+        ST_Y = CustomFunction("ST_Y", ["geometry"])
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+        SQRT = CustomFunction("SQRT", ["number"])
+        POWER = CustomFunction("POWER", ["number", "number"])
+        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
+            "1 second", "interval"
+        )
+        subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_y = valueAtTimestamp(getY(query.trajCentroids), camera_time) - ST_Y(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
+        q = (
+            SnowflakeQuery.from_(query)
+            .join(cameras)
+            .cross()
+            .select(query.star)
+            .distinct()
+            .where(subtract_mag <= distance)
+        )
+        return q
+
     def filter_relative_to_type(
         self,
         query: Query,
@@ -315,28 +369,94 @@ class Database:
         type: str,
     ):
         # TODO: Make also work with objects of other types
+        # TODO: Fix Up Local Coordinate Frame Stuff
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
-        getY = CustomFunction("getX", ["tgeompoint"])
-        getZ = CustomFunction("getX", ["tgeompoint"])
+        getY = CustomFunction("getY", ["tgeompoint"])
+        valueAtTimestamp = CustomFunction("valueAtTimestamp", ["tfloat", "timestamptz"])
 
         ST_X = CustomFunction("ST_X", ["geometry"])
         ST_Y = CustomFunction("ST_Y", ["geometry"])
-        ST_Z = CustomFunction("ST_Z", ["geometry"])
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+        SQRT = CustomFunction("SQRT", ["number"])
+        COS = CustomFunction("COS", ["number"])
+        SIN = CustomFunction("SIN", ["number"])
+        ATAN2 = CustomFunction("ATAN2", ["number", "number"])
+        POWER = CustomFunction("POWER", ["number", "number"])
+        PI = CustomFunction("PI", [])
+        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
+            "1 second", "interval"
+        )
+
+        subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_y = valueAtTimestamp(getY(query.trajCentroids), camera_time) - ST_Y(
+            ST_Centroid(cameras.egoTranslation)
+        )
+        subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
+        # ST_Z = CustomFunction("ST_Z", ["geometry"])
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+
         q = (
             SnowflakeQuery.from_(query)
             .join(cameras)
             .cross()
             .select(query.star)
             .distinct()
-            .where(x_range[0] <= (ST_X(cameras.egoTranslation) - getX(query.trajCentroids)))
-            .where((ST_X(cameras.egoTranslation) - getX(query.trajCentroids)) <= x_range[1])
-            .where(y_range[0] <= (ST_Y(cameras.egoTranslation) - getY(query.trajCentroids)))
-            .where((ST_Y(cameras.egoTranslation) - getY(query.trajCentroids)) <= y_range[1])
-            .where(z_range[0] <= (ST_Z(cameras.egoTranslation) - getZ(query.trajCentroids)))
-            .where((ST_Z(cameras.egoTranslation) - getZ(query.trajCentroids)) <= z_range[1])
+            .where(
+                x_range[0]
+                <= (
+                    subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                )
+            )
+            .where(
+                (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                <= x_range[1]
+            )
+            .where(
+                y_range[0]
+                <= (
+                    subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                )
+            )
+            .where(
+                (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                <= y_range[1]
+            )
         )
-        # print(str(q))
+
+        # q2 = (
+        #     SnowflakeQuery.from_(query)
+        #     .join(cameras)
+        #     .cross()
+        #     .select(query.itemId, cameras.filename, cameras.heading, (subtract_mag * COS(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))), (subtract_mag * SIN(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))))
+        #     .where(
+        #         x_range[0]
+        #         <= (
+        #             subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+        #         )
+        #     )
+        #     .where(
+        #         (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+        #         <= x_range[1]
+        #     )
+        #     .where(
+        #         y_range[0]
+        #         <= (
+        #             subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+        #         )
+        #     )
+        #     .where(
+        #         (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+        #         <= y_range[1]
+        #     )
+        # )
+        # print("yeeee boy")
+        # self.cur.execute(q2.get_sql())
+        # [print(x) for x in self.cur.fetchall() if "/CAM_FRONT/" in x[1]]
+        print(str(q))
+
         return q
 
     def filter_traj_volume(self, query: Query, volume: str):
@@ -384,5 +504,18 @@ class Database:
         fetched_meta = video_fetch_reformat(fetched_meta)
         get_video(fetched_meta, cams, self.start_time, boxed)
 
+    def get_heading_from_a_point(self, x, y):
+        # query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"
+        query = f"""
+            select roadDirection({x}, {y});
+        """
+        self.cur.execute(query)
+        return self.cur.fetchall()
 
-Database.insert_bbox_traj.comparators = {"annotation": lambda df: df[0].equals(df[1])}
+
+setattr(Database.insert_bbox_traj, "comparators", {"annotation": lambda df: df[0].equals(df[1])})
+
+if __name__ == "__main__":
+    x, y = 1317, 1463
+    db = Database()
+    print(db.get_heading_from_a_point(x, y))

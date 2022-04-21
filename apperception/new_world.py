@@ -5,32 +5,28 @@ import glob
 import inspect
 import uuid
 from collections.abc import Iterable
-from enum import IntEnum
 from os import makedirs, path
 from pyclbr import Function
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import cv2
 import dill as pickle
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import yaml
 from camera import Camera
 from new_db import Database
 from new_util import compile_lambda
+from pypika import Table
+from pypika.dialects import SnowflakeQuery
+from query_type import QueryType
+from scenic_util import transformation
 
-matplotlib.use("Qt5Agg")
-print("get backend", matplotlib.get_backend())
+from apperception.scenic_util import FetchCameraTuple
+
+# matplotlib.use("Qt5Agg")
+# print("get backend", matplotlib.get_backend())
 
 makedirs("./.apperception_cache", exist_ok=True)
-
-
-class Type(IntEnum):
-    # query type: for example, if we call get_cam(), and we execute the commands from root. when we encounter
-    # recognize(), we should not execute it because the inserted object must not be in the final result. we use enum
-    # type to determine whether we should execute this node
-    CAM, BBOX, TRAJ = 0, 1, 2
 
 
 BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
@@ -43,13 +39,12 @@ class World:
 
     _parent: Optional[World]
     _name: str
-    # TODO: Fix _fn typing: (World, *Any, **Any) -> Query | str? | None
-    _fn: Any
+    _fn: Tuple[Optional[Callable]]
     _kwargs: dict[str, Any]
     _done: bool
     _world_id: str
     _timestamp: datetime.datetime
-    _types: set[Type]
+    _types: set[QueryType]
     _materialized: bool
 
     def __init__(
@@ -58,15 +53,15 @@ class World:
         timestamp: datetime.datetime,
         name: str = None,
         parent: World = None,
-        fn: Any = None,
+        fn: Union[str, Callable] = None,
         kwargs: dict[str, Any] = None,
         done: bool = False,
-        types: Set[Type] = None,
+        types: Set[QueryType] = None,
         materialized: bool = False,
     ):
         self._parent = parent
         self._name = "" if name is None else name
-        self._fn = None if fn is None else (getattr(self.db, fn) if isinstance(fn, str) else fn)
+        self._fn = (fn if fn is None else (getattr(self.db, fn) if isinstance(fn, str) else fn),)
         self._kwargs = {} if kwargs is None else kwargs
         self._done = done  # update node
         self._world_id = world_id
@@ -74,24 +69,8 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    def overlay_trajectory(self, cam_id, trajectory):
-        matplotlib.use(
-            "Qt5Agg"
-        )  # FIXME: matplotlib backend is agg here (should be qt5agg). Why is it overwritten?
-        print("get backend", matplotlib.get_backend())
-        camera = World.camera_nodes[cam_id]
-        video_file = camera.video_file
-        for traj in trajectory:
-            current_trajectory = np.asarray(traj[0])
-            frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-            for point in frame_points.tolist():
-                cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-            plt.figure()
-            plt.imshow(frame)
-            plt.show()
+    def road_direction(self, x, y):
+        return self.db.get_heading_from_a_point(x, y)
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
         camera = self.camera_nodes[cam_id]
@@ -131,6 +110,116 @@ class World:
             x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
         )
 
+    def overlay_trajectory(self, scene_name: str, trajectory, object_id: str):
+        frame_timestamps = self.trajectory_to_timestamp(trajectory)
+        # camera_info is a list of mappings from timestamps to list of (frame_num, cameras)
+        camera_info: List[Dict[int, List["FetchCameraTuple"]]] = []
+        for index, cur_frame_timestamp in enumerate(frame_timestamps):
+            current_cameras = self.db.fetch_camera(scene_name, cur_frame_timestamp)
+            camera_info.append({})
+            for x in current_cameras:
+                if x[6] in camera_info[index]:
+                    camera_info[index][x[6]].append(x)
+                else:
+                    camera_info[index][x[6]] = [x]
+        camera_info_2 = [
+            [x[y] for y in sorted(x)] for x in camera_info
+        ]  # [x.values() for x in sorted(camera_info, key=lambda x: x[6])]
+
+        # assert len(camera_info) == len(frame_num)
+        # assert len(camera_info[0]) == len(frame_num[0])
+        # print(camera_info, np.asarray(camera_info).shape) # (1, 30, 8)
+        # print(trajectory, np.asarray(trajectory).shape) # (1, 1)
+        overlay_info = self.get_overlay_info(trajectory, camera_info_2)
+        # TODO: fix the following to overlay the 2d point onto the frame
+        results: List[Dict[str, List[Tuple[np.ndarray, int, str]]]] = []
+        frame_width = None
+        frame_height = None
+        for i, traj in enumerate(overlay_info):
+            results.append({})
+            for frame_num in traj:
+                for frame in frame_num:
+                    if frame_width is None:
+                        frame_im = cv2.imread(frame[2])
+                        frame_height, frame_width = frame_im.shape[:2]
+                    file_suffix = frame[2].split("/")[1]
+                    if file_suffix in results[i]:
+                        results[i][file_suffix].append(frame)
+                    else:
+                        results[i][file_suffix] = [frame]
+
+        for i in range(len(results)):
+            for file_suffix in results[i]:
+                vid_writer = cv2.VideoWriter(
+                    "./output/" + object_id + "." + file_suffix + ".mp4",
+                    cv2.VideoWriter_fourcc("m", "p", "4", "v"),
+                    30,
+                    (frame_width, frame_height),
+                )
+                for frame in results[i][file_suffix]:
+                    frame_im = cv2.imread(frame[2])
+                    cv2.circle(
+                        frame_im,
+                        tuple([int(frame[0][0][0]), int(frame[0][1][0])]),
+                        10,
+                        (0, 255, 0),
+                        -1,
+                    )
+                    vid_writer.write(frame_im)
+                vid_writer.release()
+
+    def trajectory_to_timestamp(self, trajectory):
+        """
+        fetch the frame number from the trajectory
+        1. get the time stamp field from the trajectory
+        2. convert the time stamp to frame number
+            Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
+        3. return the frame number
+        """
+        return [traj[0][0]["datetimes"] for traj in trajectory]
+
+    def get_overlay_info(self, trajectory, camera_info: List[List[List["FetchCameraTuple"]]]):
+        """
+        overlay each trajectory 3d coordinate on to the frame specified by the camera_info
+        1. for each trajectory, get the 3d coordinate
+        2. get the camera_info associated to it
+        3. implement the transformation function from 3d to 2d
+            given the single centroid point and camera configuration
+            refer to TODO in "senic_utils.py"
+        4. return a list of (2d coordinate, frame name/filename)
+        """
+        result: List[List[List[Tuple[np.ndarray, int, str]]]] = []
+        for traj_num in range(len(trajectory)):
+            traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
+            traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
+            camera_info_objs = camera_info[
+                traj_num
+            ]  # camera info list corresponding the 3d coordinate
+            traj_obj_2d: List[List[Tuple[np.ndarray, int, str]]] = []  # 2d coordinate list
+            for index in range(len(camera_info_objs)):
+                cur_camera_infos = camera_info_objs[
+                    index
+                ]  # camera info of the obejct in one point of the trajectory
+                centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
+                # in order to fit into the function transformation, we develop a dictionary called camera_config
+                frame_traj_obj_2d: List[Tuple[np.ndarray, int, str]] = []
+                for cur_camera_info in cur_camera_infos:
+                    camera_config = {}
+                    camera_config["egoTranslation"] = cur_camera_info[1]
+                    camera_config["egoRotation"] = np.array(cur_camera_info[2])
+                    camera_config["cameraTranslation"] = cur_camera_info[3]
+                    camera_config["cameraRotation"] = np.array(cur_camera_info[4])
+                    camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
+                    traj_2d = transformation(
+                        centroid_3d, camera_config
+                    )  # one point of the trajectory in 2d
+                    framenum = cur_camera_info[6]
+                    filename = cur_camera_info[7]
+                    frame_traj_obj_2d.append((traj_2d, framenum, filename))
+                traj_obj_2d.append(frame_traj_obj_2d)
+            result.append(traj_obj_2d)
+        return result
+
     def recognize(self, camera: Camera, annotation):
         node1 = self._insert_bbox_traj(camera=camera, annotation=annotation)
         node2 = node1._retrieve_bbox(camera_id=camera.id)
@@ -140,32 +229,32 @@ class World:
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_video,
             cams=[World.camera_nodes[cam_id] for cam_id in cam_ids],
             boxed=boxed,
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_bbox(self):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.get_bbox,
-        )._execute_from_root(Type.BBOX)
+        )._execute_from_root(QueryType.BBOX)
 
     def get_traj(self):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_traj,
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_traj_key(self):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_traj_key,
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_headings(self):
         # TODO: Optimize operations with NumPy if possible
@@ -192,34 +281,41 @@ class World:
     def get_distance(self, start: float, end: float):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_distance,
             start=str(self.db.start_time + datetime.timedelta(seconds=start)),
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def get_speed(self, start, end):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.get_speed,
             start=str(self.db.start_time + datetime.timedelta(seconds=start)),
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
-        )._execute_from_root(Type.TRAJ)
+        )._execute_from_root(QueryType.TRAJ)
 
     def filter_traj_type(self, object_type: str):
-        return derive_world(self, {Type.TRAJ}, self.db.filter_traj_type, object_type=object_type)
+        return derive_world(
+            self, {QueryType.TRAJ}, self.db.filter_traj_type, object_type=object_type
+        )
 
     def filter_traj_volume(self, volume: str):
-        return derive_world(self, {Type.TRAJ}, self.db.filter_traj_volume, volume=volume)
+        return derive_world(self, {QueryType.TRAJ}, self.db.filter_traj_volume, volume=volume)
 
     def filter_traj_heading(self, lessThan=float("inf"), greaterThan=float("-inf")):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.filter_traj_heading,
             lessThan=lessThan,
             greaterThan=greaterThan,
+        )
+
+    def filter_distance_to_type(self, distance: float, type: str):
+        return derive_world(
+            self, {QueryType.TRAJ}, self.db.filter_distance_to_type, distance=distance, type=type
         )
 
     def filter_relative_to_type(
@@ -231,7 +327,7 @@ class World:
     ):
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.filter_relative_to_type,
             x_range=x_range,
             y_range=y_range,
@@ -244,7 +340,7 @@ class World:
 
         return derive_world(
             self,
-            {Type.TRAJ},
+            {QueryType.TRAJ},
             self.db.filter_relative_to_type,
             x_range=x_range,
             y_range=y_range,
@@ -265,56 +361,55 @@ class World:
     def interval(self, start, end):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.interval,
             start=str(self.db.start_time + datetime.timedelta(seconds=start)),
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
         )
 
-    def add_properties(self, cam_id: str, properties: Any, property_type: str, new_prop):
-        # TODO: Should we add this to DB instead of the global object?
-        self.camera_nodes[cam_id].add_property(properties, property_type, new_prop)
-
-    def predicate(self, condition: str):
+    def filter(self, predicate: Union[str, Callable]):
         return derive_world(
             self,
-            {Type.CAM},
-            self.db.filter_cam,
-            condition=condition,
+            {QueryType.TRAJ, QueryType.BBOX},
+            self.db.filter,
+            predicate=predicate,
         )
+
+    def exclude(self, world: World):
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.exclude, world=world)
 
     def get_len(self):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.get_len,
-        )._execute_from_root(Type.CAM)
+        )._execute_from_root(QueryType.CAM)
 
     def get_camera(self):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.get_cam,
-        )._execute_from_root(Type.CAM)
+        )._execute_from_root(QueryType.CAM)
 
     def get_bbox_geo(self):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.get_bbox_geo,
-        )._execute_from_root(Type.BBOX)
+        )._execute_from_root(QueryType.BBOX)
 
     def get_time(self):
         return derive_world(
             self,
-            {Type.BBOX},
+            {QueryType.BBOX},
             self.db.get_time,
-        )._execute_from_root(Type.BBOX)
+        )._execute_from_root(QueryType.BBOX)
 
     def _insert_camera(self, camera: Camera):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.insert_cam,
             camera=camera,
         )
@@ -322,7 +417,7 @@ class World:
     def _retrieve_camera(self, camera_id: str):
         return derive_world(
             self,
-            {Type.CAM},
+            {QueryType.CAM},
             self.db.retrieve_cam,
             camera_id=camera_id,
         )
@@ -330,23 +425,32 @@ class World:
     def _insert_bbox_traj(self, camera: Camera, annotation):
         return derive_world(
             self,
-            {Type.TRAJ, Type.BBOX},
+            {QueryType.TRAJ, QueryType.BBOX},
             self.db.insert_bbox_traj,
             camera=camera,
             annotation=annotation,
         )
 
     def _retrieve_bbox(self, camera_id: str):
-        return derive_world(self, {Type.BBOX}, self.db.retrieve_bbox, camera_id=camera_id)
+        return derive_world(self, {QueryType.BBOX}, self.db.retrieve_bbox, camera_id=camera_id)
 
     def _retrieve_traj(self, camera_id: str):
-        return derive_world(self, {Type.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
+        return derive_world(self, {QueryType.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
 
-    def _execute_from_root(self, type: Type):
+    def _execute_from_root(self, _type: QueryType):
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
         query = ""
+
+        if _type is QueryType.CAM:
+            query = SnowflakeQuery.from_(Table("cameras")).select("*")
+        elif _type is QueryType.BBOX:
+            query = SnowflakeQuery.from_(Table("general_bbox")).select("*")
+        elif _type is QueryType.TRAJ:
+            query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
+        else:
+            query = ""
 
         # collect all the nodes til the root
         while curr:
@@ -358,16 +462,17 @@ class World:
             # root
             if node.fn is None:
                 continue
-            # if different type => pass
-            if type not in node.types:
-                continue
-            # treat update method differently
-            elif node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
+
+            if node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
                 print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
                     node._update_log_file()
+            # if different type => pass
+            elif _type not in node.types:
+                continue
+            # treat update method differently
             else:
                 print("execute:", node.fn.__name__)
                 # print(query)
@@ -375,13 +480,14 @@ class World:
         print("done execute node")
 
         res = query
+        # print(query)
         return res
 
     def _execute(self, **kwargs):
-        fn_spec = inspect.getfullargspec(self._fn)
+        fn_spec = inspect.getfullargspec(self._fn[0])
         if "world_id" in fn_spec.args or fn_spec.varkw is not None:
-            return self._fn(**{"world_id": self._world_id, **self._kwargs, **kwargs})
-        return self._fn(**{**self._kwargs, **kwargs})
+            return self._fn[0](**{"world_id": self._world_id, **self._kwargs, **kwargs})
+        return self._fn[0](**{**self._kwargs, **kwargs})
 
     def _print_lineage(self):
         curr = self
@@ -390,9 +496,7 @@ class World:
             curr = curr._parent
 
     def __str__(self):
-        return (
-            f"fn={self._fn}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
-        )
+        return f"fn={self._fn[0]}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
 
     @property
     def filename(self):
@@ -416,7 +520,7 @@ class World:
 
     @property
     def fn(self):
-        return self._fn
+        return self._fn[0]
 
     @property
     def kwargs(self):
@@ -480,14 +584,14 @@ def _empty_world(name: str) -> World:
     return World(world_id, timestamp, name)
 
 
-def derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
+def derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> World:
     # world = _derive_world_from_file(parent, types, fn, **kwargs)
     # if world is not None:
     #     return world
     return _derive_world(parent, types, fn, **kwargs)
 
 
-def _derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
+def _derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
     # log_file = filename(timestamp, world_id)
@@ -521,7 +625,9 @@ def _derive_world(parent: World, types: set[Type], fn: Any, **kwargs) -> World:
     )
 
 
-def _derive_world_from_file(parent: World, types: set[Type], fn: Any, **kwargs) -> Optional[World]:
+def _derive_world_from_file(
+    parent: World, types: set[QueryType], fn: Any, **kwargs
+) -> Optional[World]:
     with open(parent.filename, "r") as f:
         sibling_filenames: Iterable[str] = yaml.safe_load(f).get("children_filenames", [])
 
@@ -571,7 +677,7 @@ def double_equal(a: Tuple[Any, Any]):
 
 def op_matched(
     file_content: dict[str, Any],
-    types: set[Type],
+    types: set[QueryType],
     fn: Any,
     kwargs: dict[str, Any] = None,
 ) -> bool:
@@ -597,7 +703,7 @@ def op_matched(
 
 def format_content(content: dict[str, Any]) -> dict[str, Any]:
     if "types" in content:
-        content["types"] = set(map(Type, content["types"]))
+        content["types"] = set(map(QueryType, content["types"]))
 
     if "kwargs" in content:
         content["kwargs"] = pickle.loads(content["kwargs"])

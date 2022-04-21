@@ -20,15 +20,14 @@ class CameraConfig:
 
 
 def fetch_camera_config(scene_name: str, sample_data):
-    all_frames = sample_data[
-        (sample_data["scene_name"] == scene_name)
-        & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
-    ].sort_values(by="frame_order")
+    all_frames = sample_data[(sample_data["scene_name"] == scene_name)].sort_values(
+        by="frame_order"
+    )
 
     return [
         CameraConfig(
             frame_id=frame.token,
-            frame_num=frame.frame_order,
+            frame_num=int(frame.frame_order),
             filename=frame.filename,
             camera_translation=frame.camera_translation,
             camera_rotation=frame.camera_rotation,
