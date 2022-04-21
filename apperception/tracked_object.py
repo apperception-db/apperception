@@ -24,8 +24,8 @@ class TrackedObject:
         if not isinstance(other, TrackedObject) or self.object_type != other.object_type:
             return False
 
-        s_frame_num = np.array(self.frame_num)
-        o_frame_num = np.array(other.frame_num)
+        s_frame_num = np.array(self.timestamps)
+        o_frame_num = np.array(other.timestamps)
 
         s_indices = s_frame_num.argsort()
         o_indices = o_frame_num.argsort()
