@@ -189,35 +189,56 @@ class Database:
         """
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
-    def filter(self, query: Query, predicate: Union[str, Callable], num_objects: int):
+    def filter(self, query: Query, predicate: Union[str, Callable]):
         if isinstance(predicate, str):
             body = ast.parse(predicate).body[0]
             if isinstance(body, ast.FunctionDef):
-                num_args = len(body.args.args)
+                args = [arg.arg for arg in body.args.args]
             elif isinstance(body, ast.Expr):
                 value = body.value
                 if isinstance(value, ast.Lambda):
-                    num_args = len(value.args.args)
+                    args = [arg.arg for arg in value.args.args]
                 else:
                     raise Exception("Predicate is not a function")
             else:
                 raise Exception("Predicate is not a function")
         else:
             args = inspect.getfullargspec(predicate).args
-            num_args = len(args)
 
-        num_objects = min(num_objects, num_args)
+        tables = []
+        tables_sql = []
+        table_idx = 0
+        found_camera = False
+        found_road = False
+        for arg in args:
+            if arg in ['c', 'cam', 'camera']:
+                if found_camera:
+                    raise Exception("Only allow one camera parameter")
+                tables_sql.append("Cameras")
+                found_camera = True
+            elif arg in ['r', 'road']:
+                if found_road:
+                    raise Exception("Only allow one road parameter")
+                # TODO: Road is not a real DB table name
+                tables_sql.append("Road")
+                found_road = True
+            else:
+                # TODO: table name should depend on world's id
+                table_name = f"table_{table_idx}"
+                tables.append(table_name)
+                tables_sql.append(table_name)
+                table_idx += 1
 
-        # TODO: table name should depend on world's id
-        tables = [f"table_name_{i}" for i in range(num_objects)]
-        constant_tables = ["Cameras"]
+        predicate_sql = fn_to_sql(predicate, tables_sql)
+        query_str = query_to_str(query)
+        joins = [f'JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId' for table in tables[1:]]
 
         return f"""
         SELECT DISTINCT {tables[0]}.*
-        FROM ({query_to_str(query)}) as {tables[0]}
-        {" ".join([f'JOIN ({query_to_str(query)}) as {t} ON {t}.cameraId = {tables[0]}.cameraId' for t in tables[1:]])}
-        {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if num_args - num_objects == 1 else ""}
-        WHERE {fn_to_sql(predicate, tables + constant_tables[:num_args - num_objects])}
+        FROM ({query_str}) as {tables[0]}
+        {" ".join(joins)}
+        JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId
+        WHERE {predicate_sql}
         """
 
     def exclude(self, query: Query, world: "World"):

@@ -367,41 +367,12 @@ class World:
             end=str(self.db.start_time + datetime.timedelta(seconds=end)),
         )
 
-    class Filter:
-        world: World
-
-        def __init__(self, world: World):
-            self.world = world
-
-        def __call__(self, predicate: Union[str, Callable]) -> World:
-            return derive_world(
-                self.world,
-                {QueryType.TRAJ, QueryType.BBOX},
-                self.world.db.filter,
-                predicate=predicate,
-                num_objects=1,
-            )
-
-        def __getitem__(self, num_objects: int) -> Callable[[Union[str, Callable]], World]:
-            return lambda predicate: derive_world(
-                self.world,
-                {QueryType.TRAJ, QueryType.BBOX},
-                self.world.db.filter,
-                predicate=predicate,
-                num_objects=num_objects,
-            )
-
-    @property
-    def filter_(self) -> World.Filter:
-        return World.Filter(self)
-
-    def filter(self, predicate: Union[str, Callable], num_objects: int = 1):
+    def filter(self, predicate: Union[str, Callable]):
         return derive_world(
             self,
             {QueryType.TRAJ, QueryType.BBOX},
             self.db.filter,
             predicate=predicate,
-            num_objects=num_objects,
         )
 
     def exclude(self, world: World):
