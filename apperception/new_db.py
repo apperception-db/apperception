@@ -2,16 +2,17 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
-from query_type import QueryType
-from utils import fn_to_sql, query_to_str
 from camera import Camera
-from new_util import add_recognized_objs, get_video, recognize, video_fetch_reformat
+from new_util import (add_recognized_objs, get_video, recognize,
+                      video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
+from query_type import QueryType
 from scenic_util import fetch_camera as su_fetch_camera
+from utils import fn_to_sql, query_to_str
 
 if TYPE_CHECKING:
     from .new_world import World
@@ -187,7 +188,7 @@ class Database:
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
     def filter(self, query: Query, predicate: Union[str, Callable]):
-        table = 'table_name'
+        table = "table_name"
         return f"""
         SELECT DISTINCT {table}.*
         FROM ({query_to_str(query)}) as {table}

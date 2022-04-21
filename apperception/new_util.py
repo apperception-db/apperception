@@ -1,6 +1,6 @@
 import ast
-from datetime import datetime
 import os
+from datetime import datetime
 from types import FunctionType
 from typing import Dict, List, Tuple
 
@@ -241,9 +241,7 @@ def recognize(camera_configs: List[CameraConfig], annotation):
     return annotations
 
 
-def add_recognized_objs(
-    conn, formatted_result: Dict[str, TrackedObject], camera_id: str
-):
+def add_recognized_objs(conn, formatted_result: Dict[str, TrackedObject], camera_id: str):
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)
@@ -337,14 +335,16 @@ def insert_general_trajectory(
         max_br = np.maximum(br, max_br)
 
         # Insert bbox
-        insert_bbox_trajectories_builder.append(f"""(
+        insert_bbox_trajectories_builder.append(
+            f"""(
             '{item_id}',
             '{camera_id}',
             STBOX 'STBOX ZT(
                 ({join([*tl, timestamp])}),
                 ({join([*br, timestamp])})
             )'
-        )""")
+        )"""
+        )
 
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
@@ -369,10 +369,12 @@ def insert_general_trajectory(
 
     cursor.execute(insert_trajectory)
     if len(insert_bbox_trajectories_builder):
-        cursor.execute(f"""
+        cursor.execute(
+            f"""
         INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
         VALUES {",".join(insert_bbox_trajectories_builder)}
-        """)
+        """
+        )
         # cursor.execute(",".join(insert_bbox_trajectories_builder))
 
     # Commit your changes in the database

@@ -18,8 +18,8 @@ from new_db import Database
 from new_util import compile_lambda
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
-from scenic_util import transformation
 from query_type import QueryType
+from scenic_util import transformation
 
 from apperception.scenic_util import FetchCameraTuple
 
@@ -297,7 +297,9 @@ class World:
         )._execute_from_root(QueryType.TRAJ)
 
     def filter_traj_type(self, object_type: str):
-        return derive_world(self, {QueryType.TRAJ}, self.db.filter_traj_type, object_type=object_type)
+        return derive_world(
+            self, {QueryType.TRAJ}, self.db.filter_traj_type, object_type=object_type
+        )
 
     def filter_traj_volume(self, volume: str):
         return derive_world(self, {QueryType.TRAJ}, self.db.filter_traj_volume, volume=volume)
@@ -374,12 +376,7 @@ class World:
         )
 
     def exclude(self, world: World):
-        return derive_world(
-            self,
-            {QueryType.TRAJ, QueryType.BBOX},
-            self.db.exclude,
-            world=world
-        )
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.exclude, world=world)
 
     def get_len(self):
         return derive_world(
@@ -499,9 +496,7 @@ class World:
             curr = curr._parent
 
     def __str__(self):
-        return (
-            f"fn={self._fn[0]}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
-        )
+        return f"fn={self._fn[0]}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
 
     @property
     def filename(self):
@@ -630,7 +625,9 @@ def _derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> Wo
     )
 
 
-def _derive_world_from_file(parent: World, types: set[QueryType], fn: Any, **kwargs) -> Optional[World]:
+def _derive_world_from_file(
+    parent: World, types: set[QueryType], fn: Any, **kwargs
+) -> Optional[World]:
     with open(parent.filename, "r") as f:
         sibling_filenames: Iterable[str] = yaml.safe_load(f).get("children_filenames", [])
 
