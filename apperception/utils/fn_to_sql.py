@@ -44,7 +44,9 @@ def to_lambda_str(predicate: Callable) -> str:
     argspec = getfullargspec(predicate)
     predicate_str = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
     if not validate(predicate_str, argspec):
-        raise Exception("predicate should be a function with arguments without default values and without keyworded argument")
+        raise Exception(
+            "predicate should be a function with arguments without default values and without keyworded argument"
+        )
     return f"lambda {', '.join(argspec.args)} :{predicate_str[len('return '):]}"
 
 

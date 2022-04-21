@@ -379,7 +379,7 @@ class World:
                 {QueryType.TRAJ, QueryType.BBOX},
                 self.world.db.filter,
                 predicate=predicate,
-                num_objects=1
+                num_objects=1,
             )
 
         def __getitem__(self, num_objects: int) -> Callable[[Union[str, Callable]], World]:
@@ -389,8 +389,9 @@ class World:
                     {QueryType.TRAJ, QueryType.BBOX},
                     self.world.db.filter,
                     predicate=predicate,
-                    num_objects=num_objects
+                    num_objects=num_objects,
                 )
+
             return filter
 
     @property
@@ -403,7 +404,7 @@ class World:
             {QueryType.TRAJ, QueryType.BBOX},
             self.db.filter,
             predicate=predicate,
-            num_objects=num_objects
+            num_objects=num_objects,
         )
 
     def exclude(self, world: World):
