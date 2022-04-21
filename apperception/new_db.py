@@ -1,4 +1,6 @@
+import ast
 from datetime import datetime
+import inspect
 from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
@@ -187,13 +189,35 @@ class Database:
         """
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
-    def filter(self, query: Query, predicate: Union[str, Callable]):
-        table = "table_name"
+    def filter(self, query: Query, predicate: Union[str, Callable], num_objects: int):
+        if isinstance(predicate, str):
+            body = ast.parse(predicate).body[0]
+            if isinstance(body, ast.FunctionDef):
+                num_args = len(body.args.args)
+            elif isinstance(body, ast.Expr):
+                value = body.value
+                if isinstance(value, ast.Lambda):
+                    num_args = len(value.args.args)
+                else:
+                    raise Exception("Predicate is not a function")
+            else:
+                raise Exception("Predicate is not a function")
+        else:
+            args = inspect.getfullargspec(predicate).args
+            num_args = len(args)
+
+        num_objects = min(num_objects, num_args)
+
+        # TODO: table name should depend on world's id
+        tables = [f"table_name_{i}" for i in range(num_objects)]
+        constant_tables = ["Cameras"]
+
         return f"""
-        SELECT DISTINCT {table}.*
-        FROM ({query_to_str(query)}) as {table}
-        JOIN Cameras ON Cameras.cameraId = {table}.cameraId
-        WHERE {fn_to_sql(predicate, [table, "Cameras"])}
+        SELECT DISTINCT {tables[0]}.*
+        FROM ({query_to_str(query)}) as {tables[0]}
+        {" ".join([f'JOIN ({query_to_str(query)}) as {t} ON {t}.cameraId = {tables[0]}.cameraId' for t in tables[1:]])}
+        {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if num_args - num_objects == 1 else ""}
+        WHERE {fn_to_sql(predicate, tables + constant_tables[:num_args - num_objects])}
         """
 
     def exclude(self, query: Query, world: "World"):
@@ -262,6 +286,7 @@ class Database:
         """
 
         print("get_traj")  # print("get_traj", query)
+        print(query)
         self.cur.execute(query)
         return self.cur.fetchall()
 
