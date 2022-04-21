@@ -40,7 +40,7 @@ jobs:
           python-version: 3.8
       
       - name: Install Dependencies
-        run: pip install autoflake autopep8 black isort
+        run: pip install autoflake autopep8 black isort flake8
       
       - name: Fix lint with autoflake
         run: python -m autoflake --recursive --in-place --remove-all-unused-imports --ignore-init-module-imports --expand-star-imports apperception
@@ -56,3 +56,7 @@ jobs:
       
       - name: Commit formatted changes
         run: ./scripts/commit-and-push.sh "[CI] format"
+      
+      - name: Analyze the code with flake8
+        if: always()
+        run: python -m flake8 apperception

@@ -70,10 +70,6 @@ jobs:
         run: poetry install
         if: steps.cache.outputs.cache-hit != 'true'
       
-      - name: Analyze the code with flake8
-        if: always()
-        run: poetry run flake8 apperception
-      
       - name: Type Check with mypy
         if: always()
         run: yes | poetry run mypy --install-types apperception ; poetry run mypy apperception
