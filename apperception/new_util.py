@@ -370,12 +370,8 @@ def insert_general_trajectory(
     cursor.execute(insert_trajectory)
     if len(insert_bbox_trajectories_builder):
         cursor.execute(
-            f"""
-        INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
-        VALUES {",".join(insert_bbox_trajectories_builder)}
-        """
+            f"INSERT INTO General_Bbox (itemId, cameraId, trajBbox) VALUES {','.join(insert_bbox_trajectories_builder)}"
         )
-        # cursor.execute(",".join(insert_bbox_trajectories_builder))
 
     # Commit your changes in the database
     conn.commit()
