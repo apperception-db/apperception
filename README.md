@@ -2,6 +2,11 @@
 
 Apperception ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
+## Require
+```
+python >= 3.7
+```
+
 ## How to Setup Apperception Repo
 ### Install dependencies:
 #### Debian based Linux
