@@ -27,7 +27,7 @@ jobs:
       - name: Commit clean up changes
         run: ./scripts/commit-and-push.sh "[CI] cleanup python notebooks"
   format:
-    name: Format
+    name: Format and Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
