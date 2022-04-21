@@ -286,7 +286,6 @@ class Database:
         """
 
         print("get_traj")  # print("get_traj", query)
-        print(query)
         self.cur.execute(query)
         return self.cur.fetchall()
 

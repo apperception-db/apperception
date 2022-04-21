@@ -383,16 +383,13 @@ class World:
             )
 
         def __getitem__(self, num_objects: int) -> Callable[[Union[str, Callable]], World]:
-            def filter(predicate: Union[str, Callable]) -> World:
-                return derive_world(
-                    self.world,
-                    {QueryType.TRAJ, QueryType.BBOX},
-                    self.world.db.filter,
-                    predicate=predicate,
-                    num_objects=num_objects,
-                )
-
-            return filter
+            return lambda predicate: derive_world(
+                self.world,
+                {QueryType.TRAJ, QueryType.BBOX},
+                self.world.db.filter,
+                predicate=predicate,
+                num_objects=num_objects,
+            )
 
     @property
     def filter_(self) -> World.Filter:
