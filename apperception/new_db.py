@@ -211,12 +211,12 @@ class Database:
         found_camera = False
         found_road = False
         for arg in args:
-            if arg in ['c', 'cam', 'camera']:
+            if arg in ["c", "cam", "camera"]:
                 if found_camera:
                     raise Exception("Only allow one camera parameter")
                 tables_sql.append("Cameras")
                 found_camera = True
-            elif arg in ['r', 'road']:
+            elif arg in ["r", "road"]:
                 if found_road:
                     raise Exception("Only allow one road parameter")
                 # TODO: Road is not a real DB table name
@@ -231,7 +231,10 @@ class Database:
 
         predicate_sql = fn_to_sql(predicate, tables_sql)
         query_str = query_to_str(query)
-        joins = [f'JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId' for table in tables[1:]]
+        joins = [
+            f"JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId"
+            for table in tables[1:]
+        ]
 
         return f"""
         SELECT DISTINCT {tables[0]}.*
