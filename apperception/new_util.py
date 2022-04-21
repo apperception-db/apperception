@@ -1,6 +1,6 @@
 import ast
-import datetime
 import os
+from datetime import datetime
 from types import FunctionType
 from typing import Dict, List, Tuple
 
@@ -12,7 +12,7 @@ from box import Box
 from camera_config import CameraConfig
 from pypika.dialects import SnowflakeQuery
 from pyquaternion import Quaternion
-from scenic_util import bbox_to_data3d, convert_timestamps, join
+from scenic_util import bbox_to_data3d, join
 from tracked_object import TrackedObject
 from video_context import Camera
 from video_util import (convert_datetime_to_frame_num, get_video_box,
@@ -202,17 +202,17 @@ def compile_lambda(pred):
 
 def recognize(camera_configs: List[CameraConfig], annotation):
     annotations: Dict[str, TrackedObject] = {}
-    sample_token_to_frame_num: Dict[str, int] = {}
+    sample_token_to_time: Dict[str, int] = {}
     for config in camera_configs:
-        if config.frame_id in sample_token_to_frame_num:
+        if config.frame_id in sample_token_to_time:
             raise Exception("duplicate frame_id")
-        sample_token_to_frame_num[config.frame_id] = config.frame_num
+        sample_token_to_time[config.frame_id] = config.timestamp
 
     for a in annotation.itertuples(index=False):
         sample_data_token = a.token_sample_data
-        if sample_data_token not in sample_token_to_frame_num:
+        if sample_data_token not in sample_token_to_time:
             continue
-        frame_num = sample_token_to_frame_num[sample_data_token]
+        timestamp = sample_token_to_time[sample_data_token]
         item_id = a.instance_token
         if item_id not in annotations:
             annotations[item_id] = TrackedObject(a.category, [], [])
@@ -223,17 +223,17 @@ def recognize(camera_configs: List[CameraConfig], annotation):
         bbox = np.transpose(corners[:, [3, 7]])
 
         annotations[item_id].bboxes.append(bbox)
-        annotations[item_id].frame_num.append(frame_num)
+        annotations[item_id].timestamps.append(timestamp)
         annotations[item_id].itemHeading.append(a.heading)
 
     for item_id in annotations:
-        frame_nums = np.array(annotations[item_id].frame_num)
+        timestamps = np.array(annotations[item_id].timestamps)
         bboxes = np.array(annotations[item_id].bboxes)
         itemHeadings = np.array(annotations[item_id].itemHeading)
 
-        index = frame_nums.argsort()
+        index = timestamps.argsort()
 
-        annotations[item_id].frame_num = frame_nums[index].tolist()
+        annotations[item_id].timestamps = timestamps[index].tolist()
         annotations[item_id].bboxes = [bboxes[i, :, :] for i in index]
         annotations[item_id].itemHeading = itemHeadings[index].tolist()
 
@@ -241,13 +241,11 @@ def recognize(camera_configs: List[CameraConfig], annotation):
     return annotations
 
 
-def add_recognized_objs(
-    conn, formatted_result: Dict[str, TrackedObject], start_time: datetime.datetime, camera_id: str
-):
+def add_recognized_objs(conn, formatted_result: Dict[str, TrackedObject], camera_id: str):
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)
-        tracked_cnt = formatted_result[item_id].frame_num
+        timestamps = formatted_result[item_id].timestamps
         itemHeading_list = formatted_result[item_id].itemHeading
 
         top_left = recognized_bboxes[:, 0, :]
@@ -264,8 +262,7 @@ def add_recognized_objs(
             item_id,
             object_type,
             "default_color",
-            start_time,
-            tracked_cnt,
+            timestamps,
             obj_traj,
             camera_id,
             itemHeading_list,
@@ -277,7 +274,6 @@ def bboxes_to_postgres(
     item_id: str,
     object_type: str,
     color: str,
-    start_time: datetime.datetime,
     timestamps: List[int],
     bboxes: List[List[List[float]]],
     camera_id: str,
@@ -289,13 +285,12 @@ def bboxes_to_postgres(
     for meta_box in converted_bboxes:
         pairs.append(meta_box[0])
         deltas.append(meta_box[1:])
-    postgres_timestamps = convert_timestamps(start_time, timestamps)
     insert_general_trajectory(
         conn,
         item_id,
         object_type,
         color,
-        postgres_timestamps,
+        [str(datetime.fromtimestamp(t / 1000000.0)) for t in timestamps],
         bboxes,
         pairs,
         camera_id,
@@ -341,22 +336,19 @@ def insert_general_trajectory(
 
         # Insert bbox
         insert_bbox_trajectories_builder.append(
-            f"""
-            INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
-            VALUES (
-                '{item_id}',
-                '{camera_id}',
-                STBOX 'STBOX ZT(
-                    ({join([*tl, timestamp])}),
-                    ({join([*br, timestamp])})
-                )'
-            );
-            """
+            f"""(
+            '{item_id}',
+            '{camera_id}',
+            STBOX 'STBOX ZT(
+                ({join([*tl, timestamp])}),
+                ({join([*br, timestamp])})
+            )'
+        )"""
         )
 
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
-        itemHeadings.append(str(curItemHeading))
+        itemHeadings.append(f"{curItemHeading}@{timestamp}")
 
     # Insert the item_trajectory separately
     insert_trajectory = f"""
@@ -366,18 +358,20 @@ def insert_general_trajectory(
         '{camera_id}',
         '{object_type}',
         '{color}',
-        '{{[{', '.join(traj_centroids)}]}}',
+        tgeompoint '{{[{', '.join(traj_centroids)}]}}',
         STBOX 'STBOX Z(
             ({join(min_tl)}),
             ({join(max_br)})
         )',
-        '{{{','.join(itemHeadings)}}}'
+        tfloat '{{[{', '.join(itemHeadings)}]}}'
     );
     """
 
     cursor.execute(insert_trajectory)
     if len(insert_bbox_trajectories_builder):
-        cursor.execute("".join(insert_bbox_trajectories_builder))
+        cursor.execute(
+            f"INSERT INTO General_Bbox (itemId, cameraId, trajBbox) VALUES {','.join(insert_bbox_trajectories_builder)}"
+        )
 
     # Commit your changes in the database
     conn.commit()
