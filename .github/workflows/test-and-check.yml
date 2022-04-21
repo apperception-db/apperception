@@ -40,7 +40,7 @@ jobs:
       - name: Unit Test
         run: poetry run pytest tests
   check:
-    name: Lint and Type Check
+    name: Type Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -69,10 +69,6 @@ jobs:
       - name: Install Dependencies
         run: poetry install
         if: steps.cache.outputs.cache-hit != 'true'
-      
-      - name: Analyze the code with flake8
-        if: always()
-        run: poetry run flake8 apperception
       
       - name: Type Check with mypy
         if: always()
