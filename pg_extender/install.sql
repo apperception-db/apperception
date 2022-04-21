@@ -3,3 +3,4 @@
 \i roadDirection.sql;
 \i overlap.sql;
 \i viewAngle.sql;
+\i geoContained.sql;
