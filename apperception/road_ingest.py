@@ -129,6 +129,7 @@ CREATE TABLE IF NOT EXISTS Intersection(
 );
 """
 
+
 def create_polygon_table(polygons, drop=True):
     cursor = conn.cursor()
     if drop:
@@ -525,6 +526,7 @@ def create_roadsec_lanesec_table(roadsec_lanesec, drop=True):
     )
 
     conn.commit()
+
 
 def create_intersection_table(intersections, drop=True):
     cursor = conn.cursor()
