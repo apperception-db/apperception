@@ -22,6 +22,7 @@ POSTGRES_MACROS: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
 }
 
 
+
 def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)
@@ -46,7 +47,9 @@ def to_lambda_str(predicate: Callable) -> str:
     argspec = getfullargspec(predicate)
     predicate_str = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
     if not validate(predicate_str, argspec):
-        raise Exception()
+        raise Exception(
+            "predicate should be a function with arguments without default values and without keyworded argument"
+        )
     return f"lambda {', '.join(argspec.args)} :{predicate_str[len('return '):]}"
 
 
@@ -178,10 +181,10 @@ class GenSqlVisitor(ast.NodeVisitor):
         else:
             raise Exception("Unsupported function")
 
-        if func not in POSTGRES_MACROS:
-            return f"{func}({', '.join(map(self.visit, node.args))})"
+        if hasattr(F, func):
+            return getattr(F, func).fn(self, node.args)
 
-        return POSTGRES_MACROS[func](self, node.args)
+        return f"{func}({', '.join(map(self.visit, node.args))})"
 
     def visit_Constant(self, node: ast.Constant) -> str:
         value = node.value

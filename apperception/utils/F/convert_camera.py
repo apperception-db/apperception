@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 @fake_fn
 def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
-    arg_object, arg_camera = args
+    arg_object, arg_camera, arg_time = args
 
     if isinstance(arg_object, ast.Attribute):
         value = arg_object.value
@@ -44,4 +44,4 @@ def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
     else:
         raise Exception("Second argument of convert_camera should be camera or its ego car")
 
-    return f"ConvertCamera({object_positions}, {visitor.eval_vars[name]}.{camera_attr}, {visitor.eval_vars[name]}.timestamp)"
+    return f"ConvertCamera({object_positions}, {visitor.eval_vars[name]}.{camera_attr}, {visitor.visit(arg_time)})"

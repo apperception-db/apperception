@@ -585,6 +585,7 @@ def _empty_world(name: str) -> World:
 
 
 def derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> World:
+    # TODO: paramiterize fn's arguments and kwargs
     # world = _derive_world_from_file(parent, types, fn, **kwargs)
     # if world is not None:
     #     return world

@@ -1,3 +1,5 @@
+import ast
+import inspect
 from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Tuple, Union
 
@@ -188,12 +190,58 @@ class Database:
         return SnowflakeQuery.from_(query).select("*").where(eval(condition))
 
     def filter(self, query: Query, predicate: Union[str, Callable]):
-        table = "table_name"
+        if isinstance(predicate, str):
+            body = ast.parse(predicate).body[0]
+            if isinstance(body, ast.FunctionDef):
+                args = [arg.arg for arg in body.args.args]
+            elif isinstance(body, ast.Expr):
+                value = body.value
+                if isinstance(value, ast.Lambda):
+                    args = [arg.arg for arg in value.args.args]
+                else:
+                    raise Exception("Predicate is not a function")
+            else:
+                raise Exception("Predicate is not a function")
+        else:
+            args = inspect.getfullargspec(predicate).args
+
+        tables = []
+        tables_sql = []
+        table_idx = 0
+        found_camera = False
+        found_road = False
+        for arg in args:
+            if arg in ["c", "cam", "camera"]:
+                if found_camera:
+                    raise Exception("Only allow one camera parameter")
+                tables_sql.append("Cameras")
+                found_camera = True
+            elif arg in ["r", "road"]:
+                if found_road:
+                    raise Exception("Only allow one road parameter")
+                # TODO: Road is not a real DB table name
+                tables_sql.append("Road")
+                found_road = True
+            else:
+                # TODO: table name should depend on world's id
+                table_name = f"table_{table_idx}"
+                tables.append(table_name)
+                tables_sql.append(table_name)
+                table_idx += 1
+
+        predicate_sql = fn_to_sql(predicate, tables_sql)
+        query_str = query_to_str(query)
+        joins = [
+            f"JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId"
+            for table in tables[1:]
+        ]
+
         return f"""
-        SELECT DISTINCT {table}.*
-        FROM ({query_to_str(query)}) as {table}
-        JOIN Cameras ON Cameras.cameraId = {table}.cameraId
-        WHERE {fn_to_sql(predicate, [table, "Cameras"])}
+        SELECT DISTINCT {tables[0]}.*
+        FROM ({query_str}) as {tables[0]}
+        {" ".join(joins)}
+        JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId
+        WHERE {predicate_sql}
         """
 
     def exclude(self, query: Query, world: "World"):
