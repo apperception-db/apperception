@@ -22,7 +22,6 @@ POSTGRES_MACROS: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
 }
 
 
-
 def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)
