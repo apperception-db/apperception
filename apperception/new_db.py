@@ -53,7 +53,8 @@ class Database:
             Column("egoTranslation", "geometry"),
             Column("egoRotation", "real[4]"),
             Column("timestamp", "timestamptz"),
-            Column("heading", "real"),
+            Column("cameraHeading", "real"),
+            Column("egoHeading", "real"),
         )
         self.cur.execute(q1.get_sql())
         self.cur.execute(q2.get_sql())
@@ -136,7 +137,8 @@ class Database:
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY{config.ego_rotation},
                 '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
-                {config.heading}
+                {config.cameraHeading},
+                {config.egoHeading}
             )"""
             for config in camera.configs
         ]
@@ -154,7 +156,8 @@ class Database:
                 egoTranslation,
                 egoRotation,
                 timestamp,
-                heading
+                cameraHeading,
+                egoHeading
             )
             VALUES {','.join(values)};
             """
@@ -259,7 +262,7 @@ class Database:
 
         # hack
         q = (
-            "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading"
+            "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading"
             + f" FROM ({query.get_sql()}) AS final"
         )
 
@@ -431,19 +434,18 @@ class Database:
         ATAN2 = CustomFunction("ATAN2", ["number", "number"])
         POWER = CustomFunction("POWER", ["number", "number"])
         PI = CustomFunction("PI", [])
-        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
-            "1 second", "interval"
-        )
+        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
+        # camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
+        #     "1 second", "interval"
+        # )
 
-        subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(
+        subtract_x = valueAtTimestamp(getX(query.trajCentroids), cameras.timestamp) - ST_X(
             ST_Centroid(cameras.egoTranslation)
         )
-        subtract_y = valueAtTimestamp(getY(query.trajCentroids), camera_time) - ST_Y(
+        subtract_y = valueAtTimestamp(getY(query.trajCentroids), cameras.timestamp) - ST_Y(
             ST_Centroid(cameras.egoTranslation)
         )
         subtract_mag = SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2))
-        # ST_Z = CustomFunction("ST_Z", ["geometry"])
-        ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
 
         q = (
             SnowflakeQuery.from_(query)
@@ -454,54 +456,25 @@ class Database:
             .where(
                 x_range[0]
                 <= (
-                    subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                    subtract_mag * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
                 )
             )
             .where(
-                (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                (subtract_mag * COS(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x)))
                 <= x_range[1]
             )
             .where(
                 y_range[0]
                 <= (
-                    subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
+                    subtract_mag * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x))
                 )
             )
             .where(
-                (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
+                (subtract_mag * SIN(PI() * cameras.egoHeading / 180 + ATAN2(subtract_y, subtract_x)))
                 <= y_range[1]
             )
         )
 
-        # q2 = (
-        #     SnowflakeQuery.from_(query)
-        #     .join(cameras)
-        #     .cross()
-        #     .select(query.itemId, cameras.filename, cameras.heading, (subtract_mag * COS(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))), (subtract_mag * SIN(PI()*cameras.heading/180 + ATAN2(subtract_y, subtract_x))))
-        #     .where(
-        #         x_range[0]
-        #         <= (
-        #             subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
-        #         )
-        #     )
-        #     .where(
-        #         (subtract_mag * COS(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
-        #         <= x_range[1]
-        #     )
-        #     .where(
-        #         y_range[0]
-        #         <= (
-        #             subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x))
-        #         )
-        #     )
-        #     .where(
-        #         (subtract_mag * SIN(PI() * cameras.heading / 180 + ATAN2(subtract_y, subtract_x)))
-        #         <= y_range[1]
-        #     )
-        # )
-        # print("yeeee boy")
-        # self.cur.execute(q2.get_sql())
-        # [print(x) for x in self.cur.fetchall() if "/CAM_FRONT/" in x[1]]
         print(str(q))
 
         return q

@@ -7,11 +7,12 @@ import psycopg2
 import pickle
 import os
 import shutil
-sys.path.append(os.path.join(os.getcwd(),"apperception"))
-from new_world import empty_world, World
-from camera import Camera
-from scenic_generate_df import scenic_generate_df
-from camera_config import fetch_camera_config
+sys.path.append(os.getcwd())
+sys.path.append(os.path.join(os.getcwd(), "apperception"))
+from apperception.new_world import empty_world, World
+from apperception.data_types import Camera
+# from apperception.utils import scenic_generate_df
+from apperception.utils import df_to_camera_config
 
 
 ### COLORS FOR OUTPUT ###
@@ -43,7 +44,8 @@ def add_sample(df_sample_data, df_annotation, camera_id, cam_x, cam_y, cam_z, ca
                                                 "ego_translation": [cam_x, cam_y, cam_z], 
                                                 "scene_name": camera_id, 
                                                 "frame_order": 0, 
-                                                "heading": cam_heading}, ignore_index=True)
+                                                "ego_heading": cam_heading,
+                                                "camera_heading": 0}, ignore_index=True)
     
     df_annotation = df_annotation.append({
                                          "sample_token": camera_id,
@@ -88,7 +90,7 @@ def run_tests():
     print(BLUE + "\n ----Creating Scenic World----" + END)
     scenes = df_sample_data["scene_name"].tolist()
     for scene in scenes:
-        config = fetch_camera_config(scene, df_sample_data)
+        config = df_to_camera_config(scene, df_sample_data)
         camera = Camera(config=config, id=scene)
         world = world.add_camera(camera)
         df_config = df_sample_data[df_sample_data['scene_name'] == scene][['sample_token']]
@@ -136,20 +138,16 @@ df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camer
 df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camera1", 0, 0, 0, 0, "Object At (-10, 10)", -10, 10, 0, 0, "Camera 0 Heading")
 
 add_query("Camera 0 Heading: Object 10 Above, 10 Right", lambda world: world.filter_traj_type("Camera 0 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 0) <= obj.x <= (cam.x + 11) 
-                                                                                                   and (cam.y - 0) <= obj.y <= (cam.y + 11)), 
+                                                        .filter_relative_to_type(x_range=(0, 11), y_range=(0, 11), z_range=(0, 0), type="camera"),
          ["Object At (10, 10)"])
 add_query("Camera 0 Heading: Object 10 Below, 10 Right", lambda world: world.filter_traj_type("Camera 0 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 0) <= obj.x <= (cam.x + 11) 
-                                                                                                   and (cam.y - 11) <= obj.y <= (cam.y + 0)),  
+                                                         .filter_relative_to_type(x_range=(0, 11), y_range=(-11, 0), z_range=(0, 0), type="camera"),  
          ["Object At (10, -10)"])
 add_query("Camera 0 Heading: Object 10 Below, 10 Left", lambda world: world.filter_traj_type("Camera 0 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 11) <= obj.x <= (cam.x + 0) 
-                                                                                                   and (cam.y - 11) <= obj.y <= (cam.y + 0)), 
+                                                         .filter_relative_to_type(x_range=(-11, 0), y_range=(-11, 0), z_range=(0, 0), type="camera"), 
          ["Object At (-10, -10)"])
 add_query("Camera 0 Heading: Object 10 Above, 10 Left", lambda world: world.filter_traj_type("Camera 0 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 11) <= obj.x <= (cam.x + 0) 
-                                                                                                   and (cam.y - 0) <= obj.y <= (cam.y + 11)), 
+                                                         .filter_relative_to_type(x_range=(-11, 0), y_range=(0, 11), z_range=(0, 0), type="camera"), 
          ["Object At (-10, 10)"])
 
 
@@ -159,20 +157,16 @@ df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camer
 df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camera2", 50, 50, 0, 90, "Object At (60, 50)", 60, 50, 0, 0, "Camera 90 Heading")
 
 add_query("Camera 90 Heading: Object 10 Above", lambda world: world.filter_traj_type("Camera 90 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 1) <= obj.x <= (cam.x + 1) 
-                                                                                                   and (cam.y - 0) <= obj.y <= (cam.y + 11)), 
+                                                         .filter_relative_to_type(x_range=(-1, 1), y_range=(0, 11), z_range=(0, 0), type="camera"),
          ["Object At (60, 50)"])
 add_query("Camera 90 Heading: Object 10 Below", lambda world: world.filter_traj_type("Camera 90 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 1) <= obj.x <= (cam.x + 1) 
-                                                                                                   and (cam.y - 11) <= obj.y <= (cam.y + 0)), 
+                                                         .filter_relative_to_type(x_range=(-1, 1), y_range=(-11, 0), z_range=(0, 0), type="camera"), 
          ["Object At (40, 50)"])
 add_query("Camera 90 Heading: Object 10 Left", lambda world: world.filter_traj_type("Camera 90 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 11) <= obj.x <= (cam.x + 0) 
-                                                                                                   and (cam.y - 1) <= obj.y <= (cam.y + 1)), 
+                                                         .filter_relative_to_type(x_range=(-11, 0), y_range=(-1, 1), z_range=(0, 0), type="camera"), 
          ["Object At (50, 60)"])
 add_query("Camera 90 Heading: Object 10 Right", lambda world: world.filter_traj_type("Camera 90 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 0) <= obj.x <= (cam.x + 11) 
-                                                                                                   and (cam.y - 1) <= obj.y <= (cam.y + 1)), 
+                                                         .filter_relative_to_type(x_range=(0, 11), y_range=(-1, 1), z_range=(0, 0), type="camera"),
          ["Object At (50, 40)"])
 
 df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camera3", -50, -50, 0, 180, "Object At (-50, -40)", -50, -40, 0, 0, "Camera 180 Heading")
@@ -181,20 +175,16 @@ df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camer
 df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camera3", -50, -50, 0, 180, "Object At (-60, -50)", -60, -50, 0, 0, "Camera 180 Heading")
 
 add_query("Camera 180 Heading: Object 10 Above", lambda world: world.filter_traj_type("Camera 180 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 1) <= obj.x <= (cam.x + 1) 
-                                                                                                   and (cam.y - 0) <= obj.y <= (cam.y + 11)), 
+                                                         .filter_relative_to_type(x_range=(-1, 1), y_range=(0, 11), z_range=(0, 0), type="camera"), 
          ["Object At (-50, -60)"])
 add_query("Camera 180 Heading: Object 10 Below", lambda world: world.filter_traj_type("Camera 180 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 1) <= obj.x <= (cam.x + 1) 
-                                                                                                   and (cam.y - 11) <= obj.y <= (cam.y + 0)), 
+                                                         .filter_relative_to_type(x_range=(-1, 1), y_range=(-11, 0), z_range=(0, 0), type="camera"), 
          ["Object At (-50, -40)"])
 add_query("Camera 180 Heading: Object 10 Left", lambda world: world.filter_traj_type("Camera 180 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 11) <= obj.x <= (cam.x + 0) 
-                                                                                                   and (cam.y - 1) <= obj.y <= (cam.y + 1)), 
+                                                         .filter_relative_to_type(x_range=(-11, 0), y_range=(-1, 1), z_range=(0, 0), type="camera"), 
          ["Object At (-40, -50)"])
 add_query("Camera 180 Heading: Object 10 Right", lambda world: world.filter_traj_type("Camera 180 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 0) <= obj.x <= (cam.x + 11) 
-                                                                                                   and (cam.y - 1) <= obj.y <= (cam.y + 1)), 
+                                                         .filter_relative_to_type(x_range=(0, 11), y_range=(-1, 1), z_range=(0, 0), type="camera"), 
          ["Object At (-60, -50)"])
 
 df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camera4", 400, 400, 0, 270, "Object At (400, 390)", 400, 390, 0, 0, "Camera 270 Heading")
@@ -203,20 +193,16 @@ df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camer
 df_sample_data, df_annotation = add_sample(df_sample_data, df_annotation, "camera4", 400, 400, 0, 270, "Object At (410, 400)", 410, 400, 0, 0, "Camera 270 Heading")
 
 add_query("Camera 270 Heading: Object 10 Above", lambda world: world.filter_traj_type("Camera 270 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 1) <= obj.x <= (cam.x + 1) 
-                                                                                                   and (cam.y - 0) <= obj.y <= (cam.y + 11)), 
+                                                         .filter_relative_to_type(x_range=(-1, 1), y_range=(0, 11), z_range=(0, 0), type="camera"), 
          ["Object At (390, 400)"])
 add_query("Camera 270 Heading: Object 10 Below", lambda world: world.filter_traj_type("Camera 270 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 1) <= obj.x <= (cam.x + 1) 
-                                                                                                   and (cam.y - 11) <= obj.y <= (cam.y + 0)), 
+                                                         .filter_relative_to_type(x_range=(-1, 1), y_range=(-11, 0), z_range=(0, 0), type="camera"), 
          ["Object At (410, 400)"])
 add_query("Camera 270 Heading: Object 10 Left", lambda world: world.filter_traj_type("Camera 270 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 11) <= obj.x <= (cam.x + 0) 
-                                                                                                   and (cam.y - 1) <= obj.y <= (cam.y + 1)), 
+                                                         .filter_relative_to_type(x_range=(-11, 0), y_range=(-1, 1), z_range=(0, 0), type="camera"), 
          ["Object At (400, 390)"])
 add_query("Camera 270 Heading: Object 10 Right", lambda world: world.filter_traj_type("Camera 270 Heading")
-                                                         .filter_pred_relative_to_type(pred=lambda obj: (cam.x - 0) <= obj.x <= (cam.x + 11) 
-                                                                                                   and (cam.y - 1) <= obj.y <= (cam.y + 1)), 
+                                                         .filter_relative_to_type(x_range=(0, 11), y_range=(-1, 1), z_range=(0, 0), type="camera"), 
          ["Object At (400, 410)"])
 ########################## ####################### ##########################
 
