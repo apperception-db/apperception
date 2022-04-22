@@ -8,5 +8,5 @@ def test_fake_fn():
         a, b, c = args
         return f"{a} {b} {c}"
 
-    assert test_fn1() is None
+    assert test_fn1(   ) is None
     assert test_fn1.fn(None, (3, True, "test"))
