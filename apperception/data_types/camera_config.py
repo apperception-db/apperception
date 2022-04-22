@@ -16,4 +16,5 @@ class CameraConfig:
     ego_translation: List[float]  # float[3]
     ego_rotation: List[float]  # float[4]
     timestamp: str
-    heading: float
+    cameraHeading: float
+    egoHeading: float
