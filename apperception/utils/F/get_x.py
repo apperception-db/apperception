@@ -34,8 +34,4 @@ def get_x(visitor: "GenSqlVisitor", args: List[ast.expr]):
             location = f"{visitor.eval_vars[arg_location.id]}.trajCentroids"
     else:
         location = f"{visitor.eval_vars[arg_location]}"
-    return (
-        f"getX({location}, {visitor.visit(arg_time)})"
-        if arg_time
-        else f"getX({location})"
-    )
+    return f"getX({location}, {visitor.visit(arg_time)})" if arg_time else f"getX({location})"
