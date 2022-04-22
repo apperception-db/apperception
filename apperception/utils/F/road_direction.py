@@ -15,7 +15,7 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_time = ""
     if len(args) > 1:
         arg_time = args[1]
-    
+
     if isinstance(arg_location, ast.Attribute):
         value = arg_location.value
         attr = arg_location.attr
@@ -34,6 +34,8 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
             location = f"{visitor.eval_vars[arg_location.id]}.trajCentroids"
     else:
         location = f"{visitor.eval_vars[arg_location]}"
-    return f"roadDirection({location}, {visitor.visit(arg_time)})" if arg_time else f"roadDirection({location})"
-
-    
+    return (
+        f"roadDirection({location}, {visitor.visit(arg_time)})"
+        if arg_time
+        else f"roadDirection({location})"
+    )

@@ -15,6 +15,7 @@ def facingRelative(visitor: "GenSqlVisitor", args: List[ast.expr]):
 
     return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.eval_vars[arg_time.value.id]}.timestamp)"
 
+
 def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
     if isinstance(arg, ast.Attribute):
         value = arg.value
@@ -30,5 +31,3 @@ def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
     else:
         heading = f"{visitor.eval_vars[arg]}"
     return heading
-
-    
