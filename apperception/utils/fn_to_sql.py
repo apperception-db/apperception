@@ -15,6 +15,7 @@ else:
 
 from . import F
 
+
 def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)
