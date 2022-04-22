@@ -1,9 +1,10 @@
 name: Test and Type Check
 on:
   push:
-    branches-ignore:
-      - 'main'
-      - 'dev'
+    branches:
+      - main
+      - dev
+  pull_request:
 
 jobs:
   test:
