@@ -1,25 +1,7 @@
-from dataclasses import dataclass
-from typing import List, Tuple
-
-Float3 = Tuple[float, float, float]
-Float4 = Tuple[float, float, float, float]
+from apperception.data_types import CameraConfig
 
 
-@dataclass(frozen=True)
-class CameraConfig:
-    frame_id: str
-    frame_num: int
-    filename: str
-    camera_translation: List[float]  # float[3]
-    camera_rotation: List[float]  # float[4]
-    camera_intrinsic: List[List[float]]  # float[3][3]
-    ego_translation: List[float]  # float[3]
-    ego_rotation: List[float]  # float[4]
-    timestamp: str
-    heading: float
-
-
-def fetch_camera_config(scene_name: str, sample_data):
+def df_to_camera_config(scene_name: str, sample_data):
     all_frames = sample_data[(sample_data["scene_name"] == scene_name)].sort_values(
         by="frame_order"
     )

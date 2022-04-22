@@ -1,11 +1,13 @@
-from typing import Any, List, Set
+from typing import TYPE_CHECKING, Any, List, Set
 
-from bounding_box import BoundingBox
 from scenic_util import (add_recognized_objs, create_or_insert_camera_table,
                          recognize)
 from video_context import Camera, VideoContext
 from video_util import (create_or_insert_world_table, metadata_to_tasm,
                         video_data_to_tasm)
+
+if TYPE_CHECKING:
+    from .data_types import BoundingBox
 
 
 class VideoContextExecutor:
@@ -63,14 +65,14 @@ class VideoContextExecutor:
         return self.visit()
 
 
-def is_area_recognized(area: BoundingBox, recognized: Set[BoundingBox]):
+def is_area_recognized(area: "BoundingBox", recognized: Set["BoundingBox"]):
     for other in recognized:
         if area.is_in(other):
             return True
     return False
 
 
-def to_recognize_whole_frame(recognition_areas: List[BoundingBox]):
+def to_recognize_whole_frame(recognition_areas: List["BoundingBox"]):
     if len(recognition_areas) == 0:
         return False
 
