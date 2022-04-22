@@ -16,7 +16,9 @@ else:
 from . import F
 
 POSTGRES_MACROS: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
-    "convert_camera": F.convert_camera.fn
+    "convert_camera": F.convert_camera.fn,
+    "contained": F.contained.fn,
+    "view_angle": F.view_angle.fn,
 }
 
 
