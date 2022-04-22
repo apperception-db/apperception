@@ -14,7 +14,7 @@ class FakeFn(Generic[CT]):
     def __init__(self, fn: Callable[["GenSqlVisitor", CT], str]):
         self._fn = (fn,)
 
-    def __call__(self, *_: CT) -> Any:
+    def __call__(self, *_) -> Any:
         return None
 
     @property
