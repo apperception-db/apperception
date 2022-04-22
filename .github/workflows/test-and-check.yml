@@ -22,7 +22,7 @@ jobs:
       - name: Install and configure Poetry
         uses: snok/install-poetry@v1
         with:
-          virtualenvs-path: ~/virtualenvs
+          virtualenvs-path: ~/.virtualenvs
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v1
@@ -55,7 +55,7 @@ jobs:
       - name: Install and configure Poetry
         uses: snok/install-poetry@v1
         with:
-          virtualenvs-path: ~/virtualenvs
+          virtualenvs-path: ~/.virtualenvs
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v1
