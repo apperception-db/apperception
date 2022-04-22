@@ -15,13 +15,6 @@ else:
 
 from . import F
 
-POSTGRES_MACROS: Dict[str, Callable[[GenSqlVisitor, List[ast.expr]], str]] = {
-    "convert_camera": F.convert_camera.fn,
-    "contained": F.contained.fn,
-    "view_angle": F.view_angle.fn,
-}
-
-
 def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)

@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 @fake_fn
-def facingRelative(visitor: "GenSqlVisitor", args: List[ast.expr]):
+def facing_relative(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_heading1, arg_heading2, arg_time = args
 
     return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.eval_vars[arg_time.value.id]}.timestamp)"
