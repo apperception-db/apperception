@@ -32,6 +32,3 @@ class BoundingBox:
         if self.is_whole_frame():
             return float("inf")
         return (self.x2 - self.x1) * (self.y2 - self.y1)
-
-
-WHOLE_FRAME = BoundingBox(-1, -1, -1, -1)
