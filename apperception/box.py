@@ -22,7 +22,7 @@ class Box:
         self.orientation = orientation
 
     @property
-    def rotation_matrix(self)     -> np.ndarray:
+    def rotation_matrix(self) -> np.ndarray:
         """
         Return a rotation matrix.
         :return: <np.float: 3, 3>. The box's rotation matrix.
