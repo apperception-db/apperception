@@ -5,9 +5,8 @@ from typing import Any, Dict, Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
-from pyquaternion import Quaternion
-
 from data_types import Box
+from pyquaternion import Quaternion
 
 CREATE_ITEMTRAJ_SQL = """
 CREATE TABLE IF NOT EXISTS Item_General_Trajectory(

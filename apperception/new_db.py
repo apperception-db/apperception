@@ -4,15 +4,15 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
+from data_types import QueryType
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
 from scenic_util import fetch_camera as su_fetch_camera
-
-from utils import fn_to_sql, query_to_str, reformat_bbox_trajectories, add_recognized_objects, overlay_bboxes, recognize
-from data_types import QueryType
+from utils import (add_recognized_objects, fn_to_sql, overlay_bboxes,
+                   query_to_str, recognize, reformat_bbox_trajectories)
 
 if TYPE_CHECKING:
     from data_types import Camera

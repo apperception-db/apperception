@@ -12,12 +12,11 @@ import cv2
 import dill as pickle
 import numpy as np
 import yaml
+from data_types import Camera, QueryType
 from new_db import Database
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
-
-from scenic_util import transformation, FetchCameraTuple
-from data_types import Camera, QueryType
+from scenic_util import FetchCameraTuple, transformation
 
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
