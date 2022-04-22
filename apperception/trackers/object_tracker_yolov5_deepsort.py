@@ -9,16 +9,16 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple, Union
 
 import torch
-from bounding_box import WHOLE_FRAME, BoundingBox
 from deep_sort_pytorch.deep_sort import DeepSort
 from deep_sort_pytorch.utils.parser import get_config
-from tracked_object import TrackedObject
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages
 from yolov5.utils.downloads import attempt_download
 from yolov5.utils.general import (check_img_size, non_max_suppression,
                                   scale_coords, xyxy2xywh)
 from yolov5.utils.torch_utils import select_device
+
+from ..data_types import BoundingBox, TrackedObject
 
 
 @dataclass
@@ -44,20 +44,17 @@ class YoloV5Opt:
     config_deepsort: str = os.path.join(
         CURRENT_DIR, "../yolov5-deepsort/deep_sort_pytorch/configs/deep_sort.yaml"
     )
-    recognition_area: BoundingBox = WHOLE_FRAME
 
 
 def detect(opt: YoloV5Opt):
-    source, yolo_weights, deep_sort_weights, imgsz, crop = (
+    source, yolo_weights, deep_sort_weights, imgsz = (
         opt.source,
         opt.yolo_weights,
         opt.deep_sort_weights,
         opt.img_size,
-        opt.recognition_area,
     )
 
-    if crop.is_whole_frame():
-        crop = BoundingBox(0, 0, 100, 100)
+    crop = BoundingBox(0, 0, 100, 100)
 
     # initialize deepsort
     cfg = get_config()

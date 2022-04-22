@@ -18,7 +18,7 @@ jobs:
         run: |
           CM=$(git log -1 --oneline --format=%s | sed 's/^.*: //')
           echo "commit message: $CM"
-          if [[ $CM = style:\ \[CI\]* ]]
+          if [[ $CM = \[CI\]* ]]
           then
             exit 0
           fi
@@ -47,7 +47,7 @@ jobs:
         run: |
           CM=$(git log -1 --oneline --format=%s | sed 's/^.*: //')
           echo "commit message: $CM"
-          if [[ $CM = style:\ \[CI\]* ]]
+          if [[ $CM = \[CI\]* ]]
           then
             exit 0
           fi
