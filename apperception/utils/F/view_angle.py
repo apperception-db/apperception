@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 @fake_fn
 def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_obj_traj, arg_cam_heading, arg_cam_loc, arg_time = args
-    
+
     if isinstance(arg_obj_traj, ast.Attribute):
         value = arg_obj_traj.value
         if not isinstance(value, ast.Name):
@@ -57,7 +57,7 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
         cam_loc = arg_cam_loc.value
     else:
         raise Exception("Problem with arg_cam_loc input contained function", str(arg_cam_loc))
-    
+
     if isinstance(arg_time, ast.Attribute):
         value = arg_time.value
         if not isinstance(value, ast.Name):

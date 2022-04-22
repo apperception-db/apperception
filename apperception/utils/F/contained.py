@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 @fake_fn
 def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_cont_point, arg_geoms, arg_time = args
-    
+
     if isinstance(arg_cont_point, ast.Attribute):
         value = arg_cont_point.value
         if not isinstance(value, ast.Name):
@@ -57,5 +57,5 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
         timet = arg_time.value
     else:
         raise Exception("Problem with arg_time input contained function", str(arg_time))
-    
+
     return f"contained({object_positions}, {geoms}, {timet})"
