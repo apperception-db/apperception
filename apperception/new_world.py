@@ -6,22 +6,18 @@ import inspect
 import uuid
 from collections.abc import Iterable
 from os import makedirs, path
-from pyclbr import Function
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import cv2
 import dill as pickle
 import numpy as np
 import yaml
-from camera import Camera
 from new_db import Database
-from new_util import compile_lambda
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
-from query_type import QueryType
-from scenic_util import transformation
 
-from apperception.scenic_util import FetchCameraTuple
+from .scenic_util import transformation, FetchCameraTuple
+from .types import Camera, QueryType
 
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
@@ -333,19 +329,6 @@ class World:
             y_range=y_range,
             z_range=z_range,
             type=type,
-        )
-
-    def filter_pred_relative_to_type(self, pred: Function):
-        x_range, y_range = compile_lambda(pred)
-
-        return derive_world(
-            self,
-            {QueryType.TRAJ},
-            self.db.filter_relative_to_type,
-            x_range=x_range,
-            y_range=y_range,
-            z_range=[float(-(2**31)), float(2**31)],
-            type="camera",
         )
 
     def add_camera(self, camera: Camera):

@@ -4,19 +4,18 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
-from camera import Camera
-from new_util import (add_recognized_objs, get_video, recognize,
-                      video_fetch_reformat)
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
-from query_type import QueryType
 from scenic_util import fetch_camera as su_fetch_camera
-from utils import fn_to_sql, query_to_str
+
+from .utils import fn_to_sql, query_to_str, reformat_bbox_trajectories, add_recognized_objects, overlay_bboxes, recognize
+from .types import QueryType
 
 if TYPE_CHECKING:
+    from .types import Camera
     from .new_world import World
 
 CAMERA_TABLE = "Cameras"
@@ -124,7 +123,7 @@ class Database:
         )
         self.con.commit()
 
-    def insert_cam(self, camera: Camera):
+    def insert_cam(self, camera: "Camera"):
         values = [
             f"""(
                 '{camera.id}',
@@ -286,7 +285,7 @@ class Database:
 
     def insert_bbox_traj(self, camera: Camera, annotation):
         tracking_results = recognize(camera.configs, annotation)
-        add_recognized_objs(self.con, tracking_results, camera.id)
+        add_recognized_objects(self.con, tracking_results, camera.id)
 
     def retrieve_bbox(self, query: Query = None, camera_id: str = ""):
         bbox = Table(BBOX_TABLE)
@@ -549,8 +548,8 @@ class Database:
 
         self.cur.execute(query.get_sql())
         fetched_meta = self.cur.fetchall()
-        fetched_meta = video_fetch_reformat(fetched_meta)
-        get_video(fetched_meta, cams, self.start_time, boxed)
+        fetched_meta = reformat_bbox_trajectories(fetched_meta)
+        overlay_bboxes(fetched_meta, cams, self.start_time, boxed)
 
     def get_heading_from_a_point(self, x, y):
         # query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"

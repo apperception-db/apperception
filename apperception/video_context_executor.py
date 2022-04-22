@@ -1,11 +1,12 @@
 from typing import Any, List, Set
 
-from bounding_box import BoundingBox
 from scenic_util import (add_recognized_objs, create_or_insert_camera_table,
                          recognize)
 from video_context import Camera, VideoContext
 from video_util import (create_or_insert_world_table, metadata_to_tasm,
                         video_data_to_tasm)
+
+from .types import BoundingBox
 
 
 class VideoContextExecutor:

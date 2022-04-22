@@ -2,7 +2,7 @@ import uuid
 from dataclasses import dataclass
 from typing import List, Optional
 
-from camera_config import CameraConfig
+from . import CameraConfig
 
 
 @dataclass

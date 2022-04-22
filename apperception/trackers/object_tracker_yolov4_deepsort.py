@@ -20,7 +20,6 @@ import core.utils as utils
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from bounding_box import WHOLE_FRAME, BoundingBox
 from core.config import cfg
 # deep sort imports
 from deep_sort import nn_matching, preprocessing
@@ -30,7 +29,8 @@ from deep_sort.tracker import Tracker
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
-from tracked_object import TrackedObject
+
+from ..types import BoundingBox, TrackedObject
 
 
 @dataclass
@@ -79,7 +79,7 @@ saved_model_loaded = tf.saved_model.load(FLAGS.weights, tags=[tag_constants.SERV
 infer = saved_model_loaded.signatures["serving_default"]
 
 
-def yolov4_deepsort_video_track(video_file: str, recognition_area: BoundingBox = WHOLE_FRAME):
+def yolov4_deepsort_video_track(video_file: str):
     # Definition of the parameters
     max_cosine_distance = 0.4
     nn_budget = None

@@ -6,13 +6,11 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
-from bounding_box import WHOLE_FRAME, BoundingBox
-from lens import Lens
-from tracker import Tracker
 from typing_extensions import Literal
 
+
 if TYPE_CHECKING:
-    from object_tracker_yolov5_deepsort import TrackedObject
+    from .types import Lens, TrackedObject, Tracker
 
 # TODO: add more units
 Units = Literal["metrics"]
@@ -276,22 +274,18 @@ def recognize(
     recog_algo: str = "",
     tracker_type: str = "default",
     customized_tracker: Optional[Tracker] = None,
-    recognition_area: BoundingBox = WHOLE_FRAME,
 ):
     """Default object recognition (YOLOv5)"""
-    from object_tracker_yolov4_deepsort import yolov4_deepsort_video_track
-    from object_tracker_yolov5_deepsort import (YoloV5Opt,
-                                                yolov5_deepsort_video_track)
+    from .trackers import yolov4_deepsort_video_track
+    from .trackers.object_tracker_yolov5_deepsort import YoloV5Opt, yolov5_deepsort_video_track
 
     # recognition = item.ItemRecognition(recog_algo = recog_algo, tracker_type = tracker_type, customized_tracker = customized_tracker)
     # return recognition.video_item_recognize(video.byte_array)
-    if recognition_area.is_whole_frame():
-        recognition_area = BoundingBox(0, 0, 100, 100)
     if recog_algo == "yolov4":
-        return yolov4_deepsort_video_track(video_file, recognition_area)
+        return yolov4_deepsort_video_track(video_file)
     else:
         # use YoloV5 as default
-        return yolov5_deepsort_video_track(YoloV5Opt(video_file, recognition_area=recognition_area))
+        return yolov5_deepsort_video_track(YoloV5Opt(video_file))
 
 
 def add_recognized_objs(
