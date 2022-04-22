@@ -6,7 +6,7 @@ from apperception.utils import fn_to_sql, F
     (lambda o, c: F.road_direction(o, c.timestamp), 
         "roadDirection(T.trajCentroids, C.timestamp)"),
     (lambda o, c: F.road_direction(c.ego, c.timestamp), 
-        "facingRelative(C.egoTranslation, C.timestamp)")
+        "roadDirection(C.egoTranslation, C.timestamp)")
 ])
 
 def test_road_direction(fn, sql):
