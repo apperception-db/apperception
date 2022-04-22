@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from pyquaternion import Quaternion
 
-from .types import Box
+from data_types import Box
 
 CREATE_ITEMTRAJ_SQL = """
 CREATE TABLE IF NOT EXISTS Item_General_Trajectory(

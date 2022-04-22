@@ -18,7 +18,7 @@ from yolov5.utils.general import (check_img_size, non_max_suppression,
                                   scale_coords, xyxy2xywh)
 from yolov5.utils.torch_utils import select_device
 
-from ..types import BoundingBox, TrackedObject
+from ..data_types import BoundingBox, TrackedObject
 
 
 @dataclass

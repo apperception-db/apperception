@@ -3,7 +3,7 @@ from typing import Dict, List
 import numpy as np
 from pyquaternion import Quaternion
 
-from ..types import Box, CameraConfig, TrackedObject
+from apperception.data_types import Box, CameraConfig, TrackedObject
 
 
 def recognize(camera_configs: List[CameraConfig], annotation):

@@ -10,7 +10,7 @@ from typing_extensions import Literal
 
 
 if TYPE_CHECKING:
-    from .types import Lens, TrackedObject, Tracker
+    from .data_types import Lens, TrackedObject, Tracker
 
 # TODO: add more units
 Units = Literal["metrics"]

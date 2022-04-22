@@ -11,12 +11,12 @@ from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
 from scenic_util import fetch_camera as su_fetch_camera
 
-from .utils import fn_to_sql, query_to_str, reformat_bbox_trajectories, add_recognized_objects, overlay_bboxes, recognize
-from .types import QueryType
+from utils import fn_to_sql, query_to_str, reformat_bbox_trajectories, add_recognized_objects, overlay_bboxes, recognize
+from data_types import QueryType
 
 if TYPE_CHECKING:
-    from .types import Camera
-    from .new_world import World
+    from data_types import Camera
+    from new_world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -283,7 +283,7 @@ class Database:
         self.cur.execute(q)
         return self.cur.fetchall()
 
-    def insert_bbox_traj(self, camera: Camera, annotation):
+    def insert_bbox_traj(self, camera: "Camera", annotation):
         tracking_results = recognize(camera.configs, annotation)
         add_recognized_objects(self.con, tracking_results, camera.id)
 

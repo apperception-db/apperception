@@ -30,7 +30,7 @@ from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants
 from tools import generate_detections as gdet
 
-from ..types import BoundingBox, TrackedObject
+from ..data_types import BoundingBox, TrackedObject
 
 
 @dataclass

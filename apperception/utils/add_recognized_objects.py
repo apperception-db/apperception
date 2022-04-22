@@ -1,14 +1,16 @@
 
 from datetime import datetime
-from typing import Dict, List, Tuple
-
-from ..types import TrackedObject
-from ..scenic_util import bbox_to_data3d, join
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import numpy as np
 
+from apperception.scenic_util import bbox_to_data3d, join
 
-def add_recognized_objects(conn, formatted_result: Dict[str, TrackedObject], camera_id: str):
+if TYPE_CHECKING:
+    from ..data_types import TrackedObject
+
+
+def add_recognized_objects(conn, formatted_result: Dict[str, "TrackedObject"], camera_id: str):
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)
