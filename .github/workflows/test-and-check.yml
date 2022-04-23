@@ -70,10 +70,6 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
       
-      - name: Check cache
-        run: |
-          echo ${{steps.cached-poetry-dependencies.outputs.cache-hit}}
-      
       - name: Type Check with mypy
         if: always()
         run: yes | poetry run mypy --install-types apperception || poetry run mypy apperception
