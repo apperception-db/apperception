@@ -3,7 +3,7 @@ from apperception.utils import fn_to_sql, F
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.convert_camera(o.traj, c, c.timestamp), "ConvertCamera(T.trajCentroids, C.cameraTranslation, C.camHeading, C.timestamp)"),
+    (lambda o, c: F.convert_camera(o.traj, c, c.timestamp), "ConvertCamera(T.trajCentroids, C.cameraTranslation, C.cameraHeading, C.timestamp)"),
     (lambda o, c: F.convert_camera(o.traj, c.ego, "2004-10-19 10:23:54"), "ConvertCamera(T.trajCentroids, C.egoTranslation, C.egoHeading, '2004-10-19 10:23:54')"),
     (lambda o, c: F.convert_camera(o, c.ego, c.timestamp), "ConvertCamera(T.trajCentroids, C.egoTranslation, C.egoHeading, C.timestamp)"),
 ])
