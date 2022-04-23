@@ -1,5 +1,7 @@
 # Apperception: a database management system optimized for multi-video applications
 
+[Tests and Type Checks](https://github.com/apperception-db/apperception/actions/workflows/test-and-check.yml/badge.svg?branch=dev)
+
 Apperception ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
 ## Require
