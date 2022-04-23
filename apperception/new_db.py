@@ -1,14 +1,13 @@
 import ast
 import inspect
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, List, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Union
 
 import psycopg2
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
-from pypika.functions import Cast
 
 from apperception.data_types import QueryType, Trajectory
 from apperception.scenic_util import fetch_camera as su_fetch_camera

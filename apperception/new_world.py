@@ -66,9 +66,7 @@ class World:
                     camera_info[index][x[6]].append(x)
                 else:
                     camera_info[index][x[6]] = [x]
-        camera_info_2 = [
-            [x[y] for y in sorted(x)] for x in camera_info
-        ]
+        camera_info_2 = [[x[y] for y in sorted(x)] for x in camera_info]
 
         overlay_info = get_overlay_info(trajectory, camera_info_2)
         # TODO: fix the following to overlay the 2d point onto the frame
@@ -406,9 +404,7 @@ def get_overlay_info(trajectory, camera_info: List[List[List["FetchCameraTuple"]
     for traj_num in range(len(trajectory)):
         traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
         traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
-        camera_info_objs = camera_info[
-            traj_num
-        ]  # camera info list corresponding the 3d coordinate
+        camera_info_objs = camera_info[traj_num]  # camera info list corresponding the 3d coordinate
         traj_obj_2d: List[List[Tuple[np.ndarray, int, str]]] = []  # 2d coordinate list
         for index in range(len(camera_info_objs)):
             cur_camera_infos = camera_info_objs[
