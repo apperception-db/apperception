@@ -3,7 +3,8 @@ from __future__ import annotations
 import datetime
 import inspect
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
+                    Tuple, Union)
 
 import cv2
 import numpy as np
@@ -14,8 +15,9 @@ from pypika.dialects import SnowflakeQuery
 from scenic_util import FetchCameraTuple, transformation
 
 if TYPE_CHECKING:
-    from .data_types import Trajectory
     import pandas as pd
+
+    from .data_types import Trajectory
 
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
