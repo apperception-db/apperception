@@ -28,7 +28,7 @@ flake8 = "^4.0.1"
 mypy = "^0.942"
 types-PyYAML = "^6.0.5"
 types-psycopg2 = "^2.9.9"
-pyright = "^1.1.235"
+pyright = "^1.1.239"
 pytest = "^7.1.1"
 
 [build-system]
@@ -72,3 +72,17 @@ module = [
   'decompyle3',
 ]
 ignore_missing_imports = true
+
+[tool.pyright]
+ignore = [
+  'apperception/layers.py',
+  'apperception/metadata_*.py',
+  'apperception/mono_depth_estimator.py',
+  'apperception/video_context.py',
+  'apperception/video_context_executor.py',
+  'apperception/video_util.py',
+  'apperception/world.py',
+  'apperception/world_executor.py',
+  'apperception/trackers/object_tracker_yolov4_deepsort.py',
+  'apperception/trackers/object_tracker_yolov5_deepsort.py',
+]

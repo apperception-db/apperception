@@ -1,7 +1,7 @@
 import ast
 import inspect
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Tuple, Union
 
 import psycopg2
 from pypika import Column, CustomFunction, Table
@@ -13,7 +13,7 @@ from pypika.functions import Cast
 from apperception.scenic_util import fetch_camera as su_fetch_camera
 from apperception.utils import (add_recognized_objects, fn_to_sql, overlay_bboxes,
                    query_to_str, recognize, reformat_bbox_trajectories)
-from apperception.data_types import QueryType
+from apperception.data_types import QueryType, Trajectory
 
 if TYPE_CHECKING:
     from .data_types import Camera
@@ -305,7 +305,7 @@ class Database:
         self.cur.execute(query.get_sql())
         return self.cur.fetchall()
 
-    def get_traj(self, query: Query):
+    def get_traj(self, query: Query) -> List[List[Trajectory]]:
         # hack
         query = f"""
         SELECT asMFJSON(trajCentroids)::json->'sequences'
@@ -314,7 +314,17 @@ class Database:
 
         print("get_traj")  # print("get_traj", query)
         self.cur.execute(query)
-        return self.cur.fetchall()
+        trajectories = self.cur.fetchall()
+        return [
+            [
+                Trajectory(
+                    coordinates=t['coordinates'],
+                    datetimes=t['datetimes'],
+                    lower_inc=t['lower_inc'],
+                    upper_inc=t['upper_inc']
+                ) for t in trajectory
+            ] for (trajectory,) in trajectories
+        ]
 
     def get_traj_key(self, query: Query):
         q = SnowflakeQuery.from_(query).select("itemid")
@@ -531,7 +541,7 @@ class Database:
         self.cur.execute(query.get_sql())
         fetched_meta = self.cur.fetchall()
         fetched_meta = reformat_bbox_trajectories(fetched_meta)
-        overlay_bboxes(fetched_meta, cams, self.start_time, boxed)
+        overlay_bboxes(fetched_meta, cams, boxed)
 
     def get_heading_from_a_point(self, x, y):
         # query = f"SELECT heading FROM Segment WHERE elementid IN (SELECT Polygon.elementid AS id FROM Polygon, ST_Point({x}, {y}) AS point WHERE ST_Contains(elementPolygon, point)='t');"

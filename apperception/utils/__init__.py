@@ -7,6 +7,7 @@ from .query_to_str import query_to_str
 from .recognize import recognize
 from .reformat_bbox_trajectories import reformat_bbox_trajectories
 from .scenic_generate_df import scenic_generate_df
+from .overlay_bboxes import overlay_bboxes
 
 __all__ = [
     "F",
@@ -18,4 +19,5 @@ __all__ = [
     "recognize",
     "scenic_generate_df",
     "df_to_camera_config",
+    "overlay_bboxes",
 ]

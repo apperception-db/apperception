@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from math import radians
+from typing import List, Tuple
 
 import numpy as np
 
@@ -20,7 +21,7 @@ class Lens:
         self.cam_origin = cam_origin
         cam_x, cam_y = cam_origin
 
-    def pixel_to_world(self, pixel_coord, depth):
+    def pixel_to_world(self, pixel_coord: List[float], depth: float):
         """
         Translate pixel coordinates to world coordinates.
         """
@@ -32,7 +33,7 @@ class Lens:
         """
         return None
 
-    def world_to_pixel(self, world_coord, depth):
+    def world_to_pixel(self, world_coord: List[float], depth: float):
         """
         Translate world coordinates to pixel coordinates
         """
@@ -149,7 +150,7 @@ class VRLens(Lens):
         R_9 = np.cos(roll) * np.cos(pitch)
 
         rotation_mat = np.matrix([[R_1, R_2, R_3], [R_4, R_5, R_6], [R_7, R_8, R_9]])
-        cam_org_vec = np.matrix([[cam_x], [cam_y], [cam_z]])
+        cam_org_vec = np.matrix(np.array([[cam_x], [cam_y], [cam_z]]))
         self.col_vec = np.ravel(rotation_mat @ cam_org_vec)
         col_x, col_y, col_z = self.col_vec
         self.transform = np.matrix(
@@ -163,12 +164,12 @@ class VRLens(Lens):
 
         self.inv_transform = np.linalg.inv(self.transform)
 
-    def pixel_to_world(self, pixel_coord, depth):
+    def pixel_to_world(self, pixel_coord: List[float], depth: float):
         """
         Translate pixel coordinates to world coordinates.
         """
         x, y = pixel_coord
-        pixel = np.matrix([[x], [y], [depth], [0]])
+        pixel = np.matrix(np.array([[x], [y], [depth], [0]]))
         return self.transform @ pixel
 
     def pixels_to_world(self, pixel_coords, depths):
@@ -180,12 +181,12 @@ class VRLens(Lens):
         print(pixels)
         return self.transform @ pixels
 
-    def world_to_pixel(self, world_coord):
+    def world_to_pixel(self, world_coord: List[float], depth: float):
         """
         Translate world coordinates to pixel coordinates
         """
         x, y, z, w = world_coord
-        world_pixel = np.matrix([[x], [y], [z], [w]])
+        world_pixel = np.matrix(np.array([[x], [y], [z], [w]]))
         return self.inv_transform @ world_pixel
 
     def world_to_pixels(self, world_coords):
@@ -199,7 +200,7 @@ class VRLens(Lens):
 
 class PinholeLens(Lens):
     # TODO: (@Vanessa) change all the places where pinhole lens appears and change arguments
-    def __init__(self, resolution, cam_origin, field_of_view, skew_factor):
+    def __init__(self, resolution: Tuple[float, float], cam_origin: Tuple[float, float, float], field_of_view, skew_factor):
         """
         Construct a lens for the camera that translates to 3D world coordinates.
 
@@ -220,9 +221,9 @@ class PinholeLens(Lens):
         self.inv_transform = np.linalg.inv(
             np.matrix([[self.focal_x, self.alpha, cam_x], [0, self.focal_y, cam_y], [0, 0, 1]])
         )
-        self.transform = np.matrix(
+        self.transform = np.matrix(np.array(
             [[self.focal_x, self.alpha, cam_x, 0], [0, self.focal_y, cam_y, 0], [0, 0, 1, 0]]
-        )
+        ))
 
     def __eq__(self, other):
         return (
@@ -236,12 +237,12 @@ class PinholeLens(Lens):
             and (self.transform == other.transform).all()
         )
 
-    def pixel_to_world(self, pixel_coord, depth):
+    def pixel_to_world(self, pixel_coord: List[float], depth: float):
         """
         Translate pixel coordinates to world coordinates.
         """
         x, y = pixel_coord
-        pixel = np.matrix([[x], [y], [depth]])
+        pixel = np.matrix(np.array([[x], [y], [depth]]))
         return (self.inv_transform @ pixel).flatten().tolist()[0]
 
     def pixels_to_world(self, pixel_coords, depths):
@@ -252,12 +253,12 @@ class PinholeLens(Lens):
         pixels = np.matrix([x, y, depths])
         return self.inv_transform @ pixels
 
-    def world_to_pixel(self, world_coord):
+    def world_to_pixel(self, world_coord: List[float], depth: float):
         """
         Translate world coordinates to pixel coordinates
         """
         x, y, z = world_coord
-        world_pixel = np.matrix([[x], [y], [z], [1]])
+        world_pixel = np.matrix(np.array([[x], [y], [z], [1.0]]))
         return self.transform @ world_pixel
 
     def world_to_pixels(self, world_coords):

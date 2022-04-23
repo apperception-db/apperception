@@ -1118,7 +1118,7 @@ test = ["nose"]
 
 [[package]]
 name = "pyright"
-version = "1.1.238"
+version = "1.1.239"
 description = "Command line wrapper for pyright"
 category = "dev"
 optional = false
@@ -2198,8 +2198,8 @@ pyquaternion = [
     {file = "pyquaternion-0.9.9.tar.gz", hash = "sha256:b1f61af219cb2fe966b5fb79a192124f2e63a3f7a777ac3cadf2957b1a81bea8"},
 ]
 pyright = [
-    {file = "pyright-1.1.238-py3-none-any.whl", hash = "sha256:0c8b8be229f56de98622257acb87d2de641e670ba60e79173ecd04a51bf2fb82"},
-    {file = "pyright-1.1.238.tar.gz", hash = "sha256:28871ac1734c813102734eb84504d5fc68db9dfbbbc4d472d3f1f359e7fb5861"},
+    {file = "pyright-1.1.239-py3-none-any.whl", hash = "sha256:0d3929aba6f8add95a303fd2c008ea9a0d91e0f0b782c6cf5a2b41ffef023769"},
+    {file = "pyright-1.1.239.tar.gz", hash = "sha256:a870792c6b194c98d096b58315ba781a2c994a328d3f6c38d1a7bcc61b9f215a"},
 ]
 pyrsistent = [
     {file = "pyrsistent-0.18.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:df46c854f490f81210870e509818b729db4488e1f30f2a1ce1698b2295a878d1"},

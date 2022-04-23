@@ -5,7 +5,7 @@ from apperception.world_executor import (create_transform_matrix,
                                          world_to_pixel)
 
 
-def overlay_bboxes(metadata_results, cams, start_time, boxed):
+def overlay_bboxes(metadata_results, cams, boxed):
     # The cam nodes are raw data from the database
     # TODO: I forget why we used the data from the db instead of directly fetch
     # from the world
@@ -19,6 +19,7 @@ def overlay_bboxes(metadata_results, cams, start_time, boxed):
             cam.lens.focal_y,
             cam.lens.alpha,
         )
+        start_time = cam.configs[0].timestamp
         cam_video_file = cam.video_file
         transform_matrix = create_transform_matrix(focal_x, focal_y, cam_x, cam_y, skew_factor)
 

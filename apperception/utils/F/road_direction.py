@@ -26,7 +26,7 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
         elif attr == "cam":
             location = f"{visitor.visit(value)}.camTranslation"
         else:
-            "we dont support other location yet"
+            raise Exception("we dont support other location yet")
     elif isinstance(arg_location, ast.Name):
         if arg_location.id == "road":
             location = f"{visitor.visit(arg_location)}"

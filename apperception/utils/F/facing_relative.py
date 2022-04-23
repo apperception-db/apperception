@@ -29,5 +29,5 @@ def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
     elif isinstance(arg, ast.Name):
         heading = f"{visitor.visit(arg)}.itemHeadings"
     else:
-        heading = f"{visitor.visit(value)}"
+        heading = f"{visitor.visit(arg)}"
     return heading
