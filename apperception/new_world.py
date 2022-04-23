@@ -71,8 +71,8 @@ class World:
         # camera = self.camera_nodes[cam_id]
         # video_file = camera.video_file
         if default:
-            x1, y1, z1 = 0.01082532, 2.59647246, 0
-            x2, y2, z2 = 3.01034039, 3.35985782, 2
+            x1, y1, _ = 0.01082532, 2.59647246, 0
+            x2, y2, _ = 3.01034039, 3.35985782, 2
         else:
             raise Exception("select_intersection_of_interest_or_use_default not supported")
             # vs = cv2.VideoCapture(video_file)
