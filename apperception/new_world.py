@@ -8,11 +8,12 @@ from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
 
 import cv2
 import numpy as np
-from data_types import Camera, QueryType
-from new_db import Database
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
-from scenic_util import FetchCameraTuple, transformation
+
+from apperception.data_types import Camera, QueryType
+from apperception.new_db import database
+from apperception.scenic_util import FetchCameraTuple, transformation
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -22,12 +23,10 @@ if TYPE_CHECKING:
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
 
+camera_nodes: Dict[str, "Camera"] = {}
+
 
 class World:
-    # all worlds share a db instance
-    db = Database()
-    camera_nodes: Dict[str, "Camera"] = {}
-
     _parent: Optional[World]
     _name: str
     _fn: Tuple[Optional[Callable]]
@@ -52,7 +51,7 @@ class World:
     ):
         self._parent = parent
         self._name = "" if name is None else name
-        self._fn = (fn if fn is None else (getattr(self.db, fn) if isinstance(fn, str) else fn),)
+        self._fn = (fn if fn is None else (getattr(database, fn) if isinstance(fn, str) else fn),)
         self._kwargs = {} if kwargs is None else kwargs
         self._done = done  # update node
         self._world_id = world_id
@@ -65,7 +64,7 @@ class World:
         # camera_info is a list of mappings from timestamps to list of (frame_num, cameras)
         camera_info: List[Dict[int, List["FetchCameraTuple"]]] = []
         for index, cur_frame_timestamp in enumerate(frame_timestamps):
-            current_cameras = self.db.fetch_camera(scene_name, cur_frame_timestamp)
+            current_cameras = database.fetch_camera(scene_name, cur_frame_timestamp)
             camera_info.append({})
             for x in current_cameras:
                 if x[6] in camera_info[index]:
@@ -127,39 +126,47 @@ class World:
         return derive_world(
             self,
             {QueryType.TRAJ, QueryType.BBOX},
-            self.db.filter,
+            database.filter,
             predicate=predicate,
         )
+
+    def exclude(self, other: World) -> World:
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.exclude, world=other)
+
+    def union(self, other: World) -> World:
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.union, world=other)
+
+    def intersect(self, other: World) -> World:
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.intersect, world=other)
+
+    def sym_diff(self, other: World) -> World:
+        return self.union(other).exclude(self.intersect(other))
 
     def __lshift__(self, camera: Union["Camera", Tuple["Camera", "pd.DataFrame"]]):
         """add a camera or add a camera and recognize"""
         if isinstance(camera, Camera):
             return self.add_camera(camera)
-        camera, annotation, *_ = camera
-        return self.add_camera(camera).recognize(camera, annotation)
+        c, a, *_ = camera
+        return self.add_camera(c).recognize(c, a)
 
     def __sub__(self, other: World) -> World:
-        """exclude other world"""
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.exclude, world=other)
+        return self.exclude(other)
 
     def __or__(self, other: World) -> World:
-        """union with other world"""
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.union, world=other)
+        return self.union(other)
 
     def __and__(self, other: World) -> World:
-        """intersect with other world"""
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.intersect, world=other)
+        return self.intersect(other)
 
     def __xor__(self, other: World) -> World:
-        """symmetric difference with other world"""
-        return (self | other) - (self & other)
+        return self.sym_diff(other)
 
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
             self,
             {QueryType.TRAJ},
-            self.db.get_video,
-            cams=[World.camera_nodes[cam_id] for cam_id in cam_ids],
+            database.get_video,
+            cams=[camera_nodes[cam_id] for cam_id in cam_ids],
             boxed=boxed,
         )._execute_from_root(QueryType.TRAJ)
 
@@ -167,21 +174,21 @@ class World:
         return derive_world(
             self,
             {QueryType.BBOX},
-            self.db.get_bbox,
+            database.get_bbox,
         )._execute_from_root(QueryType.BBOX)
 
     def get_traj(self) -> List[List["Trajectory"]]:
         return derive_world(
             self,
             {QueryType.TRAJ},
-            self.db.get_traj,
+            database.get_traj,
         )._execute_from_root(QueryType.TRAJ)
 
     def get_traj_key(self):
         return derive_world(
             self,
             {QueryType.TRAJ},
-            self.db.get_traj_key,
+            database.get_traj_key,
         )._execute_from_root(QueryType.TRAJ)
 
     def get_headings(self) -> List[List[List[float]]]:
@@ -213,7 +220,7 @@ class World:
         return derive_world(
             self,
             {QueryType.TRAJ},
-            self.db.get_distance,
+            database.get_distance,
             start=str(start),
             end=str(end),
         )._execute_from_root(QueryType.TRAJ)
@@ -222,7 +229,7 @@ class World:
         return derive_world(
             self,
             {QueryType.TRAJ},
-            self.db.get_speed,
+            database.get_speed,
             start=str(start),
             end=str(end),
         )._execute_from_root(QueryType.TRAJ)
@@ -231,35 +238,35 @@ class World:
         return derive_world(
             self,
             {QueryType.CAM},
-            self.db.get_len,
+            database.get_len,
         )._execute_from_root(QueryType.CAM)
 
     def get_camera(self):
         return derive_world(
             self,
             {QueryType.CAM},
-            self.db.get_cam,
+            database.get_cam,
         )._execute_from_root(QueryType.CAM)
 
     def get_bbox_geo(self):
         return derive_world(
             self,
             {QueryType.BBOX},
-            self.db.get_bbox_geo,
+            database.get_bbox_geo,
         )._execute_from_root(QueryType.BBOX)
 
     def get_time(self):
         return derive_world(
             self,
             {QueryType.BBOX},
-            self.db.get_time,
+            database.get_time,
         )._execute_from_root(QueryType.BBOX)
 
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
             self,
             {QueryType.CAM},
-            self.db.insert_cam,
+            database.insert_cam,
             camera=camera,
         )
 
@@ -267,7 +274,7 @@ class World:
         return derive_world(
             self,
             {QueryType.CAM},
-            self.db.retrieve_cam,
+            database.retrieve_cam,
             camera_id=camera_id,
         )
 
@@ -275,16 +282,16 @@ class World:
         return derive_world(
             self,
             {QueryType.TRAJ, QueryType.BBOX},
-            self.db.insert_bbox_traj,
+            database.insert_bbox_traj,
             camera=camera,
             annotation=annotation,
         )
 
     def _retrieve_bbox(self, camera_id: str):
-        return derive_world(self, {QueryType.BBOX}, self.db.retrieve_bbox, camera_id=camera_id)
+        return derive_world(self, {QueryType.BBOX}, database.retrieve_bbox, camera_id=camera_id)
 
     def _retrieve_traj(self, camera_id: str):
-        return derive_world(self, {QueryType.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
+        return derive_world(self, {QueryType.TRAJ}, database.retrieve_traj, camera_id=camera_id)
 
     def _execute_from_root(self, _type: "QueryType"):
         nodes: list[World] = []
@@ -312,7 +319,7 @@ class World:
             if node.fn is None:
                 continue
 
-            if node.fn == self.db.insert_cam or node.fn == self.db.insert_bbox_traj:
+            if node.fn == database.insert_cam or node.fn == database.insert_bbox_traj:
                 print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
