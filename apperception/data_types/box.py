@@ -75,7 +75,7 @@ class Box:
         Returns the four bottom corners.
         :return: <np.float: 3, 4>. Bottom corners. First two face forward, last two face backwards.
         """
-        return self.corners()[:, [2, 3, 7, 6]]
+        return self.corners()[:, [2, 3, 7, 6]]  # type: ignore
 
     def view_points(self, points: np.ndarray, view: np.ndarray, normalize=True) -> np.ndarray:
         viewpad = np.eye(4)

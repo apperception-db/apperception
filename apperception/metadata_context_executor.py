@@ -1,10 +1,12 @@
 import numpy as np
 import psycopg2
-from metadata import View
-from metadata_context import (Aggregate, Column, Filter, MetadataContext,
-                              Predicate, Project, Scan, asMFJSON)
-from metadata_util import common_aggregation, metadata_view
-from scenic_util import join
+
+from apperception.metadata import View
+from apperception.metadata_context import (Aggregate, Column, Filter,
+                                           MetadataContext, Predicate, Project,
+                                           Scan, asMFJSON)
+from apperception.metadata_util import common_aggregation, metadata_view
+from apperception.scenic_util import join
 
 
 class MetadataContextExecutor:

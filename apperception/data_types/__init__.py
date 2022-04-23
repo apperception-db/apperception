@@ -7,6 +7,7 @@ from .point import Point
 from .query_type import QueryType
 from .tracked_object import TrackedObject
 from .tracker import Tracker
+from .trajectory import Trajectory
 
 __all__ = [
     "BoundingBox",
@@ -18,4 +19,5 @@ __all__ = [
     "QueryType",
     "TrackedObject",
     "Tracker",
+    "Trajectory",
 ]

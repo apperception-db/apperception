@@ -5,14 +5,14 @@ import glob
 import inspect
 import uuid
 from collections.abc import Iterable
-from os import makedirs, path
+from os import path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import cv2
 import dill as pickle
 import numpy as np
 import yaml
-from data_types import Camera, QueryType
+from data_types import Camera, QueryType, Trajectory
 from new_db import Database
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
@@ -21,7 +21,7 @@ from scenic_util import FetchCameraTuple, transformation
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
 
-makedirs("./.apperception_cache", exist_ok=True)
+# makedirs("./.apperception_cache", exist_ok=True)
 
 
 BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
@@ -46,12 +46,12 @@ class World:
         self,
         world_id: str,
         timestamp: datetime.datetime,
-        name: str = None,
-        parent: World = None,
-        fn: Union[str, Callable] = None,
-        kwargs: dict[str, Any] = None,
+        name: Optional[str] = None,
+        parent: Optional[World] = None,
+        fn: Optional[Union[str, Callable]] = None,
+        kwargs: Optional[dict[str, Any]] = None,
         done: bool = False,
-        types: Set[QueryType] = None,
+        types: Optional[Set[QueryType]] = None,
         materialized: bool = False,
     ):
         self._parent = parent
@@ -68,42 +68,30 @@ class World:
         return self.db.get_heading_from_a_point(x, y)
 
     def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
-        camera = self.camera_nodes[cam_id]
-        video_file = camera.video_file
+        # camera = self.camera_nodes[cam_id]
+        # video_file = camera.video_file
         if default:
-            x1, y1, z1 = 0.01082532, 2.59647246, 0
-            x2, y2, z2 = 3.01034039, 3.35985782, 2
+            x1, y1, _ = 0.01082532, 2.59647246, 0
+            x2, y2, _ = 3.01034039, 3.35985782, 2
         else:
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = frame[1]
-            cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
-            cv2.resizeWindow("Frame", 384, 216)
-            initBB = cv2.selectROI("Frame", frame, fromCenter=False)
-            print(initBB)
-            cv2.destroyAllWindows()
-            print("world coordinate #1")
-            tl = camera.lens.pixel_to_world(initBB[:2], 1)
-            print(tl)
-            x1, y1, z1 = tl
-            print("world coordinate #2")
-            br = camera.lens.pixel_to_world((initBB[0] + initBB[2], initBB[1] + initBB[3]), 1)
-            print(br)
-            x2, y2, z2 = br
+            raise Exception("select_intersection_of_interest_or_use_default not supported")
+            # vs = cv2.VideoCapture(video_file)
+            # frame = vs.read()
+            # frame = frame[1]
+            # cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
+            # cv2.resizeWindow("Frame", 384, 216)
+            # initBB = cv2.selectROI("Frame", frame, fromCenter=False)
+            # print(initBB)
+            # cv2.destroyAllWindows()
+            # print("world coordinate #1")
+            # tl = camera.lens.pixel_to_world(initBB[:2], 1)
+            # print(tl)
+            # x1, y1, z1 = tl
+            # print("world coordinate #2")
+            # br = camera.lens.pixel_to_world((initBB[0] + initBB[2], initBB[1] + initBB[3]), 1)
+            # print(br)
+            # x2, y2, z2 = br
         return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
-
-    def select_by_range(self, cam_id, x_range: Tuple[float, float], z_range: Tuple[float, float]):
-        camera = self.camera_nodes[cam_id]
-        x, _, z = camera.point.coordinate
-
-        x_min = x + x_range[0]
-        x_max = x + x_range[1]
-        z_min = z + z_range[0]
-        z_max = z + z_range[1]
-
-        return BASE_VOLUME_QUERY_TEXT.format(
-            x1=x_min, y1=float("-inf"), z1=z_min, x2=x_max, y2=float("inf"), z2=z_max
-        )
 
     def overlay_trajectory(self, scene_name: str, trajectory, object_id: str):
         frame_timestamps = self.trajectory_to_timestamp(trajectory)
@@ -237,7 +225,7 @@ class World:
             self.db.get_bbox,
         )._execute_from_root(QueryType.BBOX)
 
-    def get_traj(self):
+    def get_traj(self) -> List[List[Trajectory]]:
         return derive_world(
             self,
             {QueryType.TRAJ},
@@ -251,44 +239,47 @@ class World:
             self.db.get_traj_key,
         )._execute_from_root(QueryType.TRAJ)
 
-    def get_headings(self):
+    def get_headings(self) -> List[List[List[float]]]:
         # TODO: Optimize operations with NumPy if possible
         trajectories = self.get_traj()
-        headings = []
-        for traj in trajectories:
-            traj = traj[0]
-            heading = [None]
-            for j in range(1, len(traj)):
-                prev_pos = traj[j - 1]
-                current_pos = traj[j]
-                heading.append(0)
-                if current_pos[1] != prev_pos[1]:
-                    heading[j] = np.arctan2(
-                        current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0]
-                    )
-                heading[j] *= 180 / np.pi  # convert to degrees from radian
-                heading[j] = (
-                    heading[j] + 360
-                ) % 360  # converting such that all headings are positive
-            headings.append(heading)
+        headings: List[List[List[float]]] = []
+        for trajectory in trajectories:
+            _headings: List[List[float]] = []
+            for traj in trajectory:
+                __headings: List[float] = []
+                for j in range(1, len(traj.coordinates)):
+                    prev_pos = traj.coordinates[j - 1]
+                    current_pos = traj.coordinates[j]
+                    heading = 0.0
+                    if current_pos[1] != prev_pos[1]:
+                        heading = np.arctan2(
+                            current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0]
+                        )
+                    # convert to degrees from radian
+                    heading *= 180 / np.pi
+                    # converting such that all headings are positive
+                    heading = (heading + 360) % 360
+                    __headings.append(heading)
+                _headings.append(__headings)
+            headings.append(_headings)
         return headings
 
-    def get_distance(self, start: float, end: float):
+    def get_distance(self, start: datetime.datetime, end: datetime.datetime):
         return derive_world(
             self,
             {QueryType.TRAJ},
             self.db.get_distance,
-            start=str(self.db.start_time + datetime.timedelta(seconds=start)),
-            end=str(self.db.start_time + datetime.timedelta(seconds=end)),
+            start=str(start),
+            end=str(end),
         )._execute_from_root(QueryType.TRAJ)
 
-    def get_speed(self, start, end):
+    def get_speed(self, start: datetime.datetime, end: datetime.datetime):
         return derive_world(
             self,
             {QueryType.TRAJ},
             self.db.get_speed,
-            start=str(self.db.start_time + datetime.timedelta(seconds=start)),
-            end=str(self.db.start_time + datetime.timedelta(seconds=end)),
+            start=str(start),
+            end=str(end),
         )._execute_from_root(QueryType.TRAJ)
 
     def filter_traj_type(self, object_type: str):
@@ -340,13 +331,13 @@ class World:
         node2 = node1._retrieve_camera(camera_id=camera.id)
         return node2
 
-    def interval(self, start, end):
+    def interval(self, start: datetime.datetime, end: datetime.datetime):
         return derive_world(
             self,
             {QueryType.BBOX},
             self.db.interval,
-            start=str(self.db.start_time + datetime.timedelta(seconds=start)),
-            end=str(self.db.start_time + datetime.timedelta(seconds=end)),
+            start=str(start),
+            end=str(end),
         )
 
     def filter(self, predicate: Union[str, Callable]):
@@ -466,10 +457,14 @@ class World:
         return res
 
     def _execute(self, **kwargs):
-        fn_spec = inspect.getfullargspec(self._fn[0])
+        fn = self._fn[0]
+        if fn is None:
+            raise Exception("A world without a function should not be executed")
+
+        fn_spec = inspect.getfullargspec(fn)
         if "world_id" in fn_spec.args or fn_spec.varkw is not None:
-            return self._fn[0](**{"world_id": self._world_id, **self._kwargs, **kwargs})
-        return self._fn[0](**{**self._kwargs, **kwargs})
+            return fn(**{"world_id": self._world_id, **self._kwargs, **kwargs})
+        return fn(**{**self._kwargs, **kwargs})
 
     def _print_lineage(self):
         curr = self
@@ -560,9 +555,9 @@ def _empty_world_from_file(log_file: str) -> World:
 def _empty_world(name: str) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
-    log_file = filename(timestamp, world_id, name)
-    with open(log_file, "w") as f:
-        f.write(yaml.safe_dump({}))
+    # log_file = filename(timestamp, world_id, name)
+    # with open(log_file, "w") as f:
+    #     f.write(yaml.safe_dump({}))
     return World(world_id, timestamp, name)
 
 
@@ -662,7 +657,7 @@ def op_matched(
     file_content: dict[str, Any],
     types: set[QueryType],
     fn: Any,
-    kwargs: dict[str, Any] = None,
+    kwargs: Optional[dict[str, Any]] = None,
 ) -> bool:
     f_fn: str | None = file_content.get("fn", None)
     f_types: set[int] = file_content.get("types", set())

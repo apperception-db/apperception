@@ -1,5 +1,5 @@
 import pytest
-from apperception.utils.fn_to_sql import fn_to_sql
+from apperception.utils import fn_to_sql
 
 
 @pytest.mark.parametrize("fn, sql", [

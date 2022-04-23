@@ -6,10 +6,11 @@ import os
 from typing import Callable, List, Optional
 
 import uncompyle6
-from metadata import MetadataView, View, metadata_view
-from metadata_util import (COUNT, Tmax, Tmin, common_aggregation, common_geo,
-                           convert_time, decompile_filter,
-                           new_decompile_filter)
+
+from apperception.metadata import MetadataView, View, metadata_view
+from apperception.metadata_util import (COUNT, Tmax, Tmin, common_aggregation,
+                                        common_geo, convert_time,
+                                        decompile_filter, new_decompile_filter)
 
 
 class Project:

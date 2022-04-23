@@ -26,7 +26,7 @@ def recognize(camera_configs: List[CameraConfig], annotation):
         box = Box(a.translation, a.size, Quaternion(a.rotation))
 
         corners = box.corners()
-        bbox = np.transpose(corners[:, [3, 7]])
+        bbox = np.transpose(corners[:, [3, 7]])  # type: ignore
 
         annotations[item_id].bboxes.append(bbox)
         annotations[item_id].timestamps.append(timestamp)

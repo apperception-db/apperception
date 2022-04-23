@@ -6,6 +6,7 @@ __pycache__
 yolov4-deepsort
 yolov5-deepsort
 .mypy_cache
+.pytest_cache
 .idea
 output
 .apperception_cache
