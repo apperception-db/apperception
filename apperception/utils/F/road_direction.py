@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 @fake_fn
 def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_location = args[0]
-    arg_time = ""
+    arg_time = None
     if len(args) > 1:
         arg_time = args[1]
 
@@ -20,20 +20,20 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
         value = arg_location.value
         attr = arg_location.attr
         if attr == "traj":
-            location = f"{visitor.eval_vars[value.id]}.trajCentroids"
+            location = f"{visitor.visit(value)}.trajCentroids"
         elif attr == "ego":
-            location = f"{visitor.eval_vars[value.id]}.egoTranslation"
+            location = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":
-            location = f"{visitor.eval_vars[value.id]}.camTranslation"
+            location = f"{visitor.visit(value)}.camTranslation"
         else:
             "we dont support other location yet"
     elif isinstance(arg_location, ast.Name):
         if arg_location.id == "road":
-            location = f"{visitor.visit(arg_location.id)}"
+            location = f"{visitor.visit(arg_location)}"
         else:
-            location = f"{visitor.eval_vars[arg_location.id]}.trajCentroids"
+            location = f"{visitor.visit(arg_location)}.trajCentroids"
     else:
-        location = f"{visitor.eval_vars[arg_location]}"
+        location = f"{visitor.visit(arg_location)}"
     return (
         f"roadDirection({location}, {visitor.visit(arg_time)})"
         if arg_time

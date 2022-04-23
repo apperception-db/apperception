@@ -5,7 +5,7 @@ import glob
 import inspect
 import uuid
 from collections.abc import Iterable
-from os import makedirs, path
+from os import path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import cv2
@@ -21,7 +21,7 @@ from scenic_util import FetchCameraTuple, transformation
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
 
-makedirs("./.apperception_cache", exist_ok=True)
+# makedirs("./.apperception_cache", exist_ok=True)
 
 
 BASE_VOLUME_QUERY_TEXT = "STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))"
@@ -560,9 +560,9 @@ def _empty_world_from_file(log_file: str) -> World:
 def _empty_world(name: str) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
-    log_file = filename(timestamp, world_id, name)
-    with open(log_file, "w") as f:
-        f.write(yaml.safe_dump({}))
+    # log_file = filename(timestamp, world_id, name)
+    # with open(log_file, "w") as f:
+    #     f.write(yaml.safe_dump({}))
     return World(world_id, timestamp, name)
 
 

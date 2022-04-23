@@ -4,7 +4,7 @@ import ast
 import os
 from inspect import FullArgSpec, getfullargspec
 from sys import version_info
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 if version_info.major != 3:
     raise Exception("Only support python3")
@@ -16,7 +16,7 @@ else:
 from . import F
 
 
-def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
+def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Optional[Dict[str, Any]] = None):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)
 
@@ -28,7 +28,7 @@ def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dic
     if not isinstance(expr, ast.Expr):
         raise Exception("Predicate should produce an ast.Expr: ", expr)
 
-    return GenSqlVisitor(tables, eval_vars).visit(expr.value)
+    return GenSqlVisitor(tables, eval_vars or {}).visit(expr.value)
 
 
 def to_lambda_str(predicate: Callable) -> str:

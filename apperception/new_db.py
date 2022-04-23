@@ -4,19 +4,20 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Callable, Tuple, Union
 
 import psycopg2
-from data_types import QueryType
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
-from scenic_util import fetch_camera as su_fetch_camera
-from utils import (add_recognized_objects, fn_to_sql, overlay_bboxes,
+
+from apperception.scenic_util import fetch_camera as su_fetch_camera
+from apperception.utils import (add_recognized_objects, fn_to_sql, overlay_bboxes,
                    query_to_str, recognize, reformat_bbox_trajectories)
+from apperception.data_types import QueryType
 
 if TYPE_CHECKING:
-    from data_types import Camera
-    from new_world import World
+    from .data_types import Camera
+    from .new_world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -378,7 +379,7 @@ class Database:
             .where(query.heading >= greaterThan)
         )
 
-    def filter_distance_to_type(self, query: Query, distance: float, type: str):
+    def filter_distance_to_type(self, query: Query, distance: float, type: str, start_time: str):
         # TODO: Implement Types
         cameras = Table(CAMERA_TABLE)
         getX = CustomFunction("getX", ["tgeompoint"])
@@ -390,7 +391,7 @@ class Database:
         ST_Centroid = CustomFunction("ST_Centroid", ["geometry"])
         SQRT = CustomFunction("SQRT", ["number"])
         POWER = CustomFunction("POWER", ["number", "number"])
-        camera_time = Cast(self.start_time, "timestamptz") + cameras.frameNum * Cast(
+        camera_time = Cast(start_time, "timestamptz") + cameras.frameNum * Cast(
             "1 second", "interval"
         )
         subtract_x = valueAtTimestamp(getX(query.trajCentroids), camera_time) - ST_X(

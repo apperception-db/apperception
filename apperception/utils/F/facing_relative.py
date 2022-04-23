@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 def facing_relative(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_heading1, arg_heading2, arg_time = args
 
-    return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.eval_vars[arg_time.value.id]}.timestamp)"
+    return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.visit(arg_time)})"
 
 
 def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
@@ -21,13 +21,13 @@ def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
         value = arg.value
         attr = arg.attr
         if attr == "cam":
-            heading = f"{visitor.eval_vars[value.id]}.camHeading"
+            heading = f"{visitor.visit(value)}.camHeading"
         elif attr == "ego":
-            heading = f"{visitor.eval_vars[value.id]}.egoHeading"
+            heading = f"{visitor.visit(value)}.egoHeading"
         else:
-            heading = f"{visitor.eval_vars[value.id]}.itemHeadings"
+            heading = f"{visitor.visit(value)}.itemHeadings"
     elif isinstance(arg, ast.Name):
-        heading = f"{visitor.eval_vars[arg.id]}.itemHeadings"
+        heading = f"{visitor.visit(arg)}.itemHeadings"
     else:
-        heading = f"{visitor.eval_vars[arg]}"
+        heading = f"{visitor.visit(value)}"
     return heading

@@ -44,3 +44,31 @@ in-place = true
 recursive = true
 aggressive = 3
 verbose = 2
+
+[tool.mypy]
+exclude = [
+  'trackers/object_tracker_yolov4_deepsort\.py',
+  'trackers/object_tracker_yolov5_deepsort\.py',
+  'metadata_.*\.py',
+  'world_executor\.py',
+  'world\.py',
+  'mono_depth_estimator\.py',
+  'video_context_executor\.py',
+  'video_util\.py',
+  'scenic_util\.py',
+  'test_parse_scenic_pred\.py',
+]
+
+[[tool.mypy.overrides]]
+module = [
+  'pandas',
+  'pypika',
+  'pypika.dialects',
+  'pypika.functions',
+  'cv2',
+  'pyquaternion',
+  'pyquaternion.quaternion',
+  'uncompyle6',
+  'decompyle3',
+]
+ignore_missing_imports = true
