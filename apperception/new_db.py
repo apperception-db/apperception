@@ -18,6 +18,7 @@ from apperception.utils import (add_recognized_objects, fn_to_sql,
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
     from psycopg2 import cursor as Cursor
+
     from .data_types import Camera
     from .new_world import World
 
@@ -34,7 +35,11 @@ class Database:
         # should setup a postgres in docker first
         if connection is None:
             self.connection = psycopg2.connect(
-                dbname="mobilitydb", user="docker", host="localhost", port="25432", password="docker"
+                dbname="mobilitydb",
+                user="docker",
+                host="localhost",
+                port="25432",
+                password="docker",
             )
         else:
             self.connection = connection
