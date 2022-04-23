@@ -1,7 +1,7 @@
 import ast
 import datetime
 
-from metadata import metadata_view
+from apperception.metadata import metadata_view
 
 common_geo = ["Xmin", "Ymin", "Zmin", "Xmax", "Ymax", "Zmax"]
 common_aggregation = ["asMFJSON", common_geo]

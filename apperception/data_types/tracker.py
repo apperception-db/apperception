@@ -68,6 +68,8 @@ class SingleObjectTracker(Tracker):
             p2 = [int(bbox[0] + bbox[2]), int(bbox[1] + bbox[3])]
             cv2.rectangle(frame, p1, p2, (255, 255, 255), 2, 2)
         else:
+            p1 = [0, 0]
+            p2 = [0, 0]
             # Tracking failure
             cv2.putText(
                 frame,

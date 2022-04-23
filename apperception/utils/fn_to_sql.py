@@ -4,7 +4,7 @@ import ast
 import os
 from inspect import FullArgSpec, getfullargspec
 from sys import version_info
-from typing import Any, Callable, Dict, List, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 if version_info.major != 3:
     raise Exception("Only support python3")
@@ -16,7 +16,9 @@ else:
 from . import F
 
 
-def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dict[str, Any] = {}):
+def fn_to_sql(
+    predicate: Union[str, Callable], tables: List[str], eval_vars: Optional[Dict[str, Any]] = None
+):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)
 
@@ -28,7 +30,7 @@ def fn_to_sql(predicate: Union[str, Callable], tables: List[str], eval_vars: Dic
     if not isinstance(expr, ast.Expr):
         raise Exception("Predicate should produce an ast.Expr: ", expr)
 
-    return GenSqlVisitor(tables, eval_vars).visit(expr.value)
+    return GenSqlVisitor(tables, eval_vars or {}).visit(expr.value)
 
 
 def to_lambda_str(predicate: Callable) -> str:
@@ -58,56 +60,56 @@ def validate(predicate: str, argspec: FullArgSpec):
 
 
 CMP_OP = {
-    ast.Eq: "=",
-    ast.NotEq: "<>",
-    ast.Lt: "<",
-    ast.LtE: "<=",
-    ast.Gt: ">",
-    ast.GtE: ">=",
-    ast.In: " IN ",
+    ast.Eq.__name__: "=",
+    ast.NotEq.__name__: "<>",
+    ast.Lt.__name__: "<",
+    ast.LtE.__name__: "<=",
+    ast.Gt.__name__: ">",
+    ast.GtE.__name__: ">=",
+    ast.In.__name__: " IN ",
 }
 UNARY_OP = {
-    ast.UAdd: "+",
-    ast.USub: "-",
-    ast.Not: "NOT ",
+    ast.UAdd.__name__: "+",
+    ast.USub.__name__: "-",
+    ast.Not.__name__: "NOT ",
 }
 BOOL_OP = {
-    ast.And: " AND ",
-    ast.Or: " OR ",
+    ast.And.__name__: " AND ",
+    ast.Or.__name__: " OR ",
 }
 BIN_OP = {
-    ast.Add: "+",
-    ast.Div: "/",
-    ast.Mod: "%",
-    ast.Mult: "*",
-    ast.Sub: "-",
+    ast.Add.__name__: "+",
+    ast.Div.__name__: "/",
+    ast.Mod.__name__: "%",
+    ast.Mult.__name__: "*",
+    ast.Sub.__name__: "-",
 }
 
 
 def cmp_op(op: ast.cmpop) -> str:
     if isinstance(op, ast.NotIn):
         raise Exception("'x not in y' is not supported, use 'not (x in y)' instead")
-    if op.__class__ not in CMP_OP:
+    if op.__class__.__name__ not in CMP_OP:
         raise Exception("Operation not supported: ", op)
-    return CMP_OP[op.__class__]
+    return CMP_OP[op.__class__.__name__]
 
 
 def unary_op(op: ast.unaryop) -> str:
-    if op.__class__ not in UNARY_OP:
+    if op.__class__.__name__ not in UNARY_OP:
         raise Exception("Operation not supported: ", op)
-    return UNARY_OP[op.__class__]
+    return UNARY_OP[op.__class__.__name__]
 
 
 def bool_op(op: ast.boolop) -> str:
-    if op.__class__ not in BOOL_OP:
+    if op.__class__.__name__ not in BOOL_OP:
         raise Exception("Operation not supported: ", op)
-    return BOOL_OP[op.__class__]
+    return BOOL_OP[op.__class__.__name__]
 
 
 def bin_op(op: ast.operator) -> str:
-    if op.__class__ not in BIN_OP:
+    if op.__class__.__name__ not in BIN_OP:
         raise Exception("Operation not supported: ", op)
-    return BIN_OP[op.__class__]
+    return BIN_OP[op.__class__.__name__]
 
 
 class GenSqlVisitor(ast.NodeVisitor):

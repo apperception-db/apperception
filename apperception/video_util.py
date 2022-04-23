@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import datetime
 import random
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
@@ -122,7 +122,10 @@ def get_video_roi(file_name, cam_video_file, rois, times):
 
 
 def get_video_box(
-    file_name: str, cam_video_file: str, rois: List[Tuple[int, int, int, int]], times: List[int]
+    file_name: str,
+    cam_video_file: str,
+    rois: Union[List[Tuple[int, int, int, int]], np.ndarray],
+    times: List[int],
 ):
     """
     Get the frames of interest from the video, while boxing in the object at interest
