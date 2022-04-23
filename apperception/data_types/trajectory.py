@@ -1,9 +1,9 @@
-from typing import List, Tuple
 from dataclasses import dataclass
+from typing import List, Tuple
 
 
 @dataclass
-class Trajectory():
+class Trajectory:
     coordinates: List[Tuple[float, float, float]]
     datetimes: List[str]
     upper_inc: bool

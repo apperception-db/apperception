@@ -200,7 +200,13 @@ class VRLens(Lens):
 
 class PinholeLens(Lens):
     # TODO: (@Vanessa) change all the places where pinhole lens appears and change arguments
-    def __init__(self, resolution: Tuple[float, float], cam_origin: Tuple[float, float, float], field_of_view, skew_factor):
+    def __init__(
+        self,
+        resolution: Tuple[float, float],
+        cam_origin: Tuple[float, float, float],
+        field_of_view,
+        skew_factor,
+    ):
         """
         Construct a lens for the camera that translates to 3D world coordinates.
 
@@ -221,9 +227,11 @@ class PinholeLens(Lens):
         self.inv_transform = np.linalg.inv(
             np.matrix([[self.focal_x, self.alpha, cam_x], [0, self.focal_y, cam_y], [0, 0, 1]])
         )
-        self.transform = np.matrix(np.array(
-            [[self.focal_x, self.alpha, cam_x, 0], [0, self.focal_y, cam_y, 0], [0, 0, 1, 0]]
-        ))
+        self.transform = np.matrix(
+            np.array(
+                [[self.focal_x, self.alpha, cam_x, 0], [0, self.focal_y, cam_y, 0], [0, 0, 1, 0]]
+            )
+        )
 
     def __eq__(self, other):
         return (

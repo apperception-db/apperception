@@ -10,10 +10,11 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 from pypika.functions import Cast
 
-from apperception.scenic_util import fetch_camera as su_fetch_camera
-from apperception.utils import (add_recognized_objects, fn_to_sql, overlay_bboxes,
-                   query_to_str, recognize, reformat_bbox_trajectories)
 from apperception.data_types import QueryType, Trajectory
+from apperception.scenic_util import fetch_camera as su_fetch_camera
+from apperception.utils import (add_recognized_objects, fn_to_sql,
+                                overlay_bboxes, query_to_str, recognize,
+                                reformat_bbox_trajectories)
 
 if TYPE_CHECKING:
     from .data_types import Camera
@@ -318,12 +319,14 @@ class Database:
         return [
             [
                 Trajectory(
-                    coordinates=t['coordinates'],
-                    datetimes=t['datetimes'],
-                    lower_inc=t['lower_inc'],
-                    upper_inc=t['upper_inc']
-                ) for t in trajectory
-            ] for (trajectory,) in trajectories
+                    coordinates=t["coordinates"],
+                    datetimes=t["datetimes"],
+                    lower_inc=t["lower_inc"],
+                    upper_inc=t["upper_inc"],
+                )
+                for t in trajectory
+            ]
+            for (trajectory,) in trajectories
         ]
 
     def get_traj_key(self, query: Query):
