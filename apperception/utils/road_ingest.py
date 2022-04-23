@@ -1,5 +1,3 @@
-import psycopg2
-
 CREATE_POLYGON_SQL = """
 CREATE TABLE IF NOT EXISTS Polygon(
     elementId TEXT,

@@ -1,6 +1,6 @@
-
-from psycopg2._psycopg import connection as Connection
 import pandas as pd
+from psycopg2._psycopg import connection as Connection
+
 
 def export_tables(conn: Connection, data_path: str):
     # create a query to specify which values we want from the database.
@@ -33,15 +33,15 @@ def export_tables(conn: Connection, data_path: str):
 
 
 def import_tables(conn: Connection, data_path: str):
-    
+
     # Import CSV
-    data_Cameras = pd.read_csv(data_path+"cameras.csv")
+    data_Cameras = pd.read_csv(data_path + "cameras.csv")
     df_Cameras = pd.DataFrame(data_Cameras)
 
-    data_Item_General_Trajectory = pd.read_csv(data_path+"item_general_trajectory.csv")
+    data_Item_General_Trajectory = pd.read_csv(data_path + "item_general_trajectory.csv")
     df_Item_General_Trajectory = pd.DataFrame(data_Item_General_Trajectory)
 
-    data_General_Bbox = pd.read_csv(data_path+"general_bbox.csv")
+    data_General_Bbox = pd.read_csv(data_path + "general_bbox.csv")
     df_General_Bbox = pd.DataFrame(data_General_Bbox)
 
     # Connect to SQL Server
