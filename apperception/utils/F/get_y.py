@@ -24,7 +24,7 @@ def get_y(visitor: "GenSqlVisitor", args: List[ast.expr]):
         elif attr == "ego":
             location = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":
-            location = f"{visitor.visit(value)}.camTranslation"
+            location = f"{visitor.visit(value)}.cameraTranslation"
         else:
             raise Exception("we dont support other location yet")
     elif isinstance(arg_location, ast.Name):
