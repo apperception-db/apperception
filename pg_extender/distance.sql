@@ -25,6 +25,15 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
+DROP FUNCTION IF EXISTS distance(geometry, tgeompoint, timestamptz);
+CREATE OR REPLACE FUNCTION distance(a geometry, tg tgeompoint, t timestamptz) RETURNS float AS
+$BODY$
+BEGIN
+  RETURN distance(a, valueAtTimestamp(tg, t));
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
+
 DROP FUNCTION IF EXISTS distance(tgeompoint, tgeompoint, timestamptz);
 CREATE OR REPLACE FUNCTION distance(a tgeompoint, b tgeompoint, t timestamptz) RETURNS float AS
 $BODY$

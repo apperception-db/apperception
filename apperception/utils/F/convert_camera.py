@@ -44,4 +44,20 @@ def convert_camera(visitor: "GenSqlVisitor", args: List[ast.expr]):
     else:
         raise Exception("Second argument of convert_camera should be camera or its ego car")
 
-    return f"ConvertCamera({object_positions}, {visitor.eval_vars[name]}.{camera_attr}, {visitor.visit(arg_time)})"
+    if isinstance(arg_camera, ast.Attribute):
+        value = arg_camera.value
+        if not isinstance(value, ast.Name):
+            raise Exception()
+        name = value.id
+        if arg_camera.attr != "ego":
+            raise Exception("Second argument of convert_camera should be camera or its ego car")
+        camera_heading_attr = "egoHeading"
+    elif isinstance(arg_camera, ast.Name):
+        name = arg_camera.id
+        camera_heading_attr = "cameraHeading"
+    else:
+        raise Exception("Second argument of convert_camera should be camera or its ego car")
+
+    
+
+    return f"ConvertCamera({object_positions}, {visitor.eval_vars[name]}.{camera_attr}, {visitor.eval_vars[name]}.{camera_heading_attr}, {visitor.visit(arg_time)})"
