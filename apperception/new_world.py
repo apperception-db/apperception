@@ -415,7 +415,7 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
 
 
 def trajectory_to_timestamp(trajectory):
-    return [traj[0][0]["datetimes"] for traj in trajectory]
+    return [traj[0].datetimes for traj in trajectory]
 
 
 def get_overlay_info(trajectory, camera_info: List[List[List["FetchCameraTuple"]]]):
