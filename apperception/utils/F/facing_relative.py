@@ -21,7 +21,7 @@ def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
         value = arg.value
         attr = arg.attr
         if attr == "cam":
-            heading = f"{visitor.visit(value)}.camHeading"
+            heading = f"{visitor.visit(value)}.cameraHeading"
         elif attr == "ego":
             heading = f"{visitor.visit(value)}.egoHeading"
         else:

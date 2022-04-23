@@ -26,7 +26,7 @@ def distance(visitor: "GenSqlVisitor", args: List[ast.expr]):
         elif attr == "ego":
             a = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":
-            a = f"{visitor.visit(value)}.camTranslation"
+            a = f"{visitor.visit(value)}.cameraTranslation"
         else:
             raise Exception("we dont support other location yet")
     elif isinstance(arg_a, ast.Name):
@@ -45,7 +45,7 @@ def distance(visitor: "GenSqlVisitor", args: List[ast.expr]):
         elif attr == "ego":
             b = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":
-            b = f"{visitor.visit(value)}.camTranslation"
+            b = f"{visitor.visit(value)}.cameraTranslation"
         else:
             raise Exception("we dont support other location yet")
     elif isinstance(arg_b, ast.Name):

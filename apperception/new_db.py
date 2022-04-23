@@ -1,7 +1,7 @@
 import ast
 import inspect
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, List, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import psycopg2
 from pypika import Column, CustomFunction, Table
@@ -16,7 +16,8 @@ from apperception.utils import (add_recognized_objects, fn_to_sql,
                                 reformat_bbox_trajectories)
 
 if TYPE_CHECKING:
-    from psycopg2 import connection, cursor
+    from psycopg2 import connection as Connection
+    from psycopg2 import cursor as Cursor
 
     from .data_types import Camera
     from .new_world import World
@@ -27,15 +28,22 @@ BBOX_TABLE = "General_Bbox"
 
 
 class Database:
-    connection: "connection"
-    cursor: "cursor"
+    connection: "Connection"
+    cursor: "Cursor"
 
-    def __init__(self):
+    def __init__(self, connection: Optional["Connection"] = None):
         # should setup a postgres in docker first
-        self.connection: "connection" = psycopg2.connect(
-            dbname="mobilitydb", user="docker", host="localhost", port="25432", password="docker"
-        )
-        self.cursor: "cursor" = self.connection.cursor()
+        if connection is None:
+            self.connection = psycopg2.connect(
+                dbname="mobilitydb",
+                user="docker",
+                host="localhost",
+                port="25432",
+                password="docker",
+            )
+        else:
+            self.connection = connection
+        self.cursor = self.connection.cursor()
 
     def reset(self):
         self._create_camera_table()
@@ -427,3 +435,6 @@ class Database:
         fetched_meta = self.cursor.fetchall()
         fetched_meta = reformat_bbox_trajectories(fetched_meta)
         overlay_bboxes(fetched_meta, cams, boxed)
+
+
+database = Database()
