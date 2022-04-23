@@ -72,7 +72,7 @@ jobs:
       
       - name: Type Check with mypy
         if: always()
-        run: yes | poetry run mypy --install-types apperception ; poetry run mypy apperception
+        run: yes | poetry run mypy --install-types apperception || poetry run mypy apperception
       
       - name: Type Check with pyright
         if: always()
