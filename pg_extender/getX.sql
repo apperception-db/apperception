@@ -7,8 +7,8 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS getX(geometry, timestampz);
-CREATE OR REPLACE FUNCTION getX(p geometry, t timestampz) RETURNS float AS
+DROP FUNCTION IF EXISTS getX(geometry, timestamptz);
+CREATE OR REPLACE FUNCTION getX(p geometry, t timestamptz) RETURNS float AS
 $BODY$
 BEGIN
   RETURN ST_X(p);
