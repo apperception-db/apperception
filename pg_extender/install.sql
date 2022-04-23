@@ -5,3 +5,5 @@
 \i overlap.sql;
 \i viewAngle.sql;
 \i geoContained.sql;
+\i distance.sql;
+\i convertCamera.sql;
