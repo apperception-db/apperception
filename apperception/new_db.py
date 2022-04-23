@@ -16,6 +16,8 @@ from apperception.utils import (add_recognized_objects, fn_to_sql,
                                 reformat_bbox_trajectories)
 
 if TYPE_CHECKING:
+    from psycopg2 import connection, cursor
+
     from .data_types import Camera
     from .new_world import World
 
@@ -25,12 +27,15 @@ BBOX_TABLE = "General_Bbox"
 
 
 class Database:
+    connection: "connection"
+    cursor: "cursor"
+
     def __init__(self):
         # should setup a postgres in docker first
-        self.con = psycopg2.connect(
+        self.connection: "connection" = psycopg2.connect(
             dbname="mobilitydb", user="docker", host="localhost", port="25432", password="docker"
         )
-        self.cur = self.con.cursor()
+        self.cursor: "cursor" = self.connection.cursor()
 
     def reset(self):
         self._create_camera_table()
@@ -57,9 +62,9 @@ class Database:
             Column("cameraHeading", "real"),
             Column("egoHeading", "real"),
         )
-        self.cur.execute(q1.get_sql())
-        self.cur.execute(q2.get_sql())
-        self.con.commit()
+        self.cursor.execute(q1.get_sql())
+        self.cursor.execute(q2.get_sql())
+        self.connection.commit()
 
     def _create_general_bbox_table(self):
         # drop old
@@ -76,9 +81,9 @@ class Database:
         );
         """
 
-        self.cur.execute(q1.get_sql())
-        self.cur.execute(q2)
-        self.con.commit()
+        self.cursor.execute(q1.get_sql())
+        self.cursor.execute(q2)
+        self.connection.commit()
 
     def _create_item_general_trajectory_table(self):
         # drop old
@@ -98,32 +103,32 @@ class Database:
         );
         """
 
-        self.cur.execute(q1)
-        self.cur.execute(q2)
-        self.con.commit()
+        self.cursor.execute(q1)
+        self.cursor.execute(q2)
+        self.connection.commit()
 
     def _create_index(self):
-        self.cur.execute(
+        self.cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS traj_idx
             ON Item_General_Trajectory
             USING GiST(trajCentroids);
         """
         )
-        self.cur.execute(
+        self.cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS item_idx
             ON General_Bbox(itemId);
         """
         )
-        self.cur.execute(
+        self.cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS traj_bbox_idx
             ON General_Bbox
             USING GiST(trajBbox);
         """
         )
-        self.con.commit()
+        self.connection.commit()
 
     def insert_cam(self, camera: "Camera"):
         values = [
@@ -144,7 +149,7 @@ class Database:
             for config in camera.configs
         ]
 
-        self.cur.execute(
+        self.cursor.execute(
             f"""
             INSERT INTO Cameras (
                 cameraId,
@@ -165,7 +170,7 @@ class Database:
         )
 
         print("New camera inserted successfully.........")
-        self.con.commit()
+        self.connection.commit()
 
     def retrieve_cam(self, query: Query = None, camera_id: str = ""):
         """
@@ -250,6 +255,24 @@ class Database:
         FROM ({world._execute_from_root(QueryType.TRAJ)}) as __except__
         """
 
+    def union(self, query: Query, world: "World"):
+        return f"""
+        SELECT *
+        FROM ({query_to_str(query)}) as __query__
+        UNION
+        SELECT *
+        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __union__
+        """
+
+    def intersect(self, query: Query, world: "World"):
+        return f"""
+        SELECT *
+        FROM ({query_to_str(query)}) as __query__
+        INTERSECT
+        SELECT *
+        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __intersect__
+        """
+
     def get_cam(self, query: Query):
         """
         Execute sql command rapidly
@@ -261,11 +284,11 @@ class Database:
             + f" FROM ({query.get_sql()}) AS final"
         )
 
-        self.cur.execute(q)
-        return self.cur.fetchall()
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
 
     def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
-        return su_fetch_camera(self.con, scene_name, frame_timestamp)
+        return su_fetch_camera(self.connection, scene_name, frame_timestamp)
 
     def get_len(self, query: Query):
         """
@@ -278,12 +301,12 @@ class Database:
             + f" FROM ({query.get_sql()}) AS final"
         )
 
-        self.cur.execute(q)
-        return self.cur.fetchall()
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
 
     def insert_bbox_traj(self, camera: "Camera", annotation):
         tracking_results = recognize(camera.configs, annotation)
-        add_recognized_objects(self.con, tracking_results, camera.id)
+        add_recognized_objects(self.connection, tracking_results, camera.id)
 
     def retrieve_bbox(self, query: Query = None, camera_id: str = ""):
         bbox = Table(BBOX_TABLE)
@@ -296,8 +319,8 @@ class Database:
         return query + q if query else q  # UNION
 
     def get_bbox(self, query: Query):
-        self.cur.execute(query.get_sql())
-        return self.cur.fetchall()
+        self.cursor.execute(query.get_sql())
+        return self.cursor.fetchall()
 
     def get_traj(self, query: Query) -> List[List[Trajectory]]:
         # hack
@@ -307,8 +330,8 @@ class Database:
         """
 
         print("get_traj")  # print("get_traj", query)
-        self.cur.execute(query)
-        trajectories = self.cur.fetchall()
+        self.cursor.execute(query)
+        trajectories = self.cursor.fetchall()
         return [
             [
                 Trajectory(
@@ -325,8 +348,8 @@ class Database:
     def get_traj_key(self, query: Query):
         q = SnowflakeQuery.from_(query).select("itemid")
         print("get_traj_key")  # print("get_traj_key", q.get_sql())
-        self.cur.execute(q.get_sql())
-        return self.cur.fetchall()
+        self.cursor.execute(q.get_sql())
+        return self.cursor.fetchall()
 
     def get_bbox_geo(self, query: Query):
         Xmin = CustomFunction("Xmin", ["stbox"])
@@ -344,14 +367,14 @@ class Database:
             Ymax(query.trajBbox),
             Zmax(query.trajBbox),
         )
-        self.cur.execute(q.get_sql())
-        return self.cur.fetchall()
+        self.cursor.execute(q.get_sql())
+        return self.cursor.fetchall()
 
     def get_time(self, query: Query):
         Tmin = CustomFunction("Tmin", ["stbox"])
         q = SnowflakeQuery.from_(query).select(Tmin(query.trajBbox))
-        self.cur.execute(q.get_sql())
-        return self.cur.fetchall()
+        self.cursor.execute(q.get_sql())
+        return self.cursor.fetchall()
 
     def get_distance(self, query: Query, start: str, end: str):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
@@ -360,8 +383,8 @@ class Database:
             cumulativeLength(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
-        self.cur.execute(q.get_sql())
-        return self.cur.fetchall()
+        self.cursor.execute(q.get_sql())
+        return self.cursor.fetchall()
 
     def get_speed(self, query, start, end):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
@@ -371,8 +394,8 @@ class Database:
             speed(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
-        self.cur.execute(q.get_sql())
-        return self.cur.fetchall()
+        self.cursor.execute(q.get_sql())
+        return self.cursor.fetchall()
 
     def get_video(self, query, cams, boxed):
         bbox = Table(BBOX_TABLE)
@@ -400,7 +423,7 @@ class Database:
             )
         )
 
-        self.cur.execute(query.get_sql())
-        fetched_meta = self.cur.fetchall()
+        self.cursor.execute(query.get_sql())
+        fetched_meta = self.cursor.fetchall()
         fetched_meta = reformat_bbox_trajectories(fetched_meta)
         overlay_bboxes(fetched_meta, cams, boxed)
