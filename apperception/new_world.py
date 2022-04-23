@@ -3,15 +3,19 @@ from __future__ import annotations
 import datetime
 import inspect
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import cv2
 import numpy as np
-from data_types import Camera, QueryType, Trajectory
+from data_types import Camera, QueryType
 from new_db import Database
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 from scenic_util import FetchCameraTuple, transformation
+
+if TYPE_CHECKING:
+    from .data_types import Trajectory
+    import pandas as pd
 
 # matplotlib.use("Qt5Agg")
 # print("get backend", matplotlib.get_backend())
@@ -20,7 +24,7 @@ from scenic_util import FetchCameraTuple, transformation
 class World:
     # all worlds share a db instance
     db = Database()
-    camera_nodes: Dict[str, Camera] = {}
+    camera_nodes: Dict[str, "Camera"] = {}
 
     _parent: Optional[World]
     _name: str
@@ -29,7 +33,7 @@ class World:
     _done: bool
     _world_id: str
     _timestamp: datetime.datetime
-    _types: set[QueryType]
+    _types: set["QueryType"]
     _materialized: bool
 
     def __init__(
@@ -41,7 +45,7 @@ class World:
         fn: Optional[Union[str, Callable]] = None,
         kwargs: Optional[dict[str, Any]] = None,
         done: bool = False,
-        types: Optional[Set[QueryType]] = None,
+        types: Optional[Set["QueryType"]] = None,
         materialized: bool = False,
     ):
         self._parent = parent
@@ -106,11 +110,47 @@ class World:
                     vid_writer.write(frame_im)
                 vid_writer.release()
 
-    def recognize(self, camera: Camera, annotation):
+    def add_camera(self, camera: "Camera"):
+        node1 = self._insert_camera(camera=camera)
+        node2 = node1._retrieve_camera(camera_id=camera.id)
+        return node2
+
+    def recognize(self, camera: "Camera", annotation: "pd.DataFrame"):
         node1 = self._insert_bbox_traj(camera=camera, annotation=annotation)
         node2 = node1._retrieve_bbox(camera_id=camera.id)
         node3 = node2._retrieve_traj(camera_id=camera.id)
         return node3
+
+    def filter(self, predicate: Union[str, Callable]) -> World:
+        return derive_world(
+            self,
+            {QueryType.TRAJ, QueryType.BBOX},
+            self.db.filter,
+            predicate=predicate,
+        )
+
+    def __lshift__(self, camera: Union["Camera", Tuple["Camera", "pd.DataFrame"]]):
+        """add a camera or add a camera and recognize"""
+        if isinstance(camera, Camera):
+            return self.add_camera(camera)
+        camera, annotation, *_ = camera
+        return self.add_camera(camera).recognize(camera, annotation)
+
+    def __sub__(self, other: World) -> World:
+        """exclude other world"""
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.exclude, world=other)
+
+    def __or__(self, other: World) -> World:
+        """union with other world"""
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.union, world=other)
+
+    def __and__(self, other: World) -> World:
+        """intersect with other world"""
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.intersect, world=other)
+
+    def __xor__(self, other: World) -> World:
+        """symmetric difference with other world"""
+        return (self | other) - (self & other)
 
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
@@ -128,7 +168,7 @@ class World:
             self.db.get_bbox,
         )._execute_from_root(QueryType.BBOX)
 
-    def get_traj(self) -> List[List[Trajectory]]:
+    def get_traj(self) -> List[List["Trajectory"]]:
         return derive_world(
             self,
             {QueryType.TRAJ},
@@ -185,27 +225,6 @@ class World:
             end=str(end),
         )._execute_from_root(QueryType.TRAJ)
 
-    def add_camera(self, camera: Camera):
-        """
-        1. For update method, we create two nodes: the first node will write to the db, and the second node will retrieve from the db
-        2. For the write node, never double write. (so we use done flag)
-        ... -> [write] -> [retrive] -> ...
-        """
-        node1 = self._insert_camera(camera=camera)
-        node2 = node1._retrieve_camera(camera_id=camera.id)
-        return node2
-
-    def filter(self, predicate: Union[str, Callable]):
-        return derive_world(
-            self,
-            {QueryType.TRAJ, QueryType.BBOX},
-            self.db.filter,
-            predicate=predicate,
-        )
-
-    def exclude(self, world: World):
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, self.db.exclude, world=world)
-
     def get_len(self):
         return derive_world(
             self,
@@ -234,7 +253,7 @@ class World:
             self.db.get_time,
         )._execute_from_root(QueryType.BBOX)
 
-    def _insert_camera(self, camera: Camera):
+    def _insert_camera(self, camera: "Camera"):
         return derive_world(
             self,
             {QueryType.CAM},
@@ -250,7 +269,7 @@ class World:
             camera_id=camera_id,
         )
 
-    def _insert_bbox_traj(self, camera: Camera, annotation):
+    def _insert_bbox_traj(self, camera: "Camera", annotation: "pd.DataFrame"):
         return derive_world(
             self,
             {QueryType.TRAJ, QueryType.BBOX},
@@ -265,7 +284,7 @@ class World:
     def _retrieve_traj(self, camera_id: str):
         return derive_world(self, {QueryType.TRAJ}, self.db.retrieve_traj, camera_id=camera_id)
 
-    def _execute_from_root(self, _type: QueryType):
+    def _execute_from_root(self, _type: "QueryType"):
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
@@ -372,7 +391,7 @@ def empty_world(name: str) -> World:
     return World(world_id, timestamp, name)
 
 
-def derive_world(parent: World, types: set[QueryType], fn: Any, **kwargs) -> World:
+def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
 
