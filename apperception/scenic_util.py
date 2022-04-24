@@ -572,7 +572,7 @@ def export_tables(conn):
         db_cursor.copy_expert(SQL_camera_output, camera_output)
 
 
-def import_tables(conn):
+def import_tables(conn, data_path):
     # # Old Version:
     # cur = conn.cursor()
     # cur.execute(CREATE_CAMERA_SQL)
@@ -622,8 +622,9 @@ def import_tables(conn):
                 cameraIntrinsic real[3][3],
                 egoTranslation geometry,
                 egoRotation real[4],
-                timestamp TEXT,
-                heading real
+                timestamp timestamptz,
+                cameraHeading real,
+                egoHeading real
                 )
     """
     )
@@ -637,7 +638,7 @@ def import_tables(conn):
                 color TEXT,
                 trajCentroids tgeompoint,
                 largestBbox stbox,
-                itemHeadings real[],
+                itemHeadings tfloat,
                 PRIMARY KEY (itemId)
                 )
     """
@@ -662,8 +663,8 @@ def import_tables(conn):
     for i, row in df_Cameras.iterrows():
         cursor.execute(
             """
-                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, heading)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
             tuple(row),
         )
