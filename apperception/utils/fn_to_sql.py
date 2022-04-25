@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from apperception.metadata import *
+
 import ast
 import os
 from inspect import FullArgSpec, getfullargspec
@@ -190,7 +192,7 @@ class GenSqlVisitor(ast.NodeVisitor):
     def visit_Attribute(self, node: ast.Attribute) -> str:
         # Should we not allow users to directly acces the database's field?
         value = self.visit(node.value)
-        attr = node.attr
+        attr = metadata_view.resolve_key(node.attr)
         return f"{value}.{attr}"
 
     def visit_Subscript(self, node: ast.Subscript) -> str:

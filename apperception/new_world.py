@@ -14,6 +14,7 @@ from pypika.dialects import SnowflakeQuery
 from apperception.data_types import Camera, QueryType
 from apperception.new_db import database
 from apperception.scenic_util import FetchCameraTuple, transformation
+from apperception.metadata import *
 
 if TYPE_CHECKING:
     import pandas as pd
