@@ -1,6 +1,6 @@
 \i facingRelative.sql;
 \i getX.sql;
-\i getX.sql;
+\i getY.sql;
 \i roadDirection.sql;
 \i overlap.sql;
 \i viewAngle.sql;

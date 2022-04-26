@@ -6,6 +6,8 @@ from inspect import FullArgSpec, getfullargspec
 from sys import version_info
 from typing import Any, Callable, Dict, List, Optional, Union
 
+from apperception.metadata import metadata_view
+
 if version_info.major != 3:
     raise Exception("Only support python3")
 if version_info.minor < 7:
@@ -190,7 +192,7 @@ class GenSqlVisitor(ast.NodeVisitor):
     def visit_Attribute(self, node: ast.Attribute) -> str:
         # Should we not allow users to directly acces the database's field?
         value = self.visit(node.value)
-        attr = node.attr
+        attr = metadata_view.resolve_key(node.attr)
         return f"{value}.{attr}"
 
     def visit_Subscript(self, node: ast.Subscript) -> str:
