@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from apperception.metadata import *
-
 import ast
 import os
 from inspect import FullArgSpec, getfullargspec
 from sys import version_info
 from typing import Any, Callable, Dict, List, Optional, Union
+
+from apperception.metadata import metadata_view
 
 if version_info.major != 3:
     raise Exception("Only support python3")

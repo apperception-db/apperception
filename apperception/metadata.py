@@ -1,5 +1,6 @@
 from apperception.data_types import QueryType
 
+
 class View:
     def __init__(self, view_name: str, view_type: QueryType):
         self.view_name: str = view_name
@@ -97,7 +98,11 @@ class MetadataView(View):
             return self.camera_view
 
     def resolve_key(self, column_key):
-        return self.trajectory_view.resolve_key(column_key) or self.location_view.resolve_key(column_key) or self.camera_view.reseolve_key(column_key)
+        return (
+            self.trajectory_view.resolve_key(column_key)
+            or self.location_view.resolve_key(column_key)
+            or self.camera_view.reseolve_key(column_key)
+        )
 
 
 metadata_view = MetadataView()
