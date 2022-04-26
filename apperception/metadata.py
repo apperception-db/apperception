@@ -102,7 +102,8 @@ class MetadataView(View):
         return (
             self.trajectory_view.resolve_key(column_key)
             or self.location_view.resolve_key(column_key)
-            or self.camera_view.reseolve_key(column_key)
+            or self.camera_view.resolve_key(column_key)
+            or column_key
         )
 
 
