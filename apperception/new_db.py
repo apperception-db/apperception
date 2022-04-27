@@ -118,6 +118,30 @@ class Database:
     def _create_index(self):
         self.cursor.execute(
             """
+            CREATE INDEX ON Cameras (cameraId);
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Cameras (timestamp);
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Item_General_Trajectory (itemId);
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Item_General_Trajectory (cameraId);
+            """
+        )
+
+        self.cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS traj_idx
             ON Item_General_Trajectory
             USING GiST(trajCentroids);
@@ -337,7 +361,7 @@ class Database:
         FROM ({query_to_str(query)}) as final
         """
 
-        print("get_traj")  # print("get_traj", query)
+        print("get_traj", query)
         self.cursor.execute(query)
         trajectories = self.cursor.fetchall()
         return [
@@ -354,9 +378,12 @@ class Database:
         ]
 
     def get_traj_key(self, query: Query):
-        q = SnowflakeQuery.from_(query).select("itemid")
-        print("get_traj_key")  # print("get_traj_key", q.get_sql())
-        self.cursor.execute(q.get_sql())
+        query = f"""
+        SELECT itemId FROM ({query_to_str(query)}) as final
+        """
+
+        print("get_traj_key", query)
+        self.cursor.execute(query)
         return self.cursor.fetchall()
 
     def get_bbox_geo(self, query: Query):

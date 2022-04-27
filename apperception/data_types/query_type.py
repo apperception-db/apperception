@@ -8,3 +8,4 @@ class QueryType(IntEnum):
     CAM = 0
     BBOX = 1
     TRAJ = 2
+    METADATA = 3
