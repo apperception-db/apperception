@@ -118,6 +118,30 @@ class Database:
     def _create_index(self):
         self.cursor.execute(
             """
+            CREATE INDEX ON Cameras (cameraId);
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Cameras (timestamp);
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Item_General_Trajectory (itemId);
+            """
+        )
+
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Item_General_Trajectory (cameraId);
+            """
+        )
+
+        self.cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS traj_idx
             ON Item_General_Trajectory
             USING GiST(trajCentroids);
