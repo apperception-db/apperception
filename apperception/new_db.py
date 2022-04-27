@@ -139,7 +139,7 @@ class Database:
             CREATE INDEX ON Item_General_Trajectory (cameraId);
             """
         )
-        
+
         self.cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS traj_idx
