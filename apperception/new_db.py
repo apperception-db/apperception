@@ -136,6 +136,16 @@ class Database:
             USING GiST(trajBbox);
         """
         )
+        self.cursor.execute(
+            """
+            CREATE INDEX ON Item_General_Trajectory (cameraId);
+        """
+        )
+        self.cursor.execute(
+            """
+           CREATE INDEX ON Cameras (cameraId);
+        """
+        )
         self.connection.commit()
 
     def insert_cam(self, camera: "Camera"):

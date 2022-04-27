@@ -18,6 +18,12 @@ CREATE TABLE IF NOT EXISTS Segment(
 );
 """
 
+CREATE_SEGMENT_INDEX = """
+    CREATE INDEX IF NOT EXISTS segPoint_idx
+    ON Segment
+    USING GiST(startPoint, endPoint);
+"""
+
 CREATE_LANESECTION_SQL = """
 CREATE TABLE IF NOT EXISTS LaneSection(
     id Text,
@@ -182,6 +188,7 @@ def create_segment_table(conn, segments, drop=True):
         VALUES {','.join(values)};
         """
     )
+    cursor.execute(CREATE_SEGMENT_INDEX)
 
     conn.commit()
 

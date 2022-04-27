@@ -110,6 +110,11 @@ def import_tables(conn: Connection, data_path: str):
                     """,
             tuple(row),
         )
+    cursor.execute(
+        """
+        CREATE INDEX ON Cameras (cameraId);
+    """
+    )
 
     for i, row in df_Item_General_Trajectory.iterrows():
         cursor.execute(
@@ -119,6 +124,13 @@ def import_tables(conn: Connection, data_path: str):
                     """,
             tuple(row),
         )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS traj_idx
+        ON Item_General_Trajectory
+        USING GiST(trajCentroids);
+    """
+    )
 
     for i, row in df_General_Bbox.iterrows():
         cursor.execute(
@@ -128,5 +140,18 @@ def import_tables(conn: Connection, data_path: str):
                     """,
             tuple(row),
         )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS item_idx
+        ON General_Bbox(itemId);
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS traj_bbox_idx
+        ON General_Bbox
+        USING GiST(trajBbox);
+    """
+    )
 
     conn.commit()
