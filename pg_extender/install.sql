@@ -7,3 +7,4 @@
 \i geoContained.sql;
 \i distance.sql;
 \i convertCamera.sql;
+\i operators.sql;
