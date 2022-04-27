@@ -129,6 +129,9 @@ class GenSqlVisitor(ast.NodeVisitor):
     def generic_visit(self, node: ast.AST) -> None:
         raise Exception("Unsupported node type: " + type(node).__name__)
 
+    def visit_Str(self, node: ast.Str) -> str:
+        return "'{}'".format(node.s)
+
     def visit_Lambda(self, node: ast.Lambda) -> str:
         args = [arg.arg for arg in node.args.args]
         if len(args) != len(self.tables):
