@@ -15,5 +15,5 @@ ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 def road_segment(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_type = args[0]
     if not isinstance(arg_type, ast.Constant) or arg_type.value.lower() not in ROAD_TYPES:
-        raise Exception(f"Unsupported road type: {arg_type, arg_type.value}")
+        raise Exception(f"Unsupported road type: {arg_type}")
     return f"roadSegment('{arg_type.value}')"

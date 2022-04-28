@@ -15,7 +15,8 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
 
     if isinstance(arg_obj, ast.Attribute):
         value = arg_obj.value
-
+        if not isinstance(value, ast.Name):
+            raise Exception("obj not supported yet")
         cont_point_attr = arg_obj.attr
         if cont_point_attr == "traj" or cont_point_attr == "trajCentroids":
             object_positions = f"{visitor.eval_vars[value.id]}.trajCentroids"
@@ -33,6 +34,8 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
     if isinstance(arg_point_of_view, ast.Attribute):
         value = arg_point_of_view.value
         view_point_attr = arg_point_of_view.attr
+        if not isinstance(value, ast.Name):
+            raise Exception("point of view not supported yet")
         if view_point_attr == "ego":
             cam_loc = f"{visitor.eval_vars[value.id]}.egoTranslation"
             cam_heading = f"{visitor.eval_vars[value.id]}.egoHeading"
