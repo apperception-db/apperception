@@ -21,3 +21,11 @@ BEGIN
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
+
+CREATE OR REPLACE FUNCTION facingRelative(object1_headings tfloat, object2_headings tfloat, _time timestamptz) RETURNS real AS
+$BODY$
+BEGIN
+  RETURN facingRelative(CAST(valueAtTimestamp(object1_headings, _time) AS real), CAST(valueAtTimestamp(object2_headings, _time) AS real));
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
