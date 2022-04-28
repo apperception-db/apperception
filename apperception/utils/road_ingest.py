@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS Segment(
     elementId TEXT,
     startPoint geometry,
     endPoint geometry,
+    segmentLine geometry,
     heading real,
     FOREIGN KEY(elementId)
         REFERENCES Polygon(elementId)
@@ -21,7 +22,7 @@ CREATE TABLE IF NOT EXISTS Segment(
 CREATE_SEGMENT_INDEX = """
     CREATE INDEX IF NOT EXISTS segPoint_idx
     ON Segment
-    USING GiST(startPoint, endPoint);
+    USING GiST(segmentLine);
 """
 
 CREATE_LANESECTION_SQL = """
@@ -186,6 +187,13 @@ def create_segment_table(conn, segments, drop=True):
             heading
         )
         VALUES {','.join(values)};
+        """
+    )
+    cursor.execute(
+        f"""
+        UPDATE Segment
+        SET segmentLine = ST_MakeLine(startPoint, endPoint)
+        WHERE startPoint IS NOT NULL and endPoint IS NOT NULL;
         """
     )
     cursor.execute(CREATE_SEGMENT_INDEX)

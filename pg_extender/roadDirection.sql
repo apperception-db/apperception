@@ -2,11 +2,11 @@ DROP FUNCTION IF EXISTS roadDirection(real, real);
 CREATE OR REPLACE FUNCTION roadDirection(x real, y real) RETURNS real AS
 $BODY$
 BEGIN
-  RETURN (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS point, 
-                                           st_distance(st_makeline(startPoint, endPoint), point) as dis
-                                      WHERE ST_DWithin(startPoint, point, 100) OR ST_DWithin(endPoint, point, 100)
-            ORDER BY dis ASC
-            LIMIT 1);
+     RETURN (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS point ORDER BY segmentLine <-> point ASC LIMIT 1 );
+    --  RETURN (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS POINT, 
+    --                                    st_distance(st_makeline(startPoint, endPoint), point) as dis
+    --         ORDER BY dis ASC
+    --         LIMIT 1);
 END
 $BODY$
 LANGUAGE 'plpgsql' ;

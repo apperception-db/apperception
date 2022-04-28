@@ -131,6 +131,11 @@ def import_tables(conn: Connection, data_path: str):
         USING GiST(trajCentroids);
     """
     )
+    cursor.execute(
+        """
+        CREATE INDEX ON Item_General_Trajectory (cameraId);
+    """
+    )
 
     for i, row in df_General_Bbox.iterrows():
         cursor.execute(
@@ -144,6 +149,11 @@ def import_tables(conn: Connection, data_path: str):
         """
         CREATE INDEX IF NOT EXISTS item_idx
         ON General_Bbox(itemId);
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX ON General_Bbox (cameraId);
     """
     )
     cursor.execute(
