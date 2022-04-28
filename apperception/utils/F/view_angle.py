@@ -28,7 +28,7 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
     elif isinstance(arg_obj, ast.Constant):
         object_positions = arg_obj.value
     else:
-        raise Exception("First argument of contained should be geometry type", str(arg_obj_traj))
+        raise Exception("First argument of contained should be geometry type", str(arg_obj))
 
     if isinstance(arg_point_of_view, ast.Attribute):
         value = arg_point_of_view.value
@@ -48,7 +48,7 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
         cam_heading = arg_point_of_view.value
         cam_loc = arg_point_of_view.value
     else:
-        raise Exception("Problem with arg_geoms input contained function", str(arg_cam_heading))
+        raise Exception("Problem with arg_geoms input contained function", str(arg_point_of_view))
 
     if isinstance(arg_time, ast.Attribute):
         value = arg_time.value
