@@ -6,6 +6,7 @@ from .get_x import get_x
 from .get_y import get_y
 from .road_direction import road_direction
 from .view_angle import view_angle
+from .road_segment import road_segment
 
 __all__ = [
     "convert_camera",
@@ -16,4 +17,5 @@ __all__ = [
     "get_x",
     "get_y",
     "distance",
+    "road_segment",
 ]

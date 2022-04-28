@@ -1,4 +1,3 @@
-DROP FUNCTION IF EXISTS greaterThan(geometry, geometry);
 CREATE OR REPLACE FUNCTION greaterThan(a geometry, b geometry) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -7,7 +6,6 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS greaterThan(geometry, real[]);
 CREATE OR REPLACE FUNCTION greaterThan(a geometry, b real[]) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -16,7 +14,7 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-CREATE OPERATOR > (
+CREATE OPERATOR  > (
   LEFTARG = geometry,
   RIGHTARG = real[],
   PROCEDURE = greaterThan,
@@ -24,7 +22,6 @@ CREATE OPERATOR > (
   NEGATOR = <=
 );
 
-DROP FUNCTION IF EXISTS lessThan(geometry, geometry);
 CREATE OR REPLACE FUNCTION lessThan(a geometry, b geometry) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -33,7 +30,6 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS lessThan(geometry, real[]);
 CREATE OR REPLACE FUNCTION lessThan(a geometry, b real[]) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -50,7 +46,6 @@ CREATE OPERATOR < (
   NEGATOR = >=
 );
 
-DROP FUNCTION IF EXISTS greaterOrEqual(geometry, geometry);
 CREATE OR REPLACE FUNCTION greaterOrEqual(a geometry, b geometry) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -59,7 +54,6 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS greaterOrEqual(geometry, real[]);
 CREATE OR REPLACE FUNCTION greaterOrEqual(a geometry, b real[]) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -76,7 +70,6 @@ CREATE OPERATOR >= (
   NEGATOR = <
 );
 
-DROP FUNCTION IF EXISTS lessOrEqual(geometry, geometry);
 CREATE OR REPLACE FUNCTION lessOrEqual(a geometry, b geometry) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -85,7 +78,6 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS lessOrEqual(geometry, real[]);
 CREATE OR REPLACE FUNCTION lessOrEqual(a geometry, b real[]) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -102,7 +94,6 @@ CREATE OPERATOR <= (
   NEGATOR = >
 );
 
-DROP FUNCTION IF EXISTS Equal(geometry, geometry);
 CREATE OR REPLACE FUNCTION Equal(a geometry, b geometry) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -111,7 +102,6 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS Equal(geometry, real[]);
 CREATE OR REPLACE FUNCTION Equal(a geometry, b real[]) RETURNS boolean AS
 $BODY$
 BEGIN

@@ -11,52 +11,44 @@ if TYPE_CHECKING:
 
 @fake_fn
 def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
-    arg_obj_traj, arg_cam_heading, arg_cam_loc, arg_time = args
+    arg_obj, arg_point_of_view, arg_time = args
 
-    if isinstance(arg_obj_traj, ast.Attribute):
-        value = arg_obj_traj.value
-        if not isinstance(value, ast.Name):
-            raise Exception("First argument of view_angle should be trajectory")
+    if isinstance(arg_obj, ast.Attribute):
+        value = arg_obj.value
 
-        cont_point_attr = arg_obj_traj.attr
+        cont_point_attr = arg_obj.attr
         if cont_point_attr == "traj" or cont_point_attr == "trajCentroids":
             object_positions = f"{visitor.eval_vars[value.id]}.trajCentroids"
         elif cont_point_attr == "bbox":
             raise Exception("We do not support bbox yet")
         else:
-            raise Exception("First argument of contained should be trajectory")
-    elif isinstance(arg_obj_traj, ast.Name):
-        object_positions = f"{visitor.eval_vars[arg_obj_traj.id]}.trajCentroids"
-    elif isinstance(arg_obj_traj, ast.Constant):
-        object_positions = arg_obj_traj.value
+            raise Exception("First argument of contained should be geometry type")
+    elif isinstance(arg_obj, ast.Name):
+        object_positions = f"{visitor.eval_vars[arg_obj.id]}.trajCentroids"
+    elif isinstance(arg_obj, ast.Constant):
+        object_positions = arg_obj.value
     else:
-        raise Exception("First argument of contained should be trajectory", str(arg_obj_traj))
+        raise Exception("First argument of contained should be geometry type", str(arg_obj_traj))
 
-    if isinstance(arg_cam_heading, ast.Attribute):
-        value = arg_cam_heading.value
-        if not isinstance(value, ast.Name):
-            raise Exception("Problem with arg_geoms input contained function", str(arg_cam_heading))
-        cont_point_attr = arg_cam_heading.attr
-        cam_heading = f"{visitor.eval_vars[value.id]}.{cont_point_attr}"
-    elif isinstance(arg_cam_heading, ast.Name):
-        cam_heading = f"{visitor.eval_vars[arg_cam_heading.id]}"
-    elif isinstance(arg_cam_heading, ast.Constant):
-        cam_heading = arg_cam_heading.value
+    if isinstance(arg_point_of_view, ast.Attribute):
+        value = arg_point_of_view.value
+        view_point_attr = arg_point_of_view.attr
+        if view_point_attr == "ego":
+            cam_loc = f"{visitor.eval_vars[value.id]}.egoTranslation"
+            cam_heading = f"{visitor.eval_vars[value.id]}.egoHeading"
+        elif view_point_attr == "camera":
+            cam_loc = f"{visitor.eval_vars[value.id]}.cameraTranslation"
+            cam_heading = f"{visitor.eval_vars[value.id]}.cameraHeading"
+        else:
+            raise Exception("only support camera attribute")
+    elif isinstance(arg_point_of_view, ast.Name):
+        cam_heading = f"{visitor.eval_vars[arg_point_of_view.id]}.itemHeadings"
+        cam_loc = f"{visitor.eval_vars[arg_point_of_view.id]}.trajCentroids"
+    elif isinstance(arg_point_of_view, ast.Constant):
+        cam_heading = arg_point_of_view.value
+        cam_loc = arg_point_of_view.value
     else:
         raise Exception("Problem with arg_geoms input contained function", str(arg_cam_heading))
-
-    if isinstance(arg_cam_loc, ast.Attribute):
-        value = arg_cam_loc.value
-        if not isinstance(value, ast.Name):
-            raise Exception("Problem with arg_cam_loc input contained function", str(arg_cam_loc))
-        cont_point_attr = arg_cam_loc.attr
-        cam_loc = f"{visitor.eval_vars[value.id]}.{cont_point_attr}"
-    elif isinstance(arg_cam_loc, ast.Name):
-        cam_loc = f"{visitor.eval_vars[arg_cam_loc.id]}"
-    elif isinstance(arg_cam_loc, ast.Constant):
-        cam_loc = arg_cam_loc.value
-    else:
-        raise Exception("Problem with arg_cam_loc input contained function", str(arg_cam_loc))
 
     if isinstance(arg_time, ast.Attribute):
         value = arg_time.value
