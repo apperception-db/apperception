@@ -47,6 +47,7 @@ class TrajectoryView(View):
     color = "color"
     trajectory = "trajCentroids"
     traj = "trajCentroids"
+    heading = "itemHeadings"
     table_name = "Item_General_Trajectory"
     table_type = QueryType.TRAJ
 
