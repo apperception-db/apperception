@@ -190,7 +190,7 @@ def create_segment_table(conn, segments, drop=True):
         """
     )
     cursor.execute(
-        f"""
+        """
         UPDATE Segment
         SET segmentLine = ST_MakeLine(startPoint, endPoint)
         WHERE startPoint IS NOT NULL and endPoint IS NOT NULL;
