@@ -271,7 +271,7 @@ class Database:
         ]
 
         return f"""
-        SELECT DISTINCT {tables[0]}.*
+        SELECT DISTINCT *
         FROM ({query_str}) as {tables[0]}
         {" ".join(joins)}
         {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if found_camera else ""}
@@ -409,6 +409,15 @@ class Database:
         Tmin = CustomFunction("Tmin", ["stbox"])
         q = SnowflakeQuery.from_(query).select(Tmin(query.trajBbox))
         self.cursor.execute(q.get_sql())
+        return self.cursor.fetchall()
+
+    def get_id_and_time(self, query: Query, num_joined_tables: int):
+        itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
+        timestamp = "cameras.timestamp"
+        query = query_to_str(query).replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}", 1)
+
+        print("get_id_and_time", query)
+        self.cursor.execute(query)
         return self.cursor.fetchall()
 
     def get_distance(self, query: Query, start: str, end: str):

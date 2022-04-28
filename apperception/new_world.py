@@ -261,6 +261,14 @@ class World:
             {QueryType.BBOX},
             database.get_time,
         )._execute_from_root(QueryType.BBOX)
+    
+    def get_id_and_time(self, num_joined_tables: int):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_id_and_time,
+            num_joined_tables = num_joined_tables,
+        )._execute_from_root(QueryType.TRAJ)
 
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
@@ -331,7 +339,7 @@ class World:
             else:
                 print("execute:", node.fn.__name__)
                 # print(query)
-                query = node._execute(query=query)
+                query = node._execute(query=query, **node.kwargs)
         print("done execute node")
 
         res = query
