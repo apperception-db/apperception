@@ -274,7 +274,7 @@ class Database:
         SELECT DISTINCT {tables[0]}.*
         FROM ({query_str}) as {tables[0]}
         {" ".join(joins)}
-        JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId
+        {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if found_camera else ""}
         WHERE {predicate_sql}
         """
 
