@@ -43,7 +43,7 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
     elif isinstance(arg_geoms, ast.Constant):
         geoms = arg_geoms.value
     else:
-        raise Exception("Problem with arg_geoms input contained function", str(arg_geoms))
+        geoms = f"{visitor.visit(arg_geoms)}"
 
     if isinstance(arg_time, ast.Attribute):
         value = arg_time.value

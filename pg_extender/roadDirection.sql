@@ -1,4 +1,3 @@
-DROP FUNCTION IF EXISTS roadDirection(real, real);
 CREATE OR REPLACE FUNCTION roadDirection(x real, y real) RETURNS real AS
 $BODY$
 BEGIN
@@ -10,7 +9,6 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS roadDirection(geometry);
 CREATE OR REPLACE FUNCTION roadDirection(cordPoint geometry) RETURNS real AS
 $BODY$
 BEGIN
@@ -19,7 +17,14 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP FUNCTION IF EXISTS roadDirection(tgeompoint, timestamptz);
+CREATE OR REPLACE FUNCTION roadDirection(cordPoint geometry, _time timestamptz) RETURNS real AS
+$BODY$
+BEGIN
+  RETURN roadDirection(cordPoint);
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
+
 CREATE OR REPLACE FUNCTION roadDirection(trajectory tgeompoint, _time timestamptz) RETURNS real AS
 $BODY$
 BEGIN
