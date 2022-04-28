@@ -8,3 +8,4 @@
 \i distance.sql;
 \i convertCamera.sql;
 \i operators.sql;
+\i roadSegment.sql;
