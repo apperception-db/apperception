@@ -281,7 +281,9 @@ class World:
                     SELECT cameraid FROM item_general_trajectory
                     WHERE itemid = '{itemid}'
                 ) AND timestamp = timestamptz '{timestamp}'
-            """.format(itemid=itemid, timestamp=t)
+            """.format(
+                itemid=itemid, timestamp=t
+            )
             cursor.execute(q)
             r = cursor.fetchall()
             if len(r) > 0:
