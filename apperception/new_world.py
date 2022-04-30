@@ -270,6 +270,24 @@ class World:
             num_joined_tables=num_joined_tables,
         )._execute_from_root(QueryType.TRAJ)
 
+    def get_filenames_by_itemids_and_timestamps(self, itemids: list, timestamps: list):
+        print("[!] This is a quick hack!")
+        cursor = database.cursor
+        filenames = []
+        for itemid, t in zip(itemids, timestamps):
+            q = """
+                SELECT filename FROM cameras
+                WHERE cameraid IN (
+                    SELECT cameraid FROM item_general_trajectory
+                    WHERE itemid = '{itemid}'
+                ) AND timestamp = timestamptz '{timestamp}'
+            """.format(itemid=itemid, timestamp=t)
+            cursor.execute(q)
+            r = cursor.fetchall()
+            if len(r) > 0:
+                filenames.append(r[0][0])
+        return filenames
+
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
             self,
