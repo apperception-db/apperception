@@ -4,13 +4,15 @@ $BODY$
 DECLARE subtract_x real;
 DECLARE subtract_y real;
 DECLARE subtract_mag real;
+DECLARE theta real;
 
 BEGIN
   subtract_x := ST_X(ST_Centroid(objPoint)) - ST_X(ST_Centroid(camPoint));
   subtract_y := ST_Y(ST_Centroid(objPoint)) - ST_Y(ST_Centroid(camPoint));
   subtract_mag := SQRT(POWER(subtract_x, 2) + POWER(subtract_y, 2));
-  RETURN ST_MakePoint(subtract_mag * COS(PI() * camHeading / 180 + ATAN2(subtract_y, subtract_x)),
-                      subtract_mag * SIN(PI() * camHeading / 180 + ATAN2(subtract_y, subtract_x)));
+  theta := ATAN2(subtract_y, subtract_x);
+  RETURN ST_MakePoint(subtract_mag * COS(theta - radians(camHeading)),
+                      subtract_mag * SIN(theta - radians(camHeading)));
 END
 $BODY$
 LANGUAGE 'plpgsql';
