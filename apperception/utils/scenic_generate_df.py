@@ -158,7 +158,8 @@ def scenic_generate_df():
         lambda x: (get_heading(x.ego_rotation)), axis=1
     )
     df_sample_data["camera_heading"] = df_sample_data.apply(
-        lambda x: (get_camera_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1
+        lambda x: (get_camera_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360,
+        axis=1,
     )
     df_sample_data_keyframe = df_sample_data[df_sample_data["is_key_frame"]][
         ["token", "sample_token"]
@@ -175,6 +176,7 @@ def get_heading(rotation):
     q = Quaternion(rotation)
     return -(((q.yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360
 
+
 def get_camera_heading(rotation):
     q = Quaternion(rotation)
     # This rotation accounts for fact that y-axis is pointing downwards
@@ -184,6 +186,7 @@ def get_camera_heading(rotation):
     rot2 = Quaternion(axis=[0, 0, -1], angle=-np.pi / 2)
     rot_q = rot2.rotate(rot1.rotate(q))
     return -(((rot_q.yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360
+
 
 if __name__ == "__main__":
     data, anno = scenic_generate_df()
