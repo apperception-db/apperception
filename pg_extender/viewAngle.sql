@@ -6,7 +6,7 @@ DROP FUNCTION IF EXISTS viewAngle(geometry, real, geometry);
 CREATE OR REPLACE FUNCTION viewAngle(obj_position geometry, view_point_heading real, view_point geometry) RETURNS real AS 
 $BODY$
 BEGIN
-    RETURN CAST((ST_Azimuth(obj_position, view_point) * 180 / PI() - view_point_heading + 360) AS numeric) % 360; 
+    RETURN CAST((ST_Azimuth(view_point, obj_position) * 180 / PI() - view_point_heading + 360) AS numeric) % 360; 
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
