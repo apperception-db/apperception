@@ -152,13 +152,19 @@ def scenic_generate_df():
 
     # This next line probably not necassary
     df_sample_annotation["camera_heading"] = df_sample_annotation.apply(
-        lambda x: get_heading(Quaternion(axis=[1, 0, 0], angle=np.pi / 2) * x.rotation) % 360, axis=1 # rotate around x-axis to deal with different frame
+        lambda x: get_heading(Quaternion(axis=[1, 0, 0], angle=np.pi / 2) * x.rotation) % 360,
+        axis=1,  # rotate around x-axis to deal with different frame
     )
     df_sample_data["ego_heading"] = df_sample_data.apply(
         lambda x: (get_heading(x.ego_rotation)) % 360, axis=1
     )
     df_sample_data["camera_heading"] = df_sample_data.apply(
-        lambda x: (get_heading(Quaternion(axis=[1, 0, 0], angle=np.pi / 2) *  x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1 # rotate around x-axis to deal with different frame
+        lambda x: (
+            get_heading(Quaternion(axis=[1, 0, 0], angle=np.pi / 2) * x.camera_rotation)
+            + get_heading(x.ego_rotation)
+        )
+        % 360,
+        axis=1,  # rotate around x-axis to deal with different frame
     )
     df_sample_data_keyframe = df_sample_data[df_sample_data["is_key_frame"]][
         ["token", "sample_token"]
