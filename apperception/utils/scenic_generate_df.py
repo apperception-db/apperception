@@ -178,12 +178,11 @@ def get_heading(rotation):
 def get_camera_heading(rotation):
     q = Quaternion(rotation)
     # This rotation accounts for fact that y-axis is pointing downwards
-    rot1 = Quaternion(axis=[1, 0, 0], angle=np.pi / 2)
-    # This rotation accounts for fact that z-axis is now pointing downwards and y-axis is now pointing backwards
-    # (we want x-axis pointing forward, and y-axis pointing right)
-    rot2 = Quaternion(axis=[0, 0, -1], angle=-np.pi / 2)
-    rot_q = rot2.rotate(rot1.rotate(q))
-    return -(((rot_q.yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360
+    rot = Quaternion(axis=[1, 0, 0], angle=np.pi / 4)
+    rot_q = rot.rotate(q)
+    # we subtract 90 and add another 360 due to the fact that the rotation is rotated around the z-axis by 90
+    # (note: we don't have to negate the value due to the fact that the z-axis is pointing downwards, so should already be clockwise)
+    return (((rot_q.yaw_pitch_roll[0]) * 180 / np.pi) + 360 - 90 + 360) % 360
 
 if __name__ == "__main__":
     data, anno = scenic_generate_df()
