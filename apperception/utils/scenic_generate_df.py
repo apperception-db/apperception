@@ -1,4 +1,5 @@
 import json
+import math
 import pickle
 
 import numpy as np
@@ -126,7 +127,7 @@ def scenic_generate_df():
     ]
     heading = []
     for rotation in list(df_sample_annotation["rotation"]):
-        heading.append((((Quaternion(rotation).yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360)
+        heading.append(get_heading(rotation))
     df_sample_annotation["heading"] = heading
 
     df_instance = pd.DataFrame(instance_json)
@@ -152,13 +153,14 @@ def scenic_generate_df():
 
     # This next line probably not necassary
     df_sample_annotation["camera_heading"] = df_sample_annotation.apply(
-        lambda x: get_heading(x.rotation) % 360, axis=1
+        lambda x: get_camera_heading(x.rotation), axis=1
     )
     df_sample_data["ego_heading"] = df_sample_data.apply(
-        lambda x: (get_heading(x.ego_rotation)) % 360, axis=1
+        lambda x: (get_heading(x.ego_rotation)), axis=1
     )
     df_sample_data["camera_heading"] = df_sample_data.apply(
-        lambda x: (get_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360, axis=1
+        lambda x: (get_camera_heading(x.camera_rotation) + get_heading(x.ego_rotation)) % 360,
+        axis=1,
     )
     df_sample_data_keyframe = df_sample_data[df_sample_data["is_key_frame"]][
         ["token", "sample_token"]
@@ -173,7 +175,17 @@ def scenic_generate_df():
 
 def get_heading(rotation):
     q = Quaternion(rotation)
-    return (((q.yaw_pitch_roll[0]) * 180 / np.pi) + 360) % 360
+    return -(math.degrees(q.yaw_pitch_roll[0]) + 360) % 360
+
+
+def get_camera_heading(rotation):
+    q = Quaternion(rotation)
+    # This rotation accounts for fact that y-axis is pointing downwards
+    rot = Quaternion(axis=[1, 0, 0], angle=np.pi / 2)
+    rot_q = rot.rotate(q)
+    # we subtract 90 and add another 360 due to the fact that the rotation is rotated around the z-axis by 90
+    # (note: we don't have to negate the value due to the fact that the z-axis is pointing downwards, so should already be clockwise)
+    return (math.degrees(rot_q.yaw_pitch_roll[0]) + 360 - 90 + 360) % 360
 
 
 if __name__ == "__main__":

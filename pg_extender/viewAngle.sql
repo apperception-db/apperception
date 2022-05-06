@@ -5,8 +5,16 @@
 DROP FUNCTION IF EXISTS viewAngle(geometry, real, geometry);
 CREATE OR REPLACE FUNCTION viewAngle(obj_position geometry, view_point_heading real, view_point geometry) RETURNS real AS 
 $BODY$
+declare clockwise numeric;
+declare counterClockwise numeric;
 BEGIN
-    RETURN CAST((ST_Azimuth(obj_position, view_point) * 180 / PI() - view_point_heading + 360) AS numeric) % 360; 
+    clockwise := CAST((ST_Azimuth(view_point, obj_position) * 180 / PI() - view_point_heading + 360) AS numeric) % 360; 
+    counterClockwise := 360 - CAST((ST_Azimuth(view_point, obj_position) * 180 / PI() - view_point_heading + 360) AS numeric) % 360; 
+    IF clockwise < counterClockwise THEN
+      RETURN clockwise;
+    ELSE 
+      RETURN counterClockwise;
+    END IF;
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
