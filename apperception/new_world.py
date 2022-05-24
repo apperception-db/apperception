@@ -11,7 +11,7 @@ import numpy as np
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 
-from apperception.data_types import Camera, QueryType, camera
+from apperception.data_types import Camera, QueryType
 from apperception.new_db import database
 from apperception.scenic_util import FetchCameraTuple, transformation
 
@@ -59,19 +59,25 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    def overlay_trajectory(self, scene_name: str, trajectory: Trajectory, file_name: str, overlay_headings: bool=False):
+    def overlay_trajectory(
+        self,
+        scene_name: str,
+        trajectory: Trajectory,
+        file_name: str,
+        overlay_headings: bool = False,
+    ):
         frame_timestamps = trajectory.datetimes
         # camera_info is a list of mappings from timestamps to list of (frame_num, cameras)
         camera_info: List["FetchCameraTuple"] = []
         for cur_frame_timestamp in frame_timestamps:
-            current_cameras = database.fetch_camera(scene_name, ['\'' + cur_frame_timestamp + '\''])
+            current_cameras = database.fetch_camera(scene_name, ["'" + cur_frame_timestamp + "'"])
             camera_info.append(current_cameras)
 
         overlay_info = get_overlay_info(trajectory, camera_info)
-        
+
         for file_prefix in overlay_info:
             frame_width = None
-            frame_height = None 
+            frame_height = None
             vid_writer = None
             camera_points = overlay_info[file_prefix]
             for point in camera_points:
@@ -86,21 +92,23 @@ class World:
                 )
                 if overlay_headings:
                     cv2.putText(
-                        frame_im, # numpy array on which text is written
-                        "Ego Heading: " + str(ego_heading), #text
-                        (10,50), #position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX, #font family
-                        1, #font size
-                        (209, 80, 0, 255), #font color
-                    3) 
+                        frame_im,  # numpy array on which text is written
+                        "Ego Heading: " + str(ego_heading),  # text
+                        (10, 50),  # position at which writing has to start
+                        cv2.FONT_HERSHEY_SIMPLEX,  # font family
+                        1,  # font size
+                        (209, 80, 0, 255),  # font color
+                        3,
+                    )
                     cv2.putText(
-                        frame_im, # numpy array on which text is written
-                        "Camera Heading: " + str(camera_heading), #text
-                        (10,100), #position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX, #font family
-                        1, #font size
-                        (209, 80, 0, 255), #font color
-                    3) 
+                        frame_im,  # numpy array on which text is written
+                        "Camera Heading: " + str(camera_heading),  # text
+                        (10, 100),  # position at which writing has to start
+                        cv2.FONT_HERSHEY_SIMPLEX,  # font family
+                        1,  # font size
+                        (209, 80, 0, 255),  # font color
+                        3,
+                    )
                 if vid_writer is None:
                     frame_height, frame_width = frame_im.shape[:2]
                     vid_writer = cv2.VideoWriter(
@@ -195,10 +203,7 @@ class World:
 
     def get_traj_attr(self, attr: str):
         return derive_world(
-            self,
-            {QueryType.TRAJ},
-            database.get_traj_attr,
-            attr=attr
+            self, {QueryType.TRAJ}, database.get_traj_attr, attr=attr
         )._execute_from_root(QueryType.TRAJ)
 
     def get_headings(self) -> List[List[List[float]]]:
@@ -423,6 +428,7 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
         types=types,
     )
 
+
 def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple"]):
     """
     overlay each trajectory 3d coordinate on to the frame specified by the camera_info
@@ -458,10 +464,15 @@ def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple
             ego_translation = cur_camera_info[1]
             file_prefix = "_".join(filename.split("/")[:-1])
             if file_prefix in result:
-                result[file_prefix].append((traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation))
+                result[file_prefix].append(
+                    (traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation)
+                )
             else:
-                result[file_prefix] = [(traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation)]
+                result[file_prefix] = [
+                    (traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation)
+                ]
     return result
+
 
 def trajectory_to_timestamp(trajectory):
     return [traj[0].datetimes for traj in trajectory]
