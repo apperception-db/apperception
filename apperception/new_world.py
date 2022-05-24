@@ -11,7 +11,7 @@ import numpy as np
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 
-from apperception.data_types import Camera, QueryType
+from apperception.data_types import Camera, QueryType, camera
 from apperception.new_db import database
 from apperception.scenic_util import FetchCameraTuple, transformation
 
@@ -59,56 +59,58 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
-    def overlay_trajectory(self, scene_name: str, trajectory, object_id: str):
-        frame_timestamps = trajectory_to_timestamp(trajectory)
+    def overlay_trajectory(self, scene_name: str, trajectory: Trajectory, file_name: str, overlay_headings: bool=False):
+        frame_timestamps = trajectory.datetimes
         # camera_info is a list of mappings from timestamps to list of (frame_num, cameras)
-        camera_info: List[Dict[int, List["FetchCameraTuple"]]] = []
-        for index, cur_frame_timestamp in enumerate(frame_timestamps):
-            current_cameras = database.fetch_camera(scene_name, cur_frame_timestamp)
-            camera_info.append({})
-            for x in current_cameras:
-                if x[6] in camera_info[index]:
-                    camera_info[index][x[6]].append(x)
-                else:
-                    camera_info[index][x[6]] = [x]
-        camera_info_2 = [[x[y] for y in sorted(x)] for x in camera_info]
+        camera_info: List["FetchCameraTuple"] = []
+        for cur_frame_timestamp in frame_timestamps:
+            current_cameras = database.fetch_camera(scene_name, ['\'' + cur_frame_timestamp + '\''])
+            camera_info.append(current_cameras)
 
-        overlay_info = get_overlay_info(trajectory, camera_info_2)
-        # TODO: fix the following to overlay the 2d point onto the frame
-        results: List[Dict[str, List[Tuple[np.ndarray, int, str]]]] = []
-        frame_width = None
-        frame_height = None
-        for i, traj in enumerate(overlay_info):
-            results.append({})
-            for frame_num in traj:
-                for frame in frame_num:
-                    if frame_width is None:
-                        frame_im = cv2.imread(frame[2])
-                        frame_height, frame_width = frame_im.shape[:2]
-                    file_suffix = frame[2].split("/")[1]
-                    if file_suffix in results[i]:
-                        results[i][file_suffix].append(frame)
-                    else:
-                        results[i][file_suffix] = [frame]
-
-        for i in range(len(results)):
-            for file_suffix in results[i]:
-                vid_writer = cv2.VideoWriter(
-                    "./output/" + object_id + "." + file_suffix + ".mp4",
-                    cv2.VideoWriter_fourcc("m", "p", "4", "v"),
-                    30,
-                    (frame_width, frame_height),
+        overlay_info = get_overlay_info(trajectory, camera_info)
+        
+        for file_prefix in overlay_info:
+            frame_width = None
+            frame_height = None 
+            vid_writer = None
+            camera_points = overlay_info[file_prefix]
+            for point in camera_points:
+                traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation = point
+                frame_im = cv2.imread(filename)
+                cv2.circle(
+                    frame_im,
+                    tuple([int(traj_2d[0][0]), int(traj_2d[1][0])]),
+                    10,
+                    (0, 255, 0),
+                    -1,
                 )
-                for frame in results[i][file_suffix]:
-                    frame_im = cv2.imread(frame[2])
-                    cv2.circle(
-                        frame_im,
-                        tuple([int(frame[0][0][0]), int(frame[0][1][0])]),
+                if overlay_headings:
+                    cv2.putText(
+                        frame_im, # numpy array on which text is written
+                        "Ego Heading: " + str(ego_heading), #text
+                        (10,50), #position at which writing has to start
+                        cv2.FONT_HERSHEY_SIMPLEX, #font family
+                        1, #font size
+                        (209, 80, 0, 255), #font color
+                    3) 
+                    cv2.putText(
+                        frame_im, # numpy array on which text is written
+                        "Camera Heading: " + str(camera_heading), #text
+                        (10,100), #position at which writing has to start
+                        cv2.FONT_HERSHEY_SIMPLEX, #font family
+                        1, #font size
+                        (209, 80, 0, 255), #font color
+                    3) 
+                if vid_writer is None:
+                    frame_height, frame_width = frame_im.shape[:2]
+                    vid_writer = cv2.VideoWriter(
+                        "./output/" + file_name + "." + file_prefix + ".mp4",
+                        cv2.VideoWriter_fourcc("m", "p", "4", "v"),
                         10,
-                        (0, 255, 0),
-                        -1,
+                        (frame_width, frame_height),
                     )
-                    vid_writer.write(frame_im)
+                vid_writer.write(frame_im)
+            if vid_writer is not None:
                 vid_writer.release()
 
     def add_camera(self, camera: "Camera"):
@@ -189,6 +191,14 @@ class World:
             self,
             {QueryType.TRAJ},
             database.get_traj_key,
+        )._execute_from_root(QueryType.TRAJ)
+
+    def get_traj_attr(self, attr: str):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_traj_attr,
+            attr=attr
         )._execute_from_root(QueryType.TRAJ)
 
     def get_headings(self) -> List[List[List[float]]]:
@@ -413,12 +423,7 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
         types=types,
     )
 
-
-def trajectory_to_timestamp(trajectory):
-    return [traj[0].datetimes for traj in trajectory]
-
-
-def get_overlay_info(trajectory, camera_info: List[List[List["FetchCameraTuple"]]]):
+def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple"]):
     """
     overlay each trajectory 3d coordinate on to the frame specified by the camera_info
     1. for each trajectory, get the 3d coordinate
@@ -428,32 +433,35 @@ def get_overlay_info(trajectory, camera_info: List[List[List["FetchCameraTuple"]
         refer to TODO in "senic_utils.py"
     4. return a list of (2d coordinate, frame name/filename)
     """
-    result: List[List[List[Tuple[np.ndarray, int, str]]]] = []
-    for traj_num in range(len(trajectory)):
-        traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
-        traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
-        camera_info_objs = camera_info[traj_num]  # camera info list corresponding the 3d coordinate
-        traj_obj_2d: List[List[Tuple[np.ndarray, int, str]]] = []  # 2d coordinate list
-        for index in range(len(camera_info_objs)):
-            cur_camera_infos = camera_info_objs[
-                index
-            ]  # camera info of the obejct in one point of the trajectory
-            centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
-            # in order to fit into the function transformation, we develop a dictionary called camera_config
-            frame_traj_obj_2d: List[Tuple[np.ndarray, int, str]] = []
-            for cur_camera_info in cur_camera_infos:
-                camera_config = {}
-                camera_config["egoTranslation"] = cur_camera_info[1]
-                camera_config["egoRotation"] = np.array(cur_camera_info[2])
-                camera_config["cameraTranslation"] = cur_camera_info[3]
-                camera_config["cameraRotation"] = np.array(cur_camera_info[4])
-                camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
-                traj_2d = transformation(
-                    centroid_3d, camera_config
-                )  # one point of the trajectory in 2d
-                framenum = cur_camera_info[6]
-                filename = cur_camera_info[7]
-                frame_traj_obj_2d.append((traj_2d, framenum, filename))
-            traj_obj_2d.append(frame_traj_obj_2d)
-        result.append(traj_obj_2d)
+    traj_obj_3d = trajectory.coordinates
+    result: Dict[str, Tuple[np.ndarray, int, str]] = {}
+    for index in range(len(camera_info)):
+        cur_camera_infos = camera_info[
+            index
+        ]  # camera info of the obejct in one point of the trajectory
+        centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
+        # in order to fit into the function transformation, we develop a dictionary called camera_config
+        for cur_camera_info in cur_camera_infos:
+            camera_config = {}
+            camera_config["egoTranslation"] = cur_camera_info[1]
+            camera_config["egoRotation"] = np.array(cur_camera_info[2])
+            camera_config["cameraTranslation"] = cur_camera_info[3]
+            camera_config["cameraRotation"] = np.array(cur_camera_info[4])
+            camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
+            traj_2d = transformation(
+                centroid_3d, camera_config
+            )  # one point of the trajectory in 2d
+            framenum = cur_camera_info[6]
+            filename = cur_camera_info[7]
+            camera_heading = cur_camera_info[8]
+            ego_heading = cur_camera_info[9]
+            ego_translation = cur_camera_info[1]
+            file_prefix = "_".join(filename.split("/")[:-1])
+            if file_prefix in result:
+                result[file_prefix].append((traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation))
+            else:
+                result[file_prefix] = [(traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation)]
     return result
+
+def trajectory_to_timestamp(trajectory):
+    return [traj[0].datetimes for traj in trajectory]

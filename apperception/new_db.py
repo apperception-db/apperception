@@ -386,6 +386,15 @@ class Database:
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
+    def get_traj_attr(self, query: Query, attr: str):
+        query = f"""
+        SELECT {attr} FROM ({query_to_str(query)}) as final
+        """
+
+        print("get_traj_attr:", attr, query)
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
     def get_bbox_geo(self, query: Query):
         Xmin = CustomFunction("Xmin", ["stbox"])
         Ymin = CustomFunction("Ymin", ["stbox"])

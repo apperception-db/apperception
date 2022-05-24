@@ -523,7 +523,9 @@ def fetch_camera(conn, scene_name, frame_timestamps) -> List["FetchCameraTuple"]
         cameraRotation,
         cameraIntrinsic,
         frameNum,
-        fileName
+        fileName,
+        cameraHeading,
+        egoHeading
     FROM Cameras
     WHERE
         cameraId = '{scene_name}' AND
