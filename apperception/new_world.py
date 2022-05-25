@@ -91,20 +91,22 @@ class World:
                     -1,
                 )
                 if overlay_headings:
-                    camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
+                    camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[
+                        0
+                    ][0]
                     cv2.putText(
-                        frame_im, 
-                        "Ego Heading: " + str(round(ego_heading, 2)), 
-                        (10,50),
+                        frame_im,
+                        "Ego Heading: " + str(round(ego_heading, 2)),
+                        (10, 50),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1,
                         (0, 255, 0),
                         3,
-                    ) 
+                    )
                     cv2.putText(
                         frame_im,
                         "Camera Heading: " + str(round(camera_heading, 2)),
-                        (10,100),
+                        (10, 100),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1,
                         (0, 255, 0),
@@ -113,7 +115,7 @@ class World:
                     cv2.putText(
                         frame_im,
                         "Road Direction: " + str(round(camera_road_dir, 2)),
-                        (10,150),
+                        (10, 150),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1,
                         (0, 255, 0),

@@ -351,9 +351,7 @@ class Database:
         return query + q if query else q  # UNION
 
     def road_direction(self, x: float, y: float):
-        q = (
-            f"SELECT roadDirection({x}, {y});"
-        )
+        q = f"SELECT roadDirection({x}, {y});"
         self.cursor.execute(q)
         return self.cursor.fetchall()
 
