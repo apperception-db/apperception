@@ -85,9 +85,10 @@ class World:
                     -1,
                 )
                 if overlay_headings:
+                    camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
                     cv2.putText(
                         frame_im, # numpy array on which text is written
-                        "Ego Heading: " + str(ego_heading), #text
+                        "Ego Heading: " + str(round(ego_heading, 2)), #text
                         (10,50), #position at which writing has to start
                         cv2.FONT_HERSHEY_SIMPLEX, #font family
                         1, #font size
@@ -95,12 +96,20 @@ class World:
                     3) 
                     cv2.putText(
                         frame_im, # numpy array on which text is written
-                        "Camera Heading: " + str(camera_heading), #text
+                        "Camera Heading: " + str(round(camera_heading, 2)), #text
                         (10,100), #position at which writing has to start
                         cv2.FONT_HERSHEY_SIMPLEX, #font family
                         1, #font size
                         (209, 80, 0, 255), #font color
-                    3) 
+                    3)
+                    cv2.putText(
+                        frame_im, # numpy array on which text is written
+                        "Road Direction: " + str(round(camera_road_dir, 2)), #text
+                        (10,150), #position at which writing has to start
+                        cv2.FONT_HERSHEY_SIMPLEX, #font family
+                        1, #font size
+                        (209, 80, 0, 255), #font color
+                    3)
                 if vid_writer is None:
                     frame_height, frame_width = frame_im.shape[:2]
                     vid_writer = cv2.VideoWriter(
@@ -171,6 +180,9 @@ class World:
             cams=[camera_nodes[cam_id] for cam_id in cam_ids],
             boxed=boxed,
         )._execute_from_root(QueryType.TRAJ)
+
+    def road_direction(self, x: float, y: float):
+        return database.road_direction(x, y)
 
     def get_bbox(self):
         return derive_world(
