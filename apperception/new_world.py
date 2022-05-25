@@ -61,7 +61,7 @@ class World:
 
     def overlay_trajectory(self, scene_name: str, trajectory: Trajectory, file_name: str, overlay_headings: bool=False):
         frame_timestamps = trajectory.datetimes
-        # camera_info is a list of mappings from timestamps to list of (frame_num, cameras)
+        # camera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
         camera_info: List["FetchCameraTuple"] = []
         for cur_frame_timestamp in frame_timestamps:
             current_cameras = database.fetch_camera(scene_name, ['\'' + cur_frame_timestamp + '\''])
@@ -87,29 +87,32 @@ class World:
                 if overlay_headings:
                     camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
                     cv2.putText(
-                        frame_im, # numpy array on which text is written
-                        "Ego Heading: " + str(round(ego_heading, 2)), #text
-                        (10,50), #position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX, #font family
-                        1, #font size
-                        (209, 80, 0, 255), #font color
-                    3) 
+                        frame_im, 
+                        "Ego Heading: " + str(round(ego_heading, 2)), 
+                        (10,50),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 255, 0),
+                        3,
+                    ) 
                     cv2.putText(
-                        frame_im, # numpy array on which text is written
-                        "Camera Heading: " + str(round(camera_heading, 2)), #text
-                        (10,100), #position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX, #font family
-                        1, #font size
-                        (209, 80, 0, 255), #font color
-                    3)
+                        frame_im,
+                        "Camera Heading: " + str(round(camera_heading, 2)),
+                        (10,100),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 255, 0),
+                        3,
+                    )
                     cv2.putText(
-                        frame_im, # numpy array on which text is written
-                        "Road Direction: " + str(round(camera_road_dir, 2)), #text
-                        (10,150), #position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX, #font family
-                        1, #font size
-                        (209, 80, 0, 255), #font color
-                    3)
+                        frame_im,
+                        "Road Direction: " + str(round(camera_road_dir, 2)),
+                        (10,150),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 255, 0),
+                        3,
+                    )
                 if vid_writer is None:
                     frame_height, frame_width = frame_im.shape[:2]
                     vid_writer = cv2.VideoWriter(
@@ -438,12 +441,9 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
 def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple"]):
     """
     overlay each trajectory 3d coordinate on to the frame specified by the camera_info
-    1. for each trajectory, get the 3d coordinate
-    2. get the camera_info associated to it
-    3. implement the transformation function from 3d to 2d
-        given the single centroid point and camera configuration
-        refer to TODO in "senic_utils.py"
-    4. return a list of (2d coordinate, frame name/filename)
+    1. For each point in the trajectory, find the list of cameras that correspond to that timestamp
+    2. Project the trajectory coordinates onto the intrinsics of the camera, and add it to the list of results
+    3. Returns a mapping from each camera type (FRONT, BACK, etc) to the trajectory in pixel coordinates of that camera
     """
     traj_obj_3d = trajectory.coordinates
     result: Dict[str, Tuple[np.ndarray, int, str]] = {}
