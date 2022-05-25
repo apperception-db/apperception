@@ -93,7 +93,6 @@ class World:
                 if overlay_headings:
                     camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
                     cv2.putText(
-<<<<<<< HEAD
                         frame_im, 
                         "Ego Heading: " + str(round(ego_heading, 2)), 
                         (10,50),
@@ -118,23 +117,6 @@ class World:
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1,
                         (0, 255, 0),
-=======
-                        frame_im,  # numpy array on which text is written
-                        "Ego Heading: " + str(ego_heading),  # text
-                        (10, 50),  # position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX,  # font family
-                        1,  # font size
-                        (209, 80, 0, 255),  # font color
-                        3,
-                    )
-                    cv2.putText(
-                        frame_im,  # numpy array on which text is written
-                        "Camera Heading: " + str(camera_heading),  # text
-                        (10, 100),  # position at which writing has to start
-                        cv2.FONT_HERSHEY_SIMPLEX,  # font family
-                        1,  # font size
-                        (209, 80, 0, 255),  # font color
->>>>>>> 316915d63e1ecb94686cfaefa032ce9f09291a65
                         3,
                     )
                 if vid_writer is None:
