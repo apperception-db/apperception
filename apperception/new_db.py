@@ -10,7 +10,7 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import QueryType, Trajectory
-from apperception.scenic_util import fetch_camera as su_fetch_camera
+import apperception.scenic_util as su
 from apperception.utils import (add_recognized_objects, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
                                 reformat_bbox_trajectories)
@@ -319,8 +319,14 @@ class Database:
         self.cursor.execute(q)
         return self.cursor.fetchall()
 
-    def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
-        return su_fetch_camera(self.connection, scene_name, frame_timestamp)
+    def fetch_camera(self, scene_name: str, frame_timestamp: List[str]):
+        return su.fetch_camera(self.connection, scene_name, frame_timestamp)
+
+    def fetch_camera_framenum(self, scene_name: str, frame_num: List[int]):
+        return su.fetch_camera_framenum(self.connection, scene_name, frame_num)
+
+    def timestamp_to_framenum(self, scene_name: str, timestamps: List[str]):
+        return su.timestamp_to_framenum(self.connection, scene_name, timestamps)
 
     def get_len(self, query: Query):
         """
