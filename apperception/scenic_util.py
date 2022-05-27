@@ -536,6 +536,7 @@ def fetch_camera(conn, scene_name, frame_timestamps) -> List["FetchCameraTuple"]
     cursor.execute(query)
     return cursor.fetchall()
 
+
 def fetch_camera_framenum(conn, scene_name, frame_nums) -> List["FetchCameraTuple"]:
     """
     TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
@@ -581,6 +582,7 @@ def fetch_camera_framenum(conn, scene_name, frame_nums) -> List["FetchCameraTupl
     cursor.execute(query)
     return cursor.fetchall()
 
+
 def timestamp_to_framenum(conn, scene_name: str, timestamps: List[str]):
     cursor = conn.cursor()
     query = f"""
@@ -595,6 +597,7 @@ def timestamp_to_framenum(conn, scene_name: str, timestamps: List[str]):
     # print(query)
     cursor.execute(query)
     return cursor.fetchall()
+
 
 def clean_tables(conn):
     cursor = conn.cursor()

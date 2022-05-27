@@ -66,7 +66,9 @@ class World:
         file_name: str,
         overlay_headings: bool = False,
     ):
-        frame_nums = database.timestamp_to_framenum(scene_name, ["\'" + x + "\'"  for x in trajectory.datetimes])
+        frame_nums = database.timestamp_to_framenum(
+            scene_name, ["'" + x + "'" for x in trajectory.datetimes]
+        )
         # camera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
         camera_info: List["FetchCameraTuple"] = []
         for frame_num in frame_nums:

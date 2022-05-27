@@ -9,8 +9,8 @@ from pypika import Column, CustomFunction, Table
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
-from apperception.data_types import QueryType, Trajectory
 import apperception.scenic_util as su
+from apperception.data_types import QueryType, Trajectory
 from apperception.utils import (add_recognized_objects, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
                                 reformat_bbox_trajectories)
