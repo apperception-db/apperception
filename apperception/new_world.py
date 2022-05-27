@@ -65,11 +65,10 @@ class World:
         trajectory: Trajectory,
         file_name: str,
         overlay_headings: bool = False,
+        overlay_road: bool = False
     ):
-        frame_nums = database.timestamp_to_framenum(
-            scene_name, ["'" + x + "'" for x in trajectory.datetimes]
-        )
-        # camera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
+        frame_nums = database.timestamp_to_framenum(scene_name, ["\'" + x + "\'"  for x in trajectory.datetimes])
+        # c amera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
         camera_info: List["FetchCameraTuple"] = []
         for frame_num in frame_nums:
             current_cameras = database.fetch_camera_framenum(scene_name, [frame_num[0]])
@@ -83,7 +82,7 @@ class World:
             vid_writer = None
             camera_points = overlay_info[file_prefix]
             for point in camera_points:
-                traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation = point
+                traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation, camera_config = point
                 frame_im = cv2.imread(filename)
                 cv2.circle(
                     frame_im,
@@ -93,9 +92,7 @@ class World:
                     -1,
                 )
                 if overlay_headings:
-                    camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[
-                        0
-                    ][0]
+                    camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
                     cv2.putText(
                         frame_im,
                         "Ego Heading: " + str(round(ego_heading, 2)),
@@ -123,6 +120,14 @@ class World:
                         (0, 255, 0),
                         3,
                     )
+                if overlay_road:
+                    camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
+                    pixel_start_enc = world_to_pixel(camera_config, [camera_road_coords[0], camera_road_coords[1], 0])
+                    pixel_end_enc = world_to_pixel(camera_config, [camera_road_coords[2], camera_road_coords[3], 0])
+                    pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
+                    pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
+                    print(camera_road_coords, ego_translation)
+                    frame_im = cv2.line(frame_im, pixel_start, pixel_end, (255, 0, 0), 3,)
                 if vid_writer is None:
                     frame_height, frame_width = frame_im.shape[:2]
                     vid_writer = cv2.VideoWriter(
@@ -196,6 +201,9 @@ class World:
 
     def road_direction(self, x: float, y: float):
         return database.road_direction(x, y)
+
+    def road_coords(self, x: float, y: float):
+        return database.road_coords(x, y)
 
     def get_bbox(self):
         return derive_world(
@@ -445,6 +453,11 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
         types=types,
     )
 
+def world_to_pixel(camera_config: List, world_coords: List):
+    traj_2d = transformation(
+        world_coords, camera_config
+    )
+    return traj_2d
 
 def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple"]):
     """
@@ -468,9 +481,9 @@ def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple
             camera_config["cameraTranslation"] = cur_camera_info[3]
             camera_config["cameraRotation"] = np.array(cur_camera_info[4])
             camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
-            traj_2d = transformation(
-                centroid_3d, camera_config
-            )  # one point of the trajectory in 2d
+            
+            traj_2d = world_to_pixel(camera_config, centroid_3d)
+            
             framenum = cur_camera_info[6]
             filename = cur_camera_info[7]
             camera_heading = cur_camera_info[8]
@@ -479,11 +492,11 @@ def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple
             file_prefix = "_".join(filename.split("/")[:-1])
             if file_prefix in result:
                 result[file_prefix].append(
-                    (traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation)
+                    (traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation, camera_config)
                 )
             else:
                 result[file_prefix] = [
-                    (traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation)
+                    (traj_2d, framenum, filename, camera_heading, ego_heading, ego_translation, camera_config)
                 ]
     return result
 

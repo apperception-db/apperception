@@ -361,6 +361,11 @@ class Database:
         self.cursor.execute(q)
         return self.cursor.fetchall()
 
+    def road_coords(self, x: float, y: float):
+        q = f"SELECT roadCoords({x}, {y});"
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
+
     def get_bbox(self, query: Query):
         self.cursor.execute(query.get_sql())
         return self.cursor.fetchall()
