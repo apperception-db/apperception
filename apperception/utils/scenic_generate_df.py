@@ -173,9 +173,10 @@ def scenic_generate_df():
     return df_sample_data, df_sample_annotation
 
 
+##### HEADINGS ARE COUNTER CLOCKWISE, WITH NORTH BEING 0 DEGREES #####
 def get_heading(rotation):
     q = Quaternion(rotation)
-    return -(math.degrees(q.yaw_pitch_roll[0]) + 360) % 360
+    return (math.degrees(q.yaw_pitch_roll[0]) + 360) % 360
 
 
 def get_camera_heading(rotation):
@@ -185,7 +186,7 @@ def get_camera_heading(rotation):
     rot_q = rot.rotate(q)
     # we subtract 90 and add another 360 due to the fact that the rotation is rotated around the z-axis by 90
     # (note: we don't have to negate the value due to the fact that the z-axis is pointing downwards, so should already be clockwise)
-    return (math.degrees(rot_q.yaw_pitch_roll[0]) + 360 - 90 + 360) % 360
+    return -(math.degrees(rot_q.yaw_pitch_roll[0]) + 360 - 90 + 360) % 360
 
 
 if __name__ == "__main__":
