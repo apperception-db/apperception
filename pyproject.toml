@@ -49,14 +49,9 @@ verbose = 2
 exclude = [
   'trackers/object_tracker_yolov4_deepsort\.py',
   'trackers/object_tracker_yolov5_deepsort\.py',
-  'metadata_.*\.py',
-  'world_executor\.py',
-  'world\.py',
-  'mono_depth_estimator\.py',
-  'video_context_executor\.py',
+  'legacy/.*',
   'video_util\.py',
   'scenic_util\.py',
-  'test_parse_scenic_pred\.py',
 ]
 
 [[tool.mypy.overrides]]
@@ -75,14 +70,8 @@ ignore_missing_imports = true
 
 [tool.pyright]
 ignore = [
-  'apperception/layers.py',
-  'apperception/metadata_*.py',
-  'apperception/mono_depth_estimator.py',
-  'apperception/video_context.py',
-  'apperception/video_context_executor.py',
+  'apperception/legacy/*',
   'apperception/video_util.py',
-  'apperception/world.py',
-  'apperception/world_executor.py',
   'apperception/trackers/object_tracker_yolov4_deepsort.py',
   'apperception/trackers/object_tracker_yolov5_deepsort.py',
 ]
