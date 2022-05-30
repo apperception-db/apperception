@@ -7,6 +7,7 @@ from apperception.scenic_util import fetch_camera
 from apperception.legacy.video_context_executor import VideoContextExecutor
 from apperception.video_util import (convert_datetime_to_frame_num,
                                      get_video_roi)
+from apperception.utils import create_transform_matrix, world_to_pixel
 
 
 class WorldExecutor:
@@ -79,7 +80,7 @@ class WorldExecutor:
             for item_id, vals in metadata_results.items():
                 world_coords, timestamps = vals
                 # print("timestamps are", timestamps)
-                world_coords = reformat_fetched_world_coords(world_coords)
+                world_coords = np.array(world_coords)
 
                 cam_coords = world_to_pixel(world_coords, transform_matrix)
 
@@ -123,32 +124,6 @@ class WorldExecutor:
 
         metadata_executor = MetadataContextExecutor(self.conn, self.curr_world.MetadataContext)
         return metadata_executor.execute()
-
-
-def create_transform_matrix(focal_x, focal_y, cam_x, cam_y, skew_factor):
-    alpha = skew_factor
-
-    transform = np.array([[focal_x, alpha, cam_x, 0], [0, focal_y, cam_y, 0], [0, 0, 1, 0]])
-
-    return transform
-
-
-def reformat_fetched_world_coords(world_coords):
-    return np.array(world_coords)
-
-
-def world_to_pixel(world_coords, transform):
-    tl_x, tl_y, tl_z, br_x, br_y, br_z = world_coords.T
-
-    tl_world_pixels = np.array([tl_x, tl_y, tl_z, np.ones(len(tl_x))])
-    tl_vid_coords = transform @ tl_world_pixels
-
-    br_world_pixels = np.array([br_x, br_y, br_z, np.ones(len(br_x))])
-    br_vid_coords = transform @ br_world_pixels
-
-    return np.stack(
-        (tl_vid_coords[0], tl_vid_coords[1], br_vid_coords[0], br_vid_coords[1]), axis=0
-    )
 
 
 def video_fetch_reformat_tasm(fetched_meta):
