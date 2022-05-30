@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from apperception.data_types import QueryType
+    from ..query_type import QueryType
 
 
 class View:

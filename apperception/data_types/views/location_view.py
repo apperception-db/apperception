@@ -1,5 +1,5 @@
-from apperception.data_types import QueryType
-from apperception.data_types.views import View
+from ..query_type import QueryType
+from .view import View
 
 
 class LocationView(View):

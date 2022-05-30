@@ -1,6 +1,8 @@
-from apperception.data_types import QueryType
-from apperception.data_types.views import (CameraView, LocationView,
-                                           TrajectoryView, View)
+from ..query_type import QueryType
+from .camera_view import CameraView
+from .location_view import LocationView
+from .trajectory_view import TrajectoryView
+from .view import View
 
 
 class MetadataView(View):
