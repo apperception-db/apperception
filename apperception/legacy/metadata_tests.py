@@ -1,8 +1,8 @@
 import unittest
 
 import psycopg2
-from metadata_context import MetadataContext, geometry, primarykey, time
-from metadata_context_executor import MetadataContextExecutor
+from apperception.legacy.metadata_context import MetadataContext, geometry, primarykey, time
+from apperception.legacy.metadata_context_executor import MetadataContextExecutor
 
 test_context = MetadataContext()
 

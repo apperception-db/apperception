@@ -1,10 +1,10 @@
 import numpy as np
 import psycopg2
 
-from apperception.metadata_context import geometry, primarykey, time
-from apperception.metadata_context_executor import MetadataContextExecutor
+from apperception.legacy.metadata_context import geometry, primarykey, time
+from apperception.legacy.metadata_context_executor import MetadataContextExecutor
 from apperception.scenic_util import fetch_camera
-from apperception.video_context_executor import VideoContextExecutor
+from apperception.legacy.video_context_executor import VideoContextExecutor
 from apperception.video_util import (convert_datetime_to_frame_num,
                                      get_video_roi)
 

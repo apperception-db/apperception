@@ -4,10 +4,10 @@ import datetime
 import cv2
 import matplotlib
 import numpy as np
-from metadata_context import MetadataContext
+from apperception.legacy.metadata_context import MetadataContext
 from scenic_util import transformation
-from video_context import VideoContext
-from world_executor import WorldExecutor
+from apperception.legacy.video_context import VideoContext
+from apperception.legacy.world_executor import WorldExecutor
 
 matplotlib.use("Qt5Agg")
 
