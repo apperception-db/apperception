@@ -6,7 +6,6 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-psycopg2 = "^2.9.3"
 PyPika = "^0.48.9"
 PyYAML = "^6.0"
 dill = "^0.3.4"
@@ -21,6 +20,7 @@ opencv-python = "^4.5.5"
 pandas = "^1.4.2"
 decompyle3 = "^3.8.0"
 astpretty = "^2.1.0"
+psycopg2-binary = "^2.9.3"
 
 [tool.poetry.dev-dependencies]
 jupyterlab = "^3.3.2"
