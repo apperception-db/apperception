@@ -50,7 +50,6 @@ exclude = [
   'trackers/object_tracker_yolov4_deepsort\.py',
   'trackers/object_tracker_yolov5_deepsort\.py',
   'legacy/.*',
-  'mono_depth_estimator\.py',
   'video_util\.py',
   'scenic_util\.py',
 ]
@@ -71,9 +70,7 @@ ignore_missing_imports = true
 
 [tool.pyright]
 ignore = [
-  'apperception/layers.py',
   'apperception/legacy/*',
-  'apperception/utils/mono_depth_estimator.py',
   'apperception/video_util.py',
   'apperception/trackers/object_tracker_yolov4_deepsort.py',
   'apperception/trackers/object_tracker_yolov5_deepsort.py',
