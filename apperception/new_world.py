@@ -72,7 +72,7 @@ class World:
             scene_name, ["'" + x + "'" for x in trajectory.datetimes]
         )
         # c amera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
-        camera_info: List["FetchCameraTuple"] = []
+        camera_info: List[List["FetchCameraTuple"]] = []
         for frame_num in frame_nums:
             current_cameras = database.fetch_camera_framenum(scene_name, [frame_num[0]])
             camera_info.append(current_cameras)
@@ -125,28 +125,28 @@ class World:
                 vid_writer.release()
 
     def overlay_stats(self, frame, stats):
-        current = (10, 50)
+        x, y = 10, 50
         for stat in stats:
             statValue = stats[stat]
             cv2.putText(
                 frame,
                 stat + ": " + statValue,
-                current,
+                (x, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 1,
                 (0, 255, 0),
                 3,
             )
-            current[1] += 50
+            y += 50
 
     def overlay_road(self, frame, camera_config):
         ego_translation = camera_config["egoTranslation"]
         camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
         pixel_start_enc = world_to_pixel(
-            camera_config, [camera_road_coords[0], camera_road_coords[1], 0]
+            camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
         )
         pixel_end_enc = world_to_pixel(
-            camera_config, [camera_road_coords[2], camera_road_coords[3], 0]
+            camera_config, (camera_road_coords[2], camera_road_coords[3], 0)
         )
         pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
         pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
@@ -353,7 +353,7 @@ class World:
     def _retrieve_traj(self, camera_id: str):
         return derive_world(self, {QueryType.TRAJ}, database.retrieve_traj, camera_id=camera_id)
 
-    def _execute_from_root(self, _type: "QueryType"):
+    def _execute_from_root(self, _type: "QueryType") -> Any:
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
@@ -474,12 +474,12 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
     )
 
 
-def world_to_pixel(camera_config: List, world_coords: List):
+def world_to_pixel(camera_config: dict, world_coords: Union[np.ndarray, Tuple[float, float, float]]):
     traj_2d = transformation(world_coords, camera_config)
     return traj_2d
 
 
-def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple"]):
+def get_overlay_info(trajectory: Trajectory, camera_info: List[List["FetchCameraTuple"]]):
     """
     overlay each trajectory 3d coordinate on to the frame specified by the camera_info
     1. For each point in the trajectory, find the list of cameras that correspond to that timestamp
@@ -487,11 +487,11 @@ def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple
     3. Returns a mapping from each camera type (FRONT, BACK, etc) to the trajectory in pixel coordinates of that camera
     """
     traj_obj_3d = trajectory.coordinates
-    result: Dict[str, Tuple[np.ndarray, int, str]] = {}
-    for index in range(len(camera_info)):
-        cur_camera_infos = camera_info[
-            index
-        ]  # camera info of the obejct in one point of the trajectory
+    result: Dict[str, List[Tuple[np.ndarray, int, str, float, float, List[float], dict]]] = {}
+    for index, cur_camera_infos in enumerate(camera_info):
+        # cur_camera_infos = camera_info[
+        #     index
+        # ]  # camera info of the obejct in one point of the trajectory
         centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
         # in order to fit into the function transformation, we develop a dictionary called camera_config
         for cur_camera_info in cur_camera_infos:
@@ -510,30 +510,20 @@ def get_overlay_info(trajectory: Trajectory, camera_info: List["FetchCameraTuple
             ego_heading = cur_camera_info[9]
             ego_translation = cur_camera_info[1]
             file_prefix = "_".join(filename.split("/")[:-1])
-            if file_prefix in result:
-                result[file_prefix].append(
-                    (
-                        traj_2d,
-                        framenum,
-                        filename,
-                        camera_heading,
-                        ego_heading,
-                        ego_translation,
-                        camera_config,
-                    )
+
+            if file_prefix not in result:
+                result[file_prefix] = []
+            result[file_prefix].append(
+                (
+                    traj_2d,
+                    framenum,
+                    filename,
+                    camera_heading,
+                    ego_heading,
+                    ego_translation,
+                    camera_config,
                 )
-            else:
-                result[file_prefix] = [
-                    (
-                        traj_2d,
-                        framenum,
-                        filename,
-                        camera_heading,
-                        ego_heading,
-                        ego_translation,
-                        camera_config,
-                    )
-                ]
+            )
     return result
 
 
