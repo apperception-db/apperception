@@ -6,9 +6,10 @@ import monodepth2.networks
 import numpy as np
 import PIL.Image as pil
 import torch
-from apperception.legacy.layers import disp_to_depth
 from monodepth2.utils import download_model_if_doesnt_exist
 from torchvision import transforms
+
+from apperception.legacy.layers import disp_to_depth
 
 # Create depth frames for each frame from a video.
 
