@@ -103,11 +103,12 @@ class World:
                     -1,
                 )
                 if overlay_headings:
-                    cam_road_dir = self.road_direction(ego_translation[0], 
-                                                       ego_translation[1])[0][0]
-                    stats = {"Ego Heading": str(round(ego_heading, 2)),
-                             "Camera Heading": str(round(camera_heading, 2)),
-                             "Road Direction": str(round(cam_road_dir, 2))}
+                    cam_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
+                    stats = {
+                        "Ego Heading": str(round(ego_heading, 2)),
+                        "Camera Heading": str(round(camera_heading, 2)),
+                        "Road Direction": str(round(cam_road_dir, 2)),
+                    }
                     self.overlay_stats(frame_im, stats)
                 if overlay_road:
                     frame_im = self.overlay_road(frame_im, camera_config)
@@ -137,7 +138,7 @@ class World:
                 3,
             )
             current[1] += 50
-    
+
     def overlay_road(self, frame, camera_config):
         ego_translation = camera_config["egoTranslation"]
         camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
