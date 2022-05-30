@@ -442,7 +442,8 @@ def get_overlay_info(trajectory, camera_info: List[List[List["FetchCameraTuple"]
             # in order to fit into the function transformation, we develop a dictionary called camera_config
             frame_traj_obj_2d: List[Tuple[np.ndarray, int, str]] = []
             for cur_camera_info in cur_camera_infos:
-                camera_config = {}
+                # TODO: add type to camera_config
+                camera_config: Dict[str, Any] = {}
                 camera_config["egoTranslation"] = cur_camera_info[1]
                 camera_config["egoRotation"] = np.array(cur_camera_info[2])
                 camera_config["cameraTranslation"] = cur_camera_info[3]
