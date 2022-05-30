@@ -456,7 +456,9 @@ def insert_general_trajectory(
     conn.commit()
 
 
-def transformation(copy_centroid_3d: Union[np.ndarray, Tuple[float, float, float]], camera_config: Dict[str, Any]) -> np.ndarray:
+def transformation(
+    copy_centroid_3d: Union[np.ndarray, Tuple[float, float, float]], camera_config: Dict[str, Any]
+) -> np.ndarray:
     """
     TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
     """
@@ -487,7 +489,16 @@ def transformation(copy_centroid_3d: Union[np.ndarray, Tuple[float, float, float
 
 
 FetchCameraTuple = Tuple[
-    str, List[float], List[float], List[float], List[float], List[List[float]], int, str, float, float
+    str,
+    List[float],
+    List[float],
+    List[float],
+    List[float],
+    List[List[float]],
+    int,
+    str,
+    float,
+    float,
 ]
 
 

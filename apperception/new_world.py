@@ -474,7 +474,9 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
     )
 
 
-def world_to_pixel(camera_config: dict, world_coords: Union[np.ndarray, Tuple[float, float, float]]):
+def world_to_pixel(
+    camera_config: dict, world_coords: Union[np.ndarray, Tuple[float, float, float]]
+):
     traj_2d = transformation(world_coords, camera_config)
     return traj_2d
 
