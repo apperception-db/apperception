@@ -59,6 +59,7 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
+    # TODO: Eventually move these to there own utils file.s
     def overlay_trajectory(
         self,
         scene_name: str,
@@ -102,56 +103,14 @@ class World:
                     -1,
                 )
                 if overlay_headings:
-                    camera_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[
-                        0
-                    ][0]
-                    cv2.putText(
-                        frame_im,
-                        "Ego Heading: " + str(round(ego_heading, 2)),
-                        (10, 50),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1,
-                        (0, 255, 0),
-                        3,
-                    )
-                    cv2.putText(
-                        frame_im,
-                        "Camera Heading: " + str(round(camera_heading, 2)),
-                        (10, 100),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1,
-                        (0, 255, 0),
-                        3,
-                    )
-                    cv2.putText(
-                        frame_im,
-                        "Road Direction: " + str(round(camera_road_dir, 2)),
-                        (10, 150),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        1,
-                        (0, 255, 0),
-                        3,
-                    )
+                    cam_road_dir = self.road_direction(ego_translation[0], 
+                                                       ego_translation[1])[0][0]
+                    stats = {"Ego Heading": str(round(ego_heading, 2)),
+                             "Camera Heading": str(round(camera_heading, 2)),
+                             "Road Direction": str(round(cam_road_dir, 2))}
+                    self.overlay_stats(frame_im, stats)
                 if overlay_road:
-                    camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[
-                        0
-                    ][0]
-                    pixel_start_enc = world_to_pixel(
-                        camera_config, [camera_road_coords[0], camera_road_coords[1], 0]
-                    )
-                    pixel_end_enc = world_to_pixel(
-                        camera_config, [camera_road_coords[2], camera_road_coords[3], 0]
-                    )
-                    pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
-                    pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
-                    print(camera_road_coords, ego_translation)
-                    frame_im = cv2.line(
-                        frame_im,
-                        pixel_start,
-                        pixel_end,
-                        (255, 0, 0),
-                        3,
-                    )
+                    frame_im = self.overlay_road(frame_im, camera_config)
                 if vid_writer is None:
                     frame_height, frame_width = frame_im.shape[:2]
                     vid_writer = cv2.VideoWriter(
@@ -163,6 +122,42 @@ class World:
                 vid_writer.write(frame_im)
             if vid_writer is not None:
                 vid_writer.release()
+
+    def overlay_stats(self, frame, stats):
+        current = (10, 50)
+        for stat in stats:
+            statValue = stats[stat]
+            cv2.putText(
+                frame,
+                stat + ": " + statValue,
+                current,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                3,
+            )
+            current[1] += 50
+    
+    def overlay_road(self, frame, camera_config):
+        ego_translation = camera_config["egoTranslation"]
+        camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
+        pixel_start_enc = world_to_pixel(
+            camera_config, [camera_road_coords[0], camera_road_coords[1], 0]
+        )
+        pixel_end_enc = world_to_pixel(
+            camera_config, [camera_road_coords[2], camera_road_coords[3], 0]
+        )
+        pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
+        pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
+        print(camera_road_coords, ego_translation)
+        frame = cv2.line(
+            frame,
+            pixel_start,
+            pixel_end,
+            (255, 0, 0),
+            3,
+        )
+        return frame
 
     def add_camera(self, camera: "Camera"):
         node1 = self._insert_camera(camera=camera)
