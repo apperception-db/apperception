@@ -1,7 +1,8 @@
 import numpy as np
+
+from apperception.utils import create_transform_matrix, world_to_pixel
 from apperception.video_util import (convert_datetime_to_frame_num,
                                      get_video_box, get_video_roi)
-from apperception.utils import create_transform_matrix, world_to_pixel
 
 
 def overlay_bboxes(metadata_results, cams, boxed):

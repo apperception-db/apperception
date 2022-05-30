@@ -1,3 +1,4 @@
+from . import views
 from .bounding_box import BoundingBox
 from .box import Box
 from .camera import Camera
@@ -8,7 +9,6 @@ from .query_type import QueryType
 from .tracked_object import TrackedObject
 from .tracker import Tracker
 from .trajectory import Trajectory
-from . import views
 
 __all__ = [
     "BoundingBox",
@@ -21,5 +21,5 @@ __all__ = [
     "TrackedObject",
     "Tracker",
     "Trajectory",
-    "views"
+    "views",
 ]

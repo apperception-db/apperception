@@ -7,10 +7,13 @@ from apperception.scenic_util import bbox_to_data3d, join
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
+
     from ..data_types import TrackedObject
 
 
-def add_recognized_objects(conn: "Connection", formatted_result: Dict[str, "TrackedObject"], camera_id: str):
+def add_recognized_objects(
+    conn: "Connection", formatted_result: Dict[str, "TrackedObject"], camera_id: str
+):
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)

@@ -1,8 +1,8 @@
-from .view import View
 from .camera_view import CameraView
 from .location_view import LocationView
-from .trajectory_view import TrajectoryView
 from .metadata_view import MetadataView
+from .trajectory_view import TrajectoryView
+from .view import View
 
 metadata_view = MetadataView()
 

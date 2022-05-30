@@ -2,12 +2,13 @@ import numpy as np
 import psycopg2
 
 from apperception.legacy.metadata_context import geometry, primarykey, time
-from apperception.legacy.metadata_context_executor import MetadataContextExecutor
-from apperception.scenic_util import fetch_camera
+from apperception.legacy.metadata_context_executor import \
+    MetadataContextExecutor
 from apperception.legacy.video_context_executor import VideoContextExecutor
+from apperception.scenic_util import fetch_camera
+from apperception.utils import create_transform_matrix, world_to_pixel
 from apperception.video_util import (convert_datetime_to_frame_num,
                                      get_video_roi)
-from apperception.utils import create_transform_matrix, world_to_pixel
 
 
 class WorldExecutor:
