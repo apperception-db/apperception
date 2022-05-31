@@ -1,5 +1,8 @@
-from ..query_type import QueryType
+from typing import TYPE_CHECKING
 from .view import View
+
+if TYPE_CHECKING:
+    from ..query_type import QueryType
 
 
 class CameraView(View):
@@ -16,7 +19,7 @@ class CameraView(View):
     camera_heading = "cameraHeading"
     ego_heading = "egoHeading"
     table_name = "Cameras"
-    table_type = QueryType.CAM
+    table_type: "QueryType" = "CAM"
 
     def __init__(self):
         super().__init__(self.table_name, self.table_type)

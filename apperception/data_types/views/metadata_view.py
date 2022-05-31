@@ -1,13 +1,16 @@
-from ..query_type import QueryType
+from typing import TYPE_CHECKING
 from .camera_view import CameraView
 from .location_view import LocationView
 from .trajectory_view import TrajectoryView
 from .view import View
 
+if TYPE_CHECKING:
+    from ..query_type import QueryType
+
 
 class MetadataView(View):
     view_name = "metadata_view"
-    view_type = QueryType.METADATA
+    view_type: "QueryType" = "METADATA"
     object_id = TrajectoryView.object_id
     object_type = TrajectoryView.object_type
     color = TrajectoryView.color

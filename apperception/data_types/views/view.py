@@ -8,7 +8,7 @@ class View:
     def __init__(self, view_name: str, view_type: "QueryType"):
         self.view_name: str = view_name
         self.default: bool = False
-        self.view_type: QueryType = view_type
+        self.view_type: "QueryType" = view_type
 
     def from_context(self, context: Any):
         self.context = context

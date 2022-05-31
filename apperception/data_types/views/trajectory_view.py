@@ -1,5 +1,8 @@
-from ..query_type import QueryType
+from typing import TYPE_CHECKING
 from .view import View
+
+if TYPE_CHECKING:
+    from ..query_type import QueryType
 
 
 class TrajectoryView(View):
@@ -10,7 +13,7 @@ class TrajectoryView(View):
     traj = "trajCentroids"
     heading = "itemHeadings"
     table_name = "Item_General_Trajectory"
-    table_type = QueryType.TRAJ
+    table_type: "QueryType" = "TRAJ"
 
     def __init__(self):
         super().__init__(self.table_name, self.table_type)
