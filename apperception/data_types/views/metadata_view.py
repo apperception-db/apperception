@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 from .camera_view import CameraView
 from .location_view import LocationView
 from .trajectory_view import TrajectoryView

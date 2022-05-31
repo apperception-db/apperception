@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 from .view import View
 
 if TYPE_CHECKING:
