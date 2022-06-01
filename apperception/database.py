@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from psycopg2 import cursor as Cursor
 
     from .data_types import Camera
-    from .new_world import World
+    from .world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
