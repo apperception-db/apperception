@@ -293,7 +293,7 @@ class World:
     def _retrieve_traj(self, camera_id: str):
         return derive_world(self, {QueryType.TRAJ}, database.retrieve_traj, camera_id=camera_id)
 
-    def _execute_from_root(self, _type: "QueryType"):
+    def _execute_from_root(self, _type: "QueryType") -> Any:
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
