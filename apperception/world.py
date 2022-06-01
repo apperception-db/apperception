@@ -11,9 +11,9 @@ import numpy as np
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 
-from apperception.data_types import Camera, QueryType
+from apperception.data_types import Camera, QueryType, FetchCameraTuple
 from apperception.database import database
-from apperception.scenic_util import FetchCameraTuple, transformation
+from apperception.utils import transformation
 
 if TYPE_CHECKING:
     import pandas as pd

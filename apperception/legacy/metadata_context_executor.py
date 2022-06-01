@@ -6,7 +6,7 @@ from apperception.legacy.metadata_context import (Aggregate, Column, Filter,
                                                   MetadataContext, Predicate,
                                                   Project, Scan, asMFJSON)
 from apperception.legacy.metadata_util import common_aggregation
-from apperception.scenic_util import join
+from apperception.utils import join
 
 
 class MetadataContextExecutor:

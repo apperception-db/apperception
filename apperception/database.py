@@ -9,11 +9,10 @@ from pypika import Column, CustomFunction, Table
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
-import apperception.scenic_util as su
 from apperception.data_types import QueryType, Trajectory
 from apperception.utils import (add_recognized_objects, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
-                                reformat_bbox_trajectories)
+                                reformat_bbox_trajectories, fetch_camera, fetch_camera_framenum, timestamp_to_framenum)
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
@@ -320,13 +319,13 @@ class Database:
         return self.cursor.fetchall()
 
     def fetch_camera(self, scene_name: str, frame_timestamp: List[str]):
-        return su.fetch_camera(self.connection, scene_name, frame_timestamp)
+        return fetch_camera(self.connection, scene_name, frame_timestamp)
 
     def fetch_camera_framenum(self, scene_name: str, frame_num: List[int]):
-        return su.fetch_camera_framenum(self.connection, scene_name, frame_num)
+        return fetch_camera_framenum(self.connection, scene_name, frame_num)
 
     def timestamp_to_framenum(self, scene_name: str, timestamps: List[str]):
-        return su.timestamp_to_framenum(self.connection, scene_name, timestamps)
+        return timestamp_to_framenum(self.connection, scene_name, timestamps)
 
     def get_len(self, query: Query):
         """

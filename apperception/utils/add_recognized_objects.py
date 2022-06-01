@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import numpy as np
 
-from apperception.scenic_util import bbox_to_data3d, join
+from apperception.utils import join, bbox_to_data3d
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection

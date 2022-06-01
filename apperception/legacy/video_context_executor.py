@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, List, Set
 
 from apperception.legacy.video_context import Camera, VideoContext
-from apperception.scenic_util import (add_recognized_objs,
+from apperception.legacy.scenic_util import (add_recognized_objs,
                                       create_or_insert_camera_table, recognize)
 from apperception.legacy.video_util import (create_or_insert_world_table,
                                      metadata_to_tasm, video_data_to_tasm)

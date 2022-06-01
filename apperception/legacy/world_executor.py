@@ -5,8 +5,7 @@ from apperception.legacy.metadata_context import geometry, primarykey, time
 from apperception.legacy.metadata_context_executor import \
     MetadataContextExecutor
 from apperception.legacy.video_context_executor import VideoContextExecutor
-from apperception.scenic_util import fetch_camera
-from apperception.utils import create_transform_matrix, world_to_pixel, datetimes_to_framenums, get_video_roi
+from apperception.utils import create_transform_matrix, world_to_pixel, datetimes_to_framenums, get_video_roi, fetch_camera
 
 
 class WorldExecutor:
