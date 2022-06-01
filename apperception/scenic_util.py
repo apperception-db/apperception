@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -71,7 +71,7 @@ def fetch_camera_config(scene_name, sample_data):
     # how to store same scene in different cameras
     all_frames = sample_data[
         (sample_data["scene_name"] == scene_name)
-        & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
+        # & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
     ]
 
     for idx, frame in all_frames.iterrows():
@@ -249,7 +249,7 @@ def recognize(scene_name, sample_data, annotation):
     # how to store same scene in different cameras
     img_files = sample_data[
         (sample_data["scene_name"] == scene_name)
-        & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
+        # & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
     ].sort_values(by="frame_order")
 
     for _, img_file in img_files.iterrows():
@@ -456,7 +456,9 @@ def insert_general_trajectory(
     conn.commit()
 
 
-def transformation(copy_centroid_3d: np.ndarray, camera_config: Dict[str, Any]) -> np.ndarray:
+def transformation(
+    copy_centroid_3d: Union[np.ndarray, Tuple[float, float, float]], camera_config: Dict[str, Any]
+) -> np.ndarray:
     """
     TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
     """
@@ -487,7 +489,16 @@ def transformation(copy_centroid_3d: np.ndarray, camera_config: Dict[str, Any]) 
 
 
 FetchCameraTuple = Tuple[
-    str, List[float], List[float], List[float], List[float], List[List[float]], int, str
+    str,
+    List[float],
+    List[float],
+    List[float],
+    List[float],
+    List[List[float]],
+    int,
+    str,
+    float,
+    float,
 ]
 
 
@@ -523,12 +534,76 @@ def fetch_camera(conn, scene_name, frame_timestamps) -> List["FetchCameraTuple"]
         cameraRotation,
         cameraIntrinsic,
         frameNum,
-        fileName
+        fileName,
+        cameraHeading,
+        egoHeading
     FROM Cameras
     WHERE
         cameraId = '{scene_name}' AND
         timestamp IN ({",".join(map(str, frame_timestamps))})
     ORDER BY cameraId ASC, frameNum ASC;
+    """
+    # print(query)
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def fetch_camera_framenum(conn, scene_name, frame_nums) -> List["FetchCameraTuple"]:
+    """
+    TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
+    scene_name: str
+    frame_num: int[]
+    return a list of metadata info for each frame_num
+    """
+
+    cursor = conn.cursor()
+    # query = '''SELECT camera_info from camera_table where camera_table.camera_id == scene_name and camera_table.frame_num in frame_num'''
+    # if cam_id == []:
+    # 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+    # 	 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
+    # else:
+    # 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
+    # 	 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
+    # TODO: define ST_XYZ somewhere else
+    query = f"""
+    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+        BEGIN
+            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+        END;
+    $$ LANGUAGE plpgsql;
+
+    SELECT
+        cameraId,
+        ST_XYZ(egoTranslation),
+        egoRotation,
+        ST_XYZ(cameraTranslation),
+        cameraRotation,
+        cameraIntrinsic,
+        frameNum,
+        fileName,
+        cameraHeading,
+        egoHeading
+    FROM Cameras
+    WHERE
+        cameraId = '{scene_name}' AND
+        frameNum IN ({",".join(map(str, frame_nums))})
+    ORDER BY cameraId ASC, frameNum ASC;
+    """
+    # print(query)
+    cursor.execute(query)
+    return cursor.fetchall()
+
+
+def timestamp_to_framenum(conn, scene_name: str, timestamps: List[str]):
+    cursor = conn.cursor()
+    query = f"""
+    SELECT
+        DISTINCT frameNum
+    FROM Cameras
+    WHERE
+        cameraId = '{scene_name}' AND
+        timestamp IN ({",".join(map(str, timestamps))})
+    ORDER BY frameNum ASC;
     """
     # print(query)
     cursor.execute(query)
