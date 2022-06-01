@@ -1,6 +1,8 @@
-from typing import Union, List, Tuple
-import numpy as np
+from typing import List, Tuple, Union
+
 import cv2
+import numpy as np
+
 
 def get_video_box(
     file_name: str,

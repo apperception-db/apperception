@@ -1,6 +1,7 @@
 from typing import List
-import numpy as np
+
 import cv2
+import numpy as np
 
 
 def get_video_roi(file_name: str, cam_video_file: str, rois: np.ndarray, times: List[int]):

@@ -1,11 +1,11 @@
 from typing import Any, Dict, Tuple, Union
+
 import numpy as np
 from pyquaternion import Quaternion
 
 
 def transformation(
     copy_centroid_3d: Union[np.ndarray, Tuple[float, float, float]], camera_config: Dict[str, Any]
-    
 ) -> np.ndarray:
     """
     TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config

@@ -10,9 +10,11 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import QueryType, Trajectory
-from apperception.utils import (add_recognized_objects, fn_to_sql,
+from apperception.utils import (add_recognized_objects, fetch_camera,
+                                fetch_camera_framenum, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
-                                reformat_bbox_trajectories, fetch_camera, fetch_camera_framenum, timestamp_to_framenum)
+                                reformat_bbox_trajectories,
+                                timestamp_to_framenum)
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection

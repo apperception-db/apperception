@@ -11,7 +11,7 @@ import numpy as np
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 
-from apperception.data_types import Camera, QueryType, FetchCameraTuple
+from apperception.data_types import Camera, FetchCameraTuple, QueryType
 from apperception.database import database
 from apperception.utils import transformation
 

@@ -8,7 +8,7 @@ import pandas as pd
 from pyquaternion import Quaternion
 
 from apperception.data_types import Box
-from apperception.utils import join, bbox_to_data3d
+from apperception.utils import bbox_to_data3d, join
 
 CREATE_ITEMTRAJ_SQL = """
 CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
@@ -613,4 +613,3 @@ def import_tables(conn, data_path):
 
 def convert_timestamps(start_time: datetime.datetime, timestamps: Iterable[int]):
     return [str(start_time + datetime.timedelta(seconds=t)) for t in timestamps]
-

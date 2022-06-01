@@ -1,11 +1,14 @@
 from typing import TYPE_CHECKING, List, Union
 
 if TYPE_CHECKING:
-    from apperception.data_types import FetchCameraTuple
     from psycopg2 import connection as Connection
 
+    from apperception.data_types import FetchCameraTuple
 
-def fetch_camera_framenum(conn: "Connection", scene_name: str, frame_nums: List[Union[str, int]]) -> List["FetchCameraTuple"]:
+
+def fetch_camera_framenum(
+    conn: "Connection", scene_name: str, frame_nums: List[Union[str, int]]
+) -> List["FetchCameraTuple"]:
     """
     TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
     scene_name: str

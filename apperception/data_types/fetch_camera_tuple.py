@@ -1,6 +1,5 @@
 from typing import List, Tuple
 
-
 FetchCameraTuple = Tuple[
     str,
     List[float],
