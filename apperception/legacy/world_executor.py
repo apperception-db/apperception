@@ -6,9 +6,7 @@ from apperception.legacy.metadata_context_executor import \
     MetadataContextExecutor
 from apperception.legacy.video_context_executor import VideoContextExecutor
 from apperception.scenic_util import fetch_camera
-from apperception.utils import create_transform_matrix, world_to_pixel
-from apperception.video_util import (convert_datetime_to_frame_num,
-                                     get_video_roi)
+from apperception.utils import create_transform_matrix, world_to_pixel, datetimes_to_framenums, get_video_roi
 
 
 class WorldExecutor:
@@ -85,7 +83,7 @@ class WorldExecutor:
 
                 cam_coords = world_to_pixel(world_coords, transform_matrix)
 
-                vid_times = convert_datetime_to_frame_num(start_time, timestamps)
+                vid_times = datetimes_to_framenums(start_time, timestamps)
                 # print(vid_times)
 
                 vid_fname = (

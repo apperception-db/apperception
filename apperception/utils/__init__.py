@@ -12,6 +12,9 @@ from .recognize import recognize
 from .reformat_bbox_trajectories import reformat_bbox_trajectories
 from .scenic_generate_df import scenic_generate_df
 from .world_to_pixel import world_to_pixel
+from .datetimes_to_framenums import datetimes_to_framenums
+from .get_video_roi import get_video_roi
+from .get_video_box import get_video_box
 
 __all__ = [
     "F",
@@ -28,4 +31,7 @@ __all__ = [
     "world_to_pixel",
     "import_tables",
     "export_tables",
+    "datetimes_to_framenums",
+    "get_video_roi",
+    "get_video_box",
 ]

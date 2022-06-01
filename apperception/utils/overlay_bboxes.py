@@ -1,8 +1,6 @@
 import numpy as np
 
-from apperception.utils import create_transform_matrix, world_to_pixel
-from apperception.video_util import (convert_datetime_to_frame_num,
-                                     get_video_box, get_video_roi)
+from apperception.utils import create_transform_matrix, world_to_pixel, datetimes_to_framenums, get_video_roi, get_video_box
 
 
 def overlay_bboxes(metadata_results, cams, boxed):
@@ -29,7 +27,7 @@ def overlay_bboxes(metadata_results, cams, boxed):
             world_coords = np.array(world_coords)
             cam_coords = world_to_pixel(world_coords, transform_matrix)
 
-            vid_times = convert_datetime_to_frame_num(start_time, timestamps)
+            vid_times = datetimes_to_framenums(start_time, timestamps)
             # print(vid_times)
 
             vid_fname = "./output/" + cam.metadata_id + item_id + ".mp4"
