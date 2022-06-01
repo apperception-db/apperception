@@ -10,6 +10,8 @@ from .recognize import recognize
 from .reformat_bbox_trajectories import reformat_bbox_trajectories
 from .scenic_generate_df import scenic_generate_df
 from .world_to_pixel import world_to_pixel
+from .import_tables import import_tables
+from .export_tables import export_tables
 
 __all__ = [
     "F",
@@ -24,4 +26,6 @@ __all__ = [
     "overlay_bboxes",
     "create_transform_matrix",
     "world_to_pixel",
+    "import_tables",
+    "export_tables"
 ]

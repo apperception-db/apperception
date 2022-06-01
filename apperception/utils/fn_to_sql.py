@@ -3,17 +3,11 @@ from __future__ import annotations
 import ast
 import os
 from inspect import FullArgSpec, getfullargspec
-from sys import version_info
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from apperception.data_types.views import metadata_view
 
-if version_info.major != 3:
-    raise Exception("Only support python3")
-if version_info.minor < 7:
-    from uncompyle6 import deparse_code2str
-else:
-    from decompyle3 import deparse_code2str
+from decompyle3 import deparse_code2str
 
 from . import F
 
