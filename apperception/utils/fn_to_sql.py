@@ -5,9 +5,9 @@ import os
 from inspect import FullArgSpec, getfullargspec
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from apperception.data_types.views import metadata_view
-
 from decompyle3 import deparse_code2str
+
+from apperception.data_types.views import metadata_view
 
 from . import F
 
