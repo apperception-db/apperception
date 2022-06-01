@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Union
+from typing import TYPE_CHECKING, List, Union
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
