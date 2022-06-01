@@ -5,7 +5,7 @@ import copy
 import os
 from typing import Callable, List, Optional
 
-import uncompyle6
+from decompyle3 import deparse_code2str
 
 from apperception.data_types.views import MetadataView, View, metadata_view
 from apperception.legacy.metadata_util import (COUNT, Tmax, Tmin,
@@ -109,7 +109,7 @@ class Filter:
 class Predicate:
     def __init__(self, predicate: Callable[[int], bool], evaluated_var={}):
         self.predicate = predicate
-        s = uncompyle6.deparse_code2str(self.predicate.__code__, out=open(os.devnull, "w"))
+        s = deparse_code2str(self.predicate.__code__, out=open(os.devnull, "w"))
         self.t = ast.parse(s)
         self.evaluated_var = evaluated_var
         self.root = None

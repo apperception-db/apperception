@@ -12,7 +12,7 @@ from pypika import Table
 from pypika.dialects import SnowflakeQuery
 
 from apperception.data_types import Camera, QueryType
-from apperception.new_db import database
+from apperception.database import database
 from apperception.scenic_util import FetchCameraTuple, transformation
 
 if TYPE_CHECKING:
