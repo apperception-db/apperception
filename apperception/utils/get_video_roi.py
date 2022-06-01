@@ -57,11 +57,11 @@ def get_video_roi(file_name: str, cam_video_file: str, rois: np.ndarray, times: 
 
             roi_byte = np.pad(
                 roi_byte,
-                pad_width=[
-                    (pad_y, len_y - diff_y - pad_y),
-                    (pad_x, len_x - diff_x - pad_x),
-                    (0, 0),
-                ],
+                pad_width=np.array([
+                    [pad_y, len_y - diff_y - pad_y],
+                    [pad_x, len_x - diff_x - pad_x],
+                    [0, 0],
+                ]),
             )
             frame = cv2.cvtColor(roi_byte, cv2.COLOR_RGB2BGR)
 

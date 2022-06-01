@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 def fetch_camera(
-    conn: "Connection", scene_name: str, frame_timestamps: List[Union[str, int]]
+    conn: "Connection", scene_name: str, frame_timestamps: Union[List[str], List[int]]
 ) -> List["FetchCameraTuple"]:
     """
     TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
@@ -51,4 +51,5 @@ def fetch_camera(
     """
     # print(query)
     cursor.execute(query)
-    return cursor.fetchall()
+    result: list = cursor.fetchall()
+    return result

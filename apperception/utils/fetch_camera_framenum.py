@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Any, List, Union
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 def fetch_camera_framenum(
-    conn: "Connection", scene_name: str, frame_nums: List[Union[str, int]]
+    conn: "Connection", scene_name: str, frame_nums: Union[List[str], List[int]]
 ) -> List["FetchCameraTuple"]:
     """
     TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
@@ -51,4 +51,5 @@ def fetch_camera_framenum(
     """
     # print(query)
     cursor.execute(query)
-    return cursor.fetchall()
+    result: list = cursor.fetchall()
+    return result
