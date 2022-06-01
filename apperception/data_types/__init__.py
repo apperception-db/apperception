@@ -1,4 +1,3 @@
-
 from . import views
 from .bounding_box import BoundingBox
 from .box import Box
