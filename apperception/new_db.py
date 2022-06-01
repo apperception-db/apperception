@@ -9,8 +9,8 @@ from pypika import Column, CustomFunction, Table
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
+import apperception.scenic_util as su
 from apperception.data_types import QueryType, Trajectory
-from apperception.scenic_util import fetch_camera as su_fetch_camera
 from apperception.utils import (add_recognized_objects, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
                                 reformat_bbox_trajectories)
@@ -319,8 +319,14 @@ class Database:
         self.cursor.execute(q)
         return self.cursor.fetchall()
 
-    def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
-        return su_fetch_camera(self.connection, scene_name, frame_timestamp)
+    def fetch_camera(self, scene_name: str, frame_timestamp: List[str]):
+        return su.fetch_camera(self.connection, scene_name, frame_timestamp)
+
+    def fetch_camera_framenum(self, scene_name: str, frame_num: List[int]):
+        return su.fetch_camera_framenum(self.connection, scene_name, frame_num)
+
+    def timestamp_to_framenum(self, scene_name: str, timestamps: List[str]):
+        return su.timestamp_to_framenum(self.connection, scene_name, timestamps)
 
     def get_len(self, query: Query):
         """
@@ -349,6 +355,16 @@ class Database:
         traj = Table(TRAJ_TABLE)
         q = SnowflakeQuery.from_(traj).select("*").where(traj.cameraId == camera_id)
         return query + q if query else q  # UNION
+
+    def road_direction(self, x: float, y: float):
+        q = f"SELECT roadDirection({x}, {y});"
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
+
+    def road_coords(self, x: float, y: float):
+        q = f"SELECT roadCoords({x}, {y});"
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
 
     def get_bbox(self, query: Query):
         self.cursor.execute(query.get_sql())
@@ -383,6 +399,15 @@ class Database:
         """
 
         print("get_traj_key", query)
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def get_traj_attr(self, query: Query, attr: str):
+        query = f"""
+        SELECT {attr} FROM ({query_to_str(query)}) as final
+        """
+
+        print("get_traj_attr:", attr, query)
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
