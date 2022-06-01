@@ -9,7 +9,7 @@ import os
 import shutil
 sys.path.append(os.getcwd())
 sys.path.append(os.path.join(os.getcwd(), "apperception"))
-from apperception.new_world import empty_world, World
+from apperception.world import empty_world, World
 from apperception.data_types import Camera
 # from apperception.utils import scenic_generate_df
 from apperception.utils import df_to_camera_config

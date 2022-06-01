@@ -4,17 +4,17 @@ sys.path.append(os.getcwd())
 sys.path.append(os.path.join(os.getcwd(), "apperception"))
 import psycopg2
 import argparse
-from apperception.utils.import_or_export_to_db import *
+from apperception.utils import import_tables
 from apperception.utils.road_ingest import *
 import json
 
-def ingest_data(remote: bool = False, host: str = "localhost"):
+def ingest_data(remote: bool = False, host: str = "localhost", port=25432):
     if remote:
         data_path = "/data/"
         conn = psycopg2.connect(database="mobilitydb", user="docker", password="docker", host=host, port=5432)
     else:
         data_path = "./data/"
-        conn = psycopg2.connect(database="mobilitydb", user="docker", password="docker", host=host, port=25432)
+        conn = psycopg2.connect(database="mobilitydb", user="docker", password="docker", host=host, port=port)
     print("ingest all scenic data")
     import_tables(conn, data_path)
     ingest_road(conn,data_path)
@@ -82,6 +82,7 @@ def parse_args():
     parser=argparse.ArgumentParser(description="tell db the host address")
     parser.add_argument('--remote', action='store_true', help='remote db')
     parser.add_argument('--host', default='localhost', help='host address')
+    parser.add_argument('--port', default='25432', help='host port')
     args=parser.parse_args()
     return args
 
@@ -89,8 +90,9 @@ def main():
     args=parse_args()
     host=args.host
     remote=args.remote
+    port=args.port
     print("remote:", remote)
-    ingest_data(remote=remote, host=host)
+    ingest_data(remote=remote, host=host, port=int(port))
     
 
 if __name__ == '__main__':

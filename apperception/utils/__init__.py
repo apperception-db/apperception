@@ -3,7 +3,9 @@ from .add_recognized_objects import add_recognized_objects
 from .compute_heading import compute_heading
 from .create_transform_matrix import create_transform_matrix
 from .df_to_camera_config import df_to_camera_config
+from .export_tables import export_tables
 from .fn_to_sql import fn_to_sql
+from .import_tables import import_tables
 from .overlay_bboxes import overlay_bboxes
 from .query_to_str import query_to_str
 from .recognize import recognize
@@ -24,4 +26,6 @@ __all__ = [
     "overlay_bboxes",
     "create_transform_matrix",
     "world_to_pixel",
+    "import_tables",
+    "export_tables",
 ]
