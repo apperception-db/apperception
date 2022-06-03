@@ -1,8 +1,8 @@
 import ast
 import inspect
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
 from os import environ
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import psycopg2
 from pypika import Column, CustomFunction, Table
@@ -491,10 +491,12 @@ class Database:
         overlay_bboxes(fetched_meta, cams, boxed)
 
 
-database = Database(psycopg2.connect(
-    dbname=environ.get("AP_DB", "mobilitydb"),
-    user=environ.get("AP_USER", "docker"),
-    host=environ.get("AP_HOST", "localhost"),
-    port=environ.get("AP_PORT", "25432"),
-    password=environ.get("AP_PASSWORD", "docker"),
-))
+database = Database(
+    psycopg2.connect(
+        dbname=environ.get("AP_DB", "mobilitydb"),
+        user=environ.get("AP_USER", "docker"),
+        host=environ.get("AP_HOST", "localhost"),
+        port=environ.get("AP_PORT", "25432"),
+        password=environ.get("AP_PASSWORD", "docker"),
+    )
+)
