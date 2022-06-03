@@ -404,12 +404,13 @@ class Database:
         self.cursor.execute(query)
         return self.cursor.fetchall()
     
-    def get_id_and_time(self, query: Query, num_joined_tables: int):
+    def get_id_time_and_camId(self, query: Query, num_joined_tables: int):
         itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
         timestamp = "cameras.timestamp"
-        query = query_to_str(query).replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}", 1)
+        camId = "cameras.cameraId"
+        query = query_to_str(query).replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}", 1)
 
-        print("get_id_and_time", query)
+        print("get_id_time_and_camId", query)
         self.cursor.execute(query)
         return self.cursor.fetchall()
 

@@ -338,11 +338,11 @@ class World:
             database.get_time,
         )._execute_from_root(QueryType.BBOX)
 
-    def get_id_and_time(self, num_joined_tables: int):
+    def get_id_time_and_camId(self, num_joined_tables: int):
         return derive_world(
             self,
             {QueryType.TRAJ},
-            database.get_id_and_time,
+            database.get_id_time_and_camId,
             num_joined_tables=num_joined_tables,
         )._execute_from_root(QueryType.TRAJ)
 
