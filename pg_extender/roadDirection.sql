@@ -1,3 +1,9 @@
+\echo ""
+\echo ""
+\echo ""
+\echo "roadDirection"
+\echo ""
+
 DROP FUNCTION IF EXISTS roadDirection(x real, y real);
 CREATE OR REPLACE FUNCTION roadDirection(x real, y real) RETURNS real AS
 $BODY$
