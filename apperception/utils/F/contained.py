@@ -14,8 +14,10 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
     if len(args) == 2:
         arg_cont_point, arg_geoms = args
         arg_time = None
-    if len(args) == 3:
+    elif len(args) == 3:
         arg_cont_point, arg_geoms, arg_time = args
+    else:
+        raise Exception("contained accept either 2 or 3 arguments")
 
     if isinstance(arg_cont_point, ast.Attribute):
         value = arg_cont_point.value
@@ -64,8 +66,6 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
             timet = arg_time.value
         else:
             raise Exception("Problem with arg_time input contained function", str(arg_time))
-
-    if arg_time is not None:
         return f"contained({object_positions}, {geoms}, {timet})"
     else:
         return f"contained({object_positions}, {geoms})"
