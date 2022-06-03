@@ -403,7 +403,7 @@ class Database:
         print("get_traj_key", query)
         self.cursor.execute(query)
         return self.cursor.fetchall()
-    
+
     def get_id_and_time(self, query: Query, num_joined_tables: int):
         itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
         timestamp = "cameras.timestamp"
