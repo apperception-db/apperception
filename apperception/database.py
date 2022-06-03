@@ -403,13 +403,15 @@ class Database:
         print("get_traj_key", query)
         self.cursor.execute(query)
         return self.cursor.fetchall()
-    
+
     def get_id_time_camId_filename(self, query: Query, num_joined_tables: int):
         itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
         timestamp = "cameras.timestamp"
         camId = "cameras.cameraId"
         filename = "cameras.filename"
-        query = query_to_str(query).replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1)
+        query = query_to_str(query).replace(
+            "SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1
+        )
 
         print("get_id_time_camId_filename", query)
         self.cursor.execute(query)
