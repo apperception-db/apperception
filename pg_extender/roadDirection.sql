@@ -11,14 +11,19 @@ BEGIN
                                 AND ROUND(CAST(heading * 180 / PI() AS numeric), 3) != -45
                           ORDER BY segmentLine <-> point ASC LIMIT 1);
         IF result IS NULL THEN
-          result := (SELECT heading * 180 / PI() AS degHeading FROM segment, st_point(x, y) AS point 
-                            WHERE elementId = contPolygonElementId
-                            ORDER BY segmentLine <-> point ASC LIMIT 1);
+          result := (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS point 
+                            WHERE ROUND(CAST(heading * 180 / PI() AS numeric), 3) != -45 
+                            ORDER BY segmentLine <-> point ASC LIMIT 1 );
+          -- result := (SELECT heading * 180 / PI() AS degHeading FROM segment, st_point(x, y) AS point 
+          --                   WHERE elementId = contPolygonElementId
+          --                   ORDER BY segmentLine <-> point ASC LIMIT 1);
         END IF;
      ELSE
-        result := (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS point ORDER BY segmentLine <-> point ASC LIMIT 1 );
+        result := (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS point 
+                          WHERE ROUND(CAST(heading * 180 / PI() AS numeric), 3) != -45 
+                          ORDER BY segmentLine <-> point ASC LIMIT 1 );
      END IF;
-     RETURN CAST((result + 360) AS numeric) % 360;
+     RETURN CAST((result + 360 + 90) AS numeric) % 360;
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
