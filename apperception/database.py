@@ -1,6 +1,7 @@
 import ast
 import inspect
 from datetime import datetime
+from os import environ
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import psycopg2
@@ -266,16 +267,13 @@ class Database:
 
         predicate_sql = fn_to_sql(predicate, tables_sql)
         query_str = query_to_str(query)
-        joins = [
-            f"JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId"
-            for table in tables[1:]
-        ]
+        joins = [f"JOIN ({query_str}) as {table} USING (cameraId)" for table in tables[1:]]
 
         return f"""
-        SELECT DISTINCT {tables[0]}.*
+        SELECT DISTINCT *
         FROM ({query_str}) as {tables[0]}
         {" ".join(joins)}
-        {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if found_camera else ""}
+        {f"JOIN Cameras USING (cameraId)" if found_camera else ""}
         WHERE {predicate_sql}
         """
 
@@ -403,6 +401,19 @@ class Database:
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
+    def get_id_time_camId_filename(self, query: Query, num_joined_tables: int):
+        itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
+        timestamp = "cameras.timestamp"
+        camId = "cameras.cameraId"
+        filename = "cameras.filename"
+        query = query_to_str(query).replace(
+            "SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1
+        )
+
+        print("get_id_time_camId_filename", query)
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
     def get_traj_attr(self, query: Query, attr: str):
         query = f"""
         SELECT {attr} FROM ({query_to_str(query)}) as final
@@ -490,4 +501,12 @@ class Database:
         overlay_bboxes(fetched_meta, cams, boxed)
 
 
-database = Database()
+database = Database(
+    psycopg2.connect(
+        dbname=environ.get("AP_DB", "mobilitydb"),
+        user=environ.get("AP_USER", "docker"),
+        host=environ.get("AP_HOST", "localhost"),
+        port=environ.get("AP_PORT", "25432"),
+        password=environ.get("AP_PASSWORD", "docker"),
+    )
+)

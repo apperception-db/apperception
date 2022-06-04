@@ -59,6 +59,22 @@ class World:
         self._types = set() if types is None else types
         self._materialized = materialized
 
+    def get_trajectory_images(
+        self,
+        scene_name: str,
+        trajectory: Trajectory,
+    ):
+        frame_nums = database.timestamp_to_framenum(
+            scene_name, ["'" + x + "'" for x in trajectory.datetimes]
+        )
+        # c amera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
+        image_names: List[List[str]] = []
+        for frame_num in frame_nums:
+            current_cameras = database.fetch_camera_framenum(scene_name, [frame_num[0]])
+            currant_images = [x[7] for x in current_cameras]
+            image_names.append(currant_images)
+        return image_names
+
     # TODO: Eventually move these to there own utils file.s
     def overlay_trajectory(
         self,
@@ -322,6 +338,14 @@ class World:
             database.get_time,
         )._execute_from_root(QueryType.BBOX)
 
+    def get_id_time_camId_filename(self, num_joined_tables: int):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_id_time_camId_filename,
+            num_joined_tables=num_joined_tables,
+        )._execute_from_root(QueryType.TRAJ)
+
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
             self,
@@ -391,11 +415,11 @@ class World:
             else:
                 print("execute:", node.fn.__name__)
                 # print(query)
-                query = node._execute(query=query)
+                query = node._execute(query=query, **node.kwargs)
         print("done execute node")
 
         res = query
-        # print(query)
+        print(query)
         return res
 
     def _execute(self, **kwargs):

@@ -1,3 +1,9 @@
+\echo ""
+\echo ""
+\echo ""
+\echo "getX"
+\echo ""
+
 DROP FUNCTION IF EXISTS getX(geometry);
 CREATE OR REPLACE FUNCTION getX(p geometry) RETURNS float AS
 $BODY$

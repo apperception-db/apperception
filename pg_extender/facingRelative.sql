@@ -1,3 +1,9 @@
+\echo ""
+\echo ""
+\echo ""
+\echo "facingRelative"
+\echo ""
+
 CREATE OR REPLACE FUNCTION facingRelative(object_heading real, camera_heading real) RETURNS real AS
 $BODY$
 BEGIN
