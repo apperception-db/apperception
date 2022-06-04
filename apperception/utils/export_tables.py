@@ -3,8 +3,7 @@ from psycopg2._psycopg import connection as Connection
 
 def export_tables(conn: Connection, data_path: str):
     # create a query to specify which values we want from the database.
-    s = "SELECT *"
-    s += " FROM "
+    s = "SELECT * FROM "
     s_trajectory = s + "Item_General_Trajectory"
     s_bbox = s + "General_Bbox"
     s_camera = s + "Cameras"

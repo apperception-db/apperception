@@ -1,3 +1,9 @@
+\echo ""
+\echo ""
+\echo ""
+\echo "roadSegment"
+\echo ""
+
 CREATE OR REPLACE FUNCTION roadSegment(segment_type text) RETURNS geometry[] AS
 $BODY$
 DECLARE
