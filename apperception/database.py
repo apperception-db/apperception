@@ -267,10 +267,7 @@ class Database:
 
         predicate_sql = fn_to_sql(predicate, tables_sql)
         query_str = query_to_str(query)
-        joins = [
-            f"JOIN ({query_str}) as {table} USING (cameraId)"
-            for table in tables[1:]
-        ]
+        joins = [f"JOIN ({query_str}) as {table} USING (cameraId)" for table in tables[1:]]
 
         return f"""
         SELECT DISTINCT *
