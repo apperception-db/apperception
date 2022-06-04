@@ -268,7 +268,7 @@ class Database:
         predicate_sql = fn_to_sql(predicate, tables_sql)
         query_str = query_to_str(query)
         joins = [
-            f"JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId"
+            f"JOIN ({query_str}) as {table} USING (cameraId)"
             for table in tables[1:]
         ]
 
@@ -276,7 +276,7 @@ class Database:
         SELECT DISTINCT *
         FROM ({query_str}) as {tables[0]}
         {" ".join(joins)}
-        {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if found_camera else ""}
+        {f"JOIN Cameras USING (cameraId)" if found_camera else ""}
         WHERE {predicate_sql}
         """
 

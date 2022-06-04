@@ -29,7 +29,7 @@ BEGIN
                           WHERE ROUND(CAST(heading * 180 / PI() AS numeric), 3) != -45 
                           ORDER BY segmentLine <-> point ASC LIMIT 1 );
      END IF;
-     RETURN CAST((result + 360 + 90) AS numeric) % 360;
+     RETURN CAST(result AS numeric) % 360;
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
