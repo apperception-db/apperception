@@ -35,7 +35,23 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
     else:
         location = f"{visitor.visit(arg_location)}"
     return (
-        f"roadDirection({location}, {visitor.visit(arg_time)})"
+        f"roadDirection({location}, {visitor.visit(arg_time)}, {determine_heading(visitor, arg_location)})"
         if arg_time
-        else f"roadDirection({location})"
+        else f"roadDirection({location}, {determine_heading(visitor, arg_location)})"
     )
+
+def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
+    if isinstance(arg, ast.Attribute):
+        value = arg.value
+        attr = arg.attr
+        if attr == "cam":
+            heading = f"{visitor.visit(value)}.cameraHeading"
+        elif attr == "ego":
+            heading = f"{visitor.visit(value)}.egoHeading"
+        else:
+            heading = f"{visitor.visit(value)}.itemHeadings"
+    elif isinstance(arg, ast.Name):
+        heading = f"{visitor.visit(arg)}.itemHeadings"
+    else:
+        heading = f"{visitor.visit(arg)}"
+    return heading
