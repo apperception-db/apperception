@@ -40,6 +40,7 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
         else f"roadDirection({location}, {determine_heading(visitor, arg_location)})"
     )
 
+
 def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
     if isinstance(arg, ast.Attribute):
         value = arg.value
