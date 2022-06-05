@@ -27,7 +27,7 @@ BEGIN
         -- result := default_dir;
         RETURN default_dir;
      END IF;
-     RETURN CAST((result + 360 + 90) AS numeric) % 360;
+     RETURN CAST((result + 360) AS numeric) % 360;
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
