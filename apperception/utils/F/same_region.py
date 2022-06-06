@@ -17,10 +17,10 @@ def same_region(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_time: Optional[ast.expr] = None
     if len(args) > 3:
         arg_time = args[3]
-   
+
     if not isinstance(arg_type, ast.Constant) or arg_type.value.lower() not in ROAD_TYPES:
         raise Exception(f"Unsupported road type: {arg_type}")
-   
+
     if isinstance(arg_traj1, ast.Attribute):
         value = arg_traj1.value
         attr = arg_traj1.attr
