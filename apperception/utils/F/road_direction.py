@@ -11,9 +11,9 @@ if TYPE_CHECKING:
 
 @fake_fn
 def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
-    arg_location = args[0]
+    arg_location, arg_default = args[0], args[-1]
     arg_time = None
-    if len(args) > 1:
+    if len(args) > 2:
         arg_time = args[1]
 
     if isinstance(arg_location, ast.Attribute):
@@ -35,9 +35,9 @@ def road_direction(visitor: "GenSqlVisitor", args: List[ast.expr]):
     else:
         location = f"{visitor.visit(arg_location)}"
     return (
-        f"roadDirection({location}, {visitor.visit(arg_time)}, {determine_heading(visitor, arg_location)})"
+        f"roadDirection({location}, {visitor.visit(arg_time)}, {determine_heading(visitor, arg_default)})"
         if arg_time
-        else f"roadDirection({location}, {determine_heading(visitor, arg_location)})"
+        else f"roadDirection({location}, {determine_heading(visitor, arg_default)})"
     )
 
 
@@ -50,6 +50,7 @@ def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
         elif attr == "ego":
             heading = f"{visitor.visit(value)}.egoHeading"
         else:
+            #TODO: Need to make a time parameter for roadDirection() in order for this work
             heading = f"{visitor.visit(value)}.itemHeadings"
     elif isinstance(arg, ast.Name):
         heading = f"{visitor.visit(arg)}.itemHeadings"
