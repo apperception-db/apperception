@@ -50,7 +50,7 @@ def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
         elif attr == "ego":
             heading = f"{visitor.visit(value)}.egoHeading"
         else:
-            #TODO: Need to make a time parameter for roadDirection() in order for this work
+            # TODO: Need to make a time parameter for roadDirection() in order for this work
             heading = f"{visitor.visit(value)}.itemHeadings"
     elif isinstance(arg, ast.Name):
         heading = f"{visitor.visit(arg)}.itemHeadings"
