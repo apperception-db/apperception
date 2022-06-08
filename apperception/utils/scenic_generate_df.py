@@ -195,10 +195,12 @@ def get_camera_heading(rotation):
     # we subtract 90 and add another 360 due to the fact that the rotation is rotated around the z-axis by 90
     return -(math.degrees(rot_q.yaw_pitch_roll[0]) + 360 - 90 + 360) % 360
 
+
 def get_camera_position(camera_translation, ego_translation):
     rot = Quaternion(axis=[0, 0, 1], angle=np.pi / 2)
     rot_camera = np.array(rot.rotate(camera_translation))
     return np.array(rot_camera) + np.array(ego_translation)
+
 
 if __name__ == "__main__":
     data, anno = scenic_generate_df()
