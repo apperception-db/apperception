@@ -155,6 +155,13 @@ def scenic_generate_df():
     df_sample_annotation["camera_heading"] = df_sample_annotation.apply(
         lambda x: get_camera_heading(x.rotation), axis=1
     )
+
+    # Camera Position
+    df_sample_data["camera_translation"] = df_sample_data.apply(
+        lambda x: (get_camera_position(x.camera_translation, x.ego_translation)), axis=1
+    )
+
+    # Headings
     df_sample_data["ego_heading"] = df_sample_data.apply(
         lambda x: (get_heading(x.ego_rotation)), axis=1
     )
@@ -188,6 +195,10 @@ def get_camera_heading(rotation):
     # we subtract 90 and add another 360 due to the fact that the rotation is rotated around the z-axis by 90
     return -(math.degrees(rot_q.yaw_pitch_roll[0]) + 360 - 90 + 360) % 360
 
+def get_camera_position(camera_translation, ego_translation):
+    rot = Quaternion(axis=[0, 0, 1], angle=np.pi / 2)
+    rot_camera = np.array(rot.rotate(camera_translation))
+    return np.array(rot_camera) + np.array(ego_translation)
 
 if __name__ == "__main__":
     data, anno = scenic_generate_df()
