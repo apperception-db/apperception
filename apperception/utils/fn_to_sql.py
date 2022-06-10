@@ -123,9 +123,6 @@ class GenSqlVisitor(ast.NodeVisitor):
     def generic_visit(self, node: ast.AST) -> None:
         raise Exception("Unsupported node type: " + type(node).__name__)
 
-    def visit_Str(self, node: ast.Str) -> str:
-        return "'{}'".format(node.s)
-
     def visit_Lambda(self, node: ast.Lambda) -> str:
         args = [arg.arg for arg in node.args.args]
         if len(args) != len(self.tables):
@@ -185,6 +182,15 @@ class GenSqlVisitor(ast.NodeVisitor):
         if isinstance(value, str):
             return f"'{value}'"
         return str(value)
+
+    def visit_Str(self, node: ast.Str) -> str:
+        return f"'{node.s}'"
+    
+    def visit_Num(self, node: ast.Num) -> str:
+        n = node.n
+        if n.imag != 0:
+            raise Exception("Does not support complex number")
+        return str(n.real)
 
     def visit_Attribute(self, node: ast.Attribute) -> str:
         # Should we not allow users to directly acces the database's field?
