@@ -6,10 +6,12 @@ __pycache__
 yolov4-deepsort
 yolov5-deepsort
 .mypy_cache
+.pytest_cache
 .idea
 output
 .apperception_cache
 env
+.venv
 
 *.csv
 *.pickle
@@ -20,3 +22,4 @@ v1.0-mini
 *.pickle
 
 *.json
+data/nuscenes
