@@ -1,7 +1,9 @@
+from . import views
 from .bounding_box import BoundingBox
 from .box import Box
 from .camera import Camera
 from .camera_config import CameraConfig
+from .fetch_camera_tuple import FetchCameraTuple
 from .lens import Lens
 from .point import Point
 from .query_type import QueryType
@@ -20,4 +22,6 @@ __all__ = [
     "TrackedObject",
     "Tracker",
     "Trajectory",
+    "views",
+    "FetchCameraTuple",
 ]

@@ -1,6 +1,7 @@
 import ast
 import inspect
 from datetime import datetime
+from os import environ
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 import psycopg2
@@ -10,17 +11,18 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import QueryType, Trajectory
-from apperception.scenic_util import fetch_camera as su_fetch_camera
-from apperception.utils import (add_recognized_objects, fn_to_sql,
+from apperception.utils import (add_recognized_objects, fetch_camera,
+                                fetch_camera_framenum, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
-                                reformat_bbox_trajectories)
+                                reformat_bbox_trajectories,
+                                timestamp_to_framenum)
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
     from psycopg2 import cursor as Cursor
 
     from .data_types import Camera
-    from .new_world import World
+    from .world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
@@ -265,16 +267,13 @@ class Database:
 
         predicate_sql = fn_to_sql(predicate, tables_sql)
         query_str = query_to_str(query)
-        joins = [
-            f"JOIN ({query_str}) as {table} ON {table}.cameraId = {tables[0]}.cameraId"
-            for table in tables[1:]
-        ]
+        joins = [f"JOIN ({query_str}) as {table} USING (cameraId)" for table in tables[1:]]
 
         return f"""
         SELECT DISTINCT *
         FROM ({query_str}) as {tables[0]}
         {" ".join(joins)}
-        {f"JOIN Cameras ON Cameras.cameraId = {tables[0]}.cameraId" if found_camera else ""}
+        {f"JOIN Cameras USING (cameraId)" if found_camera else ""}
         WHERE {predicate_sql}
         """
 
@@ -319,8 +318,14 @@ class Database:
         self.cursor.execute(q)
         return self.cursor.fetchall()
 
-    def fetch_camera(self, scene_name: str, frame_timestamp: datetime):
-        return su_fetch_camera(self.connection, scene_name, frame_timestamp)
+    def fetch_camera(self, scene_name: str, frame_timestamp: List[str]):
+        return fetch_camera(self.connection, scene_name, frame_timestamp)
+
+    def fetch_camera_framenum(self, scene_name: str, frame_num: List[int]):
+        return fetch_camera_framenum(self.connection, scene_name, frame_num)
+
+    def timestamp_to_framenum(self, scene_name: str, timestamps: List[str]):
+        return timestamp_to_framenum(self.connection, scene_name, timestamps)
 
     def get_len(self, query: Query):
         """
@@ -349,6 +354,16 @@ class Database:
         traj = Table(TRAJ_TABLE)
         q = SnowflakeQuery.from_(traj).select("*").where(traj.cameraId == camera_id)
         return query + q if query else q  # UNION
+
+    def road_direction(self, x: float, y: float):
+        q = f"SELECT roadDirection({x}, {y});"
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
+
+    def road_coords(self, x: float, y: float):
+        q = f"SELECT roadCoords({x}, {y});"
+        self.cursor.execute(q)
+        return self.cursor.fetchall()
 
     def get_bbox(self, query: Query):
         self.cursor.execute(query.get_sql())
@@ -383,6 +398,28 @@ class Database:
         """
 
         print("get_traj_key", query)
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def get_id_time_camId_filename(self, query: Query, num_joined_tables: int):
+        itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
+        timestamp = "cameras.timestamp"
+        camId = "cameras.cameraId"
+        filename = "cameras.filename"
+        query = query_to_str(query).replace(
+            "SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1
+        )
+
+        print("get_id_time_camId_filename", query)
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def get_traj_attr(self, query: Query, attr: str):
+        query = f"""
+        SELECT {attr} FROM ({query_to_str(query)}) as final
+        """
+
+        print("get_traj_attr:", attr, query)
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
@@ -473,4 +510,12 @@ class Database:
         overlay_bboxes(fetched_meta, cams, boxed)
 
 
-database = Database()
+database = Database(
+    psycopg2.connect(
+        dbname=environ.get("AP_DB", "mobilitydb"),
+        user=environ.get("AP_USER", "docker"),
+        host=environ.get("AP_HOST", "localhost"),
+        port=environ.get("AP_PORT", "25432"),
+        password=environ.get("AP_PASSWORD", "docker"),
+    )
+)

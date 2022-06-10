@@ -3,17 +3,11 @@ from __future__ import annotations
 import ast
 import os
 from inspect import FullArgSpec, getfullargspec
-from sys import version_info
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from apperception.metadata import metadata_view
+from decompyle3 import deparse_code2str
 
-if version_info.major != 3:
-    raise Exception("Only support python3")
-if version_info.minor < 7:
-    from uncompyle6 import deparse_code2str
-else:
-    from decompyle3 import deparse_code2str
+from apperception.data_types.views import metadata_view
 
 from . import F
 
@@ -188,6 +182,15 @@ class GenSqlVisitor(ast.NodeVisitor):
         if isinstance(value, str):
             return f"'{value}'"
         return str(value)
+
+    def visit_Str(self, node: ast.Str) -> str:
+        return f"'{node.s}'"
+
+    def visit_Num(self, node: ast.Num) -> str:
+        n = node.n
+        if n.imag != 0:
+            raise Exception("Does not support complex number")
+        return str(n.real)
 
     def visit_Attribute(self, node: ast.Attribute) -> str:
         # Should we not allow users to directly acces the database's field?

@@ -1,7 +1,7 @@
 import ast
 import os
 
-import uncompyle6
+from decompyle3 import deparse_code2str
 from astpretty import pprint as apprint
 
 
@@ -9,7 +9,7 @@ def main():
     def pred(obj, cam):
         return (cam.x - 10) <= obj.x <= (cam.x + 10) and (cam.y - 15) <= obj.y <= (cam.y + 70)
 
-    s = uncompyle6.deparse_code2str(pred.__code__, out=open(os.devnull, "w"))
+    s = deparse_code2str(pred.__code__, out=open(os.devnull, "w"))
     tree = ast.parse(s)
     # print(pred.__code__)
     # print(s)

@@ -3,13 +3,18 @@ from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import numpy as np
 
-from apperception.scenic_util import bbox_to_data3d, join
+from .bbox_to_data3d import bbox_to_data3d
+from .join import join
 
 if TYPE_CHECKING:
+    from psycopg2 import connection as Connection
+
     from ..data_types import TrackedObject
 
 
-def add_recognized_objects(conn, formatted_result: Dict[str, "TrackedObject"], camera_id: str):
+def add_recognized_objects(
+    conn: "Connection", formatted_result: Dict[str, "TrackedObject"], camera_id: str
+):
     for item_id in formatted_result:
         object_type = formatted_result[item_id].object_type
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)
@@ -38,7 +43,7 @@ def add_recognized_objects(conn, formatted_result: Dict[str, "TrackedObject"], c
 
 
 def bboxes_to_postgres(
-    conn,
+    conn: "Connection",
     item_id: str,
     object_type: str,
     color: str,

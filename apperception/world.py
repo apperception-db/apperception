@@ -1,254 +1,558 @@
-import copy
+from __future__ import annotations
+
 import datetime
+import inspect
+import uuid
+from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
+                    Tuple, Union)
 
 import cv2
-import matplotlib
 import numpy as np
-from metadata_context import MetadataContext
-from scenic_util import transformation
-from video_context import VideoContext
-from world_executor import WorldExecutor
+from pypika import Table
+from pypika.dialects import SnowflakeQuery
 
-matplotlib.use("Qt5Agg")
+from apperception.data_types import Camera, FetchCameraTuple, QueryType
+from apperception.database import database
+from apperception.utils import transformation
 
-BASE_VOLUME_QUERY_TEXT = "stbox 'STBOX Z(({x1}, {y1}, {z1}),({x2}, {y2}, {z2}))'"
-world_executor = WorldExecutor()
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from .data_types import Trajectory
+
+# matplotlib.use("Qt5Agg")
+# print("get backend", matplotlib.get_backend())
+
+camera_nodes: Dict[str, "Camera"] = {}
 
 
 class World:
-    def __init__(self, name, units, enable_tasm=False):
-        self.VideoContext = VideoContext(name, units)
-        self.MetadataContext = MetadataContext(single_mode=False)
-        self.MetadataContext.start_time = self.VideoContext.start_time
-        self.GetVideo = False
-        self.enable_tasm = enable_tasm
-        # self.AccessedVideoContext = False
+    _parent: Optional[World]
+    _name: str
+    _fn: Tuple[Optional[Callable]]
+    _kwargs: dict[str, Any]
+    _done: bool
+    _world_id: str
+    _timestamp: datetime.datetime
+    _types: set["QueryType"]
+    _materialized: bool
 
-    def get_camera(self, scene_name, frame_num):
-        # Change depending if you're on docker or not
-        # TODO: fix get_camera in scenic_world_executor.py
-        if self.enable_tasm:
-            world_executor.connect_db(
-                port=5432, user="docker", password="docker", database_name="mobilitydb"
+    def __init__(
+        self,
+        world_id: str,
+        timestamp: datetime.datetime,
+        name: Optional[str] = None,
+        parent: Optional[World] = None,
+        fn: Optional[Union[str, Callable]] = None,
+        kwargs: Optional[dict[str, Any]] = None,
+        done: bool = False,
+        types: Optional[Set["QueryType"]] = None,
+        materialized: bool = False,
+    ):
+        self._parent = parent
+        self._name = "" if name is None else name
+        self._fn = (fn if fn is None else (getattr(database, fn) if isinstance(fn, str) else fn),)
+        self._kwargs = {} if kwargs is None else kwargs
+        self._done = done  # update node
+        self._world_id = world_id
+        self._timestamp = timestamp
+        self._types = set() if types is None else types
+        self._materialized = materialized
+
+    def get_trajectory_images(
+        self,
+        scene_name: str,
+        trajectory: Trajectory,
+    ):
+        frame_nums = database.timestamp_to_framenum(
+            scene_name, ["'" + x + "'" for x in trajectory.datetimes]
+        )
+        # c amera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
+        image_names: List[List[str]] = []
+        for frame_num in frame_nums:
+            current_cameras = database.fetch_camera_framenum(scene_name, [frame_num[0]])
+            currant_images = [x[7] for x in current_cameras]
+            image_names.append(currant_images)
+        return image_names
+
+    # TODO: Eventually move these to there own utils file.s
+    def overlay_trajectory(
+        self,
+        scene_name: str,
+        trajectory: Trajectory,
+        file_name: str,
+        overlay_headings: bool = False,
+        overlay_road: bool = False,
+    ):
+        frame_nums = database.timestamp_to_framenum(
+            scene_name, ["'" + x + "'" for x in trajectory.datetimes]
+        )
+        # c amera_info is a list of list of cameras, where the list of cameras at each index represents the cameras at the respective timestamp
+        camera_info: List[List["FetchCameraTuple"]] = []
+        for frame_num in frame_nums:
+            current_cameras = database.fetch_camera_framenum(scene_name, [frame_num[0]])
+            camera_info.append(current_cameras)
+
+        overlay_info = get_overlay_info(trajectory, camera_info)
+
+        for file_prefix in overlay_info:
+            frame_width = None
+            frame_height = None
+            vid_writer = None
+            camera_points = overlay_info[file_prefix]
+            for point in camera_points:
+                (
+                    traj_2d,
+                    framenum,
+                    filename,
+                    camera_heading,
+                    ego_heading,
+                    ego_translation,
+                    camera_config,
+                ) = point
+                frame_im = cv2.imread(filename)
+                cv2.circle(
+                    frame_im,
+                    tuple([int(traj_2d[0][0]), int(traj_2d[1][0])]),
+                    10,
+                    (0, 255, 0),
+                    -1,
+                )
+                if overlay_headings:
+                    cam_road_dir = self.road_direction(ego_translation[0], ego_translation[1])[0][0]
+                    stats = {
+                        "Ego Heading": str(round(ego_heading, 2)),
+                        "Camera Heading": str(round(camera_heading, 2)),
+                        "Road Direction": str(round(cam_road_dir, 2)),
+                    }
+                    self.overlay_stats(frame_im, stats)
+                if overlay_road:
+                    frame_im = self.overlay_road(frame_im, camera_config)
+                if vid_writer is None:
+                    frame_height, frame_width = frame_im.shape[:2]
+                    vid_writer = cv2.VideoWriter(
+                        "./output/" + file_name + "." + file_prefix + ".mp4",
+                        cv2.VideoWriter_fourcc("m", "p", "4", "v"),
+                        10,
+                        (frame_width, frame_height),
+                    )
+                vid_writer.write(frame_im)
+            if vid_writer is not None:
+                vid_writer.release()
+
+    def overlay_stats(self, frame, stats):
+        x, y = 10, 50
+        for stat in stats:
+            statValue = stats[stat]
+            cv2.putText(
+                frame,
+                stat + ": " + statValue,
+                (x, y),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                1,
+                (0, 255, 0),
+                3,
             )
+            y += 50
+
+    def overlay_road(self, frame, camera_config):
+        ego_translation = camera_config["egoTranslation"]
+        camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
+        pixel_start_enc = world_to_pixel(
+            camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
+        )
+        pixel_end_enc = world_to_pixel(
+            camera_config, (camera_road_coords[2], camera_road_coords[3], 0)
+        )
+        pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
+        pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
+        print(camera_road_coords, ego_translation)
+        frame = cv2.line(
+            frame,
+            pixel_start,
+            pixel_end,
+            (255, 0, 0),
+            3,
+        )
+        return frame
+
+    def add_camera(self, camera: "Camera"):
+        node1 = self._insert_camera(camera=camera)
+        node2 = node1._retrieve_camera(camera_id=camera.id)
+        return node2
+
+    def recognize(self, camera: "Camera", annotation: "pd.DataFrame"):
+        node1 = self._insert_bbox_traj(camera=camera, annotation=annotation)
+        node2 = node1._retrieve_bbox(camera_id=camera.id)
+        node3 = node2._retrieve_traj(camera_id=camera.id)
+        return node3
+
+    def filter(self, predicate: Union[str, Callable]) -> World:
+        return derive_world(
+            self,
+            {QueryType.TRAJ, QueryType.BBOX},
+            database.filter,
+            predicate=predicate,
+        )
+
+    def exclude(self, other: World) -> World:
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.exclude, world=other)
+
+    def union(self, other: World) -> World:
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.union, world=other)
+
+    def intersect(self, other: World) -> World:
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.intersect, world=other)
+
+    def sym_diff(self, other: World) -> World:
+        return self.union(other).exclude(self.intersect(other))
+
+    def __lshift__(self, camera: Union["Camera", Tuple["Camera", "pd.DataFrame"]]):
+        """add a camera or add a camera and recognize"""
+        if isinstance(camera, Camera):
+            return self.add_camera(camera)
+        c, a, *_ = camera
+        return self.add_camera(c).recognize(c, a)
+
+    def __sub__(self, other: World) -> World:
+        return self.exclude(other)
+
+    def __or__(self, other: World) -> World:
+        return self.union(other)
+
+    def __and__(self, other: World) -> World:
+        return self.intersect(other)
+
+    def __xor__(self, other: World) -> World:
+        return self.sym_diff(other)
+
+    def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_video,
+            cams=[camera_nodes[cam_id] for cam_id in cam_ids],
+            boxed=boxed,
+        )._execute_from_root(QueryType.TRAJ)
+
+    def road_direction(self, x: float, y: float):
+        return database.road_direction(x, y)
+
+    def road_coords(self, x: float, y: float):
+        return database.road_coords(x, y)
+
+    def get_bbox(self):
+        return derive_world(
+            self,
+            {QueryType.BBOX},
+            database.get_bbox,
+        )._execute_from_root(QueryType.BBOX)
+
+    def get_traj(self) -> List[List["Trajectory"]]:
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_traj,
+        )._execute_from_root(QueryType.TRAJ)
+
+    def get_traj_key(self):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_traj_key,
+        )._execute_from_root(QueryType.TRAJ)
+
+    def get_traj_attr(self, attr: str):
+        return derive_world(
+            self, {QueryType.TRAJ}, database.get_traj_attr, attr=attr
+        )._execute_from_root(QueryType.TRAJ)
+
+    def get_headings(self) -> List[List[List[float]]]:
+        # TODO: Optimize operations with NumPy if possible
+        trajectories = self.get_traj()
+        headings: List[List[List[float]]] = []
+        for trajectory in trajectories:
+            _headings: List[List[float]] = []
+            for traj in trajectory:
+                __headings: List[float] = []
+                for j in range(1, len(traj.coordinates)):
+                    prev_pos = traj.coordinates[j - 1]
+                    current_pos = traj.coordinates[j]
+                    heading = 0.0
+                    if current_pos[1] != prev_pos[1]:
+                        heading = np.arctan2(
+                            current_pos[1] - prev_pos[1], current_pos[0] - prev_pos[0]
+                        )
+                    # convert to degrees from radian
+                    heading *= 180 / np.pi
+                    # converting such that all headings are positive
+                    heading = (heading + 360) % 360
+                    __headings.append(heading)
+                _headings.append(__headings)
+            headings.append(_headings)
+        return headings
+
+    def get_distance(self, start: datetime.datetime, end: datetime.datetime):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_distance,
+            start=str(start),
+            end=str(end),
+        )._execute_from_root(QueryType.TRAJ)
+
+    def get_speed(self, start: datetime.datetime, end: datetime.datetime):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_speed,
+            start=str(start),
+            end=str(end),
+        )._execute_from_root(QueryType.TRAJ)
+
+    def get_len(self):
+        return derive_world(
+            self,
+            {QueryType.CAM},
+            database.get_len,
+        )._execute_from_root(QueryType.CAM)
+
+    def get_camera(self):
+        return derive_world(
+            self,
+            {QueryType.CAM},
+            database.get_cam,
+        )._execute_from_root(QueryType.CAM)
+
+    def get_bbox_geo(self):
+        return derive_world(
+            self,
+            {QueryType.BBOX},
+            database.get_bbox_geo,
+        )._execute_from_root(QueryType.BBOX)
+
+    def get_time(self):
+        return derive_world(
+            self,
+            {QueryType.BBOX},
+            database.get_time,
+        )._execute_from_root(QueryType.BBOX)
+
+    def get_id_time_camId_filename(self, num_joined_tables: int):
+        return derive_world(
+            self,
+            {QueryType.TRAJ},
+            database.get_id_time_camId_filename,
+            num_joined_tables=num_joined_tables,
+        )._execute_from_root(QueryType.TRAJ)
+
+    def _insert_camera(self, camera: "Camera"):
+        return derive_world(
+            self,
+            {QueryType.CAM},
+            database.insert_cam,
+            camera=camera,
+        )
+
+    def _retrieve_camera(self, camera_id: str):
+        return derive_world(
+            self,
+            {QueryType.CAM},
+            database.retrieve_cam,
+            camera_id=camera_id,
+        )
+
+    def _insert_bbox_traj(self, camera: "Camera", annotation: "pd.DataFrame"):
+        return derive_world(
+            self,
+            {QueryType.TRAJ, QueryType.BBOX},
+            database.insert_bbox_traj,
+            camera=camera,
+            annotation=annotation,
+        )
+
+    def _retrieve_bbox(self, camera_id: str):
+        return derive_world(self, {QueryType.BBOX}, database.retrieve_bbox, camera_id=camera_id)
+
+    def _retrieve_traj(self, camera_id: str):
+        return derive_world(self, {QueryType.TRAJ}, database.retrieve_traj, camera_id=camera_id)
+
+    def _execute_from_root(self, _type: "QueryType") -> Any:
+        nodes: list[World] = []
+        curr: Optional[World] = self
+        res = None
+        query = ""
+
+        if _type is QueryType.CAM:
+            query = SnowflakeQuery.from_(Table("cameras")).select("*")
+        elif _type is QueryType.BBOX:
+            query = SnowflakeQuery.from_(Table("general_bbox")).select("*")
+        elif _type is QueryType.TRAJ:
+            query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
         else:
-            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return world_executor.get_camera(scene_name, frame_num)
+            query = ""
 
-    #########################
-    ###   Video Context  ####
-    #########################
-    def get_lens(self, cam_id=""):
-        return self.get_camera(cam_id).lens
+        # collect all the nodes til the root
+        while curr:
+            nodes.append(curr)
+            curr = curr._parent
 
-    def get_name(self):
-        return self.VideoContext.get_name()
+        # execute the nodes from the root
+        for node in nodes[::-1]:
+            # root
+            if node.fn is None:
+                continue
 
-    def get_units(self):
-        return self.VideoContext.get_units()
+            if node.fn == database.insert_cam or node.fn == database.insert_bbox_traj:
+                print("execute:", node.fn.__name__)
+                if not node.done:
+                    node._execute()
+                    node._done = True
+            # if different type => pass
+            elif _type not in node.types:
+                continue
+            # treat update method differently
+            else:
+                print("execute:", node.fn.__name__)
+                # print(query)
+                query = node._execute(query=query, **node.kwargs)
+        print("done execute node")
 
-    # TODO: should be add_item / add_camera?
-    def item(self, item_id, cam_id, item_type, location):
-        new_context = copy.deepcopy(self)
-        new_context.VideoContext.item(item_id, cam_id, item_type, location)
-        return new_context
+        res = query
+        print(query)
+        return res
 
-    def camera(self, scenic_scene_name: str):
-        new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera(scenic_scene_name)
-        return new_context
+    def _execute(self, **kwargs):
+        fn = self._fn[0]
+        if fn is None:
+            raise Exception("A world without a function should not be executed")
 
-    def add_properties(self, cam_id, properties, property_type):
-        new_context = copy.deepcopy(self)
-        new_context.VideoContext.properties(cam_id, properties, property_type)
-        return new_context
+        fn_spec = inspect.getfullargspec(fn)
+        if "world_id" in fn_spec.args or fn_spec.varkw is not None:
+            return fn(**{"world_id": self._world_id, **self._kwargs, **kwargs})
+        return fn(**{**self._kwargs, **kwargs})
 
-    def recognize(self, cam_id, sample_data, annotation):
-        new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera_nodes[cam_id].recognize(sample_data, annotation)
-        return new_context
+    def _print_lineage(self):
+        curr = self
+        while curr:
+            print(curr)
+            curr = curr._parent
 
-    #########################
-    ### Metadata Context ####
-    #########################
+    def __str__(self):
+        return f"fn={self._fn[0]}\nkwargs={self._kwargs}\ndone={self._done}\nworld_id={self._world_id}\n"
 
-    def get_columns(self, *argv, distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.get_columns(argv, distinct)
-        return new_context
+    @property
+    def world_id(self):
+        return self._world_id
 
-    def predicate(self, p, evaluated_var={}):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.predicate(p, evaluated_var)
-        return new_context
+    @property
+    def timestamp(self):
+        return self._timestamp
 
-    def selectkey(self, distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.selectkey(distinct)
-        return new_context
+    @property
+    def parent(self):
+        return self._parent
 
-    def get_trajectory(self, interval=[], distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.get_trajectory(interval, distinct)
-        return new_context
+    @property
+    def name(self):
+        return self._name
 
-    def get_geo(self, interval=[], distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.get_geo(interval, distinct)
-        return new_context
+    @property
+    def fn(self):
+        return self._fn[0]
 
-    def get_time(self, distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.get_time(distinct)
-        return new_context
+    @property
+    def kwargs(self):
+        return self._kwargs
 
-    def get_distance(self, interval=[], distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.distance(interval, distinct)
-        return new_context
+    @property
+    def done(self):
+        return self._done
 
-    def get_speed(self, interval=[], distinct=False):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.get_speed(interval, distinct)
-        return new_context
+    @property
+    def types(self):
+        return self._types
 
-    def get_video(self, cam_id=[]):
-        # Go through all the cameras in 'filtered' world and obtain videos
-        new_context = copy.deepcopy(self)
-        new_context.GetVideo = True
-        # get camera gives the direct results from the data base
-        new_context.get_video_cams = self.get_camera(cam_id)
-        return new_context
+    @property
+    def materialized(self):
+        return self._materialized
 
-    def interval(self, time_interval):
-        new_context = copy.deepcopy(self)
-        new_context.MetadataContext.interval(time_interval)
-        return new_context
 
-    def execute(self):
-        world_executor.create_world(self)
-        if self.enable_tasm:
-            world_executor.enable_tasm()
-            print("successfully enable tasm during execution time")
-            # Change depending if you're on docker or not
-            world_executor.connect_db(
-                port=5432, user="docker", password="docker", database_name="mobilitydb"
+def empty_world(name: str) -> World:
+    world_id = str(uuid.uuid4())
+    timestamp = datetime.datetime.utcnow()
+    return World(world_id, timestamp, name)
+
+
+def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> World:
+    world_id = str(uuid.uuid4())
+    timestamp = datetime.datetime.utcnow()
+
+    return World(
+        world_id,
+        timestamp,
+        fn=fn,
+        kwargs=kwargs,
+        parent=parent,
+        types=types,
+    )
+
+
+def world_to_pixel(
+    camera_config: dict, world_coords: Union[np.ndarray, Tuple[float, float, float]]
+):
+    traj_2d = transformation(world_coords, camera_config)
+    return traj_2d
+
+
+def get_overlay_info(trajectory: Trajectory, camera_info: List[List["FetchCameraTuple"]]):
+    """
+    overlay each trajectory 3d coordinate on to the frame specified by the camera_info
+    1. For each point in the trajectory, find the list of cameras that correspond to that timestamp
+    2. Project the trajectory coordinates onto the intrinsics of the camera, and add it to the list of results
+    3. Returns a mapping from each camera type (FRONT, BACK, etc) to the trajectory in pixel coordinates of that camera
+    """
+    traj_obj_3d = trajectory.coordinates
+    result: Dict[str, List[Tuple[np.ndarray, int, str, float, float, List[float], dict]]] = {}
+    for index, cur_camera_infos in enumerate(camera_info):
+        # cur_camera_infos = camera_info[
+        #     index
+        # ]  # camera info of the obejct in one point of the trajectory
+        centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
+        # in order to fit into the function transformation, we develop a dictionary called camera_config
+        for cur_camera_info in cur_camera_infos:
+            # TODO: add type to camera_config
+            camera_config: Dict[str, Any] = {}
+            camera_config["egoTranslation"] = cur_camera_info[1]
+            camera_config["egoRotation"] = np.array(cur_camera_info[2])
+            camera_config["cameraTranslation"] = cur_camera_info[3]
+            camera_config["cameraRotation"] = np.array(cur_camera_info[4])
+            camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
+
+            traj_2d = world_to_pixel(camera_config, centroid_3d)
+
+            framenum = cur_camera_info[6]
+            filename = cur_camera_info[7]
+            camera_heading = cur_camera_info[8]
+            ego_heading = cur_camera_info[9]
+            ego_translation = cur_camera_info[1]
+            file_prefix = "_".join(filename.split("/")[:-1])
+
+            if file_prefix not in result:
+                result[file_prefix] = []
+            result[file_prefix].append(
+                (
+                    traj_2d,
+                    framenum,
+                    filename,
+                    camera_heading,
+                    ego_heading,
+                    ego_translation,
+                    camera_config,
+                )
             )
-        else:
-            world_executor.connect_db(user="docker", password="docker", database_name="mobilitydb")
-        return world_executor.execute()
+    return result
 
-    def select_intersection_of_interest_or_use_default(self, cam_id, default=True):
-        print(self.VideoContext.camera_nodes)
-        camera = self.VideoContext.camera_nodes[cam_id]
-        video_file = camera.video_file
-        if default:
-            x1, y1, z1 = 0.01082532, 2.59647246, 0
-            x2, y2, z2 = 3.01034039, 3.35985782, 2
-        else:
-            vs = cv2.VideoCapture(video_file)
-            frame = vs.read()
-            frame = frame[1]
-            cv2.namedWindow("Frame", cv2.WINDOW_NORMAL)
-            cv2.resizeWindow("Frame", 384, 216)
-            initBB = cv2.selectROI("Frame", frame, fromCenter=False)
-            print(initBB)
-            cv2.destroyAllWindows()
-            print("world coordinate #1")
-            tl = camera.lens.pixel_to_world(initBB[:2], 1)
-            print(tl)
-            x1, y1, z1 = tl
-            print("world coordinate #2")
-            br = camera.lens.pixel_to_world((initBB[0] + initBB[2], initBB[1] + initBB[3]), 1)
-            print(br)
-            x2, y2, z2 = br
-        return BASE_VOLUME_QUERY_TEXT.format(x1=x1, y1=y1, z1=0, x2=x2, y2=y2, z2=2)
 
-    def overlay_trajectory(self, scene_name, trajectory, video_file: str):
-        frame_num = self.trajectory_to_frame_num(trajectory)
-        # frame_num is int[[]], hence camera_info should also be [[]]
-        camera_info = []
-        for cur_frame_num in frame_num:
-            camera_info.append(
-                self.get_camera(scene_name, cur_frame_num)
-            )  # TODO: fetch_camera_info in scenic_utils.py
-        assert len(camera_info) == len(frame_num)
-        assert len(camera_info[0]) == len(frame_num[0])
-        # overlay_info = self.get_overlay_info(trajectory, camera_info)
-        # TODO: fix the following to overlay the 2d point onto the frame
-        # TODO: clean up: this for loop does not work anymore because we are not passing in camera
-        # for traj in trajectory:
-        #     current_trajectory = np.asarray(traj[0])
-        #     frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
-        #     vs = cv2.VideoCapture(video_file)
-        #     frame = vs.read()
-        #     frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
-        #     for point in frame_points.tolist():
-        #         cv2.circle(frame, tuple([int(point[0]), int(point[1])]), 3, (255, 0, 0))
-        #     plt.figure()
-        #     plt.imshow(frame)
-        #     plt.show()
-
-    def trajectory_to_frame_num(self, trajectory):
-        """
-        fetch the frame number from the trajectory
-        1. get the time stamp field from the trajectory
-        2. convert the time stamp to frame number
-            Refer to 'convert_datetime_to_frame_num' in 'video_util.py'
-        3. return the frame number
-        """
-        frame_num = []
-        start_time = self.MetadataContext.start_time
-        for traj in trajectory:
-            current_trajectory = traj[0]
-            date_times = current_trajectory["datetimes"]
-            frame_num.append(
-                [
-                    (
-                        datetime.datetime.strptime(t, "%Y-%m-%dT%H:%M:%S+00").replace(tzinfo=None)
-                        - start_time
-                    ).total_seconds()
-                    for t in date_times
-                ]
-            )
-        return frame_num
-
-    def get_overlay_info(self, trajectory, camera_info):
-        """
-        overlay each trajectory 3d coordinate on to the frame specified by the camera_info
-        1. for each trajectory, get the 3d coordinate
-        2. get the camera_info associated to it
-        3. implement the transformation function from 3d to 2d
-            given the single centroid point and camera configuration
-            refer to TODO in "senic_utils.py"
-        4. return a list of (2d coordinate, frame name/filename)
-        """
-        result = []
-        for traj_num in range(len(trajectory)):
-            traj_obj = trajectory[traj_num][0]  # traj_obj means the trajectory of current object
-            traj_obj_3d = traj_obj["coordinates"]  # 3d coordinate list of the object's trajectory
-            camera_info_obj = camera_info[
-                traj_num
-            ]  # camera info list corresponding the 3d coordinate
-            traj_obj_2d = []  # 2d coordinate list
-            for index in range(len(camera_info_obj)):
-                cur_camera_info = camera_info_obj[
-                    index
-                ]  # camera info of the obejct in one point of the trajectory
-                centroid_3d = np.array(traj_obj_3d[index])  # one point of the trajectory in 3d
-                # in order to fit into the function transformation, we develop a dictionary called camera_config
-                camera_config = {}
-                camera_config["egoTranslation"] = cur_camera_info[1]
-                camera_config["egoRotation"] = np.array(cur_camera_info[2])
-                camera_config["cameraTranslation"] = cur_camera_info[3]
-                camera_config["cameraRotation"] = np.array(cur_camera_info[4])
-                camera_config["cameraIntrinsic"] = np.array(cur_camera_info[5])
-                traj_2d = transformation(
-                    centroid_3d, camera_config
-                )  # one point of the trajectory in 2d
-
-                framenum = cur_camera_info[6]
-                filename = cur_camera_info[7]
-                traj_obj_2d.append((traj_2d, framenum, filename))
-            result.append(traj_obj_2d)
-        return result
+def trajectory_to_timestamp(trajectory):
+    return [traj[0].datetimes for traj in trajectory]
