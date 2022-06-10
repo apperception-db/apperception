@@ -4,6 +4,7 @@
 \echo "facingRelative"
 \echo ""
 
+DROP FUNCTION IF EXISTS facingRelative(real, real);
 CREATE OR REPLACE FUNCTION facingRelative(target_heading real, viewpoint_heading real) RETURNS real AS
 $BODY$
 BEGIN
@@ -13,6 +14,7 @@ $BODY$
 LANGUAGE 'plpgsql' ;
 
 
+DROP FUNCTION IF EXISTS facingRelative(real, real, timestamptz);
 CREATE OR REPLACE FUNCTION facingRelative(target_heading real, viewpoint_heading real, _time timestamptz) RETURNS real AS
 $BODY$
 BEGIN
@@ -22,6 +24,7 @@ $BODY$
 LANGUAGE 'plpgsql' ;
 
 
+DROP FUNCTION IF EXISTS facingRelative(tfloat, real, timestamptz);
 CREATE OR REPLACE FUNCTION facingRelative(target_headings tfloat, viewpoint_heading real, _time timestamptz) RETURNS real AS
 $BODY$
 BEGIN
@@ -34,6 +37,7 @@ $BODY$
 LANGUAGE 'plpgsql' ;
 
 
+DROP FUNCTION IF EXISTS facingRelative(tfloat, tfloat, timestamptz);
 CREATE OR REPLACE FUNCTION facingRelative(target_headings tfloat, viewpoint_headings tfloat, _time timestamptz) RETURNS real AS
 $BODY$
 BEGIN

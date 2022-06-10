@@ -4,6 +4,7 @@
 \echo "angleBetween"
 \echo ""
 
+DROP FUNCTION IF EXISTS angleBetween(real, real, real);
 CREATE OR REPLACE FUNCTION angleBetween(angle real, angle_from real, angle_to real) RETURNS boolean AS
 $BODY$
 BEGIN
