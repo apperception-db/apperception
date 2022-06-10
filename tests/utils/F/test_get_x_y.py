@@ -15,5 +15,3 @@ from apperception.utils import fn_to_sql, F
 
 def test_get_x_y(fn, sql):
     assert fn_to_sql(fn, ["T", "C"]) == sql
-
-

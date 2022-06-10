@@ -1,3 +1,4 @@
+from .angle_between import angle_between
 from .contained import contained
 from .convert_camera import convert_camera
 from .distance import distance
@@ -22,4 +23,5 @@ __all__ = [
     "road_segment",
     "like",
     "same_region",
+    "angle_between",
 ]

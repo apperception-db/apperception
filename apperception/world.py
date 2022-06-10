@@ -20,8 +20,6 @@ if TYPE_CHECKING:
 
     from .data_types import Trajectory
 
-# matplotlib.use("Qt5Agg")
-# print("get backend", matplotlib.get_backend())
 
 camera_nodes: Dict[str, "Camera"] = {}
 
@@ -226,6 +224,11 @@ class World:
     def __xor__(self, other: World) -> World:
         return self.sym_diff(other)
 
+    def select_all(self):
+        return derive_world(self, {QueryType.TRAJ}, database.select_all)._execute_from_root(
+            QueryType.TRAJ
+        )
+
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
             self,
@@ -240,13 +243,6 @@ class World:
 
     def road_coords(self, x: float, y: float):
         return database.road_coords(x, y)
-
-    def get_bbox(self):
-        return derive_world(
-            self,
-            {QueryType.BBOX},
-            database.get_bbox,
-        )._execute_from_root(QueryType.BBOX)
 
     def get_traj(self) -> List[List["Trajectory"]]:
         return derive_world(
@@ -419,7 +415,8 @@ class World:
         print("done execute node")
 
         res = query
-        print(query)
+        if isinstance(query, list):
+            print("Result length:", len(query))
         return res
 
     def _execute(self, **kwargs):

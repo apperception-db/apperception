@@ -4,7 +4,9 @@ from datetime import datetime
 from os import environ
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
+import pandas as pd
 import psycopg2
+import psycopg2.errors
 from pypika import Column, CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
@@ -118,51 +120,39 @@ class Database:
         self.connection.commit()
 
     def _create_index(self):
+        self.cursor.execute("CREATE INDEX ON Cameras (cameraId);")
+        self.cursor.execute("CREATE INDEX ON Cameras (timestamp);")
+        self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (itemId);")
+        self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (cameraId);")
         self.cursor.execute(
             """
-            CREATE INDEX ON Cameras (cameraId);
-            """
-        )
-
-        self.cursor.execute(
-            """
-            CREATE INDEX ON Cameras (timestamp);
-            """
-        )
-
-        self.cursor.execute(
-            """
-            CREATE INDEX ON Item_General_Trajectory (itemId);
-            """
-        )
-
-        self.cursor.execute(
-            """
-            CREATE INDEX ON Item_General_Trajectory (cameraId);
-            """
-        )
-
-        self.cursor.execute(
-            """
-            CREATE INDEX IF NOT EXISTS traj_idx
-            ON Item_General_Trajectory
-            USING GiST(trajCentroids);
+        CREATE INDEX IF NOT EXISTS traj_idx
+        ON Item_General_Trajectory
+        USING GiST(trajCentroids);
         """
         )
         self.cursor.execute(
             """
-            CREATE INDEX IF NOT EXISTS item_idx
-            ON General_Bbox(itemId);
+        CREATE INDEX IF NOT EXISTS item_idx
+        ON General_Bbox(itemId);
         """
         )
         self.cursor.execute(
             """
-            CREATE INDEX IF NOT EXISTS traj_bbox_idx
-            ON General_Bbox
-            USING GiST(trajBbox);
+        CREATE INDEX IF NOT EXISTS traj_bbox_idx
+        ON General_Bbox
+        USING GiST(trajBbox);
         """
         )
         self.connection.commit()
+
+    def _execute_query(self, query: str) -> List[tuple]:
+        try:
+            self.cursor.execute(query)
+            return self.cursor.fetchall()
+        except psycopg2.errors.DatabaseError as error:
+            self.connection.rollback()
+            raise error
 
     def insert_cam(self, camera: "Camera"):
         values = [
@@ -314,9 +304,7 @@ class Database:
             "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading"
             + f" FROM ({query.get_sql()}) AS final"
         )
-
-        self.cursor.execute(q)
-        return self.cursor.fetchall()
+        return self._execute_query(q)
 
     def fetch_camera(self, scene_name: str, frame_timestamp: List[str]):
         return fetch_camera(self.connection, scene_name, frame_timestamp)
@@ -337,9 +325,7 @@ class Database:
             "SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
             + f" FROM ({query.get_sql()}) AS final"
         )
-
-        self.cursor.execute(q)
-        return self.cursor.fetchall()
+        return self._execute_query(q)
 
     def insert_bbox_traj(self, camera: "Camera", annotation):
         tracking_results = recognize(camera.configs, annotation)
@@ -356,18 +342,15 @@ class Database:
         return query + q if query else q  # UNION
 
     def road_direction(self, x: float, y: float):
-        q = f"SELECT roadDirection({x}, {y});"
-        self.cursor.execute(q)
-        return self.cursor.fetchall()
+        return self._execute_query(f"SELECT roadDirection({x}, {y});")
 
     def road_coords(self, x: float, y: float):
-        q = f"SELECT roadCoords({x}, {y});"
-        self.cursor.execute(q)
-        return self.cursor.fetchall()
+        return self._execute_query(f"SELECT roadCoords({x}, {y});")
 
-    def get_bbox(self, query: Query):
-        self.cursor.execute(query.get_sql())
-        return self.cursor.fetchall()
+    def select_all(self, query: "Query") -> List[tuple]:
+        _query = query_to_str(query)
+        print("select_all:", _query)
+        return self._execute_query(_query)
 
     def get_traj(self, query: Query) -> List[List[Trajectory]]:
         # hack
@@ -377,8 +360,7 @@ class Database:
         """
 
         print("get_traj", query)
-        self.cursor.execute(query)
-        trajectories = self.cursor.fetchall()
+        trajectories = self._execute_query(query)
         return [
             [
                 Trajectory(
@@ -393,35 +375,32 @@ class Database:
         ]
 
     def get_traj_key(self, query: Query):
-        query = f"""
+        _query = f"""
         SELECT itemId FROM ({query_to_str(query)}) as final
         """
 
-        print("get_traj_key", query)
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        print("get_traj_key", _query)
+        return self._execute_query(_query)
 
     def get_id_time_camId_filename(self, query: Query, num_joined_tables: int):
         itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
         timestamp = "cameras.timestamp"
         camId = "cameras.cameraId"
         filename = "cameras.filename"
-        query = query_to_str(query).replace(
+        _query = query_to_str(query).replace(
             "SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1
         )
 
-        print("get_id_time_camId_filename", query)
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        print("get_id_time_camId_filename", _query)
+        return self._execute_query(_query)
 
     def get_traj_attr(self, query: Query, attr: str):
-        query = f"""
+        _query = f"""
         SELECT {attr} FROM ({query_to_str(query)}) as final
         """
 
-        print("get_traj_attr:", attr, query)
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
+        print("get_traj_attr:", attr, _query)
+        return self._execute_query(_query)
 
     def get_bbox_geo(self, query: Query):
         Xmin = CustomFunction("Xmin", ["stbox"])
@@ -439,14 +418,12 @@ class Database:
             Ymax(query.trajBbox),
             Zmax(query.trajBbox),
         )
-        self.cursor.execute(q.get_sql())
-        return self.cursor.fetchall()
+        return self._execute_query(q.get_sql())
 
     def get_time(self, query: Query):
         Tmin = CustomFunction("Tmin", ["stbox"])
         q = SnowflakeQuery.from_(query).select(Tmin(query.trajBbox))
-        self.cursor.execute(q.get_sql())
-        return self.cursor.fetchall()
+        return self._execute_query(q.get_sql())
 
     def get_distance(self, query: Query, start: str, end: str):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
@@ -455,8 +432,7 @@ class Database:
             cumulativeLength(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
-        self.cursor.execute(q.get_sql())
-        return self.cursor.fetchall()
+        return self._execute_query(q.get_sql())
 
     def get_speed(self, query, start, end):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
@@ -466,8 +442,7 @@ class Database:
             speed(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
-        self.cursor.execute(q.get_sql())
-        return self.cursor.fetchall()
+        return self._execute_query(q.get_sql())
 
     def get_video(self, query, cams, boxed):
         bbox = Table(BBOX_TABLE)
@@ -495,10 +470,14 @@ class Database:
             )
         )
 
-        self.cursor.execute(query.get_sql())
-        fetched_meta = self.cursor.fetchall()
-        fetched_meta = reformat_bbox_trajectories(fetched_meta)
-        overlay_bboxes(fetched_meta, cams, boxed)
+        fetched_meta = self._execute_query(query.get_sql())
+        _fetched_meta = reformat_bbox_trajectories(fetched_meta)
+        overlay_bboxes(_fetched_meta, cams, boxed)
+
+    def sql(self, query: str) -> pd.DataFrame:
+        df = pd.DataFrame(self._execute_query(query))
+        df.columns = [d.name for d in self.cursor.description]
+        return df
 
 
 database = Database(
