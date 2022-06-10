@@ -1,3 +1,4 @@
+from .angle_between import angle_between
 from .contained import contained
 from .convert_camera import convert_camera
 from .distance import distance
@@ -24,4 +25,5 @@ __all__ = [
     "like",
     "same_region",
     "ahead",
+    "angle_between",
 ]

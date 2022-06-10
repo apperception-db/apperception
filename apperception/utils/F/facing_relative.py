@@ -11,9 +11,11 @@ if TYPE_CHECKING:
 
 @fake_fn
 def facing_relative(visitor: "GenSqlVisitor", args: List[ast.expr]):
-    arg_heading1, arg_heading2, arg_time = args
+    arg_heading1, arg_heading2, *arg_time = args
 
-    return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.visit(arg_time)})"
+    if len(arg_time) == 0:
+        return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)})"
+    return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.visit(arg_time[0])})"
 
 
 def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
