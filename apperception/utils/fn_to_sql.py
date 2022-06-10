@@ -185,7 +185,7 @@ class GenSqlVisitor(ast.NodeVisitor):
 
     def visit_Str(self, node: ast.Str) -> str:
         return f"'{node.s}'"
-    
+
     def visit_Num(self, node: ast.Num) -> str:
         n = node.n
         if n.imag != 0:
