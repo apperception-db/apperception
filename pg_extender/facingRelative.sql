@@ -7,7 +7,7 @@
 CREATE OR REPLACE FUNCTION facingRelative(target_heading real, viewpoint_heading real) RETURNS real AS
 $BODY$
 BEGIN
-  RETURN (target_heading::numeric % 360 - viewpoint_heading::numeric % 360) % 360 ;
+  RETURN (((object_heading - camera_heading)::numeric % 360) + 360) % 360;
 END
 $BODY$
 LANGUAGE 'plpgsql' ;

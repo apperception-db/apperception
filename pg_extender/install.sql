@@ -9,3 +9,5 @@
 \i convertCamera.sql;
 \i operators.sql;
 \i roadSegment.sql;
+\i angleBetween.sql;
+\i minDistance.sql;
