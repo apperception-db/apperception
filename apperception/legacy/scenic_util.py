@@ -1,13 +1,14 @@
 import datetime
 import json
 import os
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Iterable, List, Tuple
 
 import numpy as np
 import pandas as pd
 from pyquaternion import Quaternion
 
 from apperception.data_types import Box
+from apperception.utils import bbox_to_data3d, join
 
 CREATE_ITEMTRAJ_SQL = """
 CREATE TABLE IF NOT EXISTS Item_General_Trajectory(
@@ -71,7 +72,7 @@ def fetch_camera_config(scene_name, sample_data):
     # how to store same scene in different cameras
     all_frames = sample_data[
         (sample_data["scene_name"] == scene_name)
-        & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
+        # & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
     ]
 
     for idx, frame in all_frames.iterrows():
@@ -249,7 +250,7 @@ def recognize(scene_name, sample_data, annotation):
     # how to store same scene in different cameras
     img_files = sample_data[
         (sample_data["scene_name"] == scene_name)
-        & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
+        # & (sample_data["filename"].str.contains("/CAM_FRONT/", regex=False))
     ].sort_values(by="frame_order")
 
     for _, img_file in img_files.iterrows():
@@ -387,10 +388,6 @@ def create_or_insert_general_trajectory(
     insert_general_trajectory(conn, item_id, object_type, color, postgres_timestamps, bboxes, pairs)
 
 
-def join(array: Iterable, delim: str = ","):
-    return delim.join(map(str, array))
-
-
 # Insert general trajectory
 def insert_general_trajectory(
     conn,
@@ -454,85 +451,6 @@ def insert_general_trajectory(
 
     # Commit your changes in the database
     conn.commit()
-
-
-def transformation(copy_centroid_3d: np.ndarray, camera_config: Dict[str, Any]) -> np.ndarray:
-    """
-    TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
-    """
-    centroid_3d: np.ndarray = np.copy(copy_centroid_3d)
-
-    centroid_3d -= camera_config["egoTranslation"]
-    centroid_3d = np.dot(
-        Quaternion(camera_config["egoRotation"]).inverse.rotation_matrix, centroid_3d
-    )
-
-    centroid_3d -= camera_config["cameraTranslation"]
-    centroid_3d = np.dot(
-        Quaternion(camera_config["cameraRotation"]).inverse.rotation_matrix, centroid_3d
-    )
-
-    view = np.array(camera_config["cameraIntrinsic"])
-    viewpad = np.eye(4)
-    viewpad[: view.shape[0], : view.shape[1]] = view
-
-    # Do operation in homogenous coordinates.
-    centroid_3d = centroid_3d.reshape((3, 1))
-    centroid_3d = np.concatenate((centroid_3d, np.ones((1, 1))))
-    centroid_3d = np.dot(viewpad, centroid_3d)
-    centroid_3d = centroid_3d[:3, :]
-
-    centroid_3d = centroid_3d / centroid_3d[2:3, :].repeat(3, 0).reshape(3, 1)
-    return centroid_3d[:2, :]
-
-
-FetchCameraTuple = Tuple[
-    str, List[float], List[float], List[float], List[float], List[List[float]], int, str
-]
-
-
-def fetch_camera(conn, scene_name, frame_timestamps) -> List["FetchCameraTuple"]:
-    """
-    TODO: Fix fetch camera that given a scene_name and frame_num, return the corresponding camera metadata
-    scene_name: str
-    frame_num: int[]
-    return a list of metadata info for each frame_num
-    """
-
-    cursor = conn.cursor()
-    # query = '''SELECT camera_info from camera_table where camera_table.camera_id == scene_name and camera_table.frame_num in frame_num'''
-    # if cam_id == []:
-    # 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
-    # 	 + '''FROM Cameras WHERE worldId = \'%s\';''' %world_id
-    # else:
-    # 	query = '''SELECT cameraId, ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), ST_X(focalpoints), ST_Y(focalpoints), fov, skev_factor ''' \
-    # 	 + '''FROM Cameras WHERE cameraId IN (\'%s\') AND worldId = \'%s\';''' %(','.join(cam_id), world_id)
-    # TODO: define ST_XYZ somewhere else
-    query = f"""
-    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
-        BEGIN
-            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
-        END;
-    $$ LANGUAGE plpgsql;
-
-    SELECT
-        cameraId,
-        ST_XYZ(egoTranslation),
-        egoRotation,
-        ST_XYZ(cameraTranslation),
-        cameraRotation,
-        cameraIntrinsic,
-        frameNum,
-        fileName
-    FROM Cameras
-    WHERE
-        cameraId = '{scene_name}' AND
-        timestamp IN ({",".join(map(str, frame_timestamps))})
-    ORDER BY cameraId ASC, frameNum ASC;
-    """
-    # print(query)
-    cursor.execute(query)
-    return cursor.fetchall()
 
 
 def clean_tables(conn):
@@ -695,19 +613,3 @@ def import_tables(conn, data_path):
 
 def convert_timestamps(start_time: datetime.datetime, timestamps: Iterable[int]):
     return [str(start_time + datetime.timedelta(seconds=t)) for t in timestamps]
-
-
-# Helper function to convert trajectory to centroids
-
-
-def bbox_to_data3d(bbox: List[List[float]]):
-    """
-    Compute the center, x, y, z delta of the bbox
-    """
-    tl, br = bbox
-    x_delta = (br[0] - tl[0]) / 2
-    y_delta = (br[1] - tl[1]) / 2
-    z_delta = (br[2] - tl[2]) / 2
-    center = (tl[0] + x_delta, tl[1] + y_delta, tl[2] + z_delta)
-
-    return center, x_delta, y_delta, z_delta

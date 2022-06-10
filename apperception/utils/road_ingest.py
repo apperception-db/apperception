@@ -1,5 +1,5 @@
 CREATE_POLYGON_SQL = """
-CREATE TABLE IF NOT EXISTS Polygon(
+CREATE TABLE IF NOT EXISTS SegmentPolygon(
     elementId TEXT,
     elementPolygon geometry,
     PRIMARY KEY (elementId)
@@ -12,10 +12,17 @@ CREATE TABLE IF NOT EXISTS Segment(
     elementId TEXT,
     startPoint geometry,
     endPoint geometry,
+    segmentLine geometry,
     heading real,
     FOREIGN KEY(elementId)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
+"""
+
+CREATE_SEGMENT_INDEX = """
+    CREATE INDEX IF NOT EXISTS segPoint_idx
+    ON Segment
+    USING GiST(segmentLine);
 """
 
 CREATE_LANESECTION_SQL = """
@@ -28,7 +35,7 @@ CREATE TABLE IF NOT EXISTS LaneSection(
     isForward boolean,
     PRIMARY KEY (id),
     FOREIGN KEY(id)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
 """
 
@@ -37,7 +44,7 @@ CREATE TABLE IF NOT EXISTS Lane(
     id Text,
     PRIMARY KEY (id),
     FOREIGN KEY(id)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
 """
 
@@ -53,7 +60,7 @@ CREATE TABLE IF NOT EXISTS LaneGroup(
     id Text,
     PRIMARY KEY (id),
     FOREIGN KEY(id)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
 """
 
@@ -78,7 +85,7 @@ CREATE TABLE IF NOT EXISTS Road(
     backwardLane Text,
     PRIMARY KEY (id),
     FOREIGN KEY(id)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
 """
 
@@ -102,7 +109,7 @@ CREATE TABLE IF NOT EXISTS RoadSection(
     forwardLanes text[],
     backwardLanes text[],
     FOREIGN KEY(id)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
 """
 
@@ -119,7 +126,7 @@ CREATE TABLE IF NOT EXISTS Intersection(
     road TEXT,
     PRIMARY KEY (id),
     FOREIGN KEY(id)
-        REFERENCES Polygon(elementId)
+        REFERENCES SegmentPolygon(elementId)
 );
 """
 
@@ -127,9 +134,9 @@ CREATE TABLE IF NOT EXISTS Intersection(
 def create_polygon_table(conn, polygons, drop=True):
     cursor = conn.cursor()
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Polygon CASCADE")
+        cursor.execute("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
     cursor.execute(CREATE_POLYGON_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON Polygon(elementId);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON SegmentPolygon(elementId);")
 
     values = []
     for poly in polygons:
@@ -142,7 +149,7 @@ def create_polygon_table(conn, polygons, drop=True):
 
     cursor.execute(
         f"""
-        INSERT INTO Polygon (
+        INSERT INTO SegmentPolygon (
             elementId,
             elementPolygon
         )
@@ -182,6 +189,14 @@ def create_segment_table(conn, segments, drop=True):
         VALUES {','.join(values)};
         """
     )
+    cursor.execute(
+        """
+        UPDATE Segment
+        SET segmentLine = ST_MakeLine(startPoint, endPoint)
+        WHERE startPoint IS NOT NULL and endPoint IS NOT NULL;
+        """
+    )
+    cursor.execute(CREATE_SEGMENT_INDEX)
 
     conn.commit()
 

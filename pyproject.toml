@@ -6,30 +6,23 @@ authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-psycopg2 = "^2.9.3"
 PyPika = "^0.48.9"
-PyYAML = "^6.0"
-dill = "^0.3.4"
-PyQt5 = "^5.15.6"
 pyquaternion = "^0.9.9"
-numpy = "^1.22.3"
-matplotlib = "^3.5.1"
-uncompyle6 = "^3.8.0"
-Pillow = "^9.1.0"
-torch = "^1.11.0"
+numpy = "^1.22.4"
+matplotlib = "^3.5.2"
 opencv-python = "^4.5.5"
 pandas = "^1.4.2"
-decompyle3 = "^3.8.0"
-astpretty = "^2.1.0"
+decompyle3 = "^3.9.0"
+psycopg2-binary = "^2.9.3"
 
 [tool.poetry.dev-dependencies]
-jupyterlab = "^3.3.2"
+jupyterlab = "^3.4.2"
 flake8 = "^4.0.1"
-mypy = "^0.942"
-types-PyYAML = "^6.0.5"
-types-psycopg2 = "^2.9.9"
-pyright = "^1.1.239"
-pytest = "^7.1.1"
+mypy = "^0.960"
+types-psycopg2 = "^2.9.15"
+pyright = "^1.1.251"
+pytest = "^7.1.2"
+astpretty = "^3.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -49,14 +42,9 @@ verbose = 2
 exclude = [
   'trackers/object_tracker_yolov4_deepsort\.py',
   'trackers/object_tracker_yolov5_deepsort\.py',
-  'metadata_.*\.py',
-  'world_executor\.py',
-  'world\.py',
-  'mono_depth_estimator\.py',
-  'video_context_executor\.py',
+  'legacy/.*',
   'video_util\.py',
   'scenic_util\.py',
-  'test_parse_scenic_pred\.py',
 ]
 
 [[tool.mypy.overrides]]
@@ -75,14 +63,8 @@ ignore_missing_imports = true
 
 [tool.pyright]
 ignore = [
-  'apperception/layers.py',
-  'apperception/metadata_*.py',
-  'apperception/mono_depth_estimator.py',
-  'apperception/video_context.py',
-  'apperception/video_context_executor.py',
+  'apperception/legacy/*',
   'apperception/video_util.py',
-  'apperception/world.py',
-  'apperception/world_executor.py',
   'apperception/trackers/object_tracker_yolov4_deepsort.py',
   'apperception/trackers/object_tracker_yolov5_deepsort.py',
 ]
