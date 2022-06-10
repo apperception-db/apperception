@@ -37,7 +37,7 @@ def to_lambda_str(predicate: Callable) -> str:
     """
     argspec = getfullargspec(predicate)
     predicate_str = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
-    if not validate(predicate_str, argspec):
+    if not isinstance(predicate_str, str) or not validate(predicate_str, argspec):
         raise Exception(
             "predicate should be a function with arguments without default values and without keyworded argument"
         )
@@ -46,8 +46,7 @@ def to_lambda_str(predicate: Callable) -> str:
 
 def validate(predicate: str, argspec: FullArgSpec):
     return (
-        isinstance(predicate, str)
-        and predicate.startswith("return ")
+        predicate.startswith("return ")
         and argspec.varargs is None
         and argspec.varkw is None
         and argspec.defaults is None
@@ -162,13 +161,14 @@ class GenSqlVisitor(ast.NodeVisitor):
         if any(isinstance(arg, ast.Starred) for arg in node.args):
             raise Exception("Starred argument is not supported")
 
-        if isinstance(node.func, ast.Attribute):
-            value = node.func.value
+        f = node.func
+        if isinstance(f, ast.Attribute):
+            value = f.value
             if not isinstance(value, ast.Name) or value.id != "F":
                 raise Exception("Only allow custom functions from fn module")
-            func = node.func.attr
-        elif isinstance(node.func, ast.Name):
-            func = node.func.id
+            func = f.attr
+        elif isinstance(f, ast.Name):
+            func = f.id
         else:
             raise Exception("Unsupported function")
 
@@ -193,7 +193,6 @@ class GenSqlVisitor(ast.NodeVisitor):
         return str(n.real)
 
     def visit_Attribute(self, node: ast.Attribute) -> str:
-        # Should we not allow users to directly acces the database's field?
         value = self.visit(node.value)
         attr = metadata_view.resolve_key(node.attr)
         return f"{value}.{attr}"
@@ -216,14 +215,14 @@ class GenSqlVisitor(ast.NodeVisitor):
         return f"ARRAY[{elts}]"
 
     def visit_Slice(self, node: ast.Slice) -> str:
-        if node.lower is None or node.upper is None:
+        upper = node.upper
+        lower = node.lower
+        if lower is None or upper is None:
             raise Exception("Slice must have lower and upper")
         if node.step is not None:
             raise Exception("Slice step is not supported")
 
-        lower = self.visit(node.lower)
-        upper = self.visit(node.upper)
-        return f"{lower}:{upper}"
+        return f"{self.visit(lower)}:{self.visit(upper)}"
 
     def visit_Index(self, node: ast.Index) -> str:
         return self.visit(node.value)
