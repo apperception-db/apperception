@@ -183,6 +183,15 @@ class GenSqlVisitor(ast.NodeVisitor):
             return f"'{value}'"
         return str(value)
 
+    def visit_Str(self, node: ast.Str) -> str:
+        return f"'{node.s}'"
+
+    def visit_Num(self, node: ast.Num) -> str:
+        n = node.n
+        if n.imag != 0:
+            raise Exception("Does not support complex number")
+        return str(n.real)
+
     def visit_Attribute(self, node: ast.Attribute) -> str:
         # Should we not allow users to directly acces the database's field?
         value = self.visit(node.value)
