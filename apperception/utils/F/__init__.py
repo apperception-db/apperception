@@ -10,6 +10,7 @@ from .road_direction import road_direction
 from .road_segment import road_segment
 from .same_region import same_region
 from .view_angle import view_angle
+from .ahead import ahead
 
 __all__ = [
     "convert_camera",
@@ -24,4 +25,5 @@ __all__ = [
     "like",
     "same_region",
     "angle_between",
+    "ahead",
 ]
