@@ -1,0 +1,70 @@
+[tool.poetry]
+name = "apperception"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+PyPika = "^0.48.9"
+pyquaternion = "^0.9.9"
+numpy = "^1.22.4"
+matplotlib = "^3.5.2"
+opencv-python = "^4.6.0"
+pandas = "^1.4.2"
+decompyle3 = "^3.9.0"
+psycopg2-binary = "^2.9.3"
+
+[tool.poetry.dev-dependencies]
+jupyterlab = "^3.4.3"
+flake8 = "^4.0.1"
+mypy = "^0.961"
+types-psycopg2 = "^2.9.16"
+pyright = "^1.1.253"
+pytest = "^7.1.2"
+astpretty = "^3.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+verbose = true
+
+[tool.autopep8]
+in-place = true
+recursive = true
+aggressive = 3
+verbose = 2
+
+[tool.mypy]
+exclude = [
+  'trackers/object_tracker_yolov4_deepsort\.py',
+  'trackers/object_tracker_yolov5_deepsort\.py',
+  'legacy/.*',
+  'video_util\.py',
+  'scenic_util\.py',
+]
+
+[[tool.mypy.overrides]]
+module = [
+  'pandas',
+  'pypika',
+  'pypika.dialects',
+  'pypika.functions',
+  'cv2',
+  'pyquaternion',
+  'pyquaternion.quaternion',
+  'uncompyle6',
+  'decompyle3',
+]
+ignore_missing_imports = true
+
+[tool.pyright]
+ignore = [
+  'apperception/legacy/*',
+  'apperception/video_util.py',
+  'apperception/trackers/object_tracker_yolov4_deepsort.py',
+  'apperception/trackers/object_tracker_yolov5_deepsort.py',
+]
