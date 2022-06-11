@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 
 from .fake_fn import fake_fn
 
@@ -39,7 +39,7 @@ def ahead(visitor: "GenSqlVisitor", args: List[ast.expr]):
             heading = f"{visitor.visit(value)}.itemHeadings"
         elif attr == "ego":
             loc2 = f"{visitor.visit(value)}.egoTranslation"
-            heading = f"{visitor.visit(value)}.egoHeading" 
+            heading = f"{visitor.visit(value)}.egoHeading"
         elif attr == "cam":
             loc2 = f"{visitor.visit(value)}.cameraTranslation"
             heading = f"{visitor.visit(value)}.cameraHeading"
@@ -49,6 +49,6 @@ def ahead(visitor: "GenSqlVisitor", args: List[ast.expr]):
         loc2 = f"{visitor.visit(arg_obj2)}.trajCentroids"
         heading = f"{visitor.visit(arg_obj2)}.itemHeadings"
     else:
-        raise Exception("we dont support other location yet") 
+        raise Exception("we dont support other location yet")
 
     return f"ahead({loc1}, {loc2}, {heading}, {visitor.visit(arg_time)})"
