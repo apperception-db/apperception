@@ -13,7 +13,9 @@ from . import F
 
 
 def fn_to_sql(
-    predicate: Union[str, Callable[..., bool]], tables: List[str], eval_vars: Optional[Dict[str, Any]] = None
+    predicate: Union[str, Callable[..., bool]],
+    tables: List[str],
+    eval_vars: Optional[Dict[str, Any]] = None,
 ):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)

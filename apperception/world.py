@@ -194,12 +194,7 @@ class World:
         )
 
     def join(self, others: List[World]) -> World:
-        return derive_world(
-            self,
-            {QueryType.TRAJ, QueryType.BBOX},
-            database.join,
-            others=others
-        )
+        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.join, others=others)
 
     def exclude(self, other: World) -> World:
         return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.exclude, world=other)

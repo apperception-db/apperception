@@ -269,10 +269,9 @@ class Database:
         """
 
     def join(self, query: Query, others: "List[World]", world_id: str):
-        
+
         return JoinNode(
             uuid=world_id,
-
         )
 
     def exclude(self, query: Query, world: "World"):

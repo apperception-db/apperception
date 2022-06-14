@@ -7,10 +7,10 @@ from .fetch_camera_tuple import FetchCameraTuple
 from .lens import Lens
 from .point import Point
 from .query_type import QueryType
+from .sql import SQL
 from .tracked_object import TrackedObject
 from .tracker import Tracker
 from .trajectory import Trajectory
-from .sql import SQL
 
 __all__ = [
     "BoundingBox",

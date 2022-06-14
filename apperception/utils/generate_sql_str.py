@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 from apperception.data_types import SQL
+
 
 def generate_sql_str(
     sql: "SQL",
@@ -12,8 +13,6 @@ def generate_sql_str(
     if schemas is None:
         schemas = {}
 
-    pass
-
 
 def annotate_schema(sql: "SQL") -> SQL:
     if sql.schema is not None:
@@ -24,7 +23,7 @@ def annotate_schema(sql: "SQL") -> SQL:
     num_camera = 0
     for arg in sql.where.args.args:
         identifier = arg.arg
-        if identifier in ['c', 'cam', 'camera']:
+        if identifier in ["c", "cam", "camera"]:
             if num_camera > 0:
                 raise Exception("Only allow one camera parameter")
             num_camera = 1
