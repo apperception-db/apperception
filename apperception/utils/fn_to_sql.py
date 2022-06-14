@@ -13,7 +13,7 @@ from . import F
 
 
 def fn_to_sql(
-    predicate: Union[str, Callable], tables: List[str], eval_vars: Optional[Dict[str, Any]] = None
+    predicate: Union[str, Callable[..., bool]], tables: List[str], eval_vars: Optional[Dict[str, Any]] = None
 ):
     if not isinstance(predicate, str):
         predicate = to_lambda_str(predicate)
@@ -29,14 +29,14 @@ def fn_to_sql(
     return GenSqlVisitor(tables, eval_vars or {}).visit(expr.value)
 
 
-def to_lambda_str(predicate: Callable) -> str:
+def to_lambda_str(predicate: Callable[..., bool]) -> str:
     """
     Parse a lambda or a one-line def-function into a string of lambda
     The output from deparse_code2str does not include function signture.
     For example, lambda x : x + 1 will be deparsed into 'return x + 1'
     """
     argspec = getfullargspec(predicate)
-    predicate_str = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
+    predicate_str: Any = deparse_code2str(predicate.__code__, out=open(os.devnull, "w"))
     if not isinstance(predicate_str, str) or not validate(predicate_str, argspec):
         raise Exception(
             "predicate should be a function with arguments without default values and without keyworded argument"
@@ -208,7 +208,9 @@ class GenSqlVisitor(ast.NodeVisitor):
     def visit_Attribute(self, node: ast.Attribute) -> str:
         value = self.visit(node.value)
         attr = metadata_view.resolve_key(node.attr)
-        return f"{value}.{attr}"
+        # TODO: should be able to replace "." with "__" for accessing fields from inner table.
+        # TODO: also replace "." on all the custom functions as well.
+        return f"{value}__{attr}"
 
     def visit_Subscript(self, node: ast.Subscript) -> str:
         if not isinstance(node.slice, ast.Slice) and not isinstance(node.slice, ast.Index):

@@ -10,6 +10,7 @@ from .query_type import QueryType
 from .tracked_object import TrackedObject
 from .tracker import Tracker
 from .trajectory import Trajectory
+from .sql import SQL
 
 __all__ = [
     "BoundingBox",
@@ -24,4 +25,5 @@ __all__ = [
     "Trajectory",
     "views",
     "FetchCameraTuple",
+    "SQL",
 ]

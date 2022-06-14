@@ -13,6 +13,7 @@ from pypika import Column, CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import QueryType, Trajectory
+from apperception.data_types.sql import JoinNode
 from apperception.utils import (add_recognized_objects, fetch_camera,
                                 fetch_camera_framenum, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
@@ -235,19 +236,19 @@ class Database:
         tables_sql = []
         table_idx = 0
         found_camera = False
-        found_road = False
+        # found_road = False
         for arg in args:
             if arg in ["c", "cam", "camera"]:
                 if found_camera:
                     raise Exception("Only allow one camera parameter")
                 tables_sql.append("Cameras")
                 found_camera = True
-            elif arg in ["r", "road"]:
-                if found_road:
-                    raise Exception("Only allow one road parameter")
-                # TODO: Road is not a real DB table name
-                tables_sql.append("Road")
-                found_road = True
+            # elif arg in ["r", "road"]:
+            #     if found_road:
+            #         raise Exception("Only allow one road parameter")
+            #     # TODO: Road is not a real DB table name
+            #     tables_sql.append("Road")
+            #     found_road = True
             else:
                 # TODO: table name should depend on world's id
                 table_name = f"table_{table_idx}"
@@ -266,6 +267,13 @@ class Database:
         {f"JOIN Cameras USING (cameraId)" if found_camera else ""}
         WHERE {predicate_sql}
         """
+
+    def join(self, query: Query, others: "List[World]", world_id: str):
+        
+        return JoinNode(
+            uuid=world_id,
+
+        )
 
     def exclude(self, query: Query, world: "World"):
         return f"""

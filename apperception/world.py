@@ -27,7 +27,7 @@ camera_nodes: Dict[str, "Camera"] = {}
 class World:
     _parent: Optional[World]
     _name: str
-    _fn: Tuple[Optional[Callable]]
+    _fn: Tuple[Optional[Callable[..., Any]]]
     _kwargs: dict[str, Any]
     _done: bool
     _world_id: str
@@ -41,7 +41,7 @@ class World:
         timestamp: datetime.datetime,
         name: Optional[str] = None,
         parent: Optional[World] = None,
-        fn: Optional[Union[str, Callable]] = None,
+        fn: Optional[Union[str, Callable[..., Any]]] = None,
         kwargs: Optional[dict[str, Any]] = None,
         done: bool = False,
         types: Optional[Set["QueryType"]] = None,
@@ -191,6 +191,14 @@ class World:
             {QueryType.TRAJ, QueryType.BBOX},
             database.filter,
             predicate=predicate,
+        )
+
+    def join(self, others: List[World]) -> World:
+        return derive_world(
+            self,
+            {QueryType.TRAJ, QueryType.BBOX},
+            database.join,
+            others=others
         )
 
     def exclude(self, other: World) -> World:
