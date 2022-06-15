@@ -11,3 +11,4 @@
 \i roadSegment.sql;
 \i angleBetween.sql;
 \i minDistance.sql;
+\i objectBBox.sql;

@@ -88,8 +88,10 @@ class Database:
             itemId TEXT,
             cameraId TEXT,
             trajBbox stbox,
+            timestamp timestamptz,
             FOREIGN KEY(itemId)
-                REFERENCES Item_General_Trajectory(itemId)
+                REFERENCES Item_General_Trajectory(itemId),
+            PRIMARY KEY (itemId, timestamp)
         );
         """
 
@@ -135,6 +137,12 @@ class Database:
             """
         CREATE INDEX IF NOT EXISTS item_idx
         ON General_Bbox(itemId);
+        """
+        )
+        self.cursor.execute(
+            """
+        CREATE INDEX IF NOT EXISTS item_id_timestampx
+        ON General_Bbox(itemId, timestamp);
         """
         )
         self.cursor.execute(

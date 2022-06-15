@@ -64,7 +64,8 @@ def import_tables(conn: Connection, data_path: str):
                 trajBbox stbox,
                 FOREIGN KEY(itemId)
                     REFERENCES Item_General_Trajectory(itemId)
-                )
+                ),
+                timestamp timestamptz
     """
     )
 
@@ -110,7 +111,7 @@ def import_tables(conn: Connection, data_path: str):
     for i, row in df_General_Bbox.iterrows():
         cursor.execute(
             """
-                    INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
+                    INSERT INTO General_Bbox (itemId, cameraId, trajBbox, timestamp)
                     VALUES (%s,%s,%s)
                     """,
             tuple(row),
@@ -119,6 +120,12 @@ def import_tables(conn: Connection, data_path: str):
         """
         CREATE INDEX IF NOT EXISTS item_idx
         ON General_Bbox(itemId);
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS item_id_timestampx
+        ON General_Bbox(itemId, timestamp);
     """
     )
     cursor.execute(
