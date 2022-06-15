@@ -15,7 +15,9 @@ ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 def contains_all(visitor: "GenSqlVisitor", args: List[ast.expr]):
     arg_polygon, arg_points = args
     if not isinstance(arg_polygon, ast.Constant):
-        raise Exception("Frist argument of contains_all should be a constant, recieved " + str(arg_polygon))
+        raise Exception(
+            "Frist argument of contains_all should be a constant, recieved " + str(arg_polygon)
+        )
 
     polygon = visitor.visit(arg_polygon)[1:-1]
     points = visitor.visit(arg_points)
@@ -26,7 +28,11 @@ def contains_all(visitor: "GenSqlVisitor", args: List[ast.expr]):
     size = None
     if isinstance(arg_points, ast.List):
         size = len(arg_points.elts)
-    elif (isinstance(arg_points, ast.BinOp) and isinstance(arg_points.op, ast.MatMult) and isinstance(arg_points.left, ast.List)):
+    elif (
+        isinstance(arg_points, ast.BinOp)
+        and isinstance(arg_points.op, ast.MatMult)
+        and isinstance(arg_points.left, ast.List)
+    ):
         size = len(arg_points.left.elts)
 
     return f"""(EXISTS(
