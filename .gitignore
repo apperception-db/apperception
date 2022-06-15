@@ -12,6 +12,7 @@ output
 .apperception_cache
 env
 .venv
+.coverage
 
 *.csv
 *.pickle
