@@ -44,8 +44,10 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
         elif cont_point_attr == "ego":
             object_positions = f"{visitor.eval_vars[value.id]}.egoTranslation"
         elif cont_point_attr == "bbox":
-            if arg_time == None:
-                raise Exception("To get the BBox of a non-camera object, you must provide the time paramater as well")
+            if arg_time is None:
+                raise Exception(
+                    "To get the BBox of a non-camera object, you must provide the time paramater as well"
+                )
             object_positions = f"objectBBox({visitor.eval_vars[value.id]}.itemId, {timet})"
         else:
             raise Exception("First argument of contained should be trajectory")
