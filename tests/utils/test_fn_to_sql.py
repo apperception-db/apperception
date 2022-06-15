@@ -21,6 +21,8 @@ from apperception.utils import fn_to_sql
     (lambda o, c : not o.c1, "(NOT T.c1)"),
     (lambda o, c : o.c1 and o.c2 and o.c3, "(T.c1 AND T.c2 AND T.c3)"),
     (lambda o, c : o.c1 or o.c2 or o.c3, "(T.c1 OR T.c2 OR T.c3)"),
+    (lambda o, c : o.c1 @ c.timestamp, "valueAtTimestamp(T.c1,C.timestamp)"),
+    (lambda o, c : [o.c1, o.c2] @ c.timestamp, "ARRAY[valueAtTimestamp(T.c1,C.timestamp),valueAtTimestamp(T.c2,C.timestamp)]"),
 ])
 def test_simple_ops(fn, sql):
     assert fn_to_sql(fn, ["T", "C"]) == sql
