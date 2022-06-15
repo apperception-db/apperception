@@ -58,14 +58,15 @@ def import_tables(conn: Connection, data_path: str):
 
     cursor.execute(
         """
-            CREATE TABLE General_Bbox (
-                itemId TEXT,
-                cameraId TEXT,
-                trajBbox stbox,
-                FOREIGN KEY(itemId)
-                    REFERENCES Item_General_Trajectory(itemId)
-                ),
-                timestamp timestamptz
+             CREATE TABLE General_Bbox(
+            itemId TEXT,
+            cameraId TEXT,
+            trajBbox stbox,
+            timestamp timestamptz,
+            FOREIGN KEY(itemId)
+                REFERENCES Item_General_Trajectory(itemId),
+            PRIMARY KEY (itemId, timestamp)
+        );
     """
     )
 
@@ -112,7 +113,7 @@ def import_tables(conn: Connection, data_path: str):
         cursor.execute(
             """
                     INSERT INTO General_Bbox (itemId, cameraId, trajBbox, timestamp)
-                    VALUES (%s,%s,%s)
+                    VALUES (%s,%s,%s,%s)
                     """,
             tuple(row),
         )
