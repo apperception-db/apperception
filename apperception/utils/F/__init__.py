@@ -1,5 +1,6 @@
 from .angle_between import angle_between
 from .contained import contained
+from .contains_all import contains_all
 from .convert_camera import convert_camera
 from .distance import distance
 from .facing_relative import facing_relative
@@ -24,4 +25,5 @@ __all__ = [
     "like",
     "same_region",
     "angle_between",
+    "contains_all",
 ]
