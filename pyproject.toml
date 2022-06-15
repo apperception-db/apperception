@@ -23,6 +23,8 @@ types-psycopg2 = "^2.9.16"
 pyright = "^1.1.253"
 pytest = "^7.1.2"
 astpretty = "^3.0.0"
+coverage = "^6.4.1"
+pytest-cov = "^3.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
