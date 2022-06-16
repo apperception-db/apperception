@@ -42,6 +42,7 @@ jobs:
       - name: Print mobilitydb log
         run: |
           until [ "`docker inspect -f {{.State.Running}} mobilitydb`"=="true" ]; do
+              echo "waiting"
               sleep 1;
           done;
           docker logs mobilitydb | cat
