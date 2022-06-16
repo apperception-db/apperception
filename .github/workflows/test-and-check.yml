@@ -6,19 +6,20 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      mobilitydb:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT || github.token }}
-      
-      - name: Setup MobilityDB
-        run: |
-          docker volume create mobilitydb_data
-          docker run \
-            --name "mobilitydb" \
-            -p 25432:5432 \
-            -v mobilitydb_data:/var/lib/postgresql \
-            mobilitydb/mobilitydb
 
       - name: Set up Python 3.8
         uses: actions/setup-python@v3
