@@ -41,10 +41,7 @@ jobs:
 
       - name: Print mobilitydb log
         run: |
-          until [ "`docker inspect -f {{.State.Running}} mobilitydb`"=="true" ]; do
-              echo "waiting"
-              sleep 1;
-          done;
+          sleep 30;
           docker logs mobilitydb | cat
 
       - name: Extend MobilityDB with User-Defined functions
