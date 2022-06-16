@@ -48,6 +48,10 @@ jobs:
           pushd pg_extender
           psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i overlap.sql;"
           popd
+
+      - name: Print mobilitydb log
+        run: |
+          docker logs mobilitydb | cat
       
       - name: Unit Test
         run: poetry run pytest --cov=apperception --cov-report=xml tests
