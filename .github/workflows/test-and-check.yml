@@ -16,7 +16,6 @@ jobs:
           docker volume create mobilitydb_data
           docker run \
             --name "mobilitydb" \
-            -d \
             -p 25432:5432 \
             -v mobilitydb_data:/var/lib/postgresql \
             mobilitydb/mobilitydb
