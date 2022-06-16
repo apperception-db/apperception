@@ -1,0 +1,3 @@
+ignore:
+  - "apperception/legacy"
+  - "**/__init__.py"
