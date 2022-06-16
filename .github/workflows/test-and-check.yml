@@ -37,17 +37,12 @@ jobs:
       - name: Setup MobilityDB
         run: |
           docker volume create mobilitydb_data
-          docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
-
-      - name: Print mobilitydb log
-        run: |
-          sleep 30;
-          docker logs mobilitydb | cat
+          docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5 mobilitydb/mobilitydb
 
       - name: Extend MobilityDB with User-Defined functions
         run: |
           pushd pg_extender
-          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i overlap.sql;"
+          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i install.sql;"
           popd
         env:
           PGPASSWORD: docker
