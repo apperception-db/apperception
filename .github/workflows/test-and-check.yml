@@ -34,6 +34,14 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
       
+      - name: Setup MobilityDB
+        run: |
+          docker volume create mobilitydb_data
+          docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
+          pushd pg_extender
+          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i overlap.sql;"
+          popd
+      
       - name: Unit Test
         run: poetry run pytest --cov=apperception --cov-report=xml tests
       
