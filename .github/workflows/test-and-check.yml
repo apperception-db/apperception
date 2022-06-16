@@ -38,6 +38,9 @@ jobs:
         run: |
           docker volume create mobilitydb_data
           docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
+
+      - name: Extend MobilityDB with User-Defined functions
+        run: |
           pushd pg_extender
           psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i overlap.sql;"
           popd
