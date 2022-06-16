@@ -49,6 +49,8 @@ jobs:
           pushd pg_extender
           psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i overlap.sql;"
           popd
+        env:
+          PGPASSWORD: docker
 
       - name: Print mobilitydb log
         run: |
