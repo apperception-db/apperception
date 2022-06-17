@@ -21,6 +21,7 @@ __all__ = [
     "road_direction",
     "get_x",
     "get_y",
+    "get_z",
     "distance",
     "road_segment",
     "like",
