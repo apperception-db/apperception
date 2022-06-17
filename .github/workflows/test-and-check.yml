@@ -54,11 +54,7 @@ jobs:
       
       - name: Ingest data
         run: |
-          python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data')"
-
-      - name: Print mobilitydb log
-        run: |
-          docker logs mobilitydb | cat
+          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data')"
       
       - name: Unit Test
         run: poetry run pytest --cov=apperception --cov-report=xml tests
