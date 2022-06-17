@@ -13,10 +13,10 @@ declare counterClockwise numeric;
 declare azimuth numeric;
 -- Note: view_point_heading is counter-clockwise with North being 0, while the result of ST_Azimuth is clockwise with North being 0
 BEGIN
-    view_point_heading := CAST((view_point_heading + 360) AS numeric) % 360;
-    azimuth := CAST((-ST_Azimuth(view_point, obj_position) * 180 / PI() + 360) AS numeric);
-    clockwise := CAST((azimuth - view_point_heading + 360) AS numeric) % 360;
-    counterClockwise := CAST((view_point_heading - azimuth + 360) AS numeric) % 360;
+    view_point_heading := ((view_point_heading::numeric % 360) + 360) % 360;
+    azimuth := (((-ST_Azimuth(view_point, obj_position) * 180 / PI())::numeric % 360) + 360) % 360;
+    clockwise := (azimuth - view_point_heading + 360)::numeric % 360;
+    counterClockwise := (view_point_heading - azimuth + 360)::numeric % 360;
     IF clockwise < counterClockwise THEN
       RETURN clockwise;
     ELSE 
