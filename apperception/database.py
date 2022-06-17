@@ -73,7 +73,7 @@ class Database:
             Column("timestamp", "timestamptz"),
             Column("cameraHeading", "real"),
             Column("egoHeading", "real"),
-            Column("cameraTranslation", "geometry")
+            Column("cameraTranslation", "geometry"),
         )
         self.cursor.execute(q1.get_sql())
         self.cursor.execute(q2.get_sql())
