@@ -15,7 +15,7 @@ BEGIN
     -- RETURN segment_polygons;
     EXECUTE format('SELECT SegmentPolygon.elementId FROM SegmentPolygon, %I 
                         WHERE SegmentPolygon.elementId = %I.id
-                        AND contained(%L, SegmentPolygon.elementPolygon) AND contained(%L, SegmentPolygon.elementPolygon);', 
+                        AND contained(geometry %L, SegmentPolygon.elementPolygon) AND contained(geometry %L, SegmentPolygon.elementPolygon);', 
                     segment_type, segment_type, traj1, traj2) into result;
     IF result IS NOT NULL THEN
         return true;

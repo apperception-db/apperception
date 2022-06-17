@@ -8,7 +8,7 @@ from .fake_fn import fake_fn
 if TYPE_CHECKING:
     from ..fn_to_sql import GenSqlVisitor
 
-ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
+ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection", "roadsection"}
 
 
 @fake_fn
