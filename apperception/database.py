@@ -63,11 +63,11 @@ BBOX_COLUMNS: List[Tuple[str, str]] = [
 
 
 def columns(fn: Callable[[Tuple[str, str]], str], columns: List[Tuple[str, str]]) -> str:
-    return ','.join(map(fn, columns))
+    return ",".join(map(fn, columns))
 
 
 def _schema(column: Tuple[str, str]) -> str:
-    return ' '.join(column)
+    return " ".join(column)
 
 
 def _name(column: Tuple[str, str]) -> str:
@@ -75,7 +75,7 @@ def _name(column: Tuple[str, str]) -> str:
 
 
 def place_holder(num: int):
-    return ','.join(["%s"] * num)
+    return ",".join(["%s"] * num)
 
 
 class Database:
@@ -110,12 +110,16 @@ class Database:
 
     def _create_general_bbox_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
-        self.cursor.execute(f"CREATE TABLE General_Bbox ({columns(_schema, BBOX_COLUMNS)}, FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId))")
+        self.cursor.execute(
+            f"CREATE TABLE General_Bbox ({columns(_schema, BBOX_COLUMNS)}, FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId))"
+        )
         self._commit(commit)
 
     def _create_item_general_trajectory_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
-        self.cursor.execute(f"CREATE TABLE Item_General_Trajectory ({columns(_schema, TRAJECTORY_COLUMNS)}, PRIMARY KEY (itemId))")
+        self.cursor.execute(
+            f"CREATE TABLE Item_General_Trajectory ({columns(_schema, TRAJECTORY_COLUMNS)}, PRIMARY KEY (itemId))"
+        )
         self._commit(commit)
 
     def _create_index(self, commit=True):
@@ -123,9 +127,13 @@ class Database:
         self.cursor.execute("CREATE INDEX ON Cameras (timestamp);")
         self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (itemId);")
         self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (cameraId);")
-        self.cursor.execute("CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);")
+        self.cursor.execute(
+            "CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);"
+        )
         self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
-        self.cursor.execute("CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);")
+        self.cursor.execute(
+            "CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);"
+        )
         self._commit(commit)
 
     def _insert_into_camera(self, value: tuple, commit=True):

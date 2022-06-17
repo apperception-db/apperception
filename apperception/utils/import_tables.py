@@ -1,5 +1,6 @@
-import pandas as pd
 import os
+
+import pandas as pd
 
 from apperception.database import Database
 
@@ -10,7 +11,9 @@ def import_tables(database: Database, data_path: str):
     data_Cameras = pd.read_csv(os.path.join(data_path, "cameras.csv"))
     df_Cameras = pd.DataFrame(data_Cameras)
 
-    data_Item_General_Trajectory = pd.read_csv(os.path.join(data_path, "item_general_trajectory.csv"))
+    data_Item_General_Trajectory = pd.read_csv(
+        os.path.join(data_path, "item_general_trajectory.csv")
+    )
     df_Item_General_Trajectory = pd.DataFrame(data_Item_General_Trajectory)
 
     data_General_Bbox = pd.read_csv(os.path.join(data_path, "general_bbox.csv"))
