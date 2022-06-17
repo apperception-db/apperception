@@ -51,6 +51,10 @@ jobs:
           popd
         env:
           PGPASSWORD: docker
+      
+      - name: Ingest data
+        run: |
+          python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data')"
 
       - name: Print mobilitydb log
         run: |
