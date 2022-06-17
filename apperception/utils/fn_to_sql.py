@@ -137,8 +137,21 @@ class GenSqlVisitor(ast.NodeVisitor):
 
     def visit_BinOp(self, node: ast.BinOp) -> str:
         left = self.visit(node.left)
-        op = bin_op(node.op)
         right = self.visit(node.right)
+        if isinstance(node.op, ast.MatMult):
+            if isinstance(node.left, ast.List):
+                ast_list = ast.List()
+                ast_list.elts = []
+                for elt in node.left.elts:
+                    m = ast.BinOp()
+                    m.left = elt
+                    m.op = node.op
+                    m.right = node.right
+
+                    ast_list.elts.append(m)
+                return self.visit(ast_list)
+            return f"valueAtTimestamp({left},{right})"
+        op = bin_op(node.op)
         return f"({left}{op}{right})"
 
     def visit_UnaryOp(self, node: ast.UnaryOp) -> str:

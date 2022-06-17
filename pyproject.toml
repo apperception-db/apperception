@@ -10,19 +10,21 @@ PyPika = "^0.48.9"
 pyquaternion = "^0.9.9"
 numpy = "^1.22.4"
 matplotlib = "^3.5.2"
-opencv-python = "^4.5.5"
+opencv-python = "^4.6.0"
 pandas = "^1.4.2"
 decompyle3 = "^3.9.0"
 psycopg2-binary = "^2.9.3"
 
 [tool.poetry.dev-dependencies]
-jupyterlab = "^3.4.2"
+jupyterlab = "^3.4.3"
 flake8 = "^4.0.1"
-mypy = "^0.960"
-types-psycopg2 = "^2.9.15"
-pyright = "^1.1.251"
+mypy = "^0.961"
+types-psycopg2 = "^2.9.16"
+pyright = "^1.1.253"
 pytest = "^7.1.2"
 astpretty = "^3.0.0"
+coverage = "^6.4.1"
+pytest-cov = "^3.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
