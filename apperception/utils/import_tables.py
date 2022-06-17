@@ -36,7 +36,8 @@ def import_tables(conn: Connection, data_path: str):
                 egoRotation real[4],
                 timestamp timestamptz,
                 cameraHeading real,
-                egoHeading real
+                egoHeading real,
+                cameraTranslationAbs geometry
                 )
     """
     )
@@ -77,8 +78,8 @@ def import_tables(conn: Connection, data_path: str):
     for i, row in df_Cameras.iterrows():
         cursor.execute(
             """
-                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading, cameraTranslationAbs)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
             tuple(row),
         )

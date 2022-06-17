@@ -1,6 +1,7 @@
 \i facingRelative.sql;
 \i getX.sql;
 \i getY.sql;
+\i getZ.sql;
 \i roadDirection.sql;
 \i overlap.sql;
 \i viewAngle.sql;
@@ -10,5 +11,6 @@
 \i operators.sql;
 \i roadSegment.sql;
 \i angleBetween.sql;
+\i angleExcluding.sql
 \i minDistance.sql;
 \i objectBBox.sql;

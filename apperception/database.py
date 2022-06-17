@@ -73,6 +73,7 @@ class Database:
             Column("timestamp", "timestamptz"),
             Column("cameraHeading", "real"),
             Column("egoHeading", "real"),
+            Column("cameraTranslation", "geometry")
         )
         self.cursor.execute(q1.get_sql())
         self.cursor.execute(q2.get_sql())
@@ -176,7 +177,8 @@ class Database:
                 ARRAY{config.ego_rotation},
                 '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.cameraHeading},
-                {config.egoHeading}
+                {config.egoHeading},
+                'POINT Z ({' '.join(map(str, config.camera_translation_abs))})',
             )"""
             for config in camera.configs
         ]
@@ -195,7 +197,8 @@ class Database:
                 egoRotation,
                 timestamp,
                 cameraHeading,
-                egoHeading
+                egoHeading,
+                cameraTranslationAbs
             )
             VALUES {','.join(values)};
             """

@@ -42,6 +42,9 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
         elif view_point_attr == "camera":
             cam_loc = f"{visitor.eval_vars[value.id]}.cameraTranslation"
             cam_heading = f"{visitor.eval_vars[value.id]}.cameraHeading"
+        elif view_point_attr == "cameraAbs" or view_point_attr == "cameraAbsolute":
+            cam_loc = f"{visitor.eval_vars[value.id]}.cameraTranslationAbs"
+            cam_heading = f"{visitor.eval_vars[value.id]}.cameraHeading"
         else:
             raise Exception("only support camera attribute")
     elif isinstance(arg_point_of_view, ast.Name):
