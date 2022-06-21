@@ -1,3 +1,4 @@
+from .ahead import ahead
 from .angle_between import angle_between
 from .contained import contained
 from .contains_all import contains_all
@@ -25,5 +26,6 @@ __all__ = [
     "like",
     "same_region",
     "angle_between",
+    "ahead",
     "contains_all",
 ]
