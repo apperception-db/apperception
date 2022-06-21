@@ -2,12 +2,12 @@ import ast
 import inspect
 from datetime import datetime
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
 
 import pandas as pd
 import psycopg2
 import psycopg2.errors
-from pypika import Column, CustomFunction, Table
+from pypika import CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
@@ -30,6 +30,53 @@ CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
 BBOX_TABLE = "General_Bbox"
 
+CAMERA_COLUMNS: List[Tuple[str, str]] = [
+    ("cameraId", "TEXT"),
+    ("frameId", "TEXT"),
+    ("frameNum", "Int"),
+    ("fileName", "TEXT"),
+    ("cameraTranslation", "geometry"),
+    ("cameraRotation", "real[4]"),
+    ("cameraIntrinsic", "real[3][3]"),
+    ("egoTranslation", "geometry"),
+    ("egoRotation", "real[4]"),
+    ("timestamp", "timestamptz"),
+    ("cameraHeading", "real"),
+    ("egoHeading", "real"),
+]
+
+TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
+    ("itemId", "TEXT"),
+    ("cameraId", "TEXT"),
+    ("objectType", "TEXT"),
+    ("color", "TEXT"),
+    ("trajCentroids", "tgeompoint"),
+    ("largestBbox", "stbox"),
+    ("itemHeadings", "tfloat"),
+]
+
+BBOX_COLUMNS: List[Tuple[str, str]] = [
+    ("itemId", "TEXT"),
+    ("cameraId", "TEXT"),
+    ("trajBbox", "stbox"),
+]
+
+
+def columns(fn: Callable[[Tuple[str, str]], str], columns: List[Tuple[str, str]]) -> str:
+    return ",".join(map(fn, columns))
+
+
+def _schema(column: Tuple[str, str]) -> str:
+    return " ".join(column)
+
+
+def _name(column: Tuple[str, str]) -> str:
+    return column[0]
+
+
+def place_holder(num: int):
+    return ",".join(["%s"] * num)
+
 
 class Database:
     connection: "Connection"
@@ -49,102 +96,70 @@ class Database:
             self.connection = connection
         self.cursor = self.connection.cursor()
 
-    def reset(self):
-        self._create_camera_table()
-        self._create_item_general_trajectory_table()
-        self._create_general_bbox_table()
-        self._create_index()
+    def reset(self, commit=True):
+        self._create_camera_table(False)
+        self._create_item_general_trajectory_table(False)
+        self._create_general_bbox_table(False)
+        self._create_index(False)
+        self._commit(commit)
 
-    def _create_camera_table(self):
-        # drop old
-        q1 = SnowflakeQuery.drop_table(CAMERA_TABLE).if_exists()
+    def _create_camera_table(self, commit=True):
+        self.cursor.execute("DROP TABLE IF EXISTS Cameras CASCADE;")
+        self.cursor.execute(f"CREATE TABLE Cameras ({columns(_schema, CAMERA_COLUMNS)})")
+        self._commit(commit)
 
-        # create new
-        q2 = SnowflakeQuery.create_table(CAMERA_TABLE).columns(
-            Column("cameraId", "TEXT"),
-            Column("frameId", "TEXT"),
-            Column("frameNum", "Int"),
-            Column("fileName", "TEXT"),
-            Column("cameraTranslation", "geometry"),
-            Column("cameraRotation", "real[4]"),
-            Column("cameraIntrinsic", "real[3][3]"),
-            Column("egoTranslation", "geometry"),
-            Column("egoRotation", "real[4]"),
-            Column("timestamp", "timestamptz"),
-            Column("cameraHeading", "real"),
-            Column("egoHeading", "real"),
+    def _create_general_bbox_table(self, commit=True):
+        self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
+        self.cursor.execute(
+            f"CREATE TABLE General_Bbox ({columns(_schema, BBOX_COLUMNS)}, FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId))"
         )
-        self.cursor.execute(q1.get_sql())
-        self.cursor.execute(q2.get_sql())
-        self.connection.commit()
+        self._commit(commit)
 
-    def _create_general_bbox_table(self):
-        # drop old
-        q1 = SnowflakeQuery.drop_table(BBOX_TABLE).if_exists()
+    def _create_item_general_trajectory_table(self, commit=True):
+        self.cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
+        self.cursor.execute(
+            f"CREATE TABLE Item_General_Trajectory ({columns(_schema, TRAJECTORY_COLUMNS)}, PRIMARY KEY (itemId))"
+        )
+        self._commit(commit)
 
-        # create new
-        q2 = """
-        CREATE TABLE General_Bbox(
-            itemId TEXT,
-            cameraId TEXT,
-            trajBbox stbox,
-            FOREIGN KEY(itemId)
-                REFERENCES Item_General_Trajectory(itemId)
-        );
-        """
-
-        self.cursor.execute(q1.get_sql())
-        self.cursor.execute(q2)
-        self.connection.commit()
-
-    def _create_item_general_trajectory_table(self):
-        # drop old
-        q1 = "DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;"
-
-        # create new
-        q2 = """
-        CREATE TABLE Item_General_Trajectory(
-            itemId TEXT,
-            cameraId TEXT,
-            objectType TEXT,
-            color TEXT,
-            trajCentroids tgeompoint,
-            largestBbox stbox,
-            itemHeadings tfloat,
-            PRIMARY KEY (itemId)
-        );
-        """
-
-        self.cursor.execute(q1)
-        self.cursor.execute(q2)
-        self.connection.commit()
-
-    def _create_index(self):
+    def _create_index(self, commit=True):
         self.cursor.execute("CREATE INDEX ON Cameras (cameraId);")
         self.cursor.execute("CREATE INDEX ON Cameras (timestamp);")
         self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (itemId);")
         self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (cameraId);")
         self.cursor.execute(
-            """
-        CREATE INDEX IF NOT EXISTS traj_idx
-        ON Item_General_Trajectory
-        USING GiST(trajCentroids);
-        """
+            "CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);"
         )
+        self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
         self.cursor.execute(
-            """
-        CREATE INDEX IF NOT EXISTS item_idx
-        ON General_Bbox(itemId);
-        """
+            "CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);"
         )
+        self._commit(commit)
+
+    def _insert_into_camera(self, value: tuple, commit=True):
         self.cursor.execute(
-            """
-        CREATE INDEX IF NOT EXISTS traj_bbox_idx
-        ON General_Bbox
-        USING GiST(trajBbox);
-        """
+            f"INSERT INTO Cameras ({columns(_name, CAMERA_COLUMNS)}) VALUES ({place_holder(len(CAMERA_COLUMNS))})",
+            tuple(value),
         )
-        self.connection.commit()
+        self._commit(commit)
+
+    def _insert_into_item_general_trajectory(self, value: tuple, commit=True):
+        self.cursor.execute(
+            f"INSERT INTO Item_General_Trajectory ({columns(_name, TRAJECTORY_COLUMNS)}) VALUES ({place_holder(len(TRAJECTORY_COLUMNS))})",
+            tuple(value),
+        )
+        self._commit(commit)
+
+    def _insert_into_general_bbox(self, value: tuple, commit=True):
+        self.cursor.execute(
+            f"INSERT INTO General_Bbox ({columns(_name, BBOX_COLUMNS)}) VALUES ({place_holder(len(BBOX_COLUMNS))})",
+            tuple(value),
+        )
+        self._commit(commit)
+
+    def _commit(self, commit=True):
+        if commit:
+            self.connection.commit()
 
     def _execute_query(self, query: str) -> List[tuple]:
         try:

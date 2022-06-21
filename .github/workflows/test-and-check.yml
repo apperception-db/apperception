@@ -6,6 +6,16 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      mobilitydb:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v3
         with:
@@ -33,6 +43,18 @@ jobs:
       - name: Install Dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
+
+      - name: Extend MobilityDB with User-Defined functions
+        run: |
+          pushd pg_extender
+          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i install.sql;"
+          popd
+        env:
+          PGPASSWORD: docker
+      
+      - name: Ingest data
+        run: |
+          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data')"
       
       - name: Unit Test
         run: poetry run pytest --cov=apperception --cov-report=xml tests
