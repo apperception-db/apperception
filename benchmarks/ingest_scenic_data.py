@@ -15,7 +15,7 @@ def ingest_data(remote: bool = False, host: str = "localhost", port=25432):
     else:
         data_path = "./data/"
         conn = psycopg2.connect(database="mobilitydb", user="docker", password="docker", host=host, port=port)
-    print("ingest all scenic data")
+    print("ingest all scenic data:", data_path)
     import_tables(conn, data_path)
     ingest_road(conn,data_path)
 
