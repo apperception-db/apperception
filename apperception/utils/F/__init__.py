@@ -1,3 +1,4 @@
+from .ahead import ahead
 from .angle_between import angle_between
 from .angle_excluding import angle_excluding
 from .contained import contained
@@ -29,5 +30,6 @@ __all__ = [
     "same_region",
     "angle_between",
     "angle_excluding",
+    "ahead",
     "contains_all",
 ]
