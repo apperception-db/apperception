@@ -60,7 +60,7 @@ BBOX_COLUMNS: List[Tuple[str, str]] = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("trajBbox", "stbox"),
-    ("timestamp", "timestampz"),
+    ("timestamp", "timestamptz"),
 ]
 
 
