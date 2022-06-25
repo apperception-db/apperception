@@ -14,11 +14,13 @@ from .road_direction import road_direction
 from .road_segment import road_segment
 from .same_region import same_region
 from .view_angle import view_angle
+from .contained_margin import contained_margin
 
 __all__ = [
     "convert_camera",
     "view_angle",
     "contained",
+    "contained_margin",
     "facing_relative",
     "road_direction",
     "get_x",

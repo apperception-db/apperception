@@ -6,6 +6,7 @@
 \i overlap.sql;
 \i viewAngle.sql;
 \i geoContained.sql;
+\i geoContainedMargin.sql;
 \i distance.sql;
 \i convertCamera.sql;
 \i operators.sql;

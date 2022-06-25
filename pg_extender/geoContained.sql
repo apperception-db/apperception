@@ -12,9 +12,7 @@ CREATE OR REPLACE FUNCTION contained(contPoint geometry, geom geometry) RETURNS 
 $BODY$
 declare excluded geometry;
 BEGIN
-  -- excluded := ST_Difference(contPoint, geom);
-  -- RETURN ST_Area(excluded) < 0.1 or St_Covers(geom, contPoint);
-     RETURN St_Covers(geom, contPoint);
+  RETURN St_Covers(geom, contPoint);
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
