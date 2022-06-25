@@ -18,3 +18,4 @@ class CameraConfig:
     timestamp: str
     cameraHeading: float
     egoHeading: float
+    camera_translation_abs: List[float]  # float[3]

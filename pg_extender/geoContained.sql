@@ -10,8 +10,9 @@
 DROP FUNCTION IF EXISTS contained(geometry, geometry); 
 CREATE OR REPLACE FUNCTION contained(contPoint geometry, geom geometry) RETURNS boolean AS
 $BODY$
+declare excluded geometry;
 BEGIN
-  RETURN ST_Covers(geom, contPoint);
+  RETURN St_Covers(geom, contPoint);
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
@@ -37,6 +38,34 @@ CREATE OR REPLACE FUNCTION contained(contPoint tgeompoint, geoms geometry[], t t
 $BODY$
 BEGIN
   RETURN contained(valueAtTimestamp(contPoint, t), geoms);
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
+
+------------ USED FOR STBOX TYPES (BOUNDING BOXES) ------------
+DROP FUNCTION IF EXISTS contained(stbox, geometry); 
+CREATE OR REPLACE FUNCTION contained(contPoint stbox, geom geometry) RETURNS boolean AS
+$BODY$
+BEGIN
+  RETURN contained(contPoint::box3d::geometry, geom);
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
+
+DROP FUNCTION IF EXISTS contained(stbox, geometry[]);
+CREATE OR REPLACE FUNCTION contained(contPoint stbox, geoms geometry[]) RETURNS boolean AS
+$BODY$
+BEGIN
+  RETURN contained(contPoint::box3d::geometry, geoms);
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
+
+DROP FUNCTION IF EXISTS contained(stbox, geometry[], timestamptz);
+CREATE OR REPLACE FUNCTION contained(contPoint stbox, geoms geometry[], t timestamptz) RETURNS boolean AS
+$BODY$
+BEGIN
+  RETURN contained(contPoint, geoms);
 END
 $BODY$
 LANGUAGE 'plpgsql' ;

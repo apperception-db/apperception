@@ -43,6 +43,7 @@ CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("timestamp", "timestamptz"),
     ("cameraHeading", "real"),
     ("egoHeading", "real"),
+    ("cameraTranslationAbs", "geometry"),
 ]
 
 TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
@@ -59,6 +60,7 @@ BBOX_COLUMNS: List[Tuple[str, str]] = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("trajBbox", "stbox"),
+    ("timestamp", "timestampz"),
 ]
 
 
@@ -111,14 +113,25 @@ class Database:
     def _create_general_bbox_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
         self.cursor.execute(
-            f"CREATE TABLE General_Bbox ({columns(_schema, BBOX_COLUMNS)}, FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId))"
+            f"""
+            CREATE TABLE General_Bbox (
+                {columns(_schema, BBOX_COLUMNS)},
+                FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
+                PRIMARY KEY (itemId, timestamp)
+            )
+            """
         )
         self._commit(commit)
 
     def _create_item_general_trajectory_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
         self.cursor.execute(
-            f"CREATE TABLE Item_General_Trajectory ({columns(_schema, TRAJECTORY_COLUMNS)}, PRIMARY KEY (itemId))"
+            f"""
+            CREATE TABLE Item_General_Trajectory (
+                {columns(_schema, TRAJECTORY_COLUMNS)},
+                PRIMARY KEY (itemId)
+            )
+            """
         )
         self._commit(commit)
 
@@ -133,6 +146,9 @@ class Database:
         self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
         self.cursor.execute(
             "CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);"
+        )
+        self.cursor.execute(
+            "CREATE INDEX IF NOT EXISTS item_id_timestampx ON General_Bbox(itemId, timestamp);"
         )
         self._commit(commit)
 
@@ -183,7 +199,8 @@ class Database:
                 ARRAY{config.ego_rotation},
                 '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.cameraHeading},
-                {config.egoHeading}
+                {config.egoHeading},
+                'POINT Z ({' '.join(map(str, config.camera_translation_abs))})',
             )"""
             for config in camera.configs
         ]
@@ -202,7 +219,8 @@ class Database:
                 egoRotation,
                 timestamp,
                 cameraHeading,
-                egoHeading
+                egoHeading,
+                cameraTranslationAbs
             )
             VALUES {','.join(values)};
             """
