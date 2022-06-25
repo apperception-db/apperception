@@ -2,6 +2,7 @@ from .ahead import ahead
 from .angle_between import angle_between
 from .angle_excluding import angle_excluding
 from .contained import contained
+from .contained_margin import contained_margin
 from .contains_all import contains_all
 from .convert_camera import convert_camera
 from .distance import distance
@@ -14,7 +15,6 @@ from .road_direction import road_direction
 from .road_segment import road_segment
 from .same_region import same_region
 from .view_angle import view_angle
-from .contained_margin import contained_margin
 
 __all__ = [
     "convert_camera",
