@@ -11,6 +11,8 @@ from apperception.utils import fn_to_sql, F
         "getY(C.egoTranslation, C.timestamp)"),
     (lambda o, c: F.get_y(o.traj, c.timestamp), 
         "getY(T.trajCentroids, C.timestamp)"),
+    (lambda o, c: F.get_z(o.traj, c.timestamp), 
+        "getZ(T.trajCentroids, C.timestamp)"),
 ])
 
 def test_get_x_y(fn, sql):

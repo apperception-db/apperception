@@ -36,7 +36,8 @@ def import_tables(conn: Connection, data_path: str):
                 egoRotation real[4],
                 timestamp timestamptz,
                 cameraHeading real,
-                egoHeading real
+                egoHeading real,
+                cameraTranslationAbs geometry
                 )
     """
     )
@@ -58,13 +59,15 @@ def import_tables(conn: Connection, data_path: str):
 
     cursor.execute(
         """
-            CREATE TABLE General_Bbox (
-                itemId TEXT,
-                cameraId TEXT,
-                trajBbox stbox,
-                FOREIGN KEY(itemId)
-                    REFERENCES Item_General_Trajectory(itemId)
-                )
+             CREATE TABLE General_Bbox(
+            itemId TEXT,
+            cameraId TEXT,
+            trajBbox stbox,
+            timestamp timestamptz,
+            FOREIGN KEY(itemId)
+                REFERENCES Item_General_Trajectory(itemId),
+            PRIMARY KEY (itemId, timestamp)
+        );
     """
     )
 
@@ -75,8 +78,8 @@ def import_tables(conn: Connection, data_path: str):
     for i, row in df_Cameras.iterrows():
         cursor.execute(
             """
-                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                    INSERT INTO Cameras (cameraId, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading, cameraTranslationAbs)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     """,
             tuple(row),
         )
@@ -110,8 +113,8 @@ def import_tables(conn: Connection, data_path: str):
     for i, row in df_General_Bbox.iterrows():
         cursor.execute(
             """
-                    INSERT INTO General_Bbox (itemId, cameraId, trajBbox)
-                    VALUES (%s,%s,%s)
+                    INSERT INTO General_Bbox (itemId, cameraId, trajBbox, timestamp)
+                    VALUES (%s,%s,%s,%s)
                     """,
             tuple(row),
         )
@@ -119,6 +122,12 @@ def import_tables(conn: Connection, data_path: str):
         """
         CREATE INDEX IF NOT EXISTS item_idx
         ON General_Bbox(itemId);
+    """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS item_id_timestampx
+        ON General_Bbox(itemId, timestamp);
     """
     )
     cursor.execute(

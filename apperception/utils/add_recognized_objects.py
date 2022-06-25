@@ -115,7 +115,8 @@ def insert_general_trajectory(
             STBOX 'STBOX ZT(
                 ({join([*tl, timestamp])}),
                 ({join([*br, timestamp])})
-            )'
+            )',
+            timestamptz '{timestamp}'
         )"""
         )
 
@@ -143,7 +144,7 @@ def insert_general_trajectory(
     cursor.execute(insert_trajectory)
     if len(insert_bbox_trajectories_builder):
         cursor.execute(
-            f"INSERT INTO General_Bbox (itemId, cameraId, trajBbox) VALUES {','.join(insert_bbox_trajectories_builder)}"
+            f"INSERT INTO General_Bbox (itemId, cameraId, trajBbox, timestamp) VALUES {','.join(insert_bbox_trajectories_builder)}"
         )
 
     # Commit your changes in the database

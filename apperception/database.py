@@ -73,6 +73,7 @@ class Database:
             Column("timestamp", "timestamptz"),
             Column("cameraHeading", "real"),
             Column("egoHeading", "real"),
+            Column("cameraTranslation", "geometry"),
         )
         self.cursor.execute(q1.get_sql())
         self.cursor.execute(q2.get_sql())
@@ -88,8 +89,10 @@ class Database:
             itemId TEXT,
             cameraId TEXT,
             trajBbox stbox,
+            timestamp timestamptz,
             FOREIGN KEY(itemId)
-                REFERENCES Item_General_Trajectory(itemId)
+                REFERENCES Item_General_Trajectory(itemId),
+            PRIMARY KEY (itemId, timestamp)
         );
         """
 
@@ -139,6 +142,12 @@ class Database:
         )
         self.cursor.execute(
             """
+        CREATE INDEX IF NOT EXISTS item_id_timestampx
+        ON General_Bbox(itemId, timestamp);
+        """
+        )
+        self.cursor.execute(
+            """
         CREATE INDEX IF NOT EXISTS traj_bbox_idx
         ON General_Bbox
         USING GiST(trajBbox);
@@ -168,7 +177,8 @@ class Database:
                 ARRAY{config.ego_rotation},
                 '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.cameraHeading},
-                {config.egoHeading}
+                {config.egoHeading},
+                'POINT Z ({' '.join(map(str, config.camera_translation_abs))})',
             )"""
             for config in camera.configs
         ]
@@ -187,7 +197,8 @@ class Database:
                 egoRotation,
                 timestamp,
                 cameraHeading,
-                egoHeading
+                egoHeading,
+                cameraTranslationAbs
             )
             VALUES {','.join(values)};
             """
