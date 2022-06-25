@@ -1,11 +1,13 @@
 import os
+from typing import TYPE_CHECKING
 
 import pandas as pd
 
-from apperception.database import Database
+if TYPE_CHECKING:
+    from apperception.database import Database
 
 
-def import_tables(database: Database, data_path: str):
+def import_tables(database: "Database", data_path: str):
 
     # Import CSV
     data_Cameras = pd.read_csv(os.path.join(data_path, "cameras.csv"))
