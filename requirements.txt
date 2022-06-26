@@ -1,7 +1,6 @@
 uncompyle6
 psycopg2
-ffmpeg-python
-ffprobe-python
+future-annotations
 easydict
 scipy
 opencv-python
@@ -12,3 +11,11 @@ absl-py
 easydict
 matplotlib
 pillow
+jupyter
+torch
+numpy
+pyquaternion
+PyQt5
+dill
+PyYAML
+pypika
