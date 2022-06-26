@@ -1,4 +1,3 @@
-import pytest
 from apperception.database import database
 from apperception.utils import import_tables
 
