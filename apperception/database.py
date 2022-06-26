@@ -509,8 +509,7 @@ class Database:
 
     def sql(self, query: str) -> pd.DataFrame:
         return pd.DataFrame(
-            self._execute_query(query),
-            columns=[d.name for d in self.cursor.description]
+            self._execute_query(query), columns=[d.name for d in self.cursor.description]
         )
 
 
