@@ -508,9 +508,10 @@ class Database:
         overlay_bboxes(_fetched_meta, cams, boxed)
 
     def sql(self, query: str) -> pd.DataFrame:
-        df = pd.DataFrame(self._execute_query(query))
-        df.columns = [d.name for d in self.cursor.description]
-        return df
+        return pd.DataFrame(
+            self._execute_query(query),
+            columns=[d.name for d in self.cursor.description]
+        )
 
 
 database = Database(
