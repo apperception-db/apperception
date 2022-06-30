@@ -32,4 +32,4 @@ ingest_road(d, "./data/road_network_boston")
     ("intersection", 332),
 ])
 def test_simple_ops(table, count):
-    assert d._execute_query(f"select count(*) from {table}") == [count]
+    assert d._execute_query(f"select count(*) from {table}") == [(count,)]
