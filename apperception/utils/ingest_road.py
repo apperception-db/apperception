@@ -1,3 +1,11 @@
+import json
+import os
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from apperception.database import Database
+
+
 CREATE_POLYGON_SQL = """
 CREATE TABLE IF NOT EXISTS SegmentPolygon(
     elementId TEXT,
@@ -131,12 +139,11 @@ CREATE TABLE IF NOT EXISTS Intersection(
 """
 
 
-def create_polygon_table(conn, polygons, drop=True):
-    cursor = conn.cursor()
+def create_polygon_table(database: "Database", polygons, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
-    cursor.execute(CREATE_POLYGON_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON SegmentPolygon(elementId);")
+        database._execute_update("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
+    database._execute_update(CREATE_POLYGON_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS element_idx ON SegmentPolygon(elementId);")
 
     values = []
     for poly in polygons:
@@ -147,7 +154,7 @@ def create_polygon_table(conn, polygons, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO SegmentPolygon (
             elementId,
@@ -157,15 +164,12 @@ def create_polygon_table(conn, polygons, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_segment_table(conn, segments, drop=True):
-    cursor = conn.cursor()
+def create_segment_table(database: "Database", segments, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Segment")
-    cursor.execute(CREATE_SEGMENT_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS element_idx ON Segment(elementId);")
+        database._execute_update("DROP TABLE IF EXISTS Segment")
+    database._execute_update(CREATE_SEGMENT_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS element_idx ON Segment(elementId);")
 
     values = []
     for seg in segments:
@@ -178,7 +182,7 @@ def create_segment_table(conn, segments, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Segment (
             elementId,
@@ -189,24 +193,21 @@ def create_segment_table(conn, segments, drop=True):
         VALUES {','.join(values)};
         """
     )
-    cursor.execute(
+    database._execute_update(
         """
         UPDATE Segment
         SET segmentLine = ST_MakeLine(startPoint, endPoint)
         WHERE startPoint IS NOT NULL and endPoint IS NOT NULL;
         """
     )
-    cursor.execute(CREATE_SEGMENT_INDEX)
-
-    conn.commit()
+    database._execute_update(CREATE_SEGMENT_INDEX)
 
 
-def create_lanesection_table(conn, laneSections, drop=True):
-    cursor = conn.cursor()
+def create_lanesection_table(database: "Database", laneSections, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS LaneSection")
-    cursor.execute(CREATE_LANESECTION_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS lanesec_idx ON LaneSection(id);")
+        database._execute_update("DROP TABLE IF EXISTS LaneSection")
+    database._execute_update(CREATE_LANESECTION_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS lanesec_idx ON LaneSection(id);")
 
     values = []
     for lanesec in laneSections:
@@ -221,7 +222,7 @@ def create_lanesection_table(conn, laneSections, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO LaneSection (
             id,
@@ -235,15 +236,12 @@ def create_lanesection_table(conn, laneSections, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_lane_table(conn, lanes, drop=True):
-    cursor = conn.cursor()
+def create_lane_table(database: "Database", lanes, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Lane")
-    cursor.execute(CREATE_LANE_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS lane_idx ON Lane(id);")
+        database._execute_update("DROP TABLE IF EXISTS Lane")
+    database._execute_update(CREATE_LANE_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS lane_idx ON Lane(id);")
 
     values = []
     for lane in lanes:
@@ -253,7 +251,7 @@ def create_lane_table(conn, lanes, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Lane (
             id
@@ -262,16 +260,15 @@ def create_lane_table(conn, lanes, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_lane_lanesec_table(conn, lane_lanesec, drop=True):
-    cursor = conn.cursor()
+def create_lane_lanesec_table(database: "Database", lane_lanesec, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Lane_LaneSection")
-    cursor.execute(CREATE_LANE_LANESEC_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS lane_idx ON Lane_LaneSection(laneId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS laneSection_idx ON Lane_LaneSection(laneSectionId);")
+        database._execute_update("DROP TABLE IF EXISTS Lane_LaneSection")
+    database._execute_update(CREATE_LANE_LANESEC_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS lane_idx ON Lane_LaneSection(laneId);")
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS laneSection_idx ON Lane_LaneSection(laneSectionId);"
+    )
 
     values = []
     for ll in lane_lanesec:
@@ -282,7 +279,7 @@ def create_lane_lanesec_table(conn, lane_lanesec, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Lane_LaneSection (
             laneId,
@@ -292,37 +289,33 @@ def create_lane_lanesec_table(conn, lane_lanesec, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_lanegroup_table(conn, laneGroups, drop=True):
-    cursor = conn.cursor()
+def create_lanegroup_table(database: "Database", laneGroups, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS LaneGroup")
-    cursor.execute(CREATE_LANEGROUP_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);")
+        database._execute_update("DROP TABLE IF EXISTS LaneGroup")
+    database._execute_update(CREATE_LANEGROUP_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS lanegroup_idx ON LaneGroup(id);")
 
     values = []
     for lg in laneGroups:
         values.append(f"('{lg['id']}')")
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO LaneGroup (id)
         VALUES {','.join(values)};
         """
     )
 
-    conn.commit()
 
-
-def create_lanegroup_lane_table(conn, lanegroup_lane, drop=True):
-    cursor = conn.cursor()
+def create_lanegroup_lane_table(database: "Database", lanegroup_lane, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS LaneGroup_Lane")
-    cursor.execute(CREATE_LANEGROUP_LANE_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS lane_idx ON LaneGroup_Lane(laneId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS laneGroup_idx ON LaneGroup_Lane(laneGroupId);")
+        database._execute_update("DROP TABLE IF EXISTS LaneGroup_Lane")
+    database._execute_update(CREATE_LANEGROUP_LANE_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS lane_idx ON LaneGroup_Lane(laneId);")
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON LaneGroup_Lane(laneGroupId);"
+    )
 
     values = []
     for ll in lanegroup_lane:
@@ -333,7 +326,7 @@ def create_lanegroup_lane_table(conn, lanegroup_lane, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO LaneGroup_Lane (
             laneGroupId,
@@ -343,16 +336,17 @@ def create_lanegroup_lane_table(conn, lanegroup_lane, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_opposite_lanegroup_table(conn, opposite_lanegroup, drop=True):
-    cursor = conn.cursor()
+def create_opposite_lanegroup_table(database: "Database", opposite_lanegroup, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Opposite_LaneGroup")
-    cursor.execute(CREATE_OPPOSITE_LANEGROUP_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS opposite_idx ON Opposite_LaneGroup(oppositeId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS laneGroup_idx ON Opposite_LaneGroup(laneGroupId);")
+        database._execute_update("DROP TABLE IF EXISTS Opposite_LaneGroup")
+    database._execute_update(CREATE_OPPOSITE_LANEGROUP_SQL)
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS opposite_idx ON Opposite_LaneGroup(oppositeId);"
+    )
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON Opposite_LaneGroup(laneGroupId);"
+    )
 
     values = []
     for oppo in opposite_lanegroup:
@@ -363,7 +357,7 @@ def create_opposite_lanegroup_table(conn, opposite_lanegroup, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Opposite_LaneGroup (
             laneGroupId,
@@ -373,15 +367,12 @@ def create_opposite_lanegroup_table(conn, opposite_lanegroup, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_road_table(conn, roads, drop=True):
-    cursor = conn.cursor()
+def create_road_table(database: "Database", roads, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Road")
-    cursor.execute(CREATE_ROAD_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS road_idx ON Road(id);")
+        database._execute_update("DROP TABLE IF EXISTS Road")
+    database._execute_update(CREATE_ROAD_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS road_idx ON Road(id);")
 
     values = []
     for road in roads:
@@ -393,7 +384,7 @@ def create_road_table(conn, roads, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Road (
             id,
@@ -404,16 +395,15 @@ def create_road_table(conn, roads, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_road_lanegroup_table(conn, road_lanegroup, drop=True):
-    cursor = conn.cursor()
+def create_road_lanegroup_table(database: "Database", road_lanegroup, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Road_LaneGroup")
-    cursor.execute(CREATE_ROAD_LANEGROUP_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS road_idx ON Road_LaneGroup(roadId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS laneGroup_idx ON Road_LaneGroup(laneGroupId);")
+        database._execute_update("DROP TABLE IF EXISTS Road_LaneGroup")
+    database._execute_update(CREATE_ROAD_LANEGROUP_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS road_idx ON Road_LaneGroup(roadId);")
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON Road_LaneGroup(laneGroupId);"
+    )
 
     values = []
     for rl in road_lanegroup:
@@ -424,7 +414,7 @@ def create_road_lanegroup_table(conn, road_lanegroup, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Road_LaneGroup (
             roadId,
@@ -434,16 +424,15 @@ def create_road_lanegroup_table(conn, road_lanegroup, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_road_roadsec_table(conn, road_roadsec, drop=True):
-    cursor = conn.cursor()
+def create_road_roadsec_table(database: "Database", road_roadsec, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Road_RoadSection")
-    cursor.execute(CREATE_ROAD_ROADSECTION_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS road_idx ON Road_RoadSection(roadId);")
-    cursor.execute("CREATE INDEX IF NOT EXISTS roadsec_idx ON Road_RoadSection(roadSectionId);")
+        database._execute_update("DROP TABLE IF EXISTS Road_RoadSection")
+    database._execute_update(CREATE_ROAD_ROADSECTION_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS road_idx ON Road_RoadSection(roadId);")
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS roadsec_idx ON Road_RoadSection(roadSectionId);"
+    )
 
     values = []
     for rr in road_roadsec:
@@ -454,7 +443,7 @@ def create_road_roadsec_table(conn, road_roadsec, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Road_RoadSection (
             roadId,
@@ -464,15 +453,12 @@ def create_road_roadsec_table(conn, road_roadsec, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_roadsection_table(conn, roadSections, drop=True):
-    cursor = conn.cursor()
+def create_roadsection_table(database: "Database", roadSections, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS RoadSection")
-    cursor.execute(CREATE_ROADSECTION_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS roadsec_idx ON RoadSection(id);")
+        database._execute_update("DROP TABLE IF EXISTS RoadSection")
+    database._execute_update(CREATE_ROADSECTION_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS roadsec_idx ON RoadSection(id);")
 
     values = []
     for roadsec in roadSections:
@@ -489,7 +475,7 @@ def create_roadsection_table(conn, roadSections, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO RoadSection (
             id,
@@ -500,18 +486,15 @@ def create_roadsection_table(conn, roadSections, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_roadsec_lanesec_table(conn, roadsec_lanesec, drop=True):
-    cursor = conn.cursor()
+def create_roadsec_lanesec_table(database: "Database", roadsec_lanesec, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS RoadSection_LaneSection")
-    cursor.execute(CREATE_ROADSEC_LANESEC_SQL)
-    cursor.execute(
+        database._execute_update("DROP TABLE IF EXISTS RoadSection_LaneSection")
+    database._execute_update(CREATE_ROADSEC_LANESEC_SQL)
+    database._execute_update(
         "CREATE INDEX IF NOT EXISTS lanesec_idx ON RoadSection_LaneSection(laneSectionId);"
     )
-    cursor.execute(
+    database._execute_update(
         "CREATE INDEX IF NOT EXISTS roadsec_idx ON RoadSection_LaneSection(roadSectionId);"
     )
 
@@ -524,7 +507,7 @@ def create_roadsec_lanesec_table(conn, roadsec_lanesec, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO RoadSection_LaneSection (
             roadSectionId,
@@ -534,15 +517,12 @@ def create_roadsec_lanesec_table(conn, roadsec_lanesec, drop=True):
         """
     )
 
-    conn.commit()
 
-
-def create_intersection_table(conn, intersections, drop=True):
-    cursor = conn.cursor()
+def create_intersection_table(database: "Database", intersections, drop=True):
     if drop:
-        cursor.execute("DROP TABLE IF EXISTS Intersection")
-    cursor.execute(CREATE_INTERSECTION_SQL)
-    cursor.execute("CREATE INDEX IF NOT EXISTS intersec_idx ON Intersection(id);")
+        database._execute_update("DROP TABLE IF EXISTS Intersection")
+    database._execute_update(CREATE_INTERSECTION_SQL)
+    database._execute_update("CREATE INDEX IF NOT EXISTS intersec_idx ON Intersection(id);")
 
     values = []
     for intersec in intersections:
@@ -553,7 +533,7 @@ def create_intersection_table(conn, intersections, drop=True):
             )"""
         )
 
-    cursor.execute(
+    database._execute_update(
         f"""
         INSERT INTO Intersection (
             id,
@@ -563,4 +543,28 @@ def create_intersection_table(conn, intersections, drop=True):
         """
     )
 
-    conn.commit()
+
+CREATE_TABLES = {
+    "polygon": create_polygon_table,
+    "segment": create_segment_table,
+    "laneSection": create_lanesection_table,
+    "lane": create_lane_table,
+    "lane_LaneSec": create_lane_lanesec_table,
+    "laneGroup": create_lanegroup_table,
+    "laneGroup_Lane": create_lanegroup_lane_table,
+    "laneGroup_opposite": create_opposite_lanegroup_table,
+    "road": create_road_table,
+    "road_laneGroup": create_road_lanegroup_table,
+    "road_roadSec": create_road_roadsec_table,
+    "roadSection": create_roadsection_table,
+    "roadSec_laneSec": create_roadsec_lanesec_table,
+    "intersection": create_intersection_table,
+}
+
+
+def ingest_road(database: "Database", directory: str):
+    for d, fn in CREATE_TABLES.items():
+        with open(os.path.join(directory, d + ".json"), "r") as f:
+            data = json.load(f)
+        fn(database, data)
+        database._commit()

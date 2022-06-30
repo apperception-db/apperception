@@ -55,6 +55,7 @@ jobs:
       - name: Ingest data
         run: |
           poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data')"
+          poetry run python -c "from apperception.utils import ingest_road; from apperception.database import database; ingest_road(database, './data/road_network_boston')"
       
       - name: Unit Test
         run: poetry run pytest --cov=apperception --cov-report=xml tests

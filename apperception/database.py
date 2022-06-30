@@ -185,6 +185,13 @@ class Database:
             self.connection.rollback()
             raise error
 
+    def _execute_update(self, query: str) -> None:
+        try:
+            self.cursor.execute(query)
+        except psycopg2.errors.DatabaseError as error:
+            self.connection.rollback()
+            raise error
+
     def insert_cam(self, camera: "Camera"):
         values = [
             f"""(
