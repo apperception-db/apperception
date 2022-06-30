@@ -100,7 +100,7 @@ jobs:
           AP_PORT: 25432
       
       - name: Unit Test
-        run: poetry run pytest --cov=apperception --cov-report=xml tests
+        run: poetry run pytest --cov=apperception --cov-report=xml tests tests-scenic
         env:
           AP_PORT: 25432
           AP_PORT_ROAD: 25433
