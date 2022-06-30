@@ -1,4 +1,5 @@
 from apperception.world import empty_world
+from datetime import datetime, timezone
 
 
 def test_fig_13():
@@ -20,4 +21,60 @@ def test_fig_13():
         "1 == 1;"
     )
 
-    assert world.get_id_time_camId_filename(2) == []
+    assert set(world.get_id_time_camId_filename(2)) == set([
+        (
+            '9d03c6edb6eb4d49acccb245bdd0c652',
+            '65d120d480794b9fbb433dc58512559b',
+            datetime(2018, 9, 18, 9, 15, 58, 412404, tzinfo=timezone.utc),
+            'scene-0456',
+            'samples/CAM_FRONT/n008-2018-09-18-12-07-26-0400__CAM_FRONT__1537287358412404.jpg'
+        ),
+        (
+            '82d680066ddd465dbd3b22fd6a66ed70',
+            '58350757f1d04f628aab9b22cf33549b',
+            datetime(2018, 8, 30, 12, 25, 18, 112404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657118112404.jpg'
+        ),
+        ('2c74f27891164c9182d5a0d0102dca8c',
+            'eb28d3eeb8ac46b8ac47848a18d41dc5',
+            datetime(2018, 8, 30, 12, 25, 27, 112404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657127112404.jpg'
+        ),
+        (
+            '2c74f27891164c9182d5a0d0102dca8c',
+            'eb28d3eeb8ac46b8ac47848a18d41dc5',
+            datetime(2018, 8, 30, 12, 25, 27, 612404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657127612404.jpg'
+        ),
+        (
+            '2c74f27891164c9182d5a0d0102dca8c',
+            'eb28d3eeb8ac46b8ac47848a18d41dc5',
+            datetime(2018, 8, 30, 12, 25, 28, 112404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657128112404.jpg'
+        ),
+        (
+            'b327acc1048e44889108740b2304dabc',
+            '58350757f1d04f628aab9b22cf33549b',
+            datetime(2018, 8, 30, 12, 25, 18, 112404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657118112404.jpg'
+        ),
+        (
+            'b327acc1048e44889108740b2304dabc',
+            '58350757f1d04f628aab9b22cf33549b',
+            datetime(2018, 8, 30, 12, 25, 18, 612404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657118612404.jpg'
+        ),
+        (
+            'b327acc1048e44889108740b2304dabc',
+            '58350757f1d04f628aab9b22cf33549b',
+            datetime(2018, 8, 30, 12, 25, 19, 112404, tzinfo=timezone.utc),
+            'scene-0757',
+            'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657119112404.jpg'
+        ),
+    ])
