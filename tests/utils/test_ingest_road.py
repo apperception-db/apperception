@@ -16,20 +16,20 @@ ingest_road(d, "./data/road_network_boston")
 
 
 @pytest.mark.parametrize("table, count", [
-    ("segmentpolygon", 0),
-    ("segment", 0),
-    ("lanesection", 0),
-    ("lane", 0),
-    ("lane_lanesection", 0),
-    ("lanegroup", 0),
-    ("lanegroup_lane", 0),
-    ("opposite_lanegroup", 0),
-    ("road", 0),
-    ("road_lanegroup", 0),
-    ("road_roadsection", 0),
-    ("roadsection", 0),
-    ("roadsection_lanesection", 0),
-    ("intersection", 0),
+    ("segmentpolygon", 5170),
+    ("segment", 16480),
+    ("lanesection", 1178),
+    ("lane", 1178),
+    ("lane_lanesection", 1178),
+    ("lanegroup", 964),
+    ("lanegroup_lane", 1178),
+    ("opposite_lanegroup", 742),
+    ("road", 925),
+    ("road_lanegroup", 964),
+    ("road_roadsection", 593),
+    ("roadsection", 593),
+    ("roadsection_lanesection", 1178),
+    ("intersection", 332),
 ])
 def test_simple_ops(table, count):
     assert d._execute_query(f"select count(*) from {table}") == [(count)]
