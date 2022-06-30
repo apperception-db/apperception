@@ -567,4 +567,3 @@ def ingest_road(database: "Database", directory: str):
         with open(os.path.join(directory, d + ".json"), "r") as f:
             data = json.load(f)
         fn(database, data)
-        database._commit()

@@ -185,9 +185,10 @@ class Database:
             self.connection.rollback()
             raise error
 
-    def _execute_update(self, query: str) -> None:
+    def _execute_update(self, query: str, commit: bool = True) -> None:
         try:
             self.cursor.execute(query)
+            self._commit(commit)
         except psycopg2.errors.DatabaseError as error:
             self.connection.rollback()
             raise error
