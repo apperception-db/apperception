@@ -36,7 +36,8 @@ def test_fig_13():
             'scene-0757',
             'samples/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657118112404.jpg'
         ),
-        ('2c74f27891164c9182d5a0d0102dca8c',
+        (
+            '2c74f27891164c9182d5a0d0102dca8c',
             'eb28d3eeb8ac46b8ac47848a18d41dc5',
             datetime(2018, 8, 30, 12, 25, 27, 112404, tzinfo=timezone.utc),
             'scene-0757',
