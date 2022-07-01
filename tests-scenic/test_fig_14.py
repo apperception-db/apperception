@@ -15,5 +15,4 @@ def test_fig_13():
         "F.distance(cam.ego, obj1, cam.timestamp) < 10"
     )
 
-    assert set(world.get_id_time_camId_filename(2)) == set([
-    ])
+    assert world.get_id_time_camId_filename(1) == []
