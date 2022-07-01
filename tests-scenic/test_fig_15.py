@@ -24,4 +24,17 @@ def test_fig_13():
         "F.ahead(car2, opposite_car, cam.timestamp)"
     ]))
 
-    assert world.get_id_time_camId_filename(1) == []
+    assert world.get_id_time_camId_filename(1) == [
+        (
+            '6a81ab78eee3477e8509569a5d0a2217',
+            datetime(2018, 7, 26, 9, 18, 40, 162404, tzinfo=timezone.utc),
+            'scene-0207',
+            'samples/CAM_FRONT/n008-2018-07-26-12-13-50-0400__CAM_FRONT__1532621920162404.jpg'
+        ),
+        (
+            '6a81ab78eee3477e8509569a5d0a2217',
+            datetime(2018, 7, 26, 9, 18, 40, 662404, tzinfo=timezone.utc),
+            'scene-0207',
+            'samples/CAM_FRONT/n008-2018-07-26-12-13-50-0400__CAM_FRONT__1532621920662404.jpg'
+        ),
+    ]
