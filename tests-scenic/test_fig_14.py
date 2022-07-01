@@ -9,7 +9,7 @@ def test_fig_13():
         "F.like(obj1.object_type, 'vehicle%') and",
         "F.distance(cam.ego, obj1, cam.timestamp) < 50 and",
         "F.view_angle(obj1, cam.ego, cam.timestamp) < 70 / 2 and",
-        "F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.timestamp, cam.ego), cam.timestamp), -180, -90) and",
+        "(F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.timestamp, cam.ego), cam.timestamp), -180, -90) or F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.timestamp, cam.ego), cam.timestamp), 90, 180)) and",
         "F.contained(cam.ego, F.road_segment('road')) and",
         "F.contained(obj1.traj, F.road_segment('road'), cam.timestamp) and",
         "F.angle_between(F.facing_relative(obj1, F.road_direction(obj1.traj, cam.timestamp, cam.ego), cam.timestamp), -15, 15) and",
