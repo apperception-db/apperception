@@ -20,6 +20,7 @@ def add_recognized_objects(
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)
         timestamps = formatted_result[item_id].timestamps
         itemHeading_list = formatted_result[item_id].itemHeading
+        translation_list = formatted_result[item_id].translation
 
         top_left = recognized_bboxes[:, 0, :]
         bottom_right = recognized_bboxes[:, 1, :]
@@ -39,6 +40,7 @@ def add_recognized_objects(
             obj_traj,
             camera_id,
             itemHeading_list,
+            translation_list,
         )
 
 
@@ -51,6 +53,7 @@ def bboxes_to_postgres(
     bboxes: List[List[List[float]]],
     camera_id: str,
     itemHeading_list: List[int],
+    translation_list: List[Tuple[float, float, float]],
 ):
     converted_bboxes = [bbox_to_data3d(bbox) for bbox in bboxes]
     pairs = []
@@ -68,6 +71,7 @@ def bboxes_to_postgres(
         pairs,
         camera_id,
         itemHeading_list,
+        translation_list,
     )
     # print(f"{item_id} saved successfully")
 
@@ -85,6 +89,7 @@ def insert_general_trajectory(
     pairs: List[Tuple[float, float, float]],
     camera_id: str,
     itemHeading_list: List[int],
+    translation_list: List[Tuple[float, float, float]],
 ):
 
     # Creating a cursor object using the cursor() method
@@ -96,10 +101,11 @@ def insert_general_trajectory(
     max_br = np.full(3, np.NINF)
 
     traj_centroids = []
+    translations = []
     itemHeadings = []
     prevTimestamp = None
-    for timestamp, (tl, br), current_point, curItemHeading in zip(
-        postgres_timestamps, bboxes, pairs, itemHeading_list
+    for timestamp, (tl, br), current_point, curItemHeading, current_trans in zip(
+        postgres_timestamps, bboxes, pairs, itemHeading_list, translation_list
     ):
         if prevTimestamp == timestamp:
             continue
@@ -122,17 +128,19 @@ def insert_general_trajectory(
 
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
+        translations.append(f"POINT Z ({join(current_trans, ' ')})@{timestamp}")
         itemHeadings.append(f"{curItemHeading}@{timestamp}")
 
     # Insert the item_trajectory separately
     insert_trajectory = f"""
-    INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, color, trajCentroids, largestBbox, itemHeadings)
+    INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, color, trajCentroids, translations, largestBbox, itemHeadings)
     VALUES (
         '{item_id}',
         '{camera_id}',
         '{object_type}',
         '{color}',
         tgeompoint '{{[{', '.join(traj_centroids)}]}}',
+        tgeompoint '{{[{', '.join(translations)}]}}',
         STBOX 'STBOX Z(
             ({join(min_tl)}),
             ({join(max_br)})

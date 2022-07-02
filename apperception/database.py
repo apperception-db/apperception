@@ -52,6 +52,7 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
     ("objectType", "TEXT"),
     ("color", "TEXT"),
     ("trajCentroids", "tgeompoint"),
+    ("translations", "tgeompoint"),
     ("largestBbox", "stbox"),
     ("itemHeadings", "tfloat"),
 ]
@@ -142,6 +143,9 @@ class Database:
         self.cursor.execute("CREATE INDEX ON Item_General_Trajectory (cameraId);")
         self.cursor.execute(
             "CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);"
+        )
+        self.cursor.execute(
+            "CREATE INDEX IF NOT EXISTS trans_idx ON Item_General_Trajectory USING GiST(translation);"
         )
         self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
         self.cursor.execute(

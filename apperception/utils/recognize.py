@@ -31,17 +31,20 @@ def recognize(camera_configs: List[CameraConfig], annotation):
         annotations[item_id].bboxes.append(bbox)
         annotations[item_id].timestamps.append(timestamp)
         annotations[item_id].itemHeading.append(a.heading)
+        annotations[item_id].translation.append(a.translation)
 
     for item_id in annotations:
         timestamps = np.array(annotations[item_id].timestamps)
         bboxes = np.array(annotations[item_id].bboxes)
         itemHeadings = np.array(annotations[item_id].itemHeading)
+        translations = np.array(annotations[item_id].translation)
 
         index = timestamps.argsort()
 
         annotations[item_id].timestamps = timestamps[index].tolist()
         annotations[item_id].bboxes = [bboxes[i, :, :] for i in index]
         annotations[item_id].itemHeading = itemHeadings[index].tolist()
+        annotations[item_id].translation = translations[index].tolist()
 
     print("Recognization done, saving to database......")
     return annotations
