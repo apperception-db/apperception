@@ -20,7 +20,7 @@ def add_recognized_objects(
         recognized_bboxes = np.array(formatted_result[item_id].bboxes)
         timestamps = formatted_result[item_id].timestamps
         itemHeading_list = formatted_result[item_id].itemHeading
-        translation_list = formatted_result[item_id].translation
+        translation_list = formatted_result[item_id].translations
 
         top_left = recognized_bboxes[:, 0, :]
         bottom_right = recognized_bboxes[:, 1, :]
