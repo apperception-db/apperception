@@ -1,5 +1,6 @@
 from apperception.world import empty_world
-from datetime import datetime, timezone
+from datetime import timezone
+import datetime as datetime
 
 
 def test_fig_12():
