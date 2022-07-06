@@ -14,7 +14,7 @@ from pypika.dialects import SnowflakeQuery
 from apperception.data_types import Camera, FetchCameraTuple, QueryType
 from apperception.database import database
 from apperception.utils import transformation
-from apperception.utils import overlay_trajectory
+from apperception.utils.overlay_trajectory import overlay_trajectory
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -86,12 +86,17 @@ class World:
     """
     def overlay_trajectory(
         self,
+        images_data_path: str = None,
+        num_joined_tables: int = 1,
         overlay_headings: bool = False,
         overlay_road: bool = False,
         overlay_objects: bool = False,
         keep_whole_video: bool = False
     ):
-        return overlay_trajectory(overlay_headings=overlay_headings, 
+        return overlay_trajectory(world=self,
+                                  images_data_path =images_data_path,
+                                  num_joined_tables=num_joined_tables,
+                                  overlay_headings=overlay_headings, 
                                   overlay_road=overlay_road, 
                                   overlay_objects=overlay_objects, 
                                   keep_whole_video=keep_whole_video)
