@@ -26,6 +26,8 @@ def same_region(visitor: "GenSqlVisitor", args: List[ast.expr]):
         attr = arg_traj1.attr
         if attr == "traj":
             traj1 = f"{visitor.visit(value)}.trajCentroids"
+        elif attr == "trans":
+            traj1 = f"{visitor.visit(value)}.translations"
         elif attr == "ego":
             traj1 = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":
@@ -45,6 +47,8 @@ def same_region(visitor: "GenSqlVisitor", args: List[ast.expr]):
         attr = arg_traj2.attr
         if attr == "traj":
             traj2 = f"{visitor.visit(value)}.trajCentroids"
+        elif attr == "trans":
+            traj2 = f"{visitor.visit(value)}.translations"
         elif attr == "ego":
             traj2 = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":

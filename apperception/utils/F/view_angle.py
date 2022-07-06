@@ -20,6 +20,8 @@ def view_angle(visitor: "GenSqlVisitor", args: List[ast.expr]):
         cont_point_attr = arg_obj.attr
         if cont_point_attr == "traj" or cont_point_attr == "trajCentroids":
             object_positions = f"{visitor.eval_vars[value.id]}.trajCentroids"
+        elif cont_point_attr == "trans":
+            object_positions = f"{visitor.eval_vars[value.id]}.translations"
         elif cont_point_attr == "bbox":
             raise Exception("We do not support bbox yet")
         else:

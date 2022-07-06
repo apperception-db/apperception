@@ -21,6 +21,8 @@ def get_x(visitor: "GenSqlVisitor", args: List[ast.expr]):
         attr = arg_location.attr
         if attr == "traj":
             location = f"{visitor.visit(value)}.trajCentroids"
+        elif attr == "trans":
+            location = f"{visitor.visit(value)}.translations"
         elif attr == "ego":
             location = f"{visitor.visit(value)}.egoTranslation"
         elif attr == "cam":
