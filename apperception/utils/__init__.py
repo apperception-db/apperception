@@ -21,6 +21,7 @@ from .reformat_bbox_trajectories import reformat_bbox_trajectories
 from .timestamp_to_framenum import timestamp_to_framenum
 from .transformation import transformation
 from .world_to_pixel import world_to_pixel
+from .overlay_trajectory import overlay_trajectory
 
 __all__ = [
     "F",
@@ -46,4 +47,5 @@ __all__ = [
     "timestamp_to_framenum",
     "bbox_to_data3d",
     "ingest_road",
+    "overlay_trajectory",
 ]
