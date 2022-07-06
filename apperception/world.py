@@ -436,10 +436,6 @@ class World:
         return self._done
 
     @property
-    def types(self):
-        return self._types
-
-    @property
     def materialized(self):
         return self._materialized
 

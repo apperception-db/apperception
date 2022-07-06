@@ -1,14 +1,10 @@
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from ..query_type import QueryType
+from typing import Any
 
 
 class View:
-    def __init__(self, view_name: str, view_type: "QueryType"):
+    def __init__(self, view_name: str):
         self.view_name: str = view_name
         self.default: bool = False
-        self.view_type: QueryType = view_type
 
     def from_context(self, context: Any):
         self.context = context
