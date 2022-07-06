@@ -3,8 +3,8 @@ from __future__ import annotations
 import datetime
 import inspect
 import uuid
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional,
-                    Tuple, Union)
+from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
+                    Union)
 
 import cv2
 import numpy as np
@@ -250,9 +250,7 @@ class World:
         )._execute_from_root()
 
     def get_traj_attr(self, attr: str):
-        return derive_world(
-            self, database.get_traj_attr, attr=attr
-        )._execute_from_root()
+        return derive_world(self, database.get_traj_attr, attr=attr)._execute_from_root()
 
     def get_headings(self) -> List[List[List[float]]]:
         # TODO: Optimize operations with NumPy if possible
