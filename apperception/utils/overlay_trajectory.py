@@ -1,10 +1,11 @@
-from apperception.database import database
-from apperception.utils import transformation
+from typing import Tuple, Union
+
 # from apperception.world import World
 import cv2
 import numpy as np
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
-                    Tuple, Union)
+
+from apperception.utils import transformation
+
 
 def overlay_trajectory(
     world,
@@ -13,7 +14,7 @@ def overlay_trajectory(
     overlay_headings: bool = False,
     overlay_road: bool = False,
     overlay_objects: bool = False,
-    keep_whole_video: bool = False
+    keep_whole_video: bool = False,
 ):
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
     frames = {}
@@ -23,9 +24,9 @@ def overlay_trajectory(
         if (file_prefix, camId) not in frames:
             frames[(file_prefix, camId)] = []
         frames[(file_prefix, camId)].append(frame)
-    
+
     for (file_prefix, camId) in frames:
-        frames[(file_prefix, camId)].sort(key=lambda x: x[1]) # sort base on time
+        frames[(file_prefix, camId)].sort(key=lambda x: x[1])  # sort base on time
         frame_width = None
         frame_height = None
         vid_writer = None
@@ -35,18 +36,18 @@ def overlay_trajectory(
                 filename_no_prefix = filename.split("/")[-1]
                 filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
-            
+
             if overlay_objects:
                 frame_im = overlay_objects(world, frame_im)
             if overlay_headings:
                 frame_im = overlay_headings(world, frame_im)
             if overlay_road:
                 frame_im = overlay_road(world, frame_im)
-            
+
             if vid_writer is None:
                 frame_height, frame_width = frame_im.shape[:2]
                 vid_writer = cv2.VideoWriter(
-                    "./output/" + file_prefix + "." + camId + ".mp4", #####
+                    "./output/" + file_prefix + "." + camId + ".mp4",
                     cv2.VideoWriter_fourcc("m", "p", "4", "v"),
                     10,
                     (frame_width, frame_height),
@@ -54,9 +55,6 @@ def overlay_trajectory(
             vid_writer.write(frame_im)
         if vid_writer is not None:
             vid_writer.release()
-
-
-
 
 
 # def overlay_trajectory(
@@ -169,19 +167,20 @@ def overlay_trajectory(
 #                 )
 #             )
 #     return result
-# 
+#
 # def trajectory_to_timestamp(trajectory):
 #     return [traj[0].datetimes for traj in trajectory]
 
 ##### CV2 Overlay Utils #####
 def overlay_objects(self, frame, stats):
     cv2.circle(
-                frame_im,
-                tuple([int(traj_2d[0][0]), int(traj_2d[1][0])]),
-                10,
-                (0, 255, 0),
-                -1,
-            )
+        frame_im,
+        tuple([int(traj_2d[0][0]), int(traj_2d[1][0])]),
+        10,
+        (0, 255, 0),
+        -1,
+    )
+
 
 def overlay_stats(self, frame, stats):
     x, y = 10, 50
@@ -198,6 +197,7 @@ def overlay_stats(self, frame, stats):
         )
         y += 50
 
+
 def overlay_road(self, frame, camera_config):
     cam_road_dir = road_direction(world, ego_translation[0], ego_translation[1])[0][0]
     stats = {
@@ -211,9 +211,7 @@ def overlay_road(self, frame, camera_config):
     pixel_start_enc = world_to_pixel(
         camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
     )
-    pixel_end_enc = world_to_pixel(
-        camera_config, (camera_road_coords[2], camera_road_coords[3], 0)
-    )
+    pixel_end_enc = world_to_pixel(camera_config, (camera_road_coords[2], camera_road_coords[3], 0))
     pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
     pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
     print(camera_road_coords, ego_translation)
