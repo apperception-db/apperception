@@ -22,7 +22,7 @@ def test_intersect():
     w1 = world.filter(f"lambda o: {COND1} and {COND2}")
     w2 = world.filter(f"lambda o: {COND1}") & world.filter(f"lambda o: {COND2}")
     w3 = world.filter(f"lambda o: {COND1}").filter(f"lambda o: {COND2}")
-    w4 = world
+    w4 = world.filter("lambda o: False")
     assert sort_key(w1) == sort_key(w2)
     assert sort_key(w1) == sort_key(w3)
     assert sort_key(w1) == sort_key(w4)
@@ -31,7 +31,7 @@ def test_intersect():
 def test_exclude():
     world = empty_world('world')
     w1 = world.filter(f"lambda o: {COND1} and (not {COND2})")
-    w2 = world.filter(f"lambda o: {COND1}") - world.filter(f"lambda o: {COND2})")
+    w2 = world.filter(f"lambda o: {COND1}") - world.filter(f"lambda o: {COND2}")
     assert sort_key(w1) == sort_key(w2)
 
 
