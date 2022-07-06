@@ -19,6 +19,21 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
     else:
         raise Exception("contained accept either 2 or 3 arguments")
 
+    timet = None
+    if arg_time is not None:
+        if isinstance(arg_time, ast.Attribute):
+            value = arg_time.value
+            if not isinstance(value, ast.Name):
+                raise Exception("Problem with arg_time input contained function", str(arg_time))
+            cont_point_attr = arg_time.attr
+            timet = f"{visitor.eval_vars[value.id]}.{cont_point_attr}"
+        elif isinstance(arg_time, ast.Name):
+            timet = f"{visitor.eval_vars[arg_time.id]}"
+        elif isinstance(arg_time, ast.Constant):
+            timet = arg_time.value
+        else:
+            raise Exception("Problem with arg_time input contained function", str(arg_time))
+
     if isinstance(arg_cont_point, ast.Attribute):
         value = arg_cont_point.value
         if not isinstance(value, ast.Name):
@@ -27,10 +42,15 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
         cont_point_attr = arg_cont_point.attr
         if cont_point_attr == "traj" or cont_point_attr == "trajCentroids":
             object_positions = f"{visitor.eval_vars[value.id]}.trajCentroids"
+        elif cont_point_attr == "trans" or cont_point_attr == "translation":
+            object_positions = f"{visitor.eval_vars[value.id]}.translations"
         elif cont_point_attr == "ego":
             object_positions = f"{visitor.eval_vars[value.id]}.egoTranslation"
         elif cont_point_attr == "bbox":
-            raise Exception("We do not support bbox yet")
+            if timet is None:
+                raise Exception("You must provide the time paramater as well")
+            else:
+                object_positions = f"objectBBox({visitor.eval_vars[value.id]}.itemId, {timet})"
         else:
             raise Exception("First argument of contained should be trajectory")
     elif isinstance(arg_cont_point, ast.Name):
@@ -54,18 +74,6 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
         geoms = f"{visitor.visit(arg_geoms)}"
 
     if arg_time is not None:
-        if isinstance(arg_time, ast.Attribute):
-            value = arg_time.value
-            if not isinstance(value, ast.Name):
-                raise Exception("Problem with arg_time input contained function", str(arg_time))
-            cont_point_attr = arg_time.attr
-            timet = f"{visitor.eval_vars[value.id]}.{cont_point_attr}"
-        elif isinstance(arg_time, ast.Name):
-            timet = f"{visitor.eval_vars[arg_time.id]}"
-        elif isinstance(arg_time, ast.Constant):
-            timet = arg_time.value
-        else:
-            raise Exception("Problem with arg_time input contained function", str(arg_time))
         return f"contained({object_positions}, {geoms}, {timet})"
     else:
         return f"contained({object_positions}, {geoms})"

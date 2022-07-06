@@ -5,12 +5,22 @@ from apperception.utils import fn_to_sql, F
 @pytest.mark.parametrize("fn, sql", [
     (lambda o, c: F.get_x(o.traj, c.timestamp), 
         "getX(T.trajCentroids, C.timestamp)"),
+    (lambda o, c: F.get_x(o.trans, c.timestamp), 
+        "getX(T.translations, C.timestamp)"),
     (lambda o, c: F.get_x(c.ego, c.timestamp), 
         "getX(C.egoTranslation, C.timestamp)"),
     (lambda o, c: F.get_y(c.ego, c.timestamp), 
         "getY(C.egoTranslation, C.timestamp)"),
+    (lambda o, c: F.get_y(o.trans, c.timestamp), 
+        "getY(T.translations, C.timestamp)"),
     (lambda o, c: F.get_y(o.traj, c.timestamp), 
         "getY(T.trajCentroids, C.timestamp)"),
+    (lambda o, c: F.get_z(c.ego, c.timestamp), 
+        "getZ(C.egoTranslation, C.timestamp)"),
+    (lambda o, c: F.get_z(o.trans, c.timestamp), 
+        "getZ(T.translations, C.timestamp)"),
+    (lambda o, c: F.get_z(o.traj, c.timestamp), 
+        "getZ(T.trajCentroids, C.timestamp)"),
 ])
 
 def test_get_x_y(fn, sql):

@@ -19,6 +19,7 @@ def df_to_camera_config(scene_name: str, sample_data):
             timestamp=frame.timestamp,
             cameraHeading=frame.camera_heading,
             egoHeading=frame.ego_heading,
+            camera_translation_abs=frame.camera_translation_absolute,
         )
         for frame in all_frames.itertuples(index=False)
     ]

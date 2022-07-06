@@ -59,7 +59,7 @@ We need to setup the mobilitydb with customized functions
 cd pg_extender
 psql -h localhost -p 25432 -d mobilitydb -U docker
 Enter "docker" as the default password
-\i overlap.sql;
+\i install.sql;
 \q
 ```
 

@@ -6,6 +6,52 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      mobilitydb:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mobilitydb-road:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mobilitydb-reset:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25434:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mobilitydb-import:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25435:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mobilitydb-sql:
+        image: mobilitydb/mobilitydb:latest
+        ports:
+          - 25436:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v3
         with:
@@ -33,9 +79,34 @@ jobs:
       - name: Install Dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
+
+      - name: Extend MobilityDB with User-Defined functions
+        run: |
+          pushd pg_extender
+          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25433 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25434 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25435 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25436 -d mobilitydb -U docker -c "\i install.sql;"
+          popd
+        env:
+          PGPASSWORD: docker
+      
+      - name: Ingest data
+        run: |
+          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data')"
+          poetry run python -c "from apperception.utils import ingest_road; from apperception.database import database; ingest_road(database, './data/road_network_boston')"
+        env:
+          AP_PORT: 25432
       
       - name: Unit Test
-        run: poetry run pytest --cov=apperception --cov-report=xml tests
+        run: poetry run pytest --cov=apperception --cov-report=xml tests tests-scenic
+        env:
+          AP_PORT: 25432
+          AP_PORT_ROAD: 25433
+          AP_PORT_RESET: 25434
+          AP_PORT_IMPORT: 25435
+          AP_PORT_SQL: 25436
       
       - name: Upload coverage reports to Codecov
         run: |
