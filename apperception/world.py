@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 import inspect
 import uuid
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
+from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional,
                     Tuple, Union)
 
 import cv2
@@ -11,7 +11,7 @@ import numpy as np
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
 
-from apperception.data_types import Camera, FetchCameraTuple, QueryType
+from apperception.data_types import Camera, FetchCameraTuple
 from apperception.database import database
 from apperception.utils import transformation
 
@@ -32,7 +32,6 @@ class World:
     _done: bool
     _world_id: str
     _timestamp: datetime.datetime
-    _types: set["QueryType"]
     _materialized: bool
 
     def __init__(
@@ -44,7 +43,6 @@ class World:
         fn: Optional[Union[str, Callable]] = None,
         kwargs: Optional[dict[str, Any]] = None,
         done: bool = False,
-        types: Optional[Set["QueryType"]] = None,
         materialized: bool = False,
     ):
         self._parent = parent
@@ -54,7 +52,6 @@ class World:
         self._done = done  # update node
         self._world_id = world_id
         self._timestamp = timestamp
-        self._types = set() if types is None else types
         self._materialized = materialized
 
     def get_trajectory_images(
@@ -188,19 +185,18 @@ class World:
     def filter(self, predicate: Union[str, Callable]) -> World:
         return derive_world(
             self,
-            {QueryType.TRAJ, QueryType.BBOX},
             database.filter,
             predicate=predicate,
         )
 
     def exclude(self, other: World) -> World:
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.exclude, world=other)
+        return derive_world(self, database.exclude, world=other)
 
     def union(self, other: World) -> World:
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.union, world=other)
+        return derive_world(self, database.union, world=other)
 
     def intersect(self, other: World) -> World:
-        return derive_world(self, {QueryType.TRAJ, QueryType.BBOX}, database.intersect, world=other)
+        return derive_world(self, database.intersect, world=other)
 
     def sym_diff(self, other: World) -> World:
         return self.union(other).exclude(self.intersect(other))
@@ -225,18 +221,15 @@ class World:
         return self.sym_diff(other)
 
     def select_all(self):
-        return derive_world(self, {QueryType.TRAJ}, database.select_all)._execute_from_root(
-            QueryType.TRAJ
-        )
+        return derive_world(self, database.select_all)._execute_from_root()
 
     def get_video(self, cam_ids: List[str] = [], boxed: bool = False):
         return derive_world(
             self,
-            {QueryType.TRAJ},
             database.get_video,
             cams=[camera_nodes[cam_id] for cam_id in cam_ids],
             boxed=boxed,
-        )._execute_from_root(QueryType.TRAJ)
+        )._execute_from_root()
 
     def road_direction(self, x: float, y: float):
         return database.road_direction(x, y)
@@ -247,21 +240,19 @@ class World:
     def get_traj(self) -> List[List["Trajectory"]]:
         return derive_world(
             self,
-            {QueryType.TRAJ},
             database.get_traj,
-        )._execute_from_root(QueryType.TRAJ)
+        )._execute_from_root()
 
     def get_traj_key(self):
         return derive_world(
             self,
-            {QueryType.TRAJ},
             database.get_traj_key,
-        )._execute_from_root(QueryType.TRAJ)
+        )._execute_from_root()
 
     def get_traj_attr(self, attr: str):
         return derive_world(
-            self, {QueryType.TRAJ}, database.get_traj_attr, attr=attr
-        )._execute_from_root(QueryType.TRAJ)
+            self, database.get_traj_attr, attr=attr
+        )._execute_from_root()
 
     def get_headings(self) -> List[List[List[float]]]:
         # TODO: Optimize operations with NumPy if possible
@@ -291,61 +282,53 @@ class World:
     def get_distance(self, start: datetime.datetime, end: datetime.datetime):
         return derive_world(
             self,
-            {QueryType.TRAJ},
             database.get_distance,
             start=str(start),
             end=str(end),
-        )._execute_from_root(QueryType.TRAJ)
+        )._execute_from_root()
 
     def get_speed(self, start: datetime.datetime, end: datetime.datetime):
         return derive_world(
             self,
-            {QueryType.TRAJ},
             database.get_speed,
             start=str(start),
             end=str(end),
-        )._execute_from_root(QueryType.TRAJ)
+        )._execute_from_root()
 
     def get_len(self):
         return derive_world(
             self,
-            {QueryType.CAM},
             database.get_len,
-        )._execute_from_root(QueryType.CAM)
+        )._execute_from_root()
 
     def get_camera(self):
         return derive_world(
             self,
-            {QueryType.CAM},
             database.get_cam,
-        )._execute_from_root(QueryType.CAM)
+        )._execute_from_root()
 
     def get_bbox_geo(self):
         return derive_world(
             self,
-            {QueryType.BBOX},
             database.get_bbox_geo,
-        )._execute_from_root(QueryType.BBOX)
+        )._execute_from_root()
 
     def get_time(self):
         return derive_world(
             self,
-            {QueryType.BBOX},
             database.get_time,
-        )._execute_from_root(QueryType.BBOX)
+        )._execute_from_root()
 
     def get_id_time_camId_filename(self, num_joined_tables: int):
         return derive_world(
             self,
-            {QueryType.TRAJ},
             database.get_id_time_camId_filename,
             num_joined_tables=num_joined_tables,
-        )._execute_from_root(QueryType.TRAJ)
+        )._execute_from_root()
 
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
             self,
-            {QueryType.CAM},
             database.insert_cam,
             camera=camera,
         )
@@ -353,7 +336,6 @@ class World:
     def _retrieve_camera(self, camera_id: str):
         return derive_world(
             self,
-            {QueryType.CAM},
             database.retrieve_cam,
             camera_id=camera_id,
         )
@@ -361,32 +343,22 @@ class World:
     def _insert_bbox_traj(self, camera: "Camera", annotation: "pd.DataFrame"):
         return derive_world(
             self,
-            {QueryType.TRAJ, QueryType.BBOX},
             database.insert_bbox_traj,
             camera=camera,
             annotation=annotation,
         )
 
     def _retrieve_bbox(self, camera_id: str):
-        return derive_world(self, {QueryType.BBOX}, database.retrieve_bbox, camera_id=camera_id)
+        return derive_world(self, database.retrieve_bbox, camera_id=camera_id)
 
     def _retrieve_traj(self, camera_id: str):
-        return derive_world(self, {QueryType.TRAJ}, database.retrieve_traj, camera_id=camera_id)
+        return derive_world(self, database.retrieve_traj, camera_id=camera_id)
 
-    def _execute_from_root(self, _type: "QueryType") -> Any:
+    def _execute_from_root(self) -> Any:
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
-        query = ""
-
-        if _type is QueryType.CAM:
-            query = SnowflakeQuery.from_(Table("cameras")).select("*")
-        elif _type is QueryType.BBOX:
-            query = SnowflakeQuery.from_(Table("general_bbox")).select("*")
-        elif _type is QueryType.TRAJ:
-            query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
-        else:
-            query = ""
+        query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
 
         # collect all the nodes til the root
         while curr:
@@ -404,9 +376,6 @@ class World:
                 if not node.done:
                     node._execute()
                     node._done = True
-            # if different type => pass
-            elif _type not in node.types:
-                continue
             # treat update method differently
             else:
                 print("execute:", node.fn.__name__)
@@ -481,7 +450,7 @@ def empty_world(name: str) -> World:
     return World(world_id, timestamp, name)
 
 
-def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> World:
+def derive_world(parent: World, fn: Any, **kwargs) -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
 
@@ -491,7 +460,6 @@ def derive_world(parent: World, types: set["QueryType"], fn: Any, **kwargs) -> W
         fn=fn,
         kwargs=kwargs,
         parent=parent,
-        types=types,
     )
 
 

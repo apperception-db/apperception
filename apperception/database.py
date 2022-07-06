@@ -12,7 +12,7 @@ from pypika import CustomFunction, Table
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
-from apperception.data_types import QueryType, Trajectory
+from apperception.data_types import Trajectory
 from apperception.utils import (add_recognized_objects, fetch_camera,
                                 fetch_camera_framenum, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
@@ -318,7 +318,7 @@ class Database:
         FROM ({query_to_str(query)}) as __query__
         EXCEPT
         SELECT *
-        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __except__
+        FROM ({world._execute_from_root()}) as __except__
         """
 
     def union(self, query: Query, world: "World"):
@@ -327,7 +327,7 @@ class Database:
         FROM ({query_to_str(query)}) as __query__
         UNION
         SELECT *
-        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __union__
+        FROM ({world._execute_from_root()}) as __union__
         """
 
     def intersect(self, query: Query, world: "World"):
@@ -336,7 +336,7 @@ class Database:
         FROM ({query_to_str(query)}) as __query__
         INTERSECT
         SELECT *
-        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __intersect__
+        FROM ({world._execute_from_root()}) as __intersect__
         """
 
     def get_cam(self, query: Query):
