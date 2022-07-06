@@ -10,11 +10,11 @@ DECLARE
  segment_polygons geometry[];
 BEGIN
     IF segment_type = 'lanewithrightlane' THEN
-        EXECUTE format('SELECT ARRAY(SELECT polygon_1.elementPolygon 
-        FROM SegmentPolygon as polygon_1, lane as l1, segment, SegmentPolygon as polygon_2, lane as l2  
-        WHERE polygon_1.elementId = l1.id AND l1.id = segment.elementid 
-        AND l1.id != polygon_2.elementId AND polygon_2.elementId = l2.id 
-        AND laneToRight(polygon_2.elementPolygon, polygon_1.elementPolygon, segment.heading))') into segment_polygons;
+        RETURN (SELECT ARRAY(
+            SELECT p.elementPolygon 
+            FROM SegmentPolygon as p, LaneSection as ls
+            WHERE p.elementId = ls.id AND ls.laneToRight <> 'None'
+        ));
     ELSE
         EXECUTE format('SELECT ARRAY(SELECT SegmentPolygon.elementPolygon FROM SegmentPolygon, %I 
         WHERE SegmentPolygon.elementId = %I.id)', segment_type, segment_type) into segment_polygons;
