@@ -4,7 +4,7 @@ from apperception.world import empty_world, World
 
 COND1 = "F.like(o.object_type, 'vehicle%')"
 COND2 = "F.like(o.object_type, 'human%')"
-COND3 = "o.cameraid = 'scene-0816'"
+COND3 = "o.cameraid == 'scene-0816'"
 
 
 def sort_keys(*worlds: "World") -> List[List[str]]:
