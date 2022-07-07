@@ -1,3 +1,4 @@
+from pickle import FRAME
 from apperception.database import database
 from apperception.utils import transformation
 # from apperception.world import World
@@ -6,14 +7,19 @@ import numpy as np
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
                     Tuple, Union)
 
+FRAME_RATE = 10
+FONT = cv2.FONT_HERSHEY_SIMPLEX
+
+
+
 def overlay_trajectory(
     world,
     images_data_path: str = None,
     num_joined_tables: int = 1,
-    overlay_headings: bool = False,
-    overlay_road: bool = False,
-    overlay_objects: bool = False,
-    keep_whole_video: bool = False
+    is_overlay_headings: bool = False,
+    is_overlay_road: bool = False,
+    is_overlay_objects: bool = False,
+    is_keep_whole_video: bool = False
 ):
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
     frames = {}
@@ -36,11 +42,11 @@ def overlay_trajectory(
                 filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
             
-            if overlay_objects:
+            if is_overlay_objects:
                 frame_im = overlay_objects(world, frame_im)
-            if overlay_headings:
-                frame_im = overlay_headings(world, frame_im)
-            if overlay_road:
+            if is_overlay_headings:
+                frame_im = overlay_stats(world, frame_im)
+            if is_overlay_road:
                 frame_im = overlay_road(world, frame_im)
             
             if vid_writer is None:
@@ -48,15 +54,102 @@ def overlay_trajectory(
                 vid_writer = cv2.VideoWriter(
                     "./output/" + file_prefix + "." + camId + ".mp4", #####
                     cv2.VideoWriter_fourcc("m", "p", "4", "v"),
-                    10,
+                    FRAME_RATE,
                     (frame_width, frame_height),
                 )
             vid_writer.write(frame_im)
         if vid_writer is not None:
             vid_writer.release()
 
+##### SQL Utils #####
+def fetch_camera_config(filename: str):
+    pass
+
+def fetch_trajectory(itemId: str):
+    pass
 
 
+
+##### CV2 Overlay Utils #####
+def overlay_objects(frame, itemIds, time, cam_filename):
+    pixels = {}
+    for itemId in itemIds:
+        traj = fetch_trajectory(itemId=itemId)
+        current_traj_point = traj[time]
+        
+        camera_config = fetch_camera_config(cam_filename)
+        current_pixel = world_to_pixel(camera_config, current_traj_point)
+
+        pixels[itemId] = current_pixel
+
+    for pixel in pixels:
+        cv2.circle(
+            frame,
+            tuple([int(pixel[0][0]), int(pixel[1][0])]),
+            10,
+            (0, 255, 0),
+            -1,
+        )
+
+
+def overlay_stats(world, frame, cam_filename):
+    camera_config = fetch_camera_config(cam_filename)
+    
+    ego_translation = camera_config[1]
+    ego_heading = camera_config[9]
+    camera_heading = camera_config[8]
+    cam_road_dir = world.road_direction(ego_translation[0], ego_translation[1])[0][0]
+    
+    stats = {
+        "Ego Heading": str(round(ego_heading, 2)),
+        "Camera Heading": str(round(camera_heading, 2)),
+        "Road Direction": str(round(cam_road_dir, 2)),
+    }
+    
+    x, y = 10, 50
+    for stat in stats:
+        statValue = stats[stat]
+        cv2.putText(
+            frame,
+            stat + ": " + statValue,
+            (x, y),
+            FONT,
+            1,
+            (0, 255, 0),
+            3,
+        )
+        y += 50
+
+def overlay_road(frame):
+    camera_config = fetch_camera_config(cam_filename)
+    
+    ego_translation = camera_config["egoTranslation"]
+    camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
+    pixel_start_enc = world_to_pixel(
+        camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
+    )
+    pixel_end_enc = world_to_pixel(
+        camera_config, (camera_road_coords[2], camera_road_coords[3], 0)
+    )
+    pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
+    pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
+    print(camera_road_coords, ego_translation)
+    frame = cv2.line(
+        frame,
+        pixel_start,
+        pixel_end,
+        (255, 0, 0),
+        3,
+    )
+    return frame
+
+
+##### Camera Transformation Utils #####
+def world_to_pixel(
+    camera_config: dict, world_coords: Union[np.ndarray, Tuple[float, float, float]]
+):
+    traj_2d = transformation(world_coords, camera_config)
+    return traj_2d
 
 
 # def overlay_trajectory(
@@ -172,64 +265,3 @@ def overlay_trajectory(
 # 
 # def trajectory_to_timestamp(trajectory):
 #     return [traj[0].datetimes for traj in trajectory]
-
-##### CV2 Overlay Utils #####
-def overlay_objects(self, frame, stats):
-    cv2.circle(
-                frame_im,
-                tuple([int(traj_2d[0][0]), int(traj_2d[1][0])]),
-                10,
-                (0, 255, 0),
-                -1,
-            )
-
-def overlay_stats(self, frame, stats):
-    x, y = 10, 50
-    for stat in stats:
-        statValue = stats[stat]
-        cv2.putText(
-            frame,
-            stat + ": " + statValue,
-            (x, y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 255, 0),
-            3,
-        )
-        y += 50
-
-def overlay_road(self, frame, camera_config):
-    cam_road_dir = road_direction(world, ego_translation[0], ego_translation[1])[0][0]
-    stats = {
-        "Ego Heading": str(round(ego_heading, 2)),
-        "Camera Heading": str(round(camera_heading, 2)),
-        "Road Direction": str(round(cam_road_dir, 2)),
-    }
-    self.overlay_stats(frame_im, stats)
-    ego_translation = camera_config["egoTranslation"]
-    camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
-    pixel_start_enc = world_to_pixel(
-        camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
-    )
-    pixel_end_enc = world_to_pixel(
-        camera_config, (camera_road_coords[2], camera_road_coords[3], 0)
-    )
-    pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
-    pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
-    print(camera_road_coords, ego_translation)
-    frame = cv2.line(
-        frame,
-        pixel_start,
-        pixel_end,
-        (255, 0, 0),
-        3,
-    )
-    return frame
-
-
-##### Camera Transformation Utils #####
-def world_to_pixel(
-    camera_config: dict, world_coords: Union[np.ndarray, Tuple[float, float, float]]
-):
-    traj_2d = transformation(world_coords, camera_config)
-    return traj_2d
