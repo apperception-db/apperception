@@ -1,4 +1,3 @@
-from ..query_type import QueryType
 from .camera_view import CameraView
 from .location_view import LocationView
 from .trajectory_view import TrajectoryView
@@ -7,7 +6,6 @@ from .view import View
 
 class MetadataView(View):
     view_name = "metadata_view"
-    view_type = QueryType.METADATA
     object_id = TrajectoryView.object_id
     object_type = TrajectoryView.object_type
     color = TrajectoryView.color
@@ -23,7 +21,7 @@ class MetadataView(View):
     }
 
     def __init__(self):
-        super().__init__(self.view_name, self.view_type)
+        super().__init__(self.view_name)
         self.default = True
         self.trajectory_view = TrajectoryView()
         self.location_view = LocationView()
