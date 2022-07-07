@@ -6,7 +6,6 @@ import uuid
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
                     Tuple, Union)
 
-import cv2
 import numpy as np
 from pypika import Table
 from pypika.dialects import SnowflakeQuery
@@ -81,9 +80,10 @@ class World:
     - overlay_road = If true, overlay a marking of the road that the camera is currently on
     - overlay_objects = If true, overlay a marking on all the filtered objects in the video
     - keep_whole_video = If true, will output a video for each filtered object with the entire video included (not just the frames that meet the
-                         filtering condition). If false, a video will be outputed for each camera that includes only the frames that meeti the 
+                         filtering condition). If false, a video will be outputed for each camera that includes only the frames that meeti the
                          filtering condition.
     """
+
     def overlay_trajectory(
         self,
         images_data_path: str = None,
@@ -91,7 +91,7 @@ class World:
         overlay_headings: bool = False,
         overlay_road: bool = False,
         overlay_objects: bool = False,
-        keep_whole_video: bool = False
+        keep_whole_video: bool = False,
     ):
         return overlay_trajectory(world=self,
                                   images_data_path =images_data_path,

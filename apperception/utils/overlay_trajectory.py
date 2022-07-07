@@ -31,9 +31,9 @@ def overlay_trajectory(
         if (file_prefix, camId) not in frames:
             frames[(file_prefix, camId)] = []
         frames[(file_prefix, camId)].append(frame)
-    
+
     for (file_prefix, camId) in frames:
-        frames[(file_prefix, camId)].sort(key=lambda x: x[1]) # sort base on time
+        frames[(file_prefix, camId)].sort(key=lambda x: x[1])  # sort base on time
         frame_width = None
         frame_height = None
         vid_writer = None
@@ -53,11 +53,11 @@ def overlay_trajectory(
                 frame_im = overlay_stats(frame_im, camera_config)
             if is_overlay_road:
                 frame_im = overlay_road(world, frame_im)
-            
+
             if vid_writer is None:
                 frame_height, frame_width = frame_im.shape[:2]
                 vid_writer = cv2.VideoWriter(
-                    "./output/" + file_prefix + "." + camId + ".mp4", #####
+                    "./output/" + file_prefix + "." + camId + ".mp4",
                     cv2.VideoWriter_fourcc("m", "p", "4", "v"),
                     FRAME_RATE,
                     (frame_width, frame_height),
@@ -321,6 +321,6 @@ def world_to_pixel(
 #                 )
 #             )
 #     return result
-# 
+#
 # def trajectory_to_timestamp(trajectory):
 #     return [traj[0].datetimes for traj in trajectory]
