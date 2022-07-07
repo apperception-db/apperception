@@ -71,7 +71,7 @@ def test_sym_diff():
     k1, k2 = sort_keys(w1, w2)
     all_equal(k1, k2)
 
-    w1 = world.filter(f"lambda o: {COND1} != {COND3}")
+    w1 = world.filter(f"lambda o: {COND1} != ({COND3})")
     w2 = world.filter(f"lambda o: {COND1}") ^ world.filter(f"lambda o: {COND3}")
     k1, k2 = sort_keys(w1, w2)
     all_equal(k1, k2)
