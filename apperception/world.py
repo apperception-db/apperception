@@ -96,10 +96,10 @@ class World:
         return overlay_trajectory(world=self,
                                   images_data_path =images_data_path,
                                   num_joined_tables=num_joined_tables,
-                                  overlay_headings=overlay_headings, 
-                                  overlay_road=overlay_road, 
-                                  overlay_objects=overlay_objects, 
-                                  keep_whole_video=keep_whole_video)
+                                  is_overlay_headings=overlay_headings, 
+                                  is_overlay_road=overlay_road, 
+                                  is_overlay_objects=overlay_objects, 
+                                  is_keep_whole_video=keep_whole_video)
 
 
     def add_camera(self, camera: "Camera"):
@@ -166,8 +166,8 @@ class World:
             boxed=boxed,
         )._execute_from_root(QueryType.TRAJ)
 
-    def road_direction(self, x: float, y: float):
-        return database.road_direction(x, y)
+    def road_direction(self, x: float, y: float, default_dir: float):
+        return database.road_direction(x, y, default_dir)
 
     def road_coords(self, x: float, y: float):
         return database.road_coords(x, y)

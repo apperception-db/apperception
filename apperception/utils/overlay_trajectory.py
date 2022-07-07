@@ -36,16 +36,19 @@ def overlay_trajectory(
         frame_height = None
         vid_writer = None
         for frame in frames[(file_prefix, camId)]:
-            objId, time, camId, filename = frame
+            objId, time, camId, cam_filename = frame
+            filename = cam_filename
             if images_data_path is not None:
                 filename_no_prefix = filename.split("/")[-1]
                 filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
             
+            camera_config = fetch_camera_config(cam_filename)
+            camera_config["time"] = time
             if is_overlay_objects:
                 frame_im = overlay_objects(world, frame_im)
             if is_overlay_headings:
-                frame_im = overlay_stats(world, frame_im)
+                frame_im = overlay_stats(frame_im, camera_config)
             if is_overlay_road:
                 frame_im = overlay_road(world, frame_im)
             
@@ -63,7 +66,47 @@ def overlay_trajectory(
 
 ##### SQL Utils #####
 def fetch_camera_config(filename: str):
-    pass
+    query = f"""
+    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+        BEGIN
+            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+        END;
+    $$ LANGUAGE plpgsql;
+
+    SELECT
+        cameraId,
+        ST_XYZ(egoTranslation),
+        egoRotation,
+        ST_XYZ(cameraTranslation),
+        ST_XYZ(cameraTranslationAbs),
+        cameraRotation,
+        cameraIntrinsic,
+        frameNum,
+        fileName,
+        cameraHeading,
+        egoHeading
+    FROM Cameras
+    WHERE
+        fileName = '{filename}'
+    ORDER BY cameraId ASC, frameNum ASC;
+    """
+    # print(query)
+    result = database._execute_query(query)[0]
+    print(result)
+    camera_config = {
+        "cameraId": result[0],
+        "egoTranslation": result[1],
+        "egoRotation": result[2],
+        "cameraTranslation": result[3],
+        "cameraTranslationAbs": result[4],
+        "cameraRotation": result[5],
+        "cameraIntrinsic": result[6],
+        "frameNum": result[7],
+        "fileName": result[8],
+        "cameraHeading": result[9],
+        "egoHeading": result[10],
+    }
+    return camera_config
 
 def fetch_trajectory(itemId: str):
     pass
@@ -71,13 +114,13 @@ def fetch_trajectory(itemId: str):
 
 
 ##### CV2 Overlay Utils #####
-def overlay_objects(frame, itemIds, time, cam_filename):
+def overlay_objects(frame, itemIds, camera_config):
+    time = camera_config["time"]
     pixels = {}
     for itemId in itemIds:
         traj = fetch_trajectory(itemId=itemId)
         current_traj_point = traj[time]
         
-        camera_config = fetch_camera_config(cam_filename)
         current_pixel = world_to_pixel(camera_config, current_traj_point)
 
         pixels[itemId] = current_pixel
@@ -92,13 +135,11 @@ def overlay_objects(frame, itemIds, time, cam_filename):
         )
 
 
-def overlay_stats(world, frame, cam_filename):
-    camera_config = fetch_camera_config(cam_filename)
-    
-    ego_translation = camera_config[1]
-    ego_heading = camera_config[9]
-    camera_heading = camera_config[8]
-    cam_road_dir = world.road_direction(ego_translation[0], ego_translation[1])[0][0]
+def overlay_stats(frame, camera_config):
+    ego_translation = camera_config["egoTranslation"]
+    ego_heading = camera_config["egoHeading"]
+    camera_heading = camera_config["cameraHeading"]
+    cam_road_dir = database.road_direction(ego_translation[0], ego_translation[1], ego_heading)[0][0]
     
     stats = {
         "Ego Heading": str(round(ego_heading, 2)),
@@ -119,10 +160,9 @@ def overlay_stats(world, frame, cam_filename):
             3,
         )
         y += 50
+    return frame
 
-def overlay_road(frame):
-    camera_config = fetch_camera_config(cam_filename)
-    
+def overlay_road(frame, camera_config):
     ego_translation = camera_config["egoTranslation"]
     camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
     pixel_start_enc = world_to_pixel(
