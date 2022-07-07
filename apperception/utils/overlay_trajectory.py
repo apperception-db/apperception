@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
                     Tuple, Union)
-
+import datetime
 FRAME_RATE = 10
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -23,8 +23,10 @@ def overlay_trajectory(
 ):
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
     frames = {}
+    itemIds = set()
     for frame in id_time_camId_filename:
         objId, time, camId, filename = frame
+        itemIds.add(objId)
         file_prefix = "-".join(filename.split("/")[:-1])
         if (file_prefix, camId) not in frames:
             frames[(file_prefix, camId)] = []
@@ -46,7 +48,7 @@ def overlay_trajectory(
             camera_config = fetch_camera_config(cam_filename)
             camera_config["time"] = time
             if is_overlay_objects:
-                frame_im = overlay_objects(world, frame_im)
+                frame_im = overlay_objects(frame_im, itemIds, camera_config)
             if is_overlay_headings:
                 frame_im = overlay_stats(frame_im, camera_config)
             if is_overlay_road:
@@ -109,7 +111,20 @@ def fetch_camera_config(filename: str):
     return camera_config
 
 def fetch_trajectory(itemId: str):
-    pass
+    query = f"""
+            SELECT asMFJSON(trajCentroids)::json->'sequences'
+            FROM Item_General_Trajectory as final
+            WHERE itemId = '{itemId}'
+            """
+
+    traj = database._execute_query(query)[0][0][0]
+    coordinates = traj["coordinates"]
+    datetimes = traj["datetimes"]
+    result = {}
+    for coord, time in zip(coordinates, datetimes):
+        dt_time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%f+00").replace(tzinfo=datetime.timezone.utc)
+        result[dt_time] = coord
+    return result
 
 
 
@@ -119,13 +134,16 @@ def overlay_objects(frame, itemIds, camera_config):
     pixels = {}
     for itemId in itemIds:
         traj = fetch_trajectory(itemId=itemId)
-        current_traj_point = traj[time]
-        
-        current_pixel = world_to_pixel(camera_config, current_traj_point)
+        if time in traj:
+            current_traj_point = traj[time]
+            
+            current_pixel = world_to_pixel(camera_config, current_traj_point)
 
-        pixels[itemId] = current_pixel
+            pixels[itemId] = current_pixel
 
-    for pixel in pixels:
+    print(pixels)
+    for itemId in pixels:
+        pixel = pixels[itemId]
         cv2.circle(
             frame,
             tuple([int(pixel[0][0]), int(pixel[1][0])]),
@@ -133,6 +151,7 @@ def overlay_objects(frame, itemIds, camera_config):
             (0, 255, 0),
             -1,
         )
+    return frame
 
 
 def overlay_stats(frame, camera_config):
@@ -164,7 +183,7 @@ def overlay_stats(frame, camera_config):
 
 def overlay_road(frame, camera_config):
     ego_translation = camera_config["egoTranslation"]
-    camera_road_coords = self.road_coords(ego_translation[0], ego_translation[1])[0][0]
+    camera_road_coords = database.road_coords(ego_translation[0], ego_translation[1])[0][0]
     pixel_start_enc = world_to_pixel(
         camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
     )
