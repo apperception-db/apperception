@@ -1,15 +1,15 @@
-from pickle import FRAME
-from apperception.database import database
-from apperception.utils import transformation
+import datetime
+from typing import Tuple, Union
+
 # from apperception.world import World
 import cv2
 import numpy as np
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set,
-                    Tuple, Union)
-import datetime
+
+from apperception.database import database
+from apperception.utils import transformation
+
 FRAME_RATE = 10
 FONT = cv2.FONT_HERSHEY_SIMPLEX
-
 
 
 def overlay_trajectory(
@@ -19,7 +19,7 @@ def overlay_trajectory(
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
     is_overlay_objects: bool = False,
-    is_keep_whole_video: bool = False
+    is_keep_whole_video: bool = False,
 ):
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
     frames = {}
@@ -44,7 +44,7 @@ def overlay_trajectory(
                 filename_no_prefix = filename.split("/")[-1]
                 filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
-            
+
             camera_config = fetch_camera_config(cam_filename)
             camera_config["time"] = time
             if is_overlay_objects:
@@ -66,7 +66,10 @@ def overlay_trajectory(
         if vid_writer is not None:
             vid_writer.release()
 
+
 ##### SQL Utils #####
+
+
 def fetch_camera_config(filename: str):
     query = f"""
     CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
@@ -110,6 +113,7 @@ def fetch_camera_config(filename: str):
     }
     return camera_config
 
+
 def fetch_trajectory(itemId: str):
     query = f"""
             SELECT asMFJSON(trajCentroids)::json->'sequences'
@@ -122,10 +126,11 @@ def fetch_trajectory(itemId: str):
     datetimes = traj["datetimes"]
     result = {}
     for coord, time in zip(coordinates, datetimes):
-        dt_time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%f+00").replace(tzinfo=datetime.timezone.utc)
+        dt_time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%f+00").replace(
+            tzinfo=datetime.timezone.utc
+        )
         result[dt_time] = coord
     return result
-
 
 
 ##### CV2 Overlay Utils #####
@@ -136,7 +141,7 @@ def overlay_objects(frame, itemIds, camera_config):
         traj = fetch_trajectory(itemId=itemId)
         if time in traj:
             current_traj_point = traj[time]
-            
+
             current_pixel = world_to_pixel(camera_config, current_traj_point)
 
             pixels[itemId] = current_pixel
@@ -158,14 +163,16 @@ def overlay_stats(frame, camera_config):
     ego_translation = camera_config["egoTranslation"]
     ego_heading = camera_config["egoHeading"]
     camera_heading = camera_config["cameraHeading"]
-    cam_road_dir = database.road_direction(ego_translation[0], ego_translation[1], ego_heading)[0][0]
-    
+    cam_road_dir = database.road_direction(ego_translation[0], ego_translation[1], ego_heading)[0][
+        0
+    ]
+
     stats = {
         "Ego Heading": str(round(ego_heading, 2)),
         "Camera Heading": str(round(camera_heading, 2)),
         "Road Direction": str(round(cam_road_dir, 2)),
     }
-    
+
     x, y = 10, 50
     for stat in stats:
         statValue = stats[stat]
@@ -181,15 +188,14 @@ def overlay_stats(frame, camera_config):
         y += 50
     return frame
 
+
 def overlay_road(frame, camera_config):
     ego_translation = camera_config["egoTranslation"]
     camera_road_coords = database.road_coords(ego_translation[0], ego_translation[1])[0][0]
     pixel_start_enc = world_to_pixel(
         camera_config, (camera_road_coords[0], camera_road_coords[1], 0)
     )
-    pixel_end_enc = world_to_pixel(
-        camera_config, (camera_road_coords[2], camera_road_coords[3], 0)
-    )
+    pixel_end_enc = world_to_pixel(camera_config, (camera_road_coords[2], camera_road_coords[3], 0))
     pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
     pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
     print(camera_road_coords, ego_translation)
