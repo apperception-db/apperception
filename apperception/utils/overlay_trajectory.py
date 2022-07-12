@@ -52,7 +52,7 @@ def overlay_trajectory(
             if is_overlay_headings:
                 frame_im = overlay_stats(frame_im, camera_config)
             if is_overlay_road:
-                frame_im = overlay_road(world, frame_im)
+                frame_im = overlay_road(frame_im, camera_config)
 
             if vid_writer is None:
                 frame_height, frame_width = frame_im.shape[:2]
@@ -92,9 +92,7 @@ def fetch_camera_config(filename: str):
         fileName = '{filename}'
     ORDER BY cameraId ASC, frameNum ASC;
     """
-    # print(query)
     result = database._execute_query(query)[0]
-    print(result)
     camera_config = {
         "cameraId": result[0],
         "egoTranslation": result[1],
@@ -141,7 +139,6 @@ def overlay_objects(frame, itemIds, camera_config):
 
             pixels[itemId] = current_pixel
 
-    print(pixels)
     for itemId in pixels:
         pixel = pixels[itemId]
         cv2.circle(
@@ -192,7 +189,6 @@ def overlay_road(frame, camera_config):
     )
     pixel_start = tuple([int(pixel_start_enc[0][0]), int(pixel_start_enc[1][0])])
     pixel_end = tuple([int(pixel_end_enc[0][0]), int(pixel_end_enc[1][0])])
-    print(camera_road_coords, ego_translation)
     frame = cv2.line(
         frame,
         pixel_start,
