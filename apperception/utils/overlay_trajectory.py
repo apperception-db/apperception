@@ -24,13 +24,27 @@ def overlay_trajectory(
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
     frames = {}
     itemIds = set()
+    filenames = set()
+    camIds = set()
     for frame in id_time_camId_filename:
         objId, time, camId, filename = frame
         itemIds.add(objId)
+        camIds.add(camId)
+        filenames.add(filename)
         file_prefix = "-".join(filename.split("/")[:-1])
         if (file_prefix, camId) not in frames:
             frames[(file_prefix, camId)] = []
         frames[(file_prefix, camId)].append(frame)
+
+    if is_keep_whole_video:
+        overlay_trajectory_keep_whole(world=world, 
+                                      filenames=filenames,
+                                      camIds=camId, 
+                                      images_data_path=images_data_path, 
+                                      is_overlay_headings=is_overlay_headings,
+                                      is_overlay_road=is_overlay_road,
+                                      is_overlay_objects=is_overlay_objects)
+        return
 
     for (file_prefix, camId) in frames:
         frames[(file_prefix, camId)].sort(key=lambda x: x[1])  # sort base on time
@@ -65,6 +79,21 @@ def overlay_trajectory(
             vid_writer.write(frame_im)
         if vid_writer is not None:
             vid_writer.release()
+
+def overlay_trajectory_keep_whole(
+    world,
+    camIds,
+    filenames,
+    images_data_path: str = None,
+    is_overlay_headings: bool = False,
+    is_overlay_road: bool = False,
+    is_overlay_objects: bool = False,
+    is_keep_whole_video: bool = False
+):
+    pass
+    # for itemId in itemCameras:
+    #     cameraIds = itemCameras[cameraIds]
+    #     for cameraId in cameraIds:
 
 ##### SQL Utils #####
 def fetch_camera_config(filename: str):
