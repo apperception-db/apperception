@@ -93,14 +93,15 @@ class World:
         overlay_objects: bool = False,
         keep_whole_video: bool = False,
     ):
-        return overlay_trajectory(world=self,
-                                  images_data_path =images_data_path,
-                                  num_joined_tables=num_joined_tables,
-                                  is_overlay_headings=overlay_headings, 
-                                  is_overlay_road=overlay_road, 
-                                  is_overlay_objects=overlay_objects, 
-                                  is_keep_whole_video=keep_whole_video)
-
+        return overlay_trajectory(
+            world=self,
+            images_data_path=images_data_path,
+            num_joined_tables=num_joined_tables,
+            is_overlay_headings=overlay_headings,
+            is_overlay_road=overlay_road,
+            is_overlay_objects=overlay_objects,
+            is_keep_whole_video=keep_whole_video,
+        )
 
     def add_camera(self, camera: "Camera"):
         node1 = self._insert_camera(camera=camera)
