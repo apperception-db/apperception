@@ -38,8 +38,7 @@ def overlay_trajectory(
 
     if is_keep_whole_video:
         overlay_trajectory_keep_whole(world=world, 
-                                      filenames=filenames,
-                                      camIds=camId, 
+                                      camIds=camIds, 
                                       images_data_path=images_data_path, 
                                       is_overlay_headings=is_overlay_headings,
                                       is_overlay_road=is_overlay_road,
@@ -83,19 +82,61 @@ def overlay_trajectory(
 def overlay_trajectory_keep_whole(
     world,
     camIds,
-    filenames,
     images_data_path: str = None,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
     is_overlay_objects: bool = False,
-    is_keep_whole_video: bool = False
 ):
-    pass
+    for camId in camIds:
+        filenames = fetch_camera_video(camId=camId)
+        frame_width = None
+        frame_height = None
+        vid_writer = None
+        for cam_filename in filenames:
+            filename_no_prefix = cam_filename.split("/")[-1]
+            prefix =  "-".join(cam_filename.split("/")[:-1])
+            filename = images_data_path + "/" + filename_no_prefix
+            frame_im = cv2.imread(filename)
+
+            camera_config = fetch_camera_config(cam_filename)
+            # camera_config["time"] = time
+            if is_overlay_objects:
+                # frame_im = overlay_objects(frame_im, itemIds, camera_config)
+                nice = 0
+            if is_overlay_headings:
+                frame_im = overlay_stats(frame_im, camera_config)
+            if is_overlay_road:
+                frame_im = overlay_road(frame_im, camera_config)
+
+            if vid_writer is None:
+                frame_height, frame_width = frame_im.shape[:2]
+                vid_writer = cv2.VideoWriter(
+                    "./output/" + prefix + "." + camId + "-whole" + ".mp4",
+                    cv2.VideoWriter_fourcc("m", "p", "4", "v"),
+                    FRAME_RATE,
+                    (frame_width, frame_height),
+                )
+            vid_writer.write(frame_im)
+        if vid_writer is not None:
+            vid_writer.release()
     # for itemId in itemCameras:
     #     cameraIds = itemCameras[cameraIds]
     #     for cameraId in cameraIds:
 
 ##### SQL Utils #####
+def fetch_camera_video(camId: str):
+    query = f"""
+    SELECT
+        fileName
+    FROM Cameras
+    WHERE
+        cameraId = '{camId}'
+    ORDER BY frameNum ASC;
+    """
+    result = database._execute_query(query)
+    filenames = [x[0] for x in result];
+    return filenames
+
 def fetch_camera_config(filename: str):
     query = f"""
     CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
@@ -139,9 +180,15 @@ def fetch_camera_config(filename: str):
 
 def fetch_trajectory(itemId: str, time: str):
     query = f"""
+        CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+        BEGIN
+            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+        END;
+        $$ LANGUAGE plpgsql;
+
         SELECT ST_XYZ(valueAtTimestamp(trajCentroids, '{time}'))
         FROM Item_General_Trajectory as final
-        WHERE itemId = '{itemId}'
+        WHERE itemId = '{itemId}';
         """
 
     traj = database._execute_query(query)[0][0]
