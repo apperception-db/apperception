@@ -137,21 +137,15 @@ def fetch_camera_config(filename: str):
     }
     return camera_config
 
-def fetch_trajectory(itemId: str):
+def fetch_trajectory(itemId: str, time: str):
     query = f"""
-            SELECT asMFJSON(trajCentroids)::json->'sequences'
-            FROM Item_General_Trajectory as final
-            WHERE itemId = '{itemId}'
-            """
+        SELECT ST_XYZ(valueAtTimestamp(trajCentroids, '{time}'))
+        FROM Item_General_Trajectory as final
+        WHERE itemId = '{itemId}'
+        """
 
-    traj = database._execute_query(query)[0][0][0]
-    coordinates = traj["coordinates"]
-    datetimes = traj["datetimes"]
-    result = {}
-    for coord, time in zip(coordinates, datetimes):
-        dt_time = datetime.datetime.strptime(time, "%Y-%m-%dT%H:%M:%S.%f+00").replace(tzinfo=datetime.timezone.utc)
-        result[dt_time] = coord
-    return result
+    traj = database._execute_query(query)[0][0]
+    return traj
 
 
 
@@ -160,10 +154,9 @@ def overlay_objects(frame, itemIds, camera_config):
     time = camera_config["time"]
     pixels = {}
     for itemId in itemIds:
-        traj = fetch_trajectory(itemId=itemId)
-        if time in traj:
-            current_traj_point = traj[time]
-            
+        current_traj_point = fetch_trajectory(itemId=itemId, time=time)
+        
+        if None not in current_traj_point:
             current_pixel = world_to_pixel(camera_config, current_traj_point)
 
             pixels[itemId] = current_pixel
