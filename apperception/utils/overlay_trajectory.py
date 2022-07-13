@@ -1,4 +1,3 @@
-import datetime
 from typing import Tuple, Union
 
 # from apperception.world import World
@@ -37,12 +36,14 @@ def overlay_trajectory(
         frames[(file_prefix, camId)].append(frame)
 
     if is_keep_whole_video:
-        overlay_trajectory_keep_whole(world=world, 
-                                      camIds=camIds, 
-                                      images_data_path=images_data_path, 
-                                      is_overlay_headings=is_overlay_headings,
-                                      is_overlay_road=is_overlay_road,
-                                      is_overlay_objects=is_overlay_objects)
+        overlay_trajectory_keep_whole(
+            world=world,
+            camIds=camIds,
+            images_data_path=images_data_path,
+            is_overlay_headings=is_overlay_headings,
+            is_overlay_road=is_overlay_road,
+            is_overlay_objects=is_overlay_objects,
+        )
         return
 
     for (file_prefix, camId) in frames:
@@ -79,6 +80,7 @@ def overlay_trajectory(
         if vid_writer is not None:
             vid_writer.release()
 
+
 def overlay_trajectory_keep_whole(
     world,
     camIds,
@@ -94,7 +96,7 @@ def overlay_trajectory_keep_whole(
         vid_writer = None
         for cam_filename in filenames:
             filename_no_prefix = cam_filename.split("/")[-1]
-            prefix =  "-".join(cam_filename.split("/")[:-1])
+            prefix = "-".join(cam_filename.split("/")[:-1])
             filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
 
@@ -123,7 +125,10 @@ def overlay_trajectory_keep_whole(
     #     cameraIds = itemCameras[cameraIds]
     #     for cameraId in cameraIds:
 
+
 ##### SQL Utils #####
+
+
 def fetch_camera_video(camId: str):
     query = f"""
     SELECT
@@ -134,8 +139,9 @@ def fetch_camera_video(camId: str):
     ORDER BY frameNum ASC;
     """
     result = database._execute_query(query)
-    filenames = [x[0] for x in result];
+    filenames = [x[0] for x in result]
     return filenames
+
 
 def fetch_camera_config(filename: str):
     query = f"""
@@ -178,6 +184,7 @@ def fetch_camera_config(filename: str):
     }
     return camera_config
 
+
 def fetch_trajectory(itemId: str, time: str):
     query = f"""
         CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
@@ -201,7 +208,7 @@ def overlay_objects(frame, itemIds, camera_config):
     pixels = {}
     for itemId in itemIds:
         current_traj_point = fetch_trajectory(itemId=itemId, time=time)
-        
+
         if None not in current_traj_point:
             current_pixel = world_to_pixel(camera_config, current_traj_point)
 

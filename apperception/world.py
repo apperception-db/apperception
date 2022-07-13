@@ -79,8 +79,8 @@ class World:
     - is_overlay_headings = If true, overlay the camera, ego, and road headings as part of the video
     - is_overlay_road = If true, overlay a marking of the road that the camera is currently on
     - is_overlay_objects = If true, overlay a marking on all the filtered objects in the video
-    - is_keep_whole_video = If true, will output the entire video for any camera that satisfies the 
-                        condition at any point in time. If false, a video will be outputed for 
+    - is_keep_whole_video = If true, will output the entire video for any camera that satisfies the
+                        condition at any point in time. If false, a video will be outputed for
                         each camera that includes only the frames that meet the filtering condition.
     """
 
