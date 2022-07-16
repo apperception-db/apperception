@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING, Tuple, Union, List, Dict
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+
 if TYPE_CHECKING:
-    from apperception.database import Database
+    pass
 
 import cv2
 import numpy as np
 
 from apperception.utils import transformation
+
 # from apperception.world import World
 
 FRAME_RATE = 10
