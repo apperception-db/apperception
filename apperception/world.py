@@ -95,6 +95,7 @@ class World:
     ):
         return overlay_trajectory(
             world=self,
+            database=database,
             images_data_path=images_data_path,
             num_joined_tables=num_joined_tables,
             is_overlay_headings=overlay_headings,
