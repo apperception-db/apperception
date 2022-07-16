@@ -24,11 +24,13 @@ def overlay_trajectory(
     frames = {}
     itemIds = set()
     filenames = set()
-    camIds = set()
+    camIds = {}
     for frame in id_time_camId_filename:
         objId, time, camId, filename = frame
         itemIds.add(objId)
-        camIds.add(camId)
+        if camId not in camIds:
+            camIds[camId] = {}
+        camIds[camId][filename] = time
         filenames.add(filename)
         file_prefix = "-".join(filename.split("/")[:-1])
         if (file_prefix, camId) not in frames:
@@ -39,6 +41,7 @@ def overlay_trajectory(
         overlay_trajectory_keep_whole(
             world=world,
             camIds=camIds,
+            itemIds=itemIds,
             images_data_path=images_data_path,
             is_overlay_headings=is_overlay_headings,
             is_overlay_road=is_overlay_road,
@@ -84,6 +87,7 @@ def overlay_trajectory(
 def overlay_trajectory_keep_whole(
     world,
     camIds,
+    itemIds,
     images_data_path: str = None,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
@@ -101,10 +105,9 @@ def overlay_trajectory_keep_whole(
             frame_im = cv2.imread(filename)
 
             camera_config = fetch_camera_config(cam_filename)
-            # camera_config["time"] = time
-            if is_overlay_objects:
-                # frame_im = overlay_objects(frame_im, itemIds, camera_config)
-                nice = 0
+            if is_overlay_objects and cam_filename in camIds[camId]:
+                camera_config["time"] = camIds[camId][cam_filename]
+                frame_im = overlay_objects(frame_im, itemIds, camera_config)
             if is_overlay_headings:
                 frame_im = overlay_stats(frame_im, camera_config)
             if is_overlay_road:
