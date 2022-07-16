@@ -1,4 +1,3 @@
-from ..query_type import QueryType
 from .view import View
 
 
@@ -10,8 +9,7 @@ class TrajectoryView(View):
     traj = "trajCentroids"
     heading = "itemHeadings"
     table_name = "Item_General_Trajectory"
-    table_type = QueryType.TRAJ
 
     def __init__(self):
-        super().__init__(self.table_name, self.table_type)
+        super().__init__(self.table_name)
         self.default = True

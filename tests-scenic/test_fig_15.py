@@ -2,7 +2,7 @@ from apperception.world import empty_world
 from datetime import datetime, timezone
 
 
-def test_fig_13():
+def test_fig_15():
     world = empty_world(name='world')
     world = world.filter(" ".join([
         "lambda car1, opposite_car, car2, cam:",
