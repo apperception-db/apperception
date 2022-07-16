@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Tuple, Union, Optional, Set
 
 if TYPE_CHECKING:
     pass
@@ -17,7 +17,7 @@ FONT = cv2.FONT_HERSHEY_SIMPLEX
 def overlay_trajectory(
     world,
     database,
-    images_data_path: str = None,
+    images_data_path: Optional[str] = None,
     num_joined_tables: int = 1,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
@@ -94,7 +94,7 @@ def overlay_trajectory_keep_whole(
     database,
     camIds: Dict[str, Dict[str, str]],
     itemIds: List[str],
-    images_data_path: str = None,
+    images_data_path: Optional[str] = None,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
     is_overlay_objects: bool = False,

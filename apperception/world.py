@@ -86,7 +86,7 @@ class World:
 
     def overlay_trajectory(
         self,
-        images_data_path: str = None,
+        images_data_path: Optional[str] = None,
         num_joined_tables: int = 1,
         overlay_headings: bool = False,
         overlay_road: bool = False,
