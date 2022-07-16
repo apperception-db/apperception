@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, Tuple, Union, Optional, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 if TYPE_CHECKING:
     pass
