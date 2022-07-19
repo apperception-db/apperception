@@ -1,5 +1,11 @@
-from typing import (Any, Callable, Dict, Generic, Iterable, List, Optional,
+from typing import (Any, Callable, Dict, Generic, Iterable, List, Literal, Optional,
                     Set, Tuple, TypeVar)
+
+
+BinOp = Literal["add", "sub", "mul", "div", "matmul"]
+BoolOp = Literal["and", "or"]
+CompOp = Literal["eq", "ne", "gt", "ge", "lt", "le"]
+UnaryOp = Literal["invert", "neg"]
 
 
 class PredicateNode:
@@ -106,23 +112,23 @@ def arr(*exprs: "PredicateNode"):
 
 class CompOpNode(PredicateNode):
     left: "PredicateNode"
-    op: str
+    op: CompOp
     right: "PredicateNode"
 
 
 class BinOpNode(PredicateNode):
     left: "PredicateNode"
-    op: str
+    op: BinOp
     right: "PredicateNode"
 
 
 class BoolOpNode(PredicateNode):
-    op: str
+    op: BoolOp
     exprs: List["PredicateNode"]
 
 
 class UnaryOpNode(PredicateNode):
-    op: str
+    op: UnaryOp
     expr: "PredicateNode"
 
 
@@ -194,10 +200,9 @@ class CallNode(PredicateNode):
     params: List["PredicateNode"]
 
 
-def call_node(fn: "Callable[[GenSqlVisitor, List[PredicateNode]], str]"):
+def call_node(fn: "Fn"):
     def call_node_factory(*args: "PredicateNode") -> "CallNode":
         return CallNode(fn, list(args))
-
     return call_node_factory
 
 
@@ -206,37 +211,39 @@ T = TypeVar("T")
 
 class Visitor(Generic[T]):
     def __call__(self, node: "PredicateNode") -> T:
-        return self.visit(node)
-
-    def visit(self, node: "PredicateNode") -> T:
         attr = f"visit_{node.__class__.__name__}"
         if not hasattr(self, attr):
             raise Exception("Unknown node type:", node.__class__.__name__)
         return getattr(self, attr)(node)
 
     def visit_ArrayNode(self, node: "ArrayNode") -> T:
-        ...
+        for e in node.exprs:
+            self(e)
 
     def visit_CompOpNode(self, node: "CompOpNode") -> T:
-        ...
+        self(node.left)
+        self(node.right)
 
     def visit_BinOpNode(self, node: "BinOpNode") -> T:
-        ...
+        self(node.left)
+        self(node.right)
 
     def visit_BoolOpNode(self, node: "BoolOpNode") -> T:
-        ...
+        for e in node.exprs:
+            self(e)
 
     def visit_UnaryOpNode(self, node: "UnaryOpNode") -> T:
-        ...
+        self(node.expr)
 
     def visit_LiteralNode(self, node: "LiteralNode") -> T:
         ...
 
     def visit_TableAttrNode(self, node: "TableAttrNode") -> T:
-        ...
+        self(node.table)
 
     def visit_CallNode(self, node: "CallNode") -> T:
-        ...
+        for p in node.params:
+            self(p)
 
     def visit_TableNode(self, node: "TableNode") -> T:
         ...
@@ -250,28 +257,28 @@ class Visitor(Generic[T]):
 
 class BaseTransformer(Visitor[PredicateNode]):
     def visit_ArrayNode(self, node: "ArrayNode"):
-        return ArrayNode([self.visit(e) for e in node.exprs])
+        return ArrayNode([self(e) for e in node.exprs])
 
     def visit_CompOpNode(self, node: "CompOpNode"):
-        return CompOpNode(self.visit(node.left), node.op, self.visit(node.right))
+        return CompOpNode(self(node.left), node.op, self(node.right))
 
     def visit_BinOpNode(self, node: "BinOpNode"):
-        return BinOpNode(self.visit(node.left), node.op, self.visit(node.right))
+        return BinOpNode(self(node.left), node.op, self(node.right))
 
     def visit_BoolOpNode(self, node: "BoolOpNode"):
-        return BoolOpNode(node.op, [self.visit(e) for e in node.exprs])
+        return BoolOpNode(node.op, [self(e) for e in node.exprs])
 
     def visit_UnaryOpNode(self, node: "UnaryOpNode"):
-        return UnaryOpNode(node.op, self.visit(node.expr))
+        return UnaryOpNode(node.op, self(node.expr))
 
     def visit_LiteralNode(self, node: "LiteralNode"):
         return node
 
     def visit_TableAttrNode(self, node: "TableAttrNode"):
-        return TableAttrNode(node.name, self.visit(node.table))
+        return TableAttrNode(node.name, self(node.table))
 
     def visit_CallNode(self, node: "CallNode"):
-        return CallNode(node.fn, [self.visit(p) for p in node.params])
+        return CallNode(node.fn, [self(p) for p in node.params])
 
     def visit_TableNode(self, node: "TableNode"):
         return node
@@ -288,16 +295,16 @@ class ExpandBoolOpTransformer(BaseTransformer):
         if isinstance(node, BoolOpNode):
             exprs: List["PredicateNode"] = []
             for expr in node.exprs:
-                e = self.visit(expr)
+                e = self(expr)
                 if isinstance(e, BoolOpNode) and e.op == node.op:
                     exprs.extend(e.exprs)
                 else:
                     exprs.append(e)
             return BoolOpNode(node.op, exprs)
-        return super().visit(node)
+        return super()(node)
 
 
-class FindAllTablesVisitor(BaseTransformer):
+class FindAllTablesVisitor(Visitor[None]):
     tables: Set[int]
     camera: bool
 
@@ -307,11 +314,9 @@ class FindAllTablesVisitor(BaseTransformer):
 
     def visit_ObjectTableNode(self, node: "ObjectTableNode"):
         self.tables.add(node.index)
-        return node
 
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         self.camera = True
-        return node
 
 
 class MapTablesTransformer(BaseTransformer):
@@ -326,18 +331,19 @@ class MapTablesTransformer(BaseTransformer):
         return node
 
 
-BIN_OP = {
+BIN_OP: Dict[BinOp, str] = {
     "add": "+",
     "sub": "-",
-    "mul": "div",
+    "mul": "*",
+    "div": "/",
 }
 
-BOOL_OP = {
+BOOL_OP: Dict[BoolOp, str] = {
     "and": " AND ",
     "or": " OR ",
 }
 
-COMP_OP = {
+COMP_OP: Dict[CompOp, str] = {
     "eq": "=",
     "ne": "<>",
     "ge": ">=",
@@ -346,7 +352,7 @@ COMP_OP = {
     "lt": "<",
 }
 
-UNARY_OP = {
+UNARY_OP: Dict[UnaryOp, str] = {
     "invert": "NOT ",
     "neg": "-",
 }
@@ -354,28 +360,28 @@ UNARY_OP = {
 
 class GenSqlVisitor(Visitor[str]):
     def visit_ArrayNode(self, node: "ArrayNode"):
-        elts = ",".join(self.visit(e)[5 if isinstance(e, ArrayNode) else 0 :] for e in node.exprs)
+        elts = ",".join(self(e)[5 if isinstance(e, ArrayNode) else 0 :] for e in node.exprs)
         return f"ARRAY[{elts}]"
 
     def visit_BinOpNode(self, node: "BinOpNode"):
-        left = self.visit(node.left)
-        right = self.visit(node.right)
+        left = self(node.left)
+        right = self(node.right)
         if node.op != "matmul":
             return f"({left}{BIN_OP[node.op]}{right})"
 
         if isinstance(node.left, ArrayNode):
-            return self.visit(
+            return self(
                 ArrayNode([BinOpNode(l, node.op, node.right) for l in node.left.exprs])
             )
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
-            return f"objectBBox({self.visit(node.left.table.id)}, {right})"
+            return f"objectBBox({self(node.left.table.id)}, {right})"
 
         return f"valueAtTimestamp({left},{right})"
 
     def visit_BoolOpNode(self, node: "BoolOpNode"):
         op = BOOL_OP[node.op]
-        return f"({op.join(self.visit(e) for e in node.exprs)})"
+        return f"({op.join(self(e) for e in node.exprs)})"
 
     def visit_CallNode(self, node: "CallNode"):
         fn = node.fn
@@ -391,8 +397,8 @@ class GenSqlVisitor(Visitor[str]):
             raise Exception("table type not supported")
 
     def visit_CompOpNode(self, node: "CompOpNode"):
-        left = self.visit(node.left)
-        right = self.visit(node.right)
+        left = self(node.left)
+        right = self(node.right)
         return f"({left}{COMP_OP[node.op]}{right})"
 
     def visit_LiteralNode(self, node: "LiteralNode"):
@@ -403,16 +409,16 @@ class GenSqlVisitor(Visitor[str]):
             return str(value)
 
     def visit_UnaryOpNode(self, node: "UnaryOpNode"):
-        return f"({UNARY_OP[node.op]}{self.visit(node.expr)})"
+        return f"({UNARY_OP[node.op]}{self(node.expr)})"
 
     def visit_TableNode(self, node: "TableNode"):
         raise Exception("table type not supported")
 
     def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T:
-        return self.visit(node.traj)
+        return self(node.traj)
 
     def visit_CameraTableNode(self, node: "CameraTableNode") -> T:
-        return self.visit(node.cam)
+        return self(node.cam)
 
 
 def resolve_object_attr(attr: str, num: Optional[int] = None):
