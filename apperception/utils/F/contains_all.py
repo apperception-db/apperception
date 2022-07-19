@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import List
 
-from apperception.predicate import ArrayNode, BinOpNode, GenSqlVisitor, LiteralNode, PredicateNode, call_node
+from apperception.predicate import (ArrayNode, BinOpNode, GenSqlVisitor,
+                                    LiteralNode, PredicateNode, call_node)
 
 ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 
@@ -26,7 +27,7 @@ def contains_all(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
         size = len(arg_points.exprs)
     elif (
         isinstance(arg_points, BinOpNode)
-        and arg_points.op == 'matmul'
+        and arg_points.op == "matmul"
         and isinstance(arg_points.left, ArrayNode)
     ):
         size = len(arg_points.left.exprs)

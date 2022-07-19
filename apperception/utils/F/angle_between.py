@@ -4,9 +4,8 @@ from typing import TYPE_CHECKING, List
 
 from apperception.predicate import call_node
 
-
 if TYPE_CHECKING:
-    from apperception.predicate import PredicateNode, GenSqlVisitor
+    from apperception.predicate import GenSqlVisitor, PredicateNode
 
 
 @call_node

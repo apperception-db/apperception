@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Literal
 
-from apperception.predicate import PredicateNode, call_node, GenSqlVisitor
+from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
 
 
 def get_(axis: Literal["x", "y", "z"]):
@@ -12,7 +12,7 @@ def get_(axis: Literal["x", "y", "z"]):
 
         if len(args) > 1:
             location = location @ args[1]
-        
+
         return f"st_{axis}({visitor.visit(location)})"
-    
+
     return get_

@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import ast
 from typing import List
 
-from apperception.predicate import BinOpNode, CameraTableNode, GenSqlVisitor, ObjectTableNode, PredicateNode, TableAttrNode, call_node
-
+from apperception.predicate import (BinOpNode, CameraTableNode, GenSqlVisitor,
+                                    ObjectTableNode, PredicateNode,
+                                    TableAttrNode, call_node)
 
 HEADINGS = {
     "trajCentroids": "itemHeadings",
     "egoTranslation": "egoHeading",
-    "cameraTranslation": "cameraHeading"
+    "cameraTranslation": "cameraHeading",
 }
 
 
@@ -25,7 +25,7 @@ def facing_relative(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
 
 
 def get_heading(arg: "PredicateNode"):
-    if isinstance(arg, BinOpNode) and arg.op == 'matmul':
+    if isinstance(arg, BinOpNode) and arg.op == "matmul":
         return _get_heading(arg.left) @ arg.right
     return _get_heading(arg)
 
@@ -36,8 +36,7 @@ def _get_heading(arg: "PredicateNode"):
     elif isinstance(arg, ObjectTableNode):
         arg = arg.traj
 
-    if isinstance(arg, TableAttrNode) and arg.shorten == True:
+    if isinstance(arg, TableAttrNode) and arg.shorten:
         arg = getattr(arg.table, HEADINGS[arg.name])
 
     return arg
-

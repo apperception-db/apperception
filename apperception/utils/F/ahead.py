@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from apperception.predicate import ObjectTableNode, PredicateNode, TableAttrNode, call_node, GenSqlVisitor
-
+from apperception.predicate import (GenSqlVisitor, ObjectTableNode,
+                                    PredicateNode, TableAttrNode, call_node)
 
 HEADINGS = {
     "trajCentroids": "itemHeadings",
     "egoTranslation": "egoHeading",
-    "cameraTranslation": "cameraHeading"
+    "cameraTranslation": "cameraHeading",
 }
 
 

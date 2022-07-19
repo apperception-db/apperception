@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import ast
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from apperception.predicate import call_node, GenSqlVisitor, PredicateNode
-
+from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
 
 
 @call_node

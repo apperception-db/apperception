@@ -1,6 +1,5 @@
 import ast
 from dataclasses import dataclass
-from datetime import datetime
 from typing import List, Union
 from uuid import uuid4
 
@@ -64,6 +63,5 @@ class JoinWorld(World):
 
 @dataclass
 class UnionWorld(World):
-
     def generate_sql(self):
         pass
