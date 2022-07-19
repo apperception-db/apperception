@@ -10,5 +10,4 @@ if TYPE_CHECKING:
 
 @call_node
 def angle_between(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    angle, angle_from, angle_to = args
-    return f"angleBetween({visitor.visit(angle)}, {visitor.visit(angle_from)}, {visitor.visit(angle_to)})"
+    return f"angleBetween({','.join(map(visitor, args))})"

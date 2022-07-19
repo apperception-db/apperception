@@ -4,17 +4,16 @@ from typing import List
 
 from apperception.predicate import (GenSqlVisitor, LiteralNode, PredicateNode,
                                     call_node)
-
-ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanewithrightlane"}
+from .common import ROAD_TYPES
 
 
 @call_node
 def road_segment(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    arg_type = args[0]
+    table = args[0]
     if (
-        not isinstance(arg_type, LiteralNode)
-        or not isinstance(arg_type.value, str)
-        or arg_type.value.lower() not in ROAD_TYPES
+        not isinstance(table, LiteralNode)
+        or not isinstance(table.value, str)
+        or table.value.lower() not in ROAD_TYPES
     ):
-        raise Exception(f"Unsupported road type: {arg_type}")
-    return f"roadSegment('{arg_type.value}')"
+        raise Exception(f"Unsupported road type: {table}")
+    return f"roadSegment({visitor(table)})"

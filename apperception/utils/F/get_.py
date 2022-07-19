@@ -13,6 +13,6 @@ def get_(axis: Literal["x", "y", "z"]):
         if len(args) > 1:
             location = location @ args[1]
 
-        return f"st_{axis}({visitor.visit(location)})"
+        return f"st_{axis}({visitor(location)})"
 
     return get_

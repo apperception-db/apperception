@@ -2,41 +2,23 @@ from __future__ import annotations
 
 from typing import List
 
-from apperception.predicate import (BinOpNode, CameraTableNode, GenSqlVisitor,
-                                    ObjectTableNode, PredicateNode,
-                                    TableAttrNode, call_node)
-
-HEADINGS = {
-    "trajCentroids": "itemHeadings",
-    "egoTranslation": "egoHeading",
-    "cameraTranslation": "cameraHeading",
-}
+from apperception.predicate import (BinOpNode, GenSqlVisitor,
+                                     PredicateNode,
+                                     call_node)
+from .common import get_heading
 
 
 @call_node
 def facing_relative(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    arg_heading1, arg_heading2, *arg_time = args
-    headings = arg_heading1, arg_heading2
+    headings = args[:2]
 
-    headings = map(get_heading, headings)
-    if len(arg_time) == 0:
-        headings = (h @ arg_time for h in headings)
-    return f"facingRelative({', '.join(map(visitor.visit, headings))})"
-
-
-def get_heading(arg: "PredicateNode"):
-    if isinstance(arg, BinOpNode) and arg.op == "matmul":
-        return _get_heading(arg.left) @ arg.right
-    return _get_heading(arg)
+    headings = map(_get_heading, headings)
+    if len(args) == 3:
+        headings = (h @ args[2] for h in headings)
+    return f"facingRelative({', '.join(map(visitor, headings))})"
 
 
 def _get_heading(arg: "PredicateNode"):
-    if isinstance(arg, CameraTableNode):
-        arg = arg.ego
-    elif isinstance(arg, ObjectTableNode):
-        arg = arg.traj
-
-    if isinstance(arg, TableAttrNode) and arg.shorten:
-        arg = getattr(arg.table, HEADINGS[arg.name])
-
-    return arg
+    if isinstance(arg, BinOpNode) and arg.op == "matmul":
+        return get_heading(arg.left) @ arg.right
+    return get_heading(arg)

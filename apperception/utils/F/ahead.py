@@ -4,31 +4,18 @@ from typing import List
 
 from apperception.predicate import (GenSqlVisitor, ObjectTableNode,
                                     PredicateNode, TableAttrNode, call_node)
-
-HEADINGS = {
-    "trajCentroids": "itemHeadings",
-    "egoTranslation": "egoHeading",
-    "cameraTranslation": "cameraHeading",
-}
+from .common import get_heading
 
 
 @call_node
 def ahead(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    arg_obj1, arg_obj2, arg_time = args
+    obj1, obj2, time = args
 
-    loc1 = visitor.visit(arg_obj1)
+    if isinstance(obj2, ObjectTableNode):
+        obj2 = obj2.traj
 
-    if isinstance(arg_obj2, ObjectTableNode):
-        arg_obj2 = arg_obj2.traj
-
-    if not isinstance(arg_obj2, TableAttrNode):
+    if not isinstance(obj2, TableAttrNode):
         raise Exception("we dont support other location yet")
 
-    attr = arg_obj2.name
-    if attr not in HEADINGS:
-        raise Exception("we dont support other location yet")
-
-    loc2 = visitor.visit(arg_obj2)
-    heading = visitor.visit(getattr(arg_obj2.table, HEADINGS[attr]))
-
-    return f"ahead({loc1}, {loc2}, {heading}, {visitor.visit(arg_time)})"
+    heading = get_heading(obj2)
+    return f"ahead({','.join(visitor(p @ time) for p in [obj1, obj2, heading])})"

@@ -10,35 +10,35 @@ ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 
 @call_node
 def contains_all(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    arg_polygon, arg_points = args
-    if not isinstance(arg_polygon, LiteralNode):
+    polygon, points = args
+    if not isinstance(polygon, LiteralNode):
         raise Exception(
-            "Frist argument of contains_all should be a constant, recieved " + str(arg_polygon)
+            "Frist argument of contains_all should be a constant, recieved " + str(polygon)
         )
 
-    polygon = visitor.visit(arg_polygon)[1:-1]
-    points = visitor.visit(arg_points)
+    polygon_ = visitor(polygon)[1:-1]
+    points_ = visitor(points)
 
-    if polygon not in ROAD_TYPES:
+    if polygon_ not in ROAD_TYPES:
         raise Exception("polygon should be either " + " or ".join(ROAD_TYPES))
 
     size = None
-    if isinstance(arg_points, ArrayNode):
-        size = len(arg_points.exprs)
+    if isinstance(points, ArrayNode):
+        size = len(points.exprs)
     elif (
-        isinstance(arg_points, BinOpNode)
-        and arg_points.op == "matmul"
-        and isinstance(arg_points.left, ArrayNode)
+        isinstance(points, BinOpNode)
+        and points.op == "matmul"
+        and isinstance(points.left, ArrayNode)
     ):
-        size = len(arg_points.left.exprs)
+        size = len(points.left.exprs)
 
     return f"""(EXISTS(
-        SELECT {polygon}.id
-        FROM {polygon}
+        SELECT {polygon_}.id
+        FROM {polygon_}
             JOIN SegmentPolygon
-                ON SegmentPolygon.elementId = {polygon}.id
-            JOIN unnest({points}) point
+                ON SegmentPolygon.elementId = {polygon_}.id
+            JOIN unnest({points_}) point
                 ON ST_Covers(SegmentPolygon.elementPolygon, point)
-        GROUP BY {polygon}.id
-        HAVING COUNT(point) = {f'cardinality({points})' if size is None else size}
+        GROUP BY {polygon_}.id
+        HAVING COUNT(point) = {f'cardinality({points_})' if size is None else size}
     ))"""

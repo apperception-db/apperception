@@ -8,6 +8,6 @@ from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
 def custom_fn(name: str):
     @call_node
     def fn(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-        return f"{name}({', '.join(map(visitor.visit, args))})"
-
+        return f"{name}({','.join(map(visitor, args))})"
+    
     return fn

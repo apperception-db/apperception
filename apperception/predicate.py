@@ -149,6 +149,7 @@ class ObjectTableNode(TableNode):
         self.index = index
         self.traj = TableAttrNode("trajCentroids", self, True)
         self.trans = TableAttrNode("translations", self, True)
+        self.id = TableAttrNode("itemId", self, True)
 
 
 class CameraTableNode(TableNode):
@@ -204,38 +205,36 @@ T = TypeVar("T")
 
 
 class Visitor(Generic[T]):
+    def __call__(self, node: "PredicateNode") -> T:
+        return self.visit(node)
+
     def visit(self, node: "PredicateNode") -> T:
         attr = f"visit_{node.__class__.__name__}"
         if not hasattr(self, attr):
             raise Exception("Unknown node type:", node.__class__.__name__)
         return getattr(self, attr)(node)
 
-    def visit_ArrayNode(self, node: "ArrayNode") -> T:
-        ...
+    def visit_ArrayNode(self, node: "ArrayNode") -> T: ...
 
-    def visit_CompOpNode(self, node: "CompOpNode") -> T:
-        ...
+    def visit_CompOpNode(self, node: "CompOpNode") -> T: ...
 
-    def visit_BinOpNode(self, node: "BinOpNode") -> T:
-        ...
+    def visit_BinOpNode(self, node: "BinOpNode") -> T: ...
 
-    def visit_BoolOpNode(self, node: "BoolOpNode") -> T:
-        ...
+    def visit_BoolOpNode(self, node: "BoolOpNode") -> T: ...
 
-    def visit_UnaryOpNode(self, node: "UnaryOpNode") -> T:
-        ...
+    def visit_UnaryOpNode(self, node: "UnaryOpNode") -> T: ...
 
-    def visit_LiteralNode(self, node: "LiteralNode") -> T:
-        ...
+    def visit_LiteralNode(self, node: "LiteralNode") -> T: ...
 
-    def visit_TableAttrNode(self, node: "TableAttrNode") -> T:
-        ...
+    def visit_TableAttrNode(self, node: "TableAttrNode") -> T: ...
 
-    def visit_CallNode(self, node: "CallNode") -> T:
-        ...
+    def visit_CallNode(self, node: "CallNode") -> T: ...
 
-    def visit_TableNode(self, node: "TableNode") -> T:
-        ...
+    def visit_TableNode(self, node: "TableNode") -> T: ...
+    
+    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T: ...
+
+    def visit_CameraTableNode(self, node: "CameraTableNode") -> T: ...
 
 
 class BaseTransformer(Visitor[PredicateNode]):
@@ -265,6 +264,12 @@ class BaseTransformer(Visitor[PredicateNode]):
 
     def visit_TableNode(self, node: "TableNode"):
         return node
+    
+    def visit_ObjectTableNode(self, node: "ObjectTableNode"):
+        return node
+
+    def visit_CameraTableNode(self, node: "CameraTableNode"):
+        return node
 
 
 class ExpandBoolOpTransformer(BaseTransformer):
@@ -289,11 +294,12 @@ class FindAllTablesVisitor(BaseTransformer):
         self.tables = set()
         self.camera = False
 
-    def visit_TableNode(self, node: "TableNode"):
-        if isinstance(node, CameraTableNode):
-            self.camera = True
-        elif isinstance(node, ObjectTableNode):
-            self.tables.add(node.index)
+    def visit_ObjectTableNode(self, node: "ObjectTableNode"):
+        self.tables.add(node.index)
+        return node
+
+    def visit_CameraTableNode(self, node: "CameraTableNode"):
+        self.camera = True
         return node
 
 
@@ -303,8 +309,8 @@ class MapTablesTransformer(BaseTransformer):
     def __init__(self, mapping: Dict[int, int]):
         self.mapping = mapping
 
-    def visit_TableNode(self, node: "TableNode"):
-        if isinstance(node, ObjectTableNode) and node.index in self.mapping:
+    def visit_ObjectTableNode(self, node: "ObjectTableNode"):
+        if node.index in self.mapping:
             return ObjectTableNode(objects[self.mapping[node.index]])
         return node
 
@@ -351,6 +357,9 @@ class GenSqlVisitor(Visitor[str]):
                 ArrayNode([BinOpNode(l, node.op, node.right) for l in node.left.exprs])
             )
 
+        if isinstance(node.left, TableAttrNode) and node.left.name == 'bbox':
+            return f"objectBBox({self.visit(node.left.table.id)}, {right})"
+
         return f"valueAtTimestamp({left},{right})"
 
     def visit_BoolOpNode(self, node: "BoolOpNode"):
@@ -378,7 +387,7 @@ class GenSqlVisitor(Visitor[str]):
     def visit_LiteralNode(self, node: "LiteralNode"):
         value = node.value
         if isinstance(value, str) and node.python:
-            return f'"{value}"'
+            return f"'{value}'"
         else:
             return str(value)
 
@@ -386,12 +395,13 @@ class GenSqlVisitor(Visitor[str]):
         return f"({UNARY_OP[node.op]}{self.visit(node.expr)})"
 
     def visit_TableNode(self, node: "TableNode"):
-        if isinstance(node, ObjectTableNode):
-            return self.visit(node.traj)
-        elif isinstance(node, CameraTableNode):
-            return self.visit(node.cam)
-        else:
-            raise Exception("table type not supported")
+        raise Exception("table type not supported")
+    
+    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T:
+        return self.visit(node.traj)
+    
+    def visit_CameraTableNode(self, node: "CameraTableNode") -> T:
+        return self.visit(node.cam)
 
 
 def resolve_object_attr(attr: str, num: Optional[int] = None):
