@@ -1,22 +1,17 @@
-from __future__ import annotations
-
 from typing import List
 
-from apperception.predicate import (GenSqlVisitor, ObjectTableNode,
+from apperception.predicate import (BinOpNode, GenSqlVisitor,
                                     PredicateNode, TableAttrNode, call_node)
 
-from .common import get_heading
+from .common import get_heading_at_time
 
 
 @call_node
 def ahead(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    obj1, obj2, time = args
+    obj1, obj2 = args
 
-    if isinstance(obj2, ObjectTableNode):
-        obj2 = obj2.traj
-
-    if not isinstance(obj2, TableAttrNode):
+    if not isinstance(obj2, TableAttrNode) and (not isinstance(obj2, BinOpNode) or obj2.op != 'matmul'):
         raise Exception("we dont support other location yet")
 
-    heading = get_heading(obj2)
-    return f"ahead({','.join(visitor(p @ time) for p in [obj1, obj2, heading])})"
+    heading = get_heading_at_time(obj2)
+    return f"ahead({','.join(map(visitor, [obj1, obj2, heading]))})"

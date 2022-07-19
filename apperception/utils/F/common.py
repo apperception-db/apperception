@@ -1,4 +1,4 @@
-from apperception.predicate import (CameraTableNode, ObjectTableNode,
+from apperception.predicate import (BinOpNode, CameraTableNode, CastNode, ObjectTableNode,
                                     PredicateNode, TableAttrNode)
 
 HEADINGS = {
@@ -7,16 +7,16 @@ HEADINGS = {
     "cameraTranslation": "cameraHeading",
 }
 
-ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection", "roadsection"}
+ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection", "roadsection", "lanewithrightlane"}
 
 
 def get_heading(arg: "PredicateNode"):
-    if isinstance(arg, CameraTableNode):
-        arg = arg.ego
-    elif isinstance(arg, ObjectTableNode):
-        arg = arg.traj
-
     if isinstance(arg, TableAttrNode) and arg.shorten:
         arg = getattr(arg.table, HEADINGS[arg.name])
 
     return arg
+
+def get_heading_at_time(arg: "PredicateNode"):
+    if isinstance(arg, BinOpNode) and arg.op == "matmul":
+        return CastNode("real", get_heading_at_time(arg.left) @ arg.right)
+    return get_heading(arg)

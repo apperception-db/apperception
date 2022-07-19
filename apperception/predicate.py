@@ -1,3 +1,4 @@
+import traceback
 from typing import (Any, Callable, Dict, Generic, Iterable, List, Literal, Optional,
                     Set, Tuple, TypeVar)
 
@@ -107,7 +108,7 @@ class ArrayNode(PredicateNode):
 
 
 def arr(*exprs: "PredicateNode"):
-    return ArrayNode(exprs)
+    return ArrayNode([expr if isinstance(expr, PredicateNode) else LiteralNode(expr, True) for expr in exprs])
 
 
 class CompOpNode(PredicateNode):
@@ -134,7 +135,11 @@ class UnaryOpNode(PredicateNode):
 
 class LiteralNode(PredicateNode):
     value: Any
-    python: bool = True
+    python: bool
+
+
+def lit(value: Any, python: bool = True):
+    return LiteralNode(value, python)
 
 
 class TableNode(PredicateNode):
@@ -156,6 +161,7 @@ class ObjectTableNode(TableNode):
         self.traj = TableAttrNode("trajCentroids", self, True)
         self.trans = TableAttrNode("translations", self, True)
         self.id = TableAttrNode("itemId", self, True)
+        self.type = TableAttrNode("objectType", self, True)
 
 
 class CameraTableNode(TableNode):
@@ -202,8 +208,17 @@ class CallNode(PredicateNode):
 
 def call_node(fn: "Fn"):
     def call_node_factory(*args: "PredicateNode") -> "CallNode":
+        args = [
+            arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True)
+            for arg in args
+        ]
         return CallNode(fn, list(args))
     return call_node_factory
+
+
+class CastNode(PredicateNode):
+    to: str
+    expr: "PredicateNode"
 
 
 T = TypeVar("T")
@@ -216,43 +231,46 @@ class Visitor(Generic[T]):
             raise Exception("Unknown node type:", node.__class__.__name__)
         return getattr(self, attr)(node)
 
-    def visit_ArrayNode(self, node: "ArrayNode") -> T:
+    def visit_ArrayNode(self, node: "ArrayNode") -> Any:
         for e in node.exprs:
             self(e)
 
-    def visit_CompOpNode(self, node: "CompOpNode") -> T:
+    def visit_CompOpNode(self, node: "CompOpNode") -> Any:
         self(node.left)
         self(node.right)
 
-    def visit_BinOpNode(self, node: "BinOpNode") -> T:
+    def visit_BinOpNode(self, node: "BinOpNode") -> Any:
         self(node.left)
         self(node.right)
 
-    def visit_BoolOpNode(self, node: "BoolOpNode") -> T:
+    def visit_BoolOpNode(self, node: "BoolOpNode") -> Any:
         for e in node.exprs:
             self(e)
 
-    def visit_UnaryOpNode(self, node: "UnaryOpNode") -> T:
+    def visit_UnaryOpNode(self, node: "UnaryOpNode") -> Any:
         self(node.expr)
 
-    def visit_LiteralNode(self, node: "LiteralNode") -> T:
+    def visit_LiteralNode(self, node: "LiteralNode") -> Any:
         ...
 
-    def visit_TableAttrNode(self, node: "TableAttrNode") -> T:
+    def visit_TableAttrNode(self, node: "TableAttrNode") -> Any:
         self(node.table)
 
-    def visit_CallNode(self, node: "CallNode") -> T:
+    def visit_CallNode(self, node: "CallNode") -> Any:
         for p in node.params:
             self(p)
 
-    def visit_TableNode(self, node: "TableNode") -> T:
+    def visit_TableNode(self, node: "TableNode") -> Any:
         ...
 
-    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T:
+    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> Any:
         ...
 
-    def visit_CameraTableNode(self, node: "CameraTableNode") -> T:
+    def visit_CameraTableNode(self, node: "CameraTableNode") -> Any:
         ...
+    
+    def visit_CastNode(self, node: "CastNode") -> Any:
+        self(node.expr)
 
 
 class BaseTransformer(Visitor[PredicateNode]):
@@ -275,7 +293,7 @@ class BaseTransformer(Visitor[PredicateNode]):
         return node
 
     def visit_TableAttrNode(self, node: "TableAttrNode"):
-        return TableAttrNode(node.name, self(node.table))
+        return TableAttrNode(node.name, self(node.table), node.shorten)
 
     def visit_CallNode(self, node: "CallNode"):
         return CallNode(node.fn, [self(p) for p in node.params])
@@ -288,10 +306,13 @@ class BaseTransformer(Visitor[PredicateNode]):
 
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         return node
+    
+    def visit_CastNode(self, node: "CastNode"):
+        return CastNode(node.to, self(node.expr))
 
 
 class ExpandBoolOpTransformer(BaseTransformer):
-    def visit(self, node: "PredicateNode"):
+    def __call__(self, node: "PredicateNode"):
         if isinstance(node, BoolOpNode):
             exprs: List["PredicateNode"] = []
             for expr in node.exprs:
@@ -301,16 +322,20 @@ class ExpandBoolOpTransformer(BaseTransformer):
                 else:
                     exprs.append(e)
             return BoolOpNode(node.op, exprs)
-        return super()(node)
+        return super().__call__(node)
 
 
-class FindAllTablesVisitor(Visitor[None]):
+class FindAllTablesVisitor(Visitor[Tuple[Set[int], bool]]):
     tables: Set[int]
     camera: bool
 
     def __init__(self):
         self.tables = set()
         self.camera = False
+
+    def __call__(self, node: "PredicateNode"):
+        super().__call__(node)
+        return self.tables, self.camera
 
     def visit_ObjectTableNode(self, node: "ObjectTableNode"):
         self.tables.add(node.index)
@@ -327,7 +352,7 @@ class MapTablesTransformer(BaseTransformer):
 
     def visit_ObjectTableNode(self, node: "ObjectTableNode"):
         if node.index in self.mapping:
-            return ObjectTableNode(objects[self.mapping[node.index]])
+            return objects[self.mapping[node.index]]
         return node
 
 
@@ -414,23 +439,26 @@ class GenSqlVisitor(Visitor[str]):
     def visit_TableNode(self, node: "TableNode"):
         raise Exception("table type not supported")
 
-    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T:
+    def visit_ObjectTableNode(self, node: "ObjectTableNode"):
         return self(node.traj)
 
-    def visit_CameraTableNode(self, node: "CameraTableNode") -> T:
+    def visit_CameraTableNode(self, node: "CameraTableNode"):
         return self(node.cam)
+    
+    def visit_CastNode(self, node: "CastNode"):
+        return f"({self(node.expr)})::{node.to}"
 
 
 def resolve_object_attr(attr: str, num: Optional[int] = None):
     if num is None:
         return attr
-    return f"t{num}_{attr}"
+    return f"t{num}.{attr}"
 
 
 def resolve_camera_attr(attr: str, num: Optional[int] = None):
     if num is None:
         return attr
-    return f"c{num}_{attr}"
+    return f"c{num}.{attr}"
 
 
 # TODO: this is duplicate with the one in database.py

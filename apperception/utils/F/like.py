@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from typing import List
 
 from apperception.predicate import GenSqlVisitor, PredicateNode, call_node

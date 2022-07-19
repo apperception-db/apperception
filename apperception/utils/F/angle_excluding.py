@@ -1,10 +1,3 @@
-from __future__ import annotations
+from .custom_fn import custom_fn
 
-from typing import List
-
-from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
-
-
-@call_node
-def angle_excluding(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    return f"angleExcluding({','.join(map(visitor, args))})"
+angle_excluding = custom_fn('angleExcluding', 3)

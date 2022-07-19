@@ -1,13 +1,13 @@
-from __future__ import annotations
-
 from typing import List
 
 from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
 
 
-def custom_fn(name: str):
+def custom_fn(name: str, num_args: int = None):
     @call_node
     def fn(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
+        if num_args is not None and len(args) != num_args:
+            raise Exception(f"Expecting {num_args} arguments, but received {len(args)}")
         return f"{name}({','.join(map(visitor, args))})"
 
     return fn
