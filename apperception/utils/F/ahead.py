@@ -4,6 +4,7 @@ from typing import List
 
 from apperception.predicate import (GenSqlVisitor, ObjectTableNode,
                                     PredicateNode, TableAttrNode, call_node)
+
 from .common import get_heading
 
 

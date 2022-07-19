@@ -1,5 +1,5 @@
-from apperception.predicate import CameraTableNode, ObjectTableNode, PredicateNode, TableAttrNode
-
+from apperception.predicate import (CameraTableNode, ObjectTableNode,
+                                    PredicateNode, TableAttrNode)
 
 HEADINGS = {
     "trajCentroids": "itemHeadings",

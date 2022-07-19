@@ -214,27 +214,38 @@ class Visitor(Generic[T]):
             raise Exception("Unknown node type:", node.__class__.__name__)
         return getattr(self, attr)(node)
 
-    def visit_ArrayNode(self, node: "ArrayNode") -> T: ...
+    def visit_ArrayNode(self, node: "ArrayNode") -> T:
+        ...
 
-    def visit_CompOpNode(self, node: "CompOpNode") -> T: ...
+    def visit_CompOpNode(self, node: "CompOpNode") -> T:
+        ...
 
-    def visit_BinOpNode(self, node: "BinOpNode") -> T: ...
+    def visit_BinOpNode(self, node: "BinOpNode") -> T:
+        ...
 
-    def visit_BoolOpNode(self, node: "BoolOpNode") -> T: ...
+    def visit_BoolOpNode(self, node: "BoolOpNode") -> T:
+        ...
 
-    def visit_UnaryOpNode(self, node: "UnaryOpNode") -> T: ...
+    def visit_UnaryOpNode(self, node: "UnaryOpNode") -> T:
+        ...
 
-    def visit_LiteralNode(self, node: "LiteralNode") -> T: ...
+    def visit_LiteralNode(self, node: "LiteralNode") -> T:
+        ...
 
-    def visit_TableAttrNode(self, node: "TableAttrNode") -> T: ...
+    def visit_TableAttrNode(self, node: "TableAttrNode") -> T:
+        ...
 
-    def visit_CallNode(self, node: "CallNode") -> T: ...
+    def visit_CallNode(self, node: "CallNode") -> T:
+        ...
 
-    def visit_TableNode(self, node: "TableNode") -> T: ...
-    
-    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T: ...
+    def visit_TableNode(self, node: "TableNode") -> T:
+        ...
 
-    def visit_CameraTableNode(self, node: "CameraTableNode") -> T: ...
+    def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T:
+        ...
+
+    def visit_CameraTableNode(self, node: "CameraTableNode") -> T:
+        ...
 
 
 class BaseTransformer(Visitor[PredicateNode]):
@@ -264,7 +275,7 @@ class BaseTransformer(Visitor[PredicateNode]):
 
     def visit_TableNode(self, node: "TableNode"):
         return node
-    
+
     def visit_ObjectTableNode(self, node: "ObjectTableNode"):
         return node
 
@@ -357,7 +368,7 @@ class GenSqlVisitor(Visitor[str]):
                 ArrayNode([BinOpNode(l, node.op, node.right) for l in node.left.exprs])
             )
 
-        if isinstance(node.left, TableAttrNode) and node.left.name == 'bbox':
+        if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
             return f"objectBBox({self.visit(node.left.table.id)}, {right})"
 
         return f"valueAtTimestamp({left},{right})"
@@ -396,10 +407,10 @@ class GenSqlVisitor(Visitor[str]):
 
     def visit_TableNode(self, node: "TableNode"):
         raise Exception("table type not supported")
-    
+
     def visit_ObjectTableNode(self, node: "ObjectTableNode") -> T:
         return self.visit(node.traj)
-    
+
     def visit_CameraTableNode(self, node: "CameraTableNode") -> T:
         return self.visit(node.cam)
 

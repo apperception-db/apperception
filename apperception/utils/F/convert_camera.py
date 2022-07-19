@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import List
 
-from apperception.predicate import CameraTableNode, GenSqlVisitor, PredicateNode, call_node
-from .common import HEADINGS, get_heading
+from apperception.predicate import (CameraTableNode, GenSqlVisitor,
+                                    PredicateNode, call_node)
+
+from .common import get_heading
+
 
 @call_node
 def convert_camera(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):

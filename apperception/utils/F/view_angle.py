@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from typing import List
 
-from apperception.predicate import BinOpNode, CameraTableNode, GenSqlVisitor, ObjectTableNode, PredicateNode, TableAttrNode, call_node
+from apperception.predicate import (BinOpNode, CameraTableNode, GenSqlVisitor,
+                                    ObjectTableNode, PredicateNode,
+                                    TableAttrNode, call_node)
+
 from .common import get_heading
 
 
@@ -18,7 +21,7 @@ def view_angle(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
 
     if isinstance(pov, TableAttrNode):
         heading = get_heading(pov)
-    elif isinstance(pov, BinOpNode) and pov.op == 'matmul':
+    elif isinstance(pov, BinOpNode) and pov.op == "matmul":
         left = pov.left
         if isinstance(left, ObjectTableNode):
             left = left.traj

@@ -4,6 +4,7 @@ from typing import List
 
 from apperception.predicate import (GenSqlVisitor, LiteralNode, PredicateNode,
                                     call_node)
+
 from .common import ROAD_TYPES
 
 
