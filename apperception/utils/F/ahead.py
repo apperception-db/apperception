@@ -1,7 +1,7 @@
 from typing import List
 
-from apperception.predicate import (BinOpNode, GenSqlVisitor,
-                                    PredicateNode, TableAttrNode, call_node)
+from apperception.predicate import (BinOpNode, GenSqlVisitor, PredicateNode,
+                                    TableAttrNode, call_node)
 
 from .common import get_heading_at_time
 
@@ -10,7 +10,9 @@ from .common import get_heading_at_time
 def ahead(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
     obj1, obj2 = args
 
-    if not isinstance(obj2, TableAttrNode) and (not isinstance(obj2, BinOpNode) or obj2.op != 'matmul'):
+    if not isinstance(obj2, TableAttrNode) and (
+        not isinstance(obj2, BinOpNode) or obj2.op != "matmul"
+    ):
         raise Exception("we dont support other location yet")
 
     heading = get_heading_at_time(obj2)

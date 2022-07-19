@@ -1,7 +1,5 @@
-import traceback
-from typing import (Any, Callable, Dict, Generic, Iterable, List, Literal, Optional,
-                    Set, Tuple, TypeVar)
-
+from typing import (Any, Callable, Dict, Generic, Iterable, List, Literal,
+                    Optional, Set, Tuple, TypeVar)
 
 BinOp = Literal["add", "sub", "mul", "div", "matmul"]
 BoolOp = Literal["and", "or"]
@@ -108,7 +106,9 @@ class ArrayNode(PredicateNode):
 
 
 def arr(*exprs: "PredicateNode"):
-    return ArrayNode([expr if isinstance(expr, PredicateNode) else LiteralNode(expr, True) for expr in exprs])
+    return ArrayNode(
+        [expr if isinstance(expr, PredicateNode) else LiteralNode(expr, True) for expr in exprs]
+    )
 
 
 class CompOpNode(PredicateNode):
@@ -208,11 +208,9 @@ class CallNode(PredicateNode):
 
 def call_node(fn: "Fn"):
     def call_node_factory(*args: "PredicateNode") -> "CallNode":
-        args = [
-            arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True)
-            for arg in args
-        ]
+        args = [arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True) for arg in args]
         return CallNode(fn, list(args))
+
     return call_node_factory
 
 
@@ -268,7 +266,7 @@ class Visitor(Generic[T]):
 
     def visit_CameraTableNode(self, node: "CameraTableNode") -> Any:
         ...
-    
+
     def visit_CastNode(self, node: "CastNode") -> Any:
         self(node.expr)
 
@@ -306,7 +304,7 @@ class BaseTransformer(Visitor[PredicateNode]):
 
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         return node
-    
+
     def visit_CastNode(self, node: "CastNode"):
         return CastNode(node.to, self(node.expr))
 
@@ -395,9 +393,7 @@ class GenSqlVisitor(Visitor[str]):
             return f"({left}{BIN_OP[node.op]}{right})"
 
         if isinstance(node.left, ArrayNode):
-            return self(
-                ArrayNode([BinOpNode(l, node.op, node.right) for l in node.left.exprs])
-            )
+            return self(ArrayNode([BinOpNode(l, node.op, node.right) for l in node.left.exprs]))
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
             return f"objectBBox({self(node.left.table.id)}, {right})"
@@ -444,7 +440,7 @@ class GenSqlVisitor(Visitor[str]):
 
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         return self(node.cam)
-    
+
     def visit_CastNode(self, node: "CastNode"):
         return f"({self(node.expr)})::{node.to}"
 

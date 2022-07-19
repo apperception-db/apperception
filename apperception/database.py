@@ -1,8 +1,6 @@
-import ast
-import inspect
 from datetime import datetime
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 
 import pandas as pd
 import psycopg2
@@ -13,10 +11,12 @@ from pypika import CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import Trajectory
-from apperception.predicate import ExpandBoolOpTransformer, FindAllTablesVisitor, GenSqlVisitor, MapTablesTransformer
+from apperception.predicate import (ExpandBoolOpTransformer,
+                                    FindAllTablesVisitor, GenSqlVisitor,
+                                    MapTablesTransformer)
 from apperception.utils import (add_recognized_objects, fetch_camera,
-                                fetch_camera_framenum, fn_to_sql,
-                                overlay_bboxes, query_to_str, recognize,
+                                fetch_camera_framenum, overlay_bboxes,
+                                query_to_str, recognize,
                                 reformat_bbox_trajectories,
                                 timestamp_to_framenum)
 
@@ -25,8 +25,8 @@ if TYPE_CHECKING:
     from psycopg2 import cursor as Cursor
 
     from .data_types import Camera
-    from .world import World
     from .predicate import PredicateNode
+    from .world import World
 
 CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
