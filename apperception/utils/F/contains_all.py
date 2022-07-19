@@ -1,20 +1,16 @@
 from __future__ import annotations
 
-import ast
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from .fake_fn import fake_fn
-
-if TYPE_CHECKING:
-    from ..fn_to_sql import GenSqlVisitor
+from apperception.predicate import ArrayNode, BinOpNode, GenSqlVisitor, LiteralNode, PredicateNode, call_node
 
 ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 
 
-@fake_fn
-def contains_all(visitor: "GenSqlVisitor", args: List[ast.expr]):
+@call_node
+def contains_all(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
     arg_polygon, arg_points = args
-    if not isinstance(arg_polygon, ast.Constant):
+    if not isinstance(arg_polygon, LiteralNode):
         raise Exception(
             "Frist argument of contains_all should be a constant, recieved " + str(arg_polygon)
         )
@@ -26,14 +22,14 @@ def contains_all(visitor: "GenSqlVisitor", args: List[ast.expr]):
         raise Exception("polygon should be either " + " or ".join(ROAD_TYPES))
 
     size = None
-    if isinstance(arg_points, ast.List):
-        size = len(arg_points.elts)
+    if isinstance(arg_points, ArrayNode):
+        size = len(arg_points.exprs)
     elif (
-        isinstance(arg_points, ast.BinOp)
-        and isinstance(arg_points.op, ast.MatMult)
-        and isinstance(arg_points.left, ast.List)
+        isinstance(arg_points, BinOpNode)
+        and arg_points.op == 'matmul'
+        and isinstance(arg_points.left, ArrayNode)
     ):
-        size = len(arg_points.left.elts)
+        size = len(arg_points.left.exprs)
 
     return f"""(EXISTS(
         SELECT {polygon}.id

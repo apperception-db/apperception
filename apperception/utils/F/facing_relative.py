@@ -1,35 +1,43 @@
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from .fake_fn import fake_fn
-
-if TYPE_CHECKING:
-    from ..fn_to_sql import GenSqlVisitor
+from apperception.predicate import BinOpNode, CameraTableNode, GenSqlVisitor, ObjectTableNode, PredicateNode, TableAttrNode, call_node
 
 
-@fake_fn
-def facing_relative(visitor: "GenSqlVisitor", args: List[ast.expr]):
+HEADINGS = {
+    "trajCentroids": "itemHeadings",
+    "egoTranslation": "egoHeading",
+    "cameraTranslation": "cameraHeading"
+}
+
+
+@call_node
+def facing_relative(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
     arg_heading1, arg_heading2, *arg_time = args
+    headings = arg_heading1, arg_heading2
 
+    headings = map(get_heading, headings)
     if len(arg_time) == 0:
-        return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)})"
-    return f"facingRelative({determine_heading(visitor, arg_heading1)}, {determine_heading(visitor, arg_heading2)}, {visitor.visit(arg_time[0])})"
+        headings = (h @ arg_time for h in headings)
+    return f"facingRelative({', '.join(map(visitor.visit, headings))})"
 
 
-def determine_heading(visitor: "GenSqlVisitor", arg: ast.expr):
-    if isinstance(arg, ast.Attribute):
-        value = arg.value
-        attr = arg.attr
-        if attr == "cam":
-            heading = f"{visitor.visit(value)}.cameraHeading"
-        elif attr == "ego":
-            heading = f"{visitor.visit(value)}.egoHeading"
-        else:
-            heading = f"{visitor.visit(value)}.itemHeadings"
-    elif isinstance(arg, ast.Name):
-        heading = f"{visitor.visit(arg)}.itemHeadings"
-    else:
-        heading = f"{visitor.visit(arg)}"
-    return heading
+def get_heading(arg: "PredicateNode"):
+    if isinstance(arg, BinOpNode) and arg.op == 'matmul':
+        return _get_heading(arg.left) @ arg.right
+    return _get_heading(arg)
+
+
+def _get_heading(arg: "PredicateNode"):
+    if isinstance(arg, CameraTableNode):
+        arg = arg.ego
+    elif isinstance(arg, ObjectTableNode):
+        arg = arg.traj
+
+    if isinstance(arg, TableAttrNode) and arg.shorten == True:
+        arg = getattr(arg.table, HEADINGS[arg.name])
+
+    return arg
+

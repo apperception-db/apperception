@@ -2,6 +2,7 @@ import ast
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Union
+from uuid import uuid4
 
 
 @dataclass
@@ -20,7 +21,7 @@ class SQLRepr:
         """
 
 
-@dataclass
+@dataclass(frozen=True)
 class WorldSchema:
     objects: int
     camera: bool
@@ -30,10 +31,18 @@ class WorldSchema:
 class World:
     id: str
     parents: List["World"]
-    done: bool
-    timestamp: datetime
-    materialized: bool
     schema: "WorldSchema"
+
+    def filter(self, predicate) -> "FilterWorld":
+        # TODO: schema should change if we have a predicate that involve camera
+        # TODO: predicate should be translated from str??
+        return FilterWorld(uuid4(), [self], self.schema, predicate)
+
+    def join(self, *others: "World") -> "JoinWorld":
+        pass
+
+    def union(self, *others: "World") -> "UnionWorld":
+        pass
 
 
 @dataclass
@@ -47,6 +56,7 @@ class FilterWorld(World):
 @dataclass
 class JoinWorld(World):
     predicate: ast.Expr
+    schema_mapping: dict
 
     def generate_sql(self):
         pass
@@ -54,7 +64,6 @@ class JoinWorld(World):
 
 @dataclass
 class UnionWorld(World):
-    pass
 
     def generate_sql(self):
         pass
