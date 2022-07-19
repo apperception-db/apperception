@@ -146,6 +146,7 @@ class ObjectTableNode(TableNode):
     def __init__(self, index: int):
         self.index = index
         self.traj = TableAttrNode("trajCentroids", self, True)
+        self.trans = TableAttrNode("translations", self, True)
 
 
 class CameraTableNode(TableNode):
