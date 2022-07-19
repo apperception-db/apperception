@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -10,6 +10,7 @@ class TrackedObject:
     bboxes: List[np.ndarray] = field(default_factory=list)
     timestamps: List[int] = field(default_factory=list)
     itemHeading: List[int] = field(default_factory=list)
+    translations: List[Tuple[float, float, float]] = field(default_factory=list)
 
     def __eq__(self, other) -> bool:
         return (
@@ -18,6 +19,7 @@ class TrackedObject:
             and self.timestamps == other.timestamps
             and np.array_equal(np.array(self.bboxes), np.array(other.bboxes))
             and self.itemHeading == other.itemHeading
+            and self.translations == other.translations
         )
 
     def equal(self, other) -> bool:

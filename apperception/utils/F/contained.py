@@ -42,6 +42,8 @@ def contained(visitor: "GenSqlVisitor", args: List[ast.expr]):
         cont_point_attr = arg_cont_point.attr
         if cont_point_attr == "traj" or cont_point_attr == "trajCentroids":
             object_positions = f"{visitor.eval_vars[value.id]}.trajCentroids"
+        elif cont_point_attr == "trans" or cont_point_attr == "translation":
+            object_positions = f"{visitor.eval_vars[value.id]}.translations"
         elif cont_point_attr == "ego":
             object_positions = f"{visitor.eval_vars[value.id]}.egoTranslation"
         elif cont_point_attr == "bbox":

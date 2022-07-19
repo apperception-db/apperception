@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List
 from apperception.predicate import LiteralNode, call_node, GenSqlVisitor, PredicateNode
 
 
-ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection"}
+ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanewithrightlane"}
 
 
 @call_node

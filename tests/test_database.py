@@ -41,17 +41,17 @@ def test_execute_update_and_query():
     d._execute_update("create table if not exists t1 (c1 text, c2 int)")
     d._execute_update("insert into t1 values ('test1', 3), ('test2', 4)")
     d._commit()
-    results = d._execute_query("select * from t1");
+    results = d._execute_query("select * from t1")
     assert results == [("test1", 3), ("test2", 4)], "should return correct tuples"
 
-    with pytest.raises(psycopg2.errors.DatabaseError) as e_info:
+    with pytest.raises(psycopg2.errors.DatabaseError):
         d._execute_update("zxcvasdfqwer")
 
-    results = d._execute_query("select * from t1");
+    results = d._execute_query("select * from t1")
     assert results == [("test1", 3), ("test2", 4)], "should execute another query after failed executions"
 
-    with pytest.raises(psycopg2.errors.DatabaseError) as e_info:
+    with pytest.raises(psycopg2.errors.DatabaseError):
         d._execute_query("zxcvasdfqwer")
 
-    results = d._execute_query("select * from t1");
+    results = d._execute_query("select * from t1")
     assert results == [("test1", 3), ("test2", 4)], "should execute another query after failed executions"

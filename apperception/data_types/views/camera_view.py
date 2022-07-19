@@ -1,4 +1,3 @@
-from ..query_type import QueryType
 from .view import View
 
 
@@ -16,8 +15,7 @@ class CameraView(View):
     camera_heading = "cameraHeading"
     ego_heading = "egoHeading"
     table_name = "Cameras"
-    table_type = QueryType.CAM
 
     def __init__(self):
-        super().__init__(self.table_name, self.table_type)
+        super().__init__(self.table_name)
         self.default = True

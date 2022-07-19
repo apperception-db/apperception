@@ -12,7 +12,7 @@ from pypika import CustomFunction, Table
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
-from apperception.data_types import QueryType, Trajectory
+from apperception.data_types import Trajectory
 from apperception.utils import (add_recognized_objects, fetch_camera,
                                 fetch_camera_framenum, fn_to_sql,
                                 overlay_bboxes, query_to_str, recognize,
@@ -52,6 +52,7 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
     ("objectType", "TEXT"),
     ("color", "TEXT"),
     ("trajCentroids", "tgeompoint"),
+    ("translations", "tgeompoint"),
     ("largestBbox", "stbox"),
     ("itemHeadings", "tfloat"),
 ]
@@ -143,6 +144,9 @@ class Database:
         self.cursor.execute(
             "CREATE INDEX IF NOT EXISTS traj_idx ON Item_General_Trajectory USING GiST(trajCentroids);"
         )
+        self.cursor.execute(
+            "CREATE INDEX IF NOT EXISTS trans_idx ON Item_General_Trajectory USING GiST(translations);"
+        )
         self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
         self.cursor.execute(
             "CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);"
@@ -201,14 +205,14 @@ class Database:
                 {config.frame_num},
                 '{config.filename}',
                 'POINT Z ({' '.join(map(str, config.camera_translation))})',
-                ARRAY{config.camera_rotation},
-                ARRAY{config.camera_intrinsic},
+                ARRAY{config.camera_rotation}::real[],
+                ARRAY{config.camera_intrinsic}::real[][],
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
-                ARRAY{config.ego_rotation},
+                ARRAY{config.ego_rotation}::real[],
                 '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.cameraHeading},
                 {config.egoHeading},
-                'POINT Z ({' '.join(map(str, config.camera_translation_abs))})',
+                'POINT Z ({' '.join(map(str, config.camera_translation_abs))})'
             )"""
             for config in camera.configs
         ]
@@ -314,7 +318,7 @@ class Database:
         FROM ({query_to_str(query)}) as __query__
         EXCEPT
         SELECT *
-        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __except__
+        FROM ({world._execute_from_root()}) as __except__
         """
 
     def union(self, query: Query, world: "World"):
@@ -323,7 +327,7 @@ class Database:
         FROM ({query_to_str(query)}) as __query__
         UNION
         SELECT *
-        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __union__
+        FROM ({world._execute_from_root()}) as __union__
         """
 
     def intersect(self, query: Query, world: "World"):
@@ -332,7 +336,7 @@ class Database:
         FROM ({query_to_str(query)}) as __query__
         INTERSECT
         SELECT *
-        FROM ({world._execute_from_root(QueryType.TRAJ)}) as __intersect__
+        FROM ({world._execute_from_root()}) as __intersect__
         """
 
     def get_cam(self, query: Query):
