@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple, Union
 
 if TYPE_CHECKING:
     pass
@@ -93,7 +93,7 @@ def overlay_trajectory_keep_whole(
     world,
     database,
     camIds: Dict[str, Dict[str, str]],
-    itemIds: List[str],
+    itemIds: Set[str],
     images_data_path: Optional[str] = None,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
@@ -107,9 +107,11 @@ def overlay_trajectory_keep_whole(
         for cam_filename in filenames:
             filename_no_prefix = cam_filename.split("/")[-1]
             prefix = "-".join(cam_filename.split("/")[:-1])
-            filename = images_data_path + "/" + filename_no_prefix
+            if images_data_path is not None:
+                filename = images_data_path + "/" + filename_no_prefix
+            else:
+                filename = cam_filename
             frame_im = cv2.imread(filename)
-
             camera_config = fetch_camera_config(cam_filename, database)
             if is_overlay_objects and cam_filename in camIds[camId]:
                 camera_config["time"] = camIds[camId][cam_filename]
@@ -212,7 +214,7 @@ def fetch_trajectory(itemId: str, time: str, database):
 
 
 ##### CV2 Overlay Utils #####
-def overlay_objects(frame, itemIds: List[str], camera_config, database):
+def overlay_objects(frame, itemIds: Set[str], camera_config, database):
     time = camera_config["time"]
     pixels = {}
     for itemId in itemIds:
