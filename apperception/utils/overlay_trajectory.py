@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
 
 if TYPE_CHECKING:
     pass
@@ -25,7 +25,7 @@ def overlay_trajectory(
     is_keep_whole_video: bool = False,
 ):
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
-    frames: Dict[Tuple[str, str], Tuple[Any]] = {}
+    frames: Dict[Tuple[str, str], List[Any]] = {}
     itemIds = set()
     filenames = set()
     camIds: Dict[str, Dict[str, str]] = {}
