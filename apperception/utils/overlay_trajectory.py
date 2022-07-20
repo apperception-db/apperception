@@ -25,10 +25,10 @@ def overlay_trajectory(
     is_keep_whole_video: bool = False,
 ):
     id_time_camId_filename = world.get_id_time_camId_filename(num_joined_tables=num_joined_tables)
-    frames = {}
+    frames: Dict[Union[str, str], Tuple] = {}
     itemIds = set()
     filenames = set()
-    camIds = {}
+    camIds: Dict[str, Dict[str, str]] = {}
     for frame in id_time_camId_filename:
         objId, time, camId, filename = frame
         itemIds.add(objId)
