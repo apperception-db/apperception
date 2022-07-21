@@ -94,7 +94,7 @@ jobs:
       
       - name: Ingest data
         run: |
-          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, '.data/scenic/database')"
+          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data/scenic/database')"
           poetry run python -c "from apperception.utils import ingest_road; from apperception.database import database; ingest_road(database, './data/scenic/road_network_boston')"
         env:
           AP_PORT: 25432
