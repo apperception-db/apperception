@@ -23,6 +23,8 @@ Outputs videos for all recognized objects.
                     condition at any point in time. If false, a video will be outputed for
                     each camera that includes only the frames that meet the filtering condition.
 """
+
+
 def overlay_trajectory(
     world,
     database,
@@ -132,7 +134,7 @@ def overlay_trajectory_keep_whole(
                 frame_im = overlay_road(frame_im, camera_config, database)
 
             if frame_im is not None:
-                if vid_writer is None: 
+                if vid_writer is None:
                     frame_height, frame_width = frame_im.shape[:2]
                     vid_writer = cv2.VideoWriter(
                         "./output/" + prefix + "." + camId + "-whole" + ".mp4",

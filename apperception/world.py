@@ -13,7 +13,6 @@ from pypika.dialects import SnowflakeQuery
 from apperception.data_types import Camera, FetchCameraTuple
 from apperception.database import database
 from apperception.utils import transformation
-from apperception.utils.overlay_trajectory import overlay_trajectory
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -69,7 +68,6 @@ class World:
             currant_images = [x[7] for x in current_cameras]
             image_names.append(currant_images)
         return image_names
-
 
     def add_camera(self, camera: "Camera"):
         node1 = self._insert_camera(camera=camera)
