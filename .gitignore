@@ -15,7 +15,6 @@ env
 .coverage
 coverage.xml
 
-*.csv
 *.pickle
 maps
 samples
@@ -23,4 +22,4 @@ sweeps
 v1.0-mini
 
 data/nuscenes
-data/road_network
+data/scenic/road_network
