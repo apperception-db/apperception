@@ -1,5 +1,6 @@
 from apperception.world import empty_world
-# from apperception.utils import overlay_trajectory
+from apperception.database import database
+from apperception.utils import overlay_trajectory
 from datetime import datetime, timezone
 
 
@@ -23,6 +24,5 @@ def test_fig_13():
     ]))
 
     data_dir =  "data/scenic/images"
-
-    world.overlay_trajectory(images_data_path=data_dir, overlay_headings=True, overlay_objects=True, overlay_road=True, keep_whole_video=True)
-    world.overlay_trajectory(images_data_path=data_dir, overlay_headings=True, overlay_objects=True, overlay_road=True, keep_whole_video=False)
+    overlay_trajectory(world=world, database=database, images_data_path=data_dir, is_overlay_headings=True, is_overlay_objects=True, is_overlay_road=True, is_keep_whole_video=True)
+    overlay_trajectory(world=world, database=database, images_data_path=data_dir, is_overlay_headings=True, is_overlay_objects=True, is_overlay_road=True, is_keep_whole_video=False)
