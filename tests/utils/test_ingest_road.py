@@ -12,7 +12,7 @@ d = Database(psycopg2.connect(
     port=os.environ["AP_PORT_ROAD"],
     password="docker",
 ))
-ingest_road(d, "./data/road_network_boston")
+ingest_road(d, "./data/scenic/road_network_boston")
 
 
 @pytest.mark.parametrize("table, count", [
