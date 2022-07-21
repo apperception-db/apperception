@@ -25,3 +25,4 @@ def test_fig_13():
     data_dir =  "data/scenic/images"
 
     world.overlay_trajectory(images_data_path=data_dir, overlay_headings=True, overlay_objects=True, overlay_road=True, keep_whole_video=True)
+    world.overlay_trajectory(images_data_path=data_dir, overlay_headings=True, overlay_objects=True, overlay_road=True, keep_whole_video=False)
