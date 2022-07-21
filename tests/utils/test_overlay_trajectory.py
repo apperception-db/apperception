@@ -1,5 +1,5 @@
 from apperception.world import empty_world
-from apperception.utils import overlay_trajectory
+# from apperception.utils import overlay_trajectory
 from datetime import datetime, timezone
 
 
