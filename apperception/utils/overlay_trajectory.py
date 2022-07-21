@@ -13,7 +13,16 @@ from apperception.utils import transformation
 FRAME_RATE = 10
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
-
+"""
+    overlay_trajectory()
+Outputs videos for all recognized objects.
+- is_overlay_headings = If true, overlay the camera, ego, and road headings as part of the video
+- is_overlay_road = If true, overlay a marking of the road that the camera is currently on
+- is_overlay_objects = If true, overlay a marking on all the filtered objects in the video
+- is_keep_whole_video = If true, will output the entire video for any camera that satisfies the
+                    condition at any point in time. If false, a video will be outputed for
+                    each camera that includes only the frames that meet the filtering condition.
+"""
 def overlay_trajectory(
     world,
     database,
@@ -76,15 +85,16 @@ def overlay_trajectory(
             if is_overlay_road:
                 frame_im = overlay_road(frame_im, camera_config, database)
 
-            if vid_writer is None:
-                frame_height, frame_width = frame_im.shape[:2]
-                vid_writer = cv2.VideoWriter(
-                    "./output/" + file_prefix + "." + camId + ".mp4",
-                    cv2.VideoWriter_fourcc("m", "p", "4", "v"),
-                    FRAME_RATE,
-                    (frame_width, frame_height),
-                )
-            vid_writer.write(frame_im)
+            if frame_im is not None:
+                if vid_writer is None:
+                    frame_height, frame_width = frame_im.shape[:2]
+                    vid_writer = cv2.VideoWriter(
+                        "./output/" + file_prefix + "." + camId + ".mp4",
+                        cv2.VideoWriter_fourcc("m", "p", "4", "v"),
+                        FRAME_RATE,
+                        (frame_width, frame_height),
+                    )
+                vid_writer.write(frame_im)
         if vid_writer is not None:
             vid_writer.release()
 
@@ -121,15 +131,16 @@ def overlay_trajectory_keep_whole(
             if is_overlay_road:
                 frame_im = overlay_road(frame_im, camera_config, database)
 
-            if vid_writer is None:
-                frame_height, frame_width = frame_im.shape[:2]
-                vid_writer = cv2.VideoWriter(
-                    "./output/" + prefix + "." + camId + "-whole" + ".mp4",
-                    cv2.VideoWriter_fourcc("m", "p", "4", "v"),
-                    FRAME_RATE,
-                    (frame_width, frame_height),
-                )
-            vid_writer.write(frame_im)
+            if frame_im is not None:
+                if vid_writer is None: 
+                    frame_height, frame_width = frame_im.shape[:2]
+                    vid_writer = cv2.VideoWriter(
+                        "./output/" + prefix + "." + camId + "-whole" + ".mp4",
+                        cv2.VideoWriter_fourcc("m", "p", "4", "v"),
+                        FRAME_RATE,
+                        (frame_width, frame_height),
+                    )
+                vid_writer.write(frame_im)
         if vid_writer is not None:
             vid_writer.release()
     # for itemId in itemCameras:

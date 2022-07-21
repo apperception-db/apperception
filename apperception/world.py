@@ -70,36 +70,6 @@ class World:
             image_names.append(currant_images)
         return image_names
 
-    """
-        overlay_trajectory()
-    Outputs videos for all recognized objects.
-    - is_overlay_headings = If true, overlay the camera, ego, and road headings as part of the video
-    - is_overlay_road = If true, overlay a marking of the road that the camera is currently on
-    - is_overlay_objects = If true, overlay a marking on all the filtered objects in the video
-    - is_keep_whole_video = If true, will output the entire video for any camera that satisfies the
-                        condition at any point in time. If false, a video will be outputed for
-                        each camera that includes only the frames that meet the filtering condition.
-    """
-
-    def overlay_trajectory(
-        self,
-        images_data_path: Optional[str] = None,
-        num_joined_tables: int = 1,
-        overlay_headings: bool = False,
-        overlay_road: bool = False,
-        overlay_objects: bool = False,
-        keep_whole_video: bool = False,
-    ):
-        return overlay_trajectory(
-            world=self,
-            database=database,
-            images_data_path=images_data_path,
-            num_joined_tables=num_joined_tables,
-            is_overlay_headings=overlay_headings,
-            is_overlay_road=overlay_road,
-            is_overlay_objects=overlay_objects,
-            is_keep_whole_video=keep_whole_video,
-        )
 
     def add_camera(self, camera: "Camera"):
         node1 = self._insert_camera(camera=camera)
