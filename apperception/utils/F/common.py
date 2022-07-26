@@ -3,6 +3,7 @@ from apperception.predicate import (BinOpNode, CastNode, PredicateNode,
 
 HEADINGS = {
     "trajCentroids": "itemHeadings",
+    "translations": "itemHeadings",
     "egoTranslation": "egoHeading",
     "cameraTranslation": "cameraHeading",
     "cameraTranslationAbs": "cameraHeading",
