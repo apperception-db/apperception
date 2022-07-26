@@ -13,6 +13,7 @@ from .road_direction import road_direction
 from .road_segment import road_segment
 from .same_region import same_region
 from .view_angle import view_angle
+from .min_distance import min_distance
 
 get_x = get_("x")
 get_y = get_("y")
@@ -36,4 +37,5 @@ __all__ = [
     "angle_excluding",
     "ahead",
     "contains_all",
+    "min_distance",
 ]

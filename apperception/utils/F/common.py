@@ -5,6 +5,7 @@ HEADINGS = {
     "trajCentroids": "itemHeadings",
     "egoTranslation": "egoHeading",
     "cameraTranslation": "cameraHeading",
+    "cameraTranslationAbs": "cameraHeading",
 }
 
 ROAD_TYPES = {

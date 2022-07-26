@@ -26,70 +26,109 @@ class PredicateNode:
             else:
                 setattr(self, k, next(arg))
 
-    def __add__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __add__(self, other):
+        other = wrap_literal(other)
         return BinOpNode(self, "add", other)
 
-    def __sub__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __radd__(self, other):
+        other = wrap_literal(other)
+        return BinOpNode(other, "add", self)
+
+    def __sub__(self, other):
+        other = wrap_literal(other)
         return BinOpNode(self, "sub", other)
 
-    def __mul__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rsub__(self, other):
+        other = wrap_literal(other)
+        return BinOpNode(other, "sub", self)
+
+    def __mul__(self, other):
+        other = wrap_literal(other)
         return BinOpNode(self, "mul", other)
 
-    def __truediv__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rmul__(self, other):
+        other = wrap_literal(other)
+        return BinOpNode(other, "mul", self)
+
+    def __truediv__(self, other):
+        other = wrap_literal(other)
         return BinOpNode(self, "div", other)
 
-    def __matmul__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rtruediv__(self, other):
+        other = wrap_literal(other)
+        return BinOpNode(other, "div", self)
+
+    def __matmul__(self, other):
+        other = wrap_literal(other)
         return BinOpNode(self, "matmul", other)
 
-    def __and__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rmatmul__(self, other):
+        other = wrap_literal(other)
+        return BinOpNode(other, "matmul", self)
+
+    def __and__(self, other):
+        other = wrap_literal(other)
         return BoolOpNode("and", [self, other])
 
-    def __or__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rand__(self, other):
+        other = wrap_literal(other)
+        return BoolOpNode("and", [other, self])
+
+    def __or__(self, other):
+        other = wrap_literal(other)
         return BoolOpNode("or", [self, other])
 
-    def __eq__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __ror__(self, other):
+        other = wrap_literal(other)
+        return BoolOpNode("or", [other, self])
+
+    def __eq__(self, other):
+        other = wrap_literal(other)
         return CompOpNode(self, "eq", other)
 
-    def __ne__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __req__(self, other):
+        other = wrap_literal(other)
+        return CompOpNode(other, "eq", self)
+
+    def __ne__(self, other):
+        other = wrap_literal(other)
         return CompOpNode(self, "ne", other)
 
-    def __ge__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rne__(self, other):
+        other = wrap_literal(other)
+        return CompOpNode(other, "ne", self)
+
+    def __ge__(self, other):
+        other = wrap_literal(other)
         return CompOpNode(self, "ge", other)
 
-    def __gt__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rge__(self, other):
+        other = wrap_literal(other)
+        return CompOpNode(other, "ge", self)
+
+    def __gt__(self, other):
+        other = wrap_literal(other)
         return CompOpNode(self, "gt", other)
 
-    def __le__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rgt__(self, other):
+        other = wrap_literal(other)
+        return CompOpNode(other, "gt", self)
+
+    def __le__(self, other):
+        other = wrap_literal(other)
         return CompOpNode(self, "le", other)
 
-    def __lt__(self, other: "PredicateNode"):
-        if not isinstance(other, PredicateNode):
-            raise Exception()
+    def __rle__(self, other):
+        other = wrap_literal(other)
+        return CompOpNode(other, "le", self)
+
+    def __lt__(self, other):
+        other = wrap_literal(other)
         return CompOpNode(self, "lt", other)
+
+    def __rlt__(self, other):
+        other = wrap_literal(other)
+        return CompOpNode(other, "lt", self)
 
     def __invert__(self):
         return UnaryOpNode("invert", self)
@@ -105,10 +144,16 @@ class ArrayNode(PredicateNode):
     exprs: List["PredicateNode"]
 
 
+def wrap_literal(x: Any) -> "PredicateNode":
+    if isinstance(x, list):
+        return arr(*x)
+    if not isinstance(x, PredicateNode):
+        return LiteralNode(x, True)
+    return x
+
+
 def arr(*exprs: "PredicateNode"):
-    return ArrayNode(
-        [expr if isinstance(expr, PredicateNode) else LiteralNode(expr, True) for expr in exprs]
-    )
+    return ArrayNode([*map(wrap_literal, exprs)])
 
 
 class CompOpNode(PredicateNode):
