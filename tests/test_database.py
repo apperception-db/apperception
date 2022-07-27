@@ -20,7 +20,7 @@ def test_reset():
         password="docker",
     ))
 
-    import_tables(d, './data')
+    import_tables(d, './data/scenic/database')
     for t in TABLE_NAMES:
         assert not d.sql(f"select * from {t} limit 1").empty
 

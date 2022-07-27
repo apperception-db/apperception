@@ -9,7 +9,9 @@ CREATE OR REPLACE FUNCTION roadCoords(x real, y real) RETURNS real[] AS
 $BODY$
 BEGIN
      RETURN (SELECT ARRAY[ST_X(startPoint), ST_Y(startPoint), ST_X(endPoint), ST_Y(endPoint)] 
-                FROM segment, st_point(x, y) AS point ORDER BY segmentLine <-> point ASC LIMIT 1 );
+                FROM RoadSection, Segment, st_point(x, y) AS point 
+                WHERE RoadSection.id = Segment.elementId
+                ORDER BY segmentLine <-> point ASC LIMIT 1 );
     --  RETURN (SELECT heading * 180 / PI() FROM segment, st_point(x, y) AS POINT, 
     --                                    st_distance(st_makeline(startPoint, endPoint), point) as dis
     --         ORDER BY dis ASC

@@ -15,6 +15,7 @@ from .import_tables import import_tables
 from .ingest_road import ingest_road
 from .join import join
 from .overlay_bboxes import overlay_bboxes
+from .overlay_trajectory import overlay_trajectory
 from .query_to_str import query_to_str
 from .recognize import recognize
 from .reformat_bbox_trajectories import reformat_bbox_trajectories
@@ -32,6 +33,7 @@ __all__ = [
     "recognize",
     "df_to_camera_config",
     "overlay_bboxes",
+    "overlay_trajectory",
     "create_transform_matrix",
     "world_to_pixel",
     "import_tables",

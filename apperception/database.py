@@ -353,8 +353,8 @@ class Database:
         q = SnowflakeQuery.from_(traj).select("*").where(traj.cameraId == camera_id)
         return query + q if query else q  # UNION
 
-    def road_direction(self, x: float, y: float):
-        return self._execute_query(f"SELECT roadDirection({x}, {y});")
+    def road_direction(self, x: float, y: float, default_dir: float):
+        return self._execute_query(f"SELECT roadDirection({x}, {y}, {default_dir});")
 
     def road_coords(self, x: float, y: float):
         return self._execute_query(f"SELECT roadCoords({x}, {y});")
