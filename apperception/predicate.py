@@ -189,10 +189,9 @@ def lit(value: Any, python: bool = True):
 
 class TableNode(PredicateNode):
     index: Optional[int]
-    _short = {}
 
     def __getattr__(self, name: str) -> "TableAttrNode":
-        return TableAttrNode(self._short.get(name, name), self, False)
+        return TableAttrNode(name, self, False)
 
     def __repr__(self):
         if self.index is None:
@@ -201,6 +200,8 @@ class TableNode(PredicateNode):
 
 
 class ObjectTableNode(TableNode):
+    index: int
+
     def __init__(self, index: int):
         self.index = index
         self.traj = TableAttrNode("trajCentroids", self, True)
@@ -243,18 +244,31 @@ cameras = CameraTables()
 camera = CameraTableNode()
 
 
-Fn = Callable[["Visitor", Iterable["PredicateNode"]], str]
+Fn = Callable[["GenSqlVisitor", List["PredicateNode"]], str]
 
 
 class CallNode(PredicateNode):
-    fn: "Fn"
+    _fn: Tuple["Fn"]
     params: List["PredicateNode"]
+
+    def __init__(self, fn: "Fn", params: List["PredicateNode"]):
+        self._fn = (fn,)
+        self.params = params
+    
+    @property
+    def fn(self) -> "Fn":
+        return self._fn[0]
 
 
 def call_node(fn: "Fn"):
     def call_node_factory(*args: "PredicateNode") -> "CallNode":
-        args = [arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True) for arg in args]
-        return CallNode(fn, list(args))
+        return CallNode(
+            fn,
+            [
+                arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True)
+                for arg in args
+            ]
+        )
 
     return call_node_factory
 
@@ -438,7 +452,7 @@ class GenSqlVisitor(Visitor[str]):
             return f"({left}{BIN_OP[node.op]}{right})"
 
         if isinstance(node.left, ArrayNode):
-            return self(ArrayNode([BinOpNode(l, node.op, node.right) for l in node.left.exprs]))
+            return self(ArrayNode([BinOpNode(expr, node.op, node.right) for expr in node.left.exprs]))
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
             return f"objectBBox({self(node.left.table.id)}, {right})"

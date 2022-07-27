@@ -35,13 +35,13 @@ class World:
     def filter(self, predicate) -> "FilterWorld":
         # TODO: schema should change if we have a predicate that involve camera
         # TODO: predicate should be translated from str??
-        return FilterWorld(uuid4(), [self], self.schema, predicate)
+        return FilterWorld(str(uuid4()), [self], self.schema, predicate)
 
     def join(self, *others: "World") -> "JoinWorld":
-        pass
+        raise Exception()
 
     def union(self, *others: "World") -> "UnionWorld":
-        pass
+        raise Exception()
 
 
 @dataclass
@@ -49,7 +49,7 @@ class FilterWorld(World):
     predicate: ast.Expr
 
     def generate_sql(self):
-        pass
+        raise Exception()
 
 
 @dataclass
@@ -58,10 +58,10 @@ class JoinWorld(World):
     schema_mapping: dict
 
     def generate_sql(self):
-        pass
+        raise Exception()
 
 
 @dataclass
 class UnionWorld(World):
     def generate_sql(self):
-        pass
+        raise Exception()
