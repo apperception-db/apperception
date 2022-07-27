@@ -337,7 +337,7 @@ class World:
         return self._materialized
 
 
-def empty_world(name: str) -> World:
+def empty_world(name: str = "world") -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
     return World(world_id, timestamp, name)
