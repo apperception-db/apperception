@@ -14,15 +14,15 @@ def test_fig_13():
         F.like(obj1.type, 'vehicle%') &
         F.like(obj2.type, 'vehicle%') &
         F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
-        (F.distance(cam.ego, obj1.trans@cam.time) < 50) &
-        (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2.0) &
-        (F.distance(cam.ego, obj2.trans@cam.time) < 50) &
-        (F.view_angle(obj2.trans@cam.time, cam.ego) < 70 / 2.0) &
-        F.contains_all('intersection', [obj1.trans, obj2.trans]@cam.time) &
-        F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 50, 135) &
-        F.angle_between(F.facing_relative(obj2.trans@cam.time, cam.ego), -135, -50) &
+        (F.distance(cam.ego, obj1.traj@cam.time) < 50) &
+        (F.view_angle(obj1.traj@cam.time, cam.ego) < 70 / 2.0) &
+        (F.distance(cam.ego, obj2.traj@cam.time) < 50) &
+        (F.view_angle(obj2.traj@cam.time, cam.ego) < 70 / 2.0) &
+        F.contains_all('intersection', [obj1.traj, obj2.traj]@cam.time) &
+        F.angle_between(F.facing_relative(obj1.traj@cam.time, cam.ego), 50, 135) &
+        F.angle_between(F.facing_relative(obj2.traj@cam.time, cam.ego), -135, -50) &
         (F.min_distance(cam.ego, F.road_segment('intersection')) < 10) &
-        F.angle_between(F.facing_relative(obj1.trans@cam.time, obj2.trans@cam.time), 100, -100)
+        F.angle_between(F.facing_relative(obj1.traj@cam.time, obj2.traj@cam.time), 100, -100)
     )
 
     assert set(world.get_id_time_camId_filename(2)) == set([
