@@ -1,25 +1,29 @@
 from apperception.world import empty_world
+from apperception.utils import F
+from apperception.predicate import camera, objects
 from datetime import datetime, timezone
 
 
 def test_fig_13():
-    world = empty_world(name='world')
-    world = world.filter(" ".join([
-        "lambda obj1, obj2, cam:",
-        "obj1.object_id != obj2.object_id and",
-        "F.like(obj1.object_type, 'vehicle%') and",
-        "F.like(obj2.object_type, 'vehicle%') and",
-        "F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) and",
-        "F.distance(cam.ego, obj1, cam.timestamp) < 50 and",
-        "F.view_angle(obj1, cam.ego, cam.timestamp) < 70 / 2.0 and",
-        "F.distance(cam.ego, obj2, cam.timestamp) < 50 and",
-        "F.view_angle(obj2, cam.ego, cam.timestamp) < 70 / 2.0 and",
-        "F.contains_all('intersection', [obj1.traj, obj2.traj]@cam.timestamp) and "
-        "F.angle_between(F.facing_relative(obj1, cam.ego, cam.timestamp), 50, 135) and",
-        "F.angle_between(F.facing_relative(obj2, cam.ego, cam.timestamp), -135, -50) and",
-        "F.minDistance(cam.egoTranslation, F.road_segment('intersection')) < 10 and",
-        "F.angle_between(F.facing_relative(obj1, obj2, cam.timestamp), 100, -100)",
-    ]))
+    obj1 = objects[0]
+    obj2 = objects[1]
+    cam = camera
+
+    world = empty_world().filter(
+        (obj1.id != obj2.id) &
+        F.like(obj1.type, 'vehicle%') &
+        F.like(obj2.type, 'vehicle%') &
+        F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
+        (F.distance(cam.ego, obj1.traj@cam.time) < 50) &
+        (F.view_angle(obj1.traj@cam.time, cam.ego) < 70 / 2.0) &
+        (F.distance(cam.ego, obj2.traj@cam.time) < 50) &
+        (F.view_angle(obj2.traj@cam.time, cam.ego) < 70 / 2.0) &
+        F.contains_all('intersection', [obj1.traj, obj2.traj]@cam.time) &
+        F.angle_between(F.facing_relative(obj1.traj@cam.time, cam.ego), 50, 135) &
+        F.angle_between(F.facing_relative(obj2.traj@cam.time, cam.ego), -135, -50) &
+        (F.min_distance(cam.ego, F.road_segment('intersection')) < 10) &
+        F.angle_between(F.facing_relative(obj1.traj@cam.time, obj2.traj@cam.time), 100, -100)
+    )
 
     assert set(world.get_id_time_camId_filename(2)) == set([
         (

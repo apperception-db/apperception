@@ -1,15 +1,18 @@
 import pytest
-from apperception.utils import fn_to_sql, F
+from common import *
+
+
+o = objects[0]
+c = camera
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.ahead(o, c.ego, c.timestamp), 
-        "ahead(T.trajCentroids, C.egoTranslation, C.egoHeading, C.timestamp)"),
-    (lambda o, c: F.ahead(c.ego, o, c.timestamp), 
-        "ahead(C.egoTranslation, T.trajCentroids, T.itemHeadings, C.timestamp)"),
-    (lambda o, c: F.ahead(o, o, c.timestamp), 
-        "ahead(T.trajCentroids, T.trajCentroids, T.itemHeadings, C.timestamp)"),
+    (ahead(o.trans@c.time, c.ego), 
+        "ahead(valueAtTimestamp(t0.translations,timestamp),egoTranslation,egoHeading)"),
+    (ahead(o.trans@c.time, c.cam), 
+        "ahead(valueAtTimestamp(t0.translations,timestamp),cameraTranslation,cameraHeading)"),
+    (ahead(o.trans@c.time, o.trans@c.time), 
+        "ahead(valueAtTimestamp(t0.translations,timestamp),valueAtTimestamp(t0.translations,timestamp),(valueAtTimestamp(t0.itemHeadings,timestamp))::real)"),
 ])
-
-def test_get_x_y(fn, sql):
-    assert fn_to_sql(fn, ["T", "C"]) == sql
+def test_ahead(fn, sql):
+    assert gen(fn) == sql

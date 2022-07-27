@@ -1,17 +1,18 @@
 import pytest
-from apperception.utils import fn_to_sql, F
+from common import *
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.road_direction(o, c.timestamp, c.ego), 
-        "roadDirection(T.trajCentroids, C.timestamp, C.egoHeading)"),
-    (lambda o, c: F.road_direction(c.ego, c.timestamp, c.ego), 
-        "roadDirection(C.egoTranslation, C.timestamp, C.egoHeading)"),
-    (lambda o, c: F.road_direction(c.trans, c.timestamp, c.ego), 
-        "roadDirection(C.translations, C.timestamp, C.egoHeading)")
+    (road_direction(o.trans@c.time), 
+        "roadDirection(valueAtTimestamp(t0.translations,timestamp),(valueAtTimestamp(t0.itemHeadings,timestamp))::real)"),
+    (road_direction(o.trans@c.time, c.ego), 
+        "roadDirection(valueAtTimestamp(t0.translations,timestamp),egoHeading)"),
+    (road_direction(c.ego), 
+        "roadDirection(egoTranslation,egoHeading)"),
+    (road_direction(c.ego, o.trans@c.time), 
+        "roadDirection(egoTranslation,(valueAtTimestamp(t0.itemHeadings,timestamp))::real)"),
 ])
-
 def test_road_direction(fn, sql):
-    assert fn_to_sql(fn, ["T", "C"]) == sql
+    assert gen(fn) == sql
 
 

@@ -1,17 +1,10 @@
-from __future__ import annotations
+from typing import List
 
-import ast
-from typing import TYPE_CHECKING, List
-
-from .fake_fn import fake_fn
-
-if TYPE_CHECKING:
-    from ..fn_to_sql import GenSqlVisitor
+from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
 
 
-@fake_fn
-def like(visitor: "GenSqlVisitor", args: List[ast.expr]):
+@call_node
+def like(visitor: "GenSqlVisitor", args: "List[PredicateNode]") -> str:
     if len(args) != 2:
         raise Exception("like accepts 2 arguments")
-    arg_1, arg_2 = args
-    return f"({visitor.visit(arg_1)} LIKE {visitor.visit(arg_2)})"
+    return " LIKE ".join(map(visitor, args))

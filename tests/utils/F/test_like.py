@@ -1,13 +1,24 @@
 import pytest
-from apperception.utils import fn_to_sql, F
+from common import *
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.like(o.traj, c.timestamp), 
-        "(T.trajCentroids LIKE C.timestamp)"),
-    (lambda o, c: F.like(o.object_type, 'human%'), 
-        "(T.objectType LIKE 'human%')"),
+    (like(o.traj, c.time), 
+        "t0.trajCentroids LIKE timestamp"),
+    (like(o.type, 'human%'), 
+        "t0.objectType LIKE 'human%'"),
 ])
+def test_like(fn, sql):
+    assert gen(fn) == sql
 
-def test_get_x_y(fn, sql):
-    assert fn_to_sql(fn, ["T", "C"]) == sql
+
+@pytest.mark.parametrize("fn, msg", [
+    (like(1), 
+        "like accepts 2 arguments"),
+    (like(1,2,3), 
+        "like accepts 2 arguments"),
+])
+def test_exception(fn, msg):
+    with pytest.raises(Exception) as e_info:
+        gen(fn)
+    str(e_info.value) == msg

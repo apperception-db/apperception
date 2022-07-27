@@ -1,24 +1,20 @@
 from __future__ import annotations
 
-import ast
-from typing import TYPE_CHECKING, List
+from typing import List
 
-from .fake_fn import fake_fn
+from apperception.predicate import (GenSqlVisitor, LiteralNode, PredicateNode,
+                                    call_node)
 
-if TYPE_CHECKING:
-    from ..fn_to_sql import GenSqlVisitor
-
-ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanewithrightlane"}
+from .common import ROAD_TYPES
 
 
-@fake_fn
-def road_segment(visitor: "GenSqlVisitor", args: List[ast.expr]):
-    arg_type = args[0]
-    if isinstance(arg_type, ast.Constant):
-        value = arg_type.value.lower()
-        if value not in ROAD_TYPES:
-            raise Exception(f"Unsupported road type: {value}")
-        else:
-            return f"roadSegment('{value}')"
-    else:
-        raise Exception(f"Unsupported road type: {arg_type.__class__}")
+@call_node
+def road_segment(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
+    table = args[0]
+    if (
+        not isinstance(table, LiteralNode)
+        or not isinstance(table.value, str)
+        or table.value not in ROAD_TYPES
+    ):
+        raise Exception(f"Unsupported road type: {table}")
+    return f"roadSegment({visitor(table)})"

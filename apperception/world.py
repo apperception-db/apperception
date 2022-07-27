@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     import pandas as pd
 
     from .data_types import Trajectory
+    from .predicate import PredicateNode
 
 
 camera_nodes: Dict[str, "Camera"] = {}
@@ -80,7 +81,7 @@ class World:
         node3 = node2._retrieve_traj(camera_id=camera.id)
         return node3
 
-    def filter(self, predicate: Union[str, Callable]) -> World:
+    def filter(self, predicate: "PredicateNode") -> World:
         return derive_world(
             self,
             database.filter,
@@ -336,7 +337,7 @@ class World:
         return self._materialized
 
 
-def empty_world(name: str) -> World:
+def empty_world(name: str = "world") -> World:
     world_id = str(uuid.uuid4())
     timestamp = datetime.datetime.utcnow()
     return World(world_id, timestamp, name)

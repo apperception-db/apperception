@@ -1,28 +1,37 @@
 from apperception.world import empty_world
+from apperception.utils import F
+from apperception.predicate import objects, camera
 from datetime import datetime, timezone
 
 
 def test_fig_15():
-    world = empty_world(name='world')
-    world = world.filter(" ".join([
-        "lambda car1, opposite_car, car2, cam:",
-        "F.like(car1.object_type, 'vehicle%') and",
-        "F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.timestamp, cam.ego), cam.timestamp), -15, 15) and",
-        "F.view_angle(car1, cam.ego, cam.timestamp) < 70 / 2 and",
-        "F.distance(cam.ego, car1, cam.timestamp) < 40 and",
-        "F.angle_between(F.facing_relative(car1, cam.ego, cam.timestamp), -15, 15) and",
-        "F.angle_between(F.facing_relative(car1, F.road_direction(car1.traj, cam.timestamp, cam.ego), cam.timestamp), -15, 15) and",
-        "F.ahead(car1, cam.ego, cam.timestamp) and",
-        "F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.timestamp, cam.ego), cam.timestamp), -15, 15) and",
-        "F.convert_camera(opposite_car, cam.ego, cam.timestamp) > [-10, 0] and",
-        "F.convert_camera(opposite_car, cam.ego, cam.timestamp) < [-1, 50] and",
-        "F.angle_between(F.facing_relative(opposite_car, cam.ego, cam.timestamp), 140, 180) and",
-        "F.like(car2.object_type, 'vehicle%') and F.like(opposite_car.object_type, 'vehicle%') and",
-        "opposite_car.itemId != car2.itemId and car1.itemId != car2.itemId and car1.itemId != opposite_car.itemId and",
-        "F.distance(opposite_car, car2, cam.timestamp) < 40 and",
-        "F.angle_between(F.facing_relative(car2, F.road_direction(car2.traj, cam.timestamp, cam.ego), cam.timestamp), -15, 15) and",
-        "F.ahead(car2, opposite_car, cam.timestamp)"
-    ]))
+    cam = camera
+    car1 = objects[0]
+    opposite_car = objects[1]
+    car2 = objects[2]
+
+    world = empty_world().filter(
+        F.like(car1.type, 'vehicle%') &
+        F.like(car2.type, 'vehicle%') &
+        F.like(opposite_car.type, 'vehicle%') &
+        (opposite_car.id != car2.id) &
+        (car1.id != car2.id) &
+        (car1.id != opposite_car.id) &
+
+        F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
+        (F.view_angle(car1.traj@cam.time, cam.ego) < 70 / 2) &
+        (F.distance(cam.ego, car1.traj@cam.time) < 40) &
+        F.angle_between(F.facing_relative(car1.traj@cam.time, cam.ego), -15, 15) &
+        F.angle_between(F.facing_relative(car1.traj@cam.time, F.road_direction(car1.traj@cam.time, cam.ego)), -15, 15) &
+        F.ahead(car1.traj@cam.time, cam.ego) &
+        F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
+        (F.convert_camera(opposite_car.traj@cam.time, cam.ego) > [-10, 0]) &
+        (F.convert_camera(opposite_car.traj@cam.time, cam.ego) < [-1, 50]) &
+        F.angle_between(F.facing_relative(opposite_car.traj@cam.time, cam.ego), 140, 180) &
+        (F.distance(opposite_car@cam.time, car2@cam.time) < 40) &
+        F.angle_between(F.facing_relative(car2.traj@cam.time, F.road_direction(car2.traj@cam.time, cam.ego)), -15, 15) &
+        F.ahead(car2.traj@cam.time, opposite_car.traj@cam.time)
+    )
 
     assert world.get_id_time_camId_filename(1) == [
         (

@@ -1,11 +1,21 @@
 import pytest
-from apperception.utils import fn_to_sql, F
+from common import *
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.angle_excluding(o.traj, c.timestamp, o.timestamp), 
-        "angleExcluding(T.trajCentroids, C.timestamp, T.timestamp)"),
+    (angle_excluding(1, 2, 3), "angleExcluding(1,2,3)"),
 ])
+def test_angle_excluding(fn, sql):
+    assert gen(fn) == sql
 
-def test_angle_between(fn, sql):
-    assert fn_to_sql(fn, ["T", "C"]) == sql
+
+@pytest.mark.parametrize("fn, msg", [
+    (angle_excluding(1), 
+        "angle_excluding is expecting 3 arguments, but received 1"),
+    (angle_excluding(1,2,3,4), 
+        "angle_excluding is expecting 3 arguments, but received 4"),
+])
+def test_exception(fn, msg):
+    with pytest.raises(Exception) as e_info:
+        gen(fn)
+    str(e_info.value) == msg

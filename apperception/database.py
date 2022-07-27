@@ -1,8 +1,6 @@
-import ast
-import inspect
 from datetime import datetime
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 
 import pandas as pd
 import psycopg2
@@ -13,9 +11,12 @@ from pypika import CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import Trajectory
+from apperception.predicate import (ExpandBoolOpTransformer,
+                                    FindAllTablesVisitor, GenSqlVisitor,
+                                    MapTablesTransformer)
 from apperception.utils import (add_recognized_objects, fetch_camera,
-                                fetch_camera_framenum, fn_to_sql,
-                                overlay_bboxes, query_to_str, recognize,
+                                fetch_camera_framenum, overlay_bboxes,
+                                query_to_str, recognize,
                                 reformat_bbox_trajectories,
                                 timestamp_to_framenum)
 
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from psycopg2 import cursor as Cursor
 
     from .data_types import Camera
+    from .predicate import PredicateNode
     from .world import World
 
 CAMERA_TABLE = "Cameras"
@@ -260,56 +262,21 @@ class Database:
         q = SnowflakeQuery.from_(cam).select("*").where(cam.cameraId == camera_id)
         return q
 
-    def filter(self, query: Query, predicate: Union[str, Callable]):
-        if isinstance(predicate, str):
-            body = ast.parse(predicate).body[0]
-            if isinstance(body, ast.FunctionDef):
-                args = [arg.arg for arg in body.args.args]
-            elif isinstance(body, ast.Expr):
-                value = body.value
-                if isinstance(value, ast.Lambda):
-                    args = [arg.arg for arg in value.args.args]
-                else:
-                    raise Exception("Predicate is not a function")
-            else:
-                raise Exception("Predicate is not a function")
-        else:
-            args = inspect.getfullargspec(predicate).args
-
-        tables = []
-        tables_sql = []
-        table_idx = 0
-        found_camera = False
-        found_road = False
-        for arg in args:
-            if arg in ["c", "cam", "camera"]:
-                if found_camera:
-                    raise Exception("Only allow one camera parameter")
-                tables_sql.append("Cameras")
-                found_camera = True
-            elif arg in ["r", "road"]:
-                if found_road:
-                    raise Exception("Only allow one road parameter")
-                # TODO: Road is not a real DB table name
-                tables_sql.append("Road")
-                found_road = True
-            else:
-                # TODO: table name should depend on world's id
-                table_name = f"table_{table_idx}"
-                tables.append(table_name)
-                tables_sql.append(table_name)
-                table_idx += 1
-
-        predicate_sql = fn_to_sql(predicate, tables_sql)
+    def filter(self, query: Query, predicate: "PredicateNode"):
+        tables, camera = FindAllTablesVisitor()(predicate)
+        tables = sorted(tables)
+        mapping = {t: i for i, t in enumerate(tables)}
+        predicate = ExpandBoolOpTransformer()(predicate)
+        predicate = MapTablesTransformer(mapping)(predicate)
         query_str = query_to_str(query)
-        joins = [f"JOIN ({query_str}) as {table} USING (cameraId)" for table in tables[1:]]
+        joins = [f"JOIN ({query_str}) as t{i} USING (cameraId)" for i in range(1, len(tables))]
 
         return f"""
         SELECT DISTINCT *
-        FROM ({query_str}) as {tables[0]}
+        FROM ({query_str}) as t0
         {" ".join(joins)}
-        {f"JOIN Cameras USING (cameraId)" if found_camera else ""}
-        WHERE {predicate_sql}
+        {f"JOIN Cameras USING (cameraId)" if camera else ""}
+        WHERE {GenSqlVisitor()(predicate)}
         """
 
     def exclude(self, query: Query, world: "World"):
@@ -428,7 +395,7 @@ class Database:
         return self._execute_query(_query)
 
     def get_id_time_camId_filename(self, query: Query, num_joined_tables: int):
-        itemId = ",".join([f"table_{i}.itemId" for i in range(num_joined_tables)])
+        itemId = ",".join([f"t{i}.itemId" for i in range(num_joined_tables)])
         timestamp = "cameras.timestamp"
         camId = "cameras.cameraId"
         filename = "cameras.filename"

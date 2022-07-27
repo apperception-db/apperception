@@ -1,13 +1,22 @@
 import pytest
-from apperception.utils import fn_to_sql, F
+from common import *
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.contained(o.traj, c.timestamp, o.timestamp), 
-        "contained(T.trajCentroids, C.timestamp, T.timestamp)"),
-     (lambda o, c: F.contained(o.trans, c.timestamp, o.timestamp), 
-        "contained(T.translations, C.timestamp, T.timestamp)"),
+    (contained(1, 2), "contained(1,2)"),
 ])
+def test_contained(fn, sql):
+    assert gen(fn) == sql
 
-def test_angle_between(fn, sql):
-    assert fn_to_sql(fn, ["T", "C"]) == sql
+
+@pytest.mark.parametrize("fn, msg", [
+    (contained(1), 
+        "contained is expecting 2 arguments, but received 1"),
+    (contained(1,2,3), 
+        "contained is expecting 2 arguments, but received 3"),
+])
+def test_exception(fn, msg):
+    with pytest.raises(Exception) as e_info:
+        gen(fn)
+    str(e_info.value) == msg
+

@@ -1,16 +1,17 @@
 from apperception.world import empty_world
-
+from apperception.utils import F
+from apperception.predicate import objects, camera
 
 def test_fig_16():
-    world = empty_world(name='world')
-    world = world.filter(" ".join([
-        "lambda obj1, cam:",
-        "F.contained(cam.ego, F.road_segment('lanewithrightlane')) and",
-        "F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.timestamp, cam.ego), cam.timestamp), -15, 15) and",
-        "F.like(obj1.object_type, 'vehicle%') and",
-        "F.convert_camera(obj1, cam.ego, cam.timestamp) > [0,0] and",
-        "F.convert_camera(obj1, cam.ego, cam.timestamp) < [4,5] and",
-        "F.angle_between(F.facing_relative(obj1, F.road_direction(obj1.traj, cam.timestamp, cam.ego), cam.timestamp), -30, -15)",
-    ]))
+    o = objects[0]
+    c = camera
+    world = empty_world().filter(
+        F.contained(c.ego, F.road_segment('lanewithrightlane')) &
+        F.angle_between(F.facing_relative(c.ego, F.road_direction(c.ego)), -15, 15) &
+        F.like(o.type, 'vehicle%') &
+        (F.convert_camera(o.traj@c.time, c.ego) > [0, 0]) &
+        (F.convert_camera(o.traj@c.time, c.ego) < [4, 5]) &
+        F.angle_between(F.facing_relative(o.traj@c.time, F.road_direction(o.traj@c.time)), -30, -15)
+    )
 
     assert world.get_id_time_camId_filename(1) == []
