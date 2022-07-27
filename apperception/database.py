@@ -183,10 +183,13 @@ class Database:
         if commit:
             self.connection.commit()
 
-    def _execute_query(self, query: str) -> List[tuple]:
+    def _execute_query(self, query: str) -> Optional[List[tuple]]:
         try:
             self.cursor.execute(query)
-            return self.cursor.fetchall()
+            if self.cursor.pgresult_ptr is not None:
+                return self.cursor.fetchall()
+            else:
+                return None
         except psycopg2.errors.DatabaseError as error:
             self.connection.rollback()
             raise error
