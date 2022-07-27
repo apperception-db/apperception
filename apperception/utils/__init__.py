@@ -8,7 +8,6 @@ from .df_to_camera_config import df_to_camera_config
 from .export_tables import export_tables
 from .fetch_camera import fetch_camera
 from .fetch_camera_framenum import fetch_camera_framenum
-from .fn_to_sql import fn_to_sql
 from .get_video_box import get_video_box
 from .get_video_roi import get_video_roi
 from .import_tables import import_tables
@@ -25,7 +24,6 @@ from .world_to_pixel import world_to_pixel
 
 __all__ = [
     "F",
-    "fn_to_sql",
     "query_to_str",
     "reformat_bbox_trajectories",
     "add_recognized_objects",
