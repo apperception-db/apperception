@@ -1,5 +1,5 @@
-from typing import (Any, Callable, Dict, Generic, Iterable, List, Literal,
-                    Optional, Set, Tuple, TypeVar)
+from typing import (Any, Callable, Dict, Generic, List, Literal, Optional, Set,
+                    Tuple, TypeVar)
 
 BinOp = Literal["add", "sub", "mul", "div", "matmul"]
 BoolOp = Literal["and", "or"]
@@ -254,7 +254,7 @@ class CallNode(PredicateNode):
     def __init__(self, fn: "Fn", params: List["PredicateNode"]):
         self._fn = (fn,)
         self.params = params
-    
+
     @property
     def fn(self) -> "Fn":
         return self._fn[0]
@@ -263,11 +263,7 @@ class CallNode(PredicateNode):
 def call_node(fn: "Fn"):
     def call_node_factory(*args: "PredicateNode") -> "CallNode":
         return CallNode(
-            fn,
-            [
-                arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True)
-                for arg in args
-            ]
+            fn, [arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True) for arg in args]
         )
 
     return call_node_factory
@@ -452,7 +448,9 @@ class GenSqlVisitor(Visitor[str]):
             return f"({left}{BIN_OP[node.op]}{right})"
 
         if isinstance(node.left, ArrayNode):
-            return self(ArrayNode([BinOpNode(expr, node.op, node.right) for expr in node.left.exprs]))
+            return self(
+                ArrayNode([BinOpNode(expr, node.op, node.right) for expr in node.left.exprs])
+            )
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
             return f"objectBBox({self(node.left.table.id)}, {right})"
