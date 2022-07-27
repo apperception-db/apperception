@@ -1,12 +1,21 @@
 import pytest
-from apperception.utils import fn_to_sql, F
+from common import *
 
 
 @pytest.mark.parametrize("fn, sql", [
-    (lambda o, c: F.contained_margin(o.traj, c.timestamp, 0.5, o.timestamp), 
-        "containedMargin(T.trajCentroids, C.timestamp, 0.5, T.timestamp)"),
+    (contained_margin(1, 2, 3), "containedMargin(1,2,3)"),
 ])
+def test_contained_margin(fn, sql):
+    assert gen(fn) == sql
 
-def test_angle_between(fn, sql):
-    print(fn_to_sql(fn, ["T", "C"]))
-    assert fn_to_sql(fn, ["T", "C"]) == sql
+
+@pytest.mark.parametrize("fn, msg", [
+    (contained_margin(1), 
+        "contained_margin is expecting 3 arguments, but received 1"),
+    (contained_margin(1,2,3,4), 
+        "contained_margin is expecting 3 arguments, but received 4"),
+])
+def test_exception(fn, msg):
+    with pytest.raises(Exception) as e_info:
+        gen(fn)
+    str(e_info.value) == msg

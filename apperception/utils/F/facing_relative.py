@@ -9,4 +9,4 @@ from .common import get_heading_at_time
 
 @call_node
 def facing_relative(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
-    return f"facingRelative({', '.join(map(visitor, map(get_heading_at_time, args)))})"
+    return f"facingRelative({','.join(map(visitor, map(get_heading_at_time, args)))})"

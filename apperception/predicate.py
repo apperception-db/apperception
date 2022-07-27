@@ -70,65 +70,33 @@ class PredicateNode:
         other = wrap_literal(other)
         return BoolOpNode("and", [self, other])
 
-    def __rand__(self, other):
-        other = wrap_literal(other)
-        return BoolOpNode("and", [other, self])
-
     def __or__(self, other):
         other = wrap_literal(other)
         return BoolOpNode("or", [self, other])
-
-    def __ror__(self, other):
-        other = wrap_literal(other)
-        return BoolOpNode("or", [other, self])
 
     def __eq__(self, other):
         other = wrap_literal(other)
         return CompOpNode(self, "eq", other)
 
-    def __req__(self, other):
-        other = wrap_literal(other)
-        return CompOpNode(other, "eq", self)
-
     def __ne__(self, other):
         other = wrap_literal(other)
         return CompOpNode(self, "ne", other)
-
-    def __rne__(self, other):
-        other = wrap_literal(other)
-        return CompOpNode(other, "ne", self)
 
     def __ge__(self, other):
         other = wrap_literal(other)
         return CompOpNode(self, "ge", other)
 
-    def __rge__(self, other):
-        other = wrap_literal(other)
-        return CompOpNode(other, "ge", self)
-
     def __gt__(self, other):
         other = wrap_literal(other)
         return CompOpNode(self, "gt", other)
-
-    def __rgt__(self, other):
-        other = wrap_literal(other)
-        return CompOpNode(other, "gt", self)
 
     def __le__(self, other):
         other = wrap_literal(other)
         return CompOpNode(self, "le", other)
 
-    def __rle__(self, other):
-        other = wrap_literal(other)
-        return CompOpNode(other, "le", self)
-
     def __lt__(self, other):
         other = wrap_literal(other)
         return CompOpNode(self, "lt", other)
-
-    def __rlt__(self, other):
-        other = wrap_literal(other)
-        return CompOpNode(other, "lt", self)
 
     def __invert__(self):
         return UnaryOpNode("invert", self)
@@ -227,15 +195,11 @@ class TableAttrNode(PredicateNode):
 
 class ObjectTables:
     def __getitem__(self, index: int) -> "ObjectTableNode":
-        if not isinstance(index, int):
-            raise Exception("index must be an integer, instead received: ", type(index))
         return ObjectTableNode(index)
 
 
 class CameraTables:
     def __getitem__(self, index: int) -> "CameraTableNode":
-        if not isinstance(index, int):
-            raise Exception("index must be an integer, instead received: ", type(index))
         return CameraTableNode(index)
 
 
@@ -272,6 +236,10 @@ def call_node(fn: "Fn"):
 class CastNode(PredicateNode):
     to: str
     expr: "PredicateNode"
+
+
+def cast(expr: "PredicateNode", to: str) -> "CastNode":
+    return CastNode(to, expr)
 
 
 T = TypeVar("T")

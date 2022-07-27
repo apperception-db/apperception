@@ -69,7 +69,7 @@ def test_exclude():
 
 def test_sym_diff():
     world = empty_world()
-    w1 = world.filter(COND1 != COND3)
+    w1 = world.filter(COND1 != COND2)
     w2 = world.filter(COND1) ^ world.filter(COND2)
     k1, k2 = sort_keys(w1, w2)
     all_equal(k1, k2)

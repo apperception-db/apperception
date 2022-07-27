@@ -14,7 +14,7 @@ def road_segment(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
     if (
         not isinstance(table, LiteralNode)
         or not isinstance(table.value, str)
-        or table.value.lower() not in ROAD_TYPES
+        or table.value not in ROAD_TYPES
     ):
         raise Exception(f"Unsupported road type: {table}")
     return f"roadSegment({visitor(table)})"
