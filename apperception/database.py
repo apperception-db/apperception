@@ -186,6 +186,8 @@ class Database:
     def _execute_query(self, query: str) -> Optional[List[tuple]]:
         try:
             self.cursor.execute(query)
+            for notice in self.cursor.connection.notices:
+                print(notice)
             if self.cursor.pgresult_ptr is not None:
                 return self.cursor.fetchall()
             else:
