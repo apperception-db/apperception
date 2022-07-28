@@ -183,7 +183,7 @@ class Database:
         if commit:
             self.connection.commit()
 
-    def _execute_query(self, query: str) -> Optional[List[tuple]]:
+    def _execute_query(self, query: str) -> List[tuple]:
         try:
             self.cursor.execute(query)
             for notice in self.cursor.connection.notices:
@@ -191,7 +191,7 @@ class Database:
             if self.cursor.pgresult_ptr is not None:
                 return self.cursor.fetchall()
             else:
-                return None
+                return []
         except psycopg2.errors.DatabaseError as error:
             self.connection.rollback()
             raise error
