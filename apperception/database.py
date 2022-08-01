@@ -186,7 +186,12 @@ class Database:
     def _execute_query(self, query: str) -> List[tuple]:
         try:
             self.cursor.execute(query)
-            return self.cursor.fetchall()
+            for notice in self.cursor.connection.notices:
+                print(notice)
+            if self.cursor.pgresult_ptr is not None:
+                return self.cursor.fetchall()
+            else:
+                return []
         except psycopg2.errors.DatabaseError as error:
             self.connection.rollback()
             raise error
