@@ -69,3 +69,13 @@ BEGIN
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
+
+DROP FUNCTION IF EXISTS contained(geometry, text);
+CREATE OR REPLACE FUNCTION contained(contPoint geometry, segmentType text) RETURNS boolean AS
+$BODY$
+declare geom geometry;
+BEGIN
+  RETURN EXISTS(SELECT * FROM SegmentPolygon WHERE ST_Contains(elementPolygon, contPoint) AND segmentType = Any(segmentTypes));
+END
+$BODY$
+LANGUAGE 'plpgsql' ;
