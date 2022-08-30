@@ -18,3 +18,5 @@
 \i minDistance.sql;
 \i ahead.sql;
 \i roadCoords.sql;
+\i in_view.sql;
+
