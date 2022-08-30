@@ -1,5 +1,7 @@
 import os
 import pandas as pd
+import numpy as np
+import math
 
 os.chdir("../")
 from apperception.database import database
@@ -70,7 +72,10 @@ def get_obj_trajectory(tracking_df, ego_config):
 
 def facing_relative(prev_traj_point, next_traj_point, current_ego_heading):
     ### TODO: get direction from adjacent traj points, then calculate the relative degree
-    return 1
+    diff = next_traj_point - prev_traj_point
+    diff_heading = math.degrees(np.arctan2(diff[1], diff[0])) - 90
+    result = ((diff_heading - current_ego_heading) % 360 + 360) % 360
+    return result
 
 def facing_relative_check(obj_info, threshold):
     for obj_id in obj_info:
