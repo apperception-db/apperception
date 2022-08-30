@@ -72,6 +72,7 @@ def get_obj_trajectory(tracking_df, ego_config):
 
 def facing_relative(prev_traj_point, next_traj_point, current_ego_heading):
     ### TODO: get direction from adjacent traj points, then calculate the relative degree
+    ####### COMPLETE
     diff = next_traj_point - prev_traj_point
     diff_heading = math.degrees(np.arctan2(diff[1], diff[0])) - 90
     result = ((diff_heading - current_ego_heading) % 360 + 360) % 360
@@ -163,11 +164,12 @@ class optimizeIngestion:
         # 2. Filter out frames that in intersection
         intersection_filtered = self.optimize_road_network.optimize_filter_intersection(all_frames)
         ###TODO:fetch the camera_config corresponding to intersection_filtered 
-        query = """SELECT * FROM Cameras 
-                    WHERE filename like 'samples/CAM_FRONT/%2018-08-01-15%' 
-                    ORDER BY frameNum""" 
-        camera_config = database._execute_query(query)
-        camera_config_df = pd.DataFrame(camera_config, columns=camera_columns)
+        ###### COMPLETE
+        # query = """SELECT * FROM Cameras 
+        #             WHERE filename like 'samples/CAM_FRONT/%2018-08-01-15%' 
+        #             ORDER BY frameNum""" 
+        # camera_config = database._execute_query(query)
+        camera_config_df = pd.DataFrame(intersection_filtered, columns=camera_columns)
         ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading']]
         
         
