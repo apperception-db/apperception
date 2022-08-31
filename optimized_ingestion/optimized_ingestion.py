@@ -25,9 +25,9 @@ CAMERA_COLUMNS = [
     "timestamp",
     "cameraHeading",
     "egoHeading",
-    "cameraTranslationAbs"] #road_direction not included yet
+    "cameraTranslationAbs"]#roadDirection not added yet
 
-def convert_frame_to_map(frame):
+def convert_frame_to_map(frames):
     map_frame = dict(zip(CAMERA_COLUMNS, frames[:12]))
     return map_frame
 
@@ -100,7 +100,10 @@ class optimizeRoadNetwork:
         intersection_filtered = []
 
         # TODO: Connection to DB for each execution might take too much time, do all at same time
-        for frame in sampled_frames:
+        cnt = 0
+        for frame in sample_frames:
+            print(cnt)
+            cnt += 1
             map_frame = convert_frame_to_map(frame)
             # use sql in order to make use of mobilitydb features. TODO: Find python alternative
             query = f"SELECT TRUE WHERE minDistance('{map_frame['egoTranslation']}', 'intersection') < 10" 
@@ -119,12 +122,15 @@ class optimizeSampling:
     def optimize_sampling(self):
         return self.sampling
     
-    def native_sample(self):
+    def naive_sample(self):
+        print("start sampling")
         # Sample All Frames from Video at a #
         query = f"SELECT * FROM Cameras WHERE cameraId = '{CAMERA_ID}' ORDER BY frameNum"
 
         all_frames = database._execute_query(query)
+        print("length of all frames", len(all_frames))
         sampled_frames = all_frames[::SAMPLING_RATE]
+        print("length of sampled_frames", sampled_frames.shape[0])
         return sampled_frames
 
 
@@ -158,7 +164,7 @@ class optimizeIngestion:
 
     def run_test(self):
         # 1. Get all frames from video
-        all_frames = self.optimize_sampling.native_sample()
+        all_frames = self.optimize_sampling.naive_sample()
         
         
         # 2. Filter out frames that in intersection
@@ -190,3 +196,5 @@ class optimizeIngestion:
         
         obj_info = get_obj_trajectory(df)
         facing_relative_check(obj_info, 0)
+
+optimizeIngestion().run_test()
