@@ -3,6 +3,7 @@ import inspect
 import os
 import copy
 from typing import Callable
+from PIL.Image import new
 import uncompyle6
 import psycopg2
 from metadata_util import *
@@ -56,6 +57,16 @@ class Column:
     def interval(self, starttime, endtime):
         self.aggregate("atPeriodSet", parameters=["\'{[%s, %s)}\'"%(starttime, endtime)])
 
+    def get_trajectory_by_camera(self, camera_id):
+        self.aggregate("getTrajectoryByCamera", parameters=[f"\'{camera_id}\'"])
+    
+    def merge_trajectory(self):
+        self.aggregate("mergeTrajectory")
+    
+    def merge_geo(self):
+        self.aggregate("mergeGeo")
+    
+    
 class Aggregate:
 
     def __init__(self, func_name:str, parameters:list=[]):
@@ -133,7 +144,7 @@ class MetadataContext:
             self.scan.view = mapped_view
         elif self.scan.view.default and mapped_view.default and self.scan.view.view_name != mapped_view.view_name:
             self.scan.view = metadata_view
-
+        print(self.scan.view.view_name)
         view_name = mapped_view.view_name
         column_node = Column(view_name+"."+column_key)
         self.project.append(column_node)
@@ -207,10 +218,10 @@ class MetadataContext:
             return new_context
  
     ### TODO: return a proxy type
-    def get_trajectory(self, time_interval = [], distinct = False):
+    def get_trajectory(self, time_interval = [], camera_id = ""):
         if not self.single_mode:
-            self.project.distinct = distinct
-            traj_column = self.select_column(MetadataView.trajectory)
+            traj_column = self.select_column(MetadataView.object_id)
+            traj_column.get_trajectory_by_camera(camera_id) if camera_id != "" else traj_column.merge_trajectory()
             starttime, endtime = convert_time(self.start_time, time_interval)
             traj_column.interval(starttime, endtime)
             traj_column.get_coordinates()
@@ -218,13 +229,13 @@ class MetadataContext:
         else:
             ### make a copy of self first
             new_context = copy.deepcopy(self)
-            new_context.project.distinct = distinct
-            traj_column = new_context.select_column(MetadataView.trajectory)
+            traj_column = new_context.select_column(MetadataView.object_id)
+            traj_column.get_trajectory_by_camera(camera_id) if camera_id != "" else traj_column.merge_trajectory()
             starttime, endtime = convert_time(self.start_time, time_interval)
             traj_column.interval(starttime, endtime)
             traj_column.get_coordinates()
             return new_context
-
+    
     ### TODO: return a proxy type
     def get_geo(self, time_interval=[], distinct = False):
         if not self.single_mode:
@@ -247,6 +258,22 @@ class MetadataContext:
             new_context.interval(time_interval)
             return new_context
 
+    def get_merged_geo(self, time_interval = [], distinct = False):
+        if not self.single_mode:
+            self.project.distinct = distinct
+            traj_column = self.select_column(MetadataView.object_id)
+            traj_column.merge_geo()
+            # self.interval(time_interval)
+            return self
+        else:
+            ### make a copy of self first
+            new_context = copy.deepcopy(self)
+            new_context.project.distinct = distinct
+            traj_column = self.select_column(MetadataView.object_id)
+            traj_column.merge_geo()
+            # new_context.interval(time_interval)
+            return new_context
+    
     ### TODO: return a proxy type
     def interval(self,time_interval):
         start, end = convert_time(self.start_time, time_interval)

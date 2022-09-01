@@ -10,12 +10,11 @@ import datetime
 
 # Camera node
 class Camera:
-    def __init__(self, cam_id, point, ratio, video_file, metadata_id, lens):
-        self.cam_id = cam_id 
-        self.ratio = ratio
+    def __init__(self, cam_id, video_file, metadata_id, lens):
+        self.cam_id = cam_id
         self.video_file = video_file
         self.metadata_id = metadata_id
-        self.properties = []
+        self.properties = {}
 
         # Contain objects that still have yet to be added to the backend
         # If user calls recognize, those items will have already been 
@@ -23,7 +22,6 @@ class Camera:
         # have not added to the camera.
         self.items = [] 
         self.object_recognition = None
-        self.point = point
         self.lens = lens
 
     def add_item(self, item):
@@ -92,10 +90,10 @@ class VideoContext:
         return self.units
 
     # Establish camera
-    def camera(self, cam_id, point, ratio, video_file, metadata_id, lens):
+    def camera(self, cam_id, video_file, metadata_id, lens):
         camera_node = self.__get_camera(cam_id)
         if not camera_node:
-            camera_node = Camera(cam_id, point, ratio, video_file, metadata_id, lens)
+            camera_node = Camera(cam_id, video_file, metadata_id, lens)
             self.__add_camera(cam_id, camera_node)
         return camera_node
 
@@ -128,6 +126,3 @@ class VideoContext:
     # Clear
     def clear(self):
         self.camera_nodes = []
-
-    
-

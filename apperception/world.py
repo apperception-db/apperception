@@ -44,9 +44,9 @@ class World:
         new_context.VideoContext.item(item_id, cam_id, item_type, location)
         return new_context
 
-    def camera(self, cam_id, location, ratio, video_file, metadata_identifier, lens):
+    def camera(self, cam_id, video_file, metadata_identifier, lens):
         new_context = copy.deepcopy(self)
-        new_context.VideoContext.camera(cam_id, location, ratio, video_file, metadata_identifier, lens)
+        new_context.VideoContext.camera(cam_id, video_file, metadata_identifier, lens)
         return new_context
 
     def add_properties(self, cam_id, properties, property_type):
@@ -78,9 +78,19 @@ class World:
         new_context.MetadataContext.selectkey(distinct)
         return new_context
 
-    def get_trajectory(self, interval = [], distinct = False):
+    def get_trajectory(self, interval = [], camera_id = ""):
         new_context = copy.deepcopy(self)
-        new_context.MetadataContext.get_trajectory(interval, distinct)
+        new_context.MetadataContext.get_trajectory(interval, camera_id)
+        return new_context
+    
+    def get_merged_trajectory(self, interval = []):
+        new_context = copy.deepcopy(self)
+        new_context.MetadataContext.get_merged_trajectory(interval)
+        return new_context
+    
+    def get_merged_geo(self, interval = [], distinct = False):
+        new_context = copy.deepcopy(self)
+        new_context.MetadataContext.get_merged_geo(interval, distinct)
         return new_context
 
     def get_geo(self, interval = [], distinct = False):
@@ -159,11 +169,12 @@ class World:
         for traj in trajectory:
             current_trajectory = np.asarray(traj[0])
             frame_points = camera.lens.world_to_pixels(current_trajectory.T).T
+            # import code; code.interact(local=dict(globals(), **locals()))
             vs = cv2.VideoCapture(video_file)
             frame = vs.read()
             frame = cv2.cvtColor(frame[1], cv2.COLOR_BGR2RGB)
             for point in frame_points.tolist():
-                cv2.circle(frame,tuple([int(point[0]), int(point[1])]),3,(255,0,0))
+                cv2.circle(frame,tuple([int(point[0]), int(point[1])]),5,(255,0,0),20)
             plt.figure()
             plt.imshow(frame)
             plt.show()
