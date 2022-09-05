@@ -375,14 +375,16 @@ class MapTablesTransformer(BaseTransformer):
         if node.index in self.mapping:
             return objects[self.mapping[node.index]]
         return node
-    
+
 
 class NormalizeArrayAtTime(BaseTransformer):
     def visit_BinOpNode(self, node: "BinOpNode"):
-        if node.op == 'matmul':
+        if node.op == "matmul":
             left = node.left
             if isinstance(left, ArrayNode):
-                return self(ArrayNode([BinOpNode(expr, node.op, node.right) for expr in left.exprs]))
+                return self(
+                    ArrayNode([BinOpNode(expr, node.op, node.right) for expr in left.exprs])
+                )
         return node
 
 

@@ -11,9 +11,8 @@ from pypika import CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import Trajectory
-from apperception.predicate import (ExpandBoolOpTransformer,
-                                    FindAllTablesVisitor, GenSqlVisitor,
-                                    MapTablesTransformer, NormalizeArrayAtTime, normalize)
+from apperception.predicate import (FindAllTablesVisitor, GenSqlVisitor,
+                                    MapTablesTransformer, normalize)
 from apperception.utils import (add_recognized_objects, fetch_camera,
                                 fetch_camera_framenum, overlay_bboxes,
                                 query_to_str, recognize,
