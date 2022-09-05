@@ -293,6 +293,9 @@ class Visitor(Generic[T]):
     def visit_CastNode(self, node: "CastNode") -> Any:
         self(node.expr)
 
+    def reset(self):
+        pass
+
 
 class BaseTransformer(Visitor[PredicateNode]):
     def visit_ArrayNode(self, node: "ArrayNode"):
@@ -363,6 +366,10 @@ class FindAllTablesVisitor(Visitor[Tuple[Set[int], bool]]):
 
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         self.camera = True
+    
+    def reset(self):
+        self.tables = set()
+        self.camera = False
 
 
 class MapTablesTransformer(BaseTransformer):
@@ -386,12 +393,13 @@ class NormalizeArrayAtTime(BaseTransformer):
         return node
 
 
-normalizers: List[BaseTransformer] = [ExpandBoolOpTransformer, NormalizeArrayAtTime]
+normalizers: List[BaseTransformer] = [ExpandBoolOpTransformer(), NormalizeArrayAtTime()]
 
 
 def normalize(predicate: "PredicateNode") -> "PredicateNode":
     for normalizer in normalizers:
-        predicate = normalizer()(predicate)
+        normalizer.reset()
+        predicate = normalizer(predicate)
     return predicate
 
 
