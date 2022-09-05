@@ -366,7 +366,7 @@ class FindAllTablesVisitor(Visitor[Tuple[Set[int], bool]]):
 
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         self.camera = True
-    
+
     def reset(self):
         self.tables = set()
         self.camera = False
