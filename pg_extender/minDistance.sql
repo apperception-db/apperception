@@ -11,8 +11,8 @@ declare geom geometry;
 declare min_dis real;
 BEGIN
     RETURN (
-        SELECT MIN(ST_Distance(p, geom))
-        FROM UNNEST(geoms) as unnested_geoms(geom)
+        SELECT MIN(ST_Distance(p, UNNEST))
+        FROM UNNEST(geoms)
     );
 END
 $BODY$
