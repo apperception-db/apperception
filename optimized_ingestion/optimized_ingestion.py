@@ -10,6 +10,11 @@ from apperception.utils import F
 import sys
 sys.path.insert(1, './Yolov5_StrongSORT_OSNet')
 
+from filters import Filter
+from typing import Any, Dict, List, Tuple
+from frame import Frame
+from pipeline import Pipeline
+
 ### Constants ###
 SAMPLING_RATE = 2
 CAMERA_ID = "scene-0757"
@@ -36,8 +41,8 @@ CAMERA_COLUMNS = [
 
 """
 Helper Functions
+TODO: Clean Up
 """
-
 def convert_frame_to_map(frames):
     map_frame = dict(zip(CAMERA_COLUMNS, frames[:12]))
     return map_frame
@@ -89,9 +94,6 @@ def get_obj_trajectory(tracking_df, ego_config):
 
 
 def facing_relative(prev_traj_point, next_traj_point, current_ego_heading):
-    ### TODO: get direction from adjacent traj points, then calculate the relative degree
-    ####### COMPLETE
-    
     diff = (next_traj_point[0] - prev_traj_point[0], next_traj_point[1] - prev_traj_point[1])
     diff_heading = math.degrees(np.arctan2(diff[1], diff[0])) - 90
     result = ((diff_heading - current_ego_heading) % 360 + 360) % 360
@@ -107,136 +109,27 @@ def facing_relative_check(obj_info, threshold, ego_config):
         facing_relative_filtered[obj_id] = filtered_idx
     return facing_relative_filtered
 
-"""
-Dummy Modules for playing around
-"""
 
-class optimizeSampling:
-    def __init__(self, sampling=None):
-        self.sampling = sampling
-        self.optimized_sampling = self.optimize_sampling()
+# Filter used to filter the by how close ego is to an inview segment of some type
+class InViewFilter(Filter):
+    def __init__(self, distance: float, segment_type: str) -> None:
+        self.distance = distance
+        self.segment_type = segment_type
 
-    def optimize_sampling(self):
-        return self.sampling
-    
-    def naive_sample(self):
-        print("start sampling")
-        # Sample All Frames from Video at a #
-        query = f"SELECT * FROM Cameras WHERE filename like '{TEST_FILE_REG}' ORDER BY frameNum"
-
-        all_frames = database._execute_query(query)
-        print("length of all frames", len(all_frames))
-        sampled_frames = all_frames[::SAMPLING_RATE]
-        print("length of sampled_frames", len(sampled_frames))
-        return sampled_frames
-
-class optimizeRoadNetwork:
-    def __init__(self, road_network=None):
-        self.road_network = road_network
-        self.optimized_road_network = self.optimize_road_network()
-
-    def optimize_road_network(self):
-        return self.road_network
-
-    def optimize_filter_intersection(self, sample_frames):
+    def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
         intersection_filtered = []
 
         # TODO: Connection to DB for each execution might take too much time, do all at same time
-        cnt = 0
-        for frame in sample_frames:
-            print(cnt)
-            cnt += 1
-            map_frame = convert_frame_to_map(frame)
+        for frame in frames:
             # use sql in order to make use of mobilitydb features. TODO: Find python alternative
-            query = f"SELECT TRUE WHERE minDistance('{map_frame['egoTranslation']}', 'intersection') < 10" 
+            query = f"SELECT TRUE WHERE minDistance('{frame.ego_translation}', '{self.segment_type}') < {self.distance}" 
             result = database._execute_query(query)
             if result:
                 intersection_filtered.append(frame)
 
-        return intersection_filtered
+        return intersection_filtered, metadata
 
-class optimizeDecoding:
-    def __init__(self, decoding=None):
-        self.decoding = decoding
-        self.optimized_decoding = self.optimize_decoding()
+if __name__ == "__main__":
+    pipeline = Pipeline() 
 
-    def optimize_decoding(self):
-        return self.decoding
-
-    def optimize_tracking(self, lst_of_frames):
-        import sample_frame_tracker
-        # Now the result is written to a txt file, need to fix this later
-        for frames in lst_of_frames:
-            print("frames are", frames)
-            result = sample_frame_tracker.run(frames, save_vid=True)
-
-"""
-End to End Optimization Ingestion
-Use Case: select cars appears in intersection
-                      facing degree d relative to ego
-Test Data: only use one video as the test data
-"""
-
-class optimizeIngestion:
-    def __init__(self):
-        self.optimize_road_network = optimizeRoadNetwork()
-        self.optimize_sampling = optimizeSampling()
-        self.optimize_decoding = optimizeDecoding()
-
-    def run_test(self):
-        # 1. Get all frames from video
-        all_frames = self.optimize_sampling.naive_sample()
-        
-        
-        # 2. Filter out frames that in intersection
-        intersection_filtered = self.optimize_road_network.optimize_filter_intersection(all_frames)
-        ###TODO:fetch the camera_config corresponding to intersection_filtered 
-        ###### COMPLETE
-        # query = """SELECT * FROM Cameras 
-        #             WHERE filename like 'samples/CAM_FRONT/%2018-08-01-15%' 
-        #             ORDER BY frameNum""" 
-        # camera_config = database._execute_query(query)
-        camera_config_df = pd.DataFrame(intersection_filtered, columns=CAMERA_COLUMNS)
-        ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading']]
-        camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
-
-        # 3. Decode filtered_frames and track
-        self.optimize_decoding.optimize_tracking([camera_config_df.filename.tolist()])
-        df = pd.read_csv(TEST_TRACK_FILE, sep=" ", header=None, 
-                 names=["frame_idx", 
-                        "object_id", 
-                        "bbox_left", 
-                        "bbox_top", 
-                        "bbox_w", 
-                        "bbox_h", 
-                        "None1",
-                        "None2",
-                        "None3",
-                        "None",
-                        "object_type"])
-        df.frame_idx = df.frame_idx.add(-1)
-        
-        obj_info = get_obj_trajectory(df, ego_config)
-        facing_relative_filtered = facing_relative_check(obj_info, 0, ego_config)
-        for obj_id in facing_relative_filtered:
-            ### frame idx of current obj that satisfies the condition
-            filtered_idx = facing_relative_filtered[obj_id]
-            current_obj_filtered_frames = camera_config_df.filename.iloc[filtered_idx]
-            current_obj_bboxes = obj_info[obj_id]['bbox']
-            import cv2
-            import numpy as np
-            
-            # choose codec according to format needed
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-            video = cv2.VideoWriter('../imposed_video/' + str(obj_id) + '_video.avi', fourcc, 1, (1600, 900))
-
-            for i in range(len(current_obj_filtered_frames)):
-                img = cv2.imread(current_obj_filtered_frames.iloc[i])
-                x, y, x_w, y_h = current_obj_bboxes[filtered_idx.index[i]]
-                cv2.rectangle(img,(x,y),(x_w,y_h),(0,255,0),2)
-                video.write(img)
-
-            cv2.destroyAllWindows()
-            video.release()
-
-optimizeIngestion().run_test()
+    pipeline.add_filter(filter=InViewFilter(distance=10, segment_type="intersection"))

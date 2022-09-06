@@ -26,3 +26,5 @@ data/scenic/road_network
 
 monodepth2
 models
+
+Yolov5_StrongSORT_OSNet
