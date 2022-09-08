@@ -5,6 +5,8 @@ __pycache__
 
 yolov4-deepsort
 yolov5-deepsort
+Yolov5_StrongSORT_OSNet
+
 .mypy_cache
 .pytest_cache
 .idea
@@ -19,8 +21,8 @@ coverage.xml
 maps
 samples
 sweeps
-v1.0-mini
 
+data/v1.0-mini
 data/nuscenes
 data/scenic/road_network
 

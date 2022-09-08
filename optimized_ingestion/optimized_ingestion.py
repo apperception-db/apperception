@@ -19,9 +19,10 @@ from pipeline import Pipeline
 ### Constants ###
 SAMPLING_RATE = 2
 CAMERA_ID = "scene-0757"
-TEST_FILE_REG = 'samples/CAM_FRONT/%2018-08-01-15%'
-TEST_FILE_DIR = '/home/yongming/workspace/research/apperception/v1.0-mini/'
-TEST_TRACK_FILE = "/home/yongming/workspace/research/apperception_new_local/apperception/optimized_ingestion/tracks/CAM_FRONT.txt"
+TEST_FILE_REG = '%CAM_FRONT/%2018-08-30-15%'
+BASE_DIR = '/Users/chanwutk/Documents'
+TEST_FILE_DIR = os.path.join(BASE_DIR, 'apperception/data/v1.0-mini/')
+TEST_TRACK_FILE = os.path.join(BASE_DIR, "apperception/optimized_ingestion/tracks/CAM_FRONT.txt")
 os.remove(TEST_TRACK_FILE) if os.path.exists(TEST_TRACK_FILE) else None
 
 CAMERA_COLUMNS = [
@@ -37,7 +38,6 @@ CAMERA_COLUMNS = [
     "timestamp",
     "cameraHeading",
     "egoHeading",
-    "cameraTranslationAbs",
     "roadDirection"]
 
 """
@@ -144,7 +144,7 @@ class TrackingFilter(Filter):
         
         result = sample_frame_tracker.run(camera_config_df.filename.tolist(), save_vid=True)
 
-        df = pd.read_csv(TEST_TRACK_FILE, sep=" ", header=None, 
+        df = pd.read_csv(TEST_TRACK_FILE, sep=",", header=None, 
                  names=["frame_idx", 
                         "object_id", 
                         "bbox_left", 
