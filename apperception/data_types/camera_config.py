@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List, Tuple
+
 import numpy.typing as npt
 
 Float3 = Tuple[float, float, float]
