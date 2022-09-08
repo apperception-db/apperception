@@ -2,6 +2,7 @@ import os
 import pandas as pd
 import numpy as np
 import math
+import cv2
 
 os.chdir("../")
 from apperception.database import database
@@ -129,7 +130,64 @@ class InViewFilter(Filter):
 
         return intersection_filtered, metadata
 
+class TrackingFilter(Filter):
+    def __init__(self) -> None:
+        pass
+
+    def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
+        import sample_frame_tracker
+        # Now the result is written to a txt file, need to fix this later
+        
+        camera_config_df = pd.DataFrame([x.get_tuple() for x in frames], columns=CAMERA_COLUMNS)
+        ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading']]
+        camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
+        
+        result = sample_frame_tracker.run(camera_config_df.filename.tolist(), save_vid=True)
+
+        df = pd.read_csv(TEST_TRACK_FILE, sep=" ", header=None, 
+                 names=["frame_idx", 
+                        "object_id", 
+                        "bbox_left", 
+                        "bbox_top", 
+                        "bbox_w", 
+                        "bbox_h", 
+                        "None1",
+                        "None2",
+                        "None3",
+                        "None",
+                        "object_type"])
+        df.frame_idx = df.frame_idx.add(-1)
+        
+        obj_info = get_obj_trajectory(df, ego_config)
+        facing_relative_filtered = facing_relative_check(obj_info, 0, ego_config)
+        for obj_id in facing_relative_filtered:
+            ### frame idx of current obj that satisfies the condition
+            filtered_idx = facing_relative_filtered[obj_id]
+            current_obj_filtered_frames = camera_config_df.filename.iloc[filtered_idx]
+            current_obj_bboxes = obj_info[obj_id]['bbox']
+            
+            # choose codec according to format needed
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+            video = cv2.VideoWriter('../imposed_video/' + str(obj_id) + '_video.avi', fourcc, 1, (1600, 900))
+
+            for i in range(len(current_obj_filtered_frames)):
+                img = cv2.imread(current_obj_filtered_frames.iloc[i])
+                x, y, x_w, y_h = current_obj_bboxes[filtered_idx.index[i]]
+                cv2.rectangle(img,(x,y),(x_w,y_h),(0,255,0),2)
+                video.write(img)
+
+            cv2.destroyAllWindows()
+            video.release()
+
 if __name__ == "__main__":
+    query = f"SELECT * FROM Cameras WHERE filename like '{TEST_FILE_REG}' ORDER BY frameNum"
+    all_frames = database._execute_query(query)
+    
+    frames = [Frame(x) for x in all_frames]
+
     pipeline = Pipeline() 
 
     pipeline.add_filter(filter=InViewFilter(distance=10, segment_type="intersection"))
+    pipeline.add_filter(filter=TrackingFilter())
+
+    pipeline.run(frames)

@@ -35,3 +35,21 @@ class Frame:
         self.camera_translation_abs = camera_config[12]
         self.road_direction = camera_config[13]
 
+    def get_tuple(self) -> Tuple[Any]:
+        return (
+            self.camera_id,
+            self.frame_id,
+            self.frame_num,
+            self.filename,
+            self.camera_translation,
+            self.camera_rotation,
+            self.camera_intrinsic,
+            self.ego_translation,
+            self.ego_rotation,
+            self.timestamp,
+            self.camera_heading,
+            self.ego_heading,
+            self.camera_translation_abs,
+            self.road_direction
+        )
+
