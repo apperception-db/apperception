@@ -33,7 +33,7 @@ class Frame:
         self.camera_heading = camera_config[10]
         self.ego_heading = camera_config[11]
         self.camera_translation_abs = camera_config[12]
-        self.road_direction = camera_config[13]
+        self.road_direction = camera_config[13] if len(camera_config) >= 14 else None
 
     def get_tuple(self) -> Tuple[Any]:
         return (
