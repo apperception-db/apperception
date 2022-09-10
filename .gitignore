@@ -5,14 +5,11 @@ __pycache__
 
 yolov4-deepsort
 yolov5-deepsort
-Yolov5_StrongSORT_OSNet
 
 .mypy_cache
 .pytest_cache
 .idea
 output
-.apperception_cache
-env
 .venv
 .coverage
 coverage.xml
@@ -26,7 +23,6 @@ data/v1.0-mini
 data/nuscenes
 data/scenic/road_network
 
-monodepth2
 models
 
-Yolov5_StrongSORT_OSNet
+weights

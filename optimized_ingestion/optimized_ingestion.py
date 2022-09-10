@@ -4,17 +4,25 @@ import numpy as np
 import math
 import cv2
 
-os.chdir("../")
+from torchvision import transforms
+from pyquaternion import Quaternion
+
+from depth_to_3d import depth_to_3d
+
+# os.chdir("../")
 from apperception.database import database
 from apperception.world import empty_world
 from apperception.utils import F
 import sys
-sys.path.insert(1, './Yolov5_StrongSORT_OSNet')
+
+if './submodules' not in sys.path:
+    sys.path.append('./submodules')
 
 from filters import Filter
 from typing import Any, Dict, List, Tuple
 from frame import Frame
 from pipeline import Pipeline
+from monodepth import monodepth
 
 ### Constants ###
 SAMPLING_RATE = 2
@@ -76,21 +84,29 @@ def get_obj_trajectory(tracking_df, ego_config):
         ### for each coordinate, transform
         obj_trajectory = []
         obj_bboxes = []
+        obj_3d_camera_trajectory = []
+        obj_3d_trajectory = []
         for index, row in object_with_ego.iterrows():
             obj_trajectory.append(transform_to_world(
                                     frame_coordinates=(row['bbox_left']+row['bbox_w']//2, 
                                                        row['bbox_top']+row['bbox_h']//2), 
-                                    ego_translation=row['egoTranslation'],
-                                    ego_rotation=row['egoRotation']))
+                                    ego_translation=row['cameraTranslation'],
+                                    ego_rotation=row['cameraRotation']))
             obj_bboxes.append(transform_to_world(
                                 frame_coordinates=(row['bbox_left'], row['bbox_top'], 
                                                    row['bbox_left']+row['bbox_w'], 
                                                    row['bbox_top']+row['bbox_h']),
                                 ego_translation=row['egoTranslation'],
                                 ego_rotation=row['egoRotation']))
+            x, y, z = row['3d-x'], row['3d-y'], row['3d-z']
+            obj_3d_camera_trajectory.append((x, y, z))
+            rotated_offset = Quaternion(row['cameraRotation']) \
+                .rotate(np.array(x, y, z))
+            obj_3d_trajectory.append(np.array(row['cameraTranslation']) + rotated_offset)
         obj_info[name]['frame_idx'] = object_with_ego[['frame_idx']]
         obj_info[name]['trajectory'] = obj_trajectory
         obj_info[name]['bbox'] = obj_bboxes
+        obj_info[name]['3d-trajectory'] = obj_3d_camera_trajectory
     return obj_info
 
 
@@ -130,32 +146,54 @@ class InViewFilter(Filter):
 
         return intersection_filtered, metadata
 
+
 class TrackingFilter(Filter):
     def __init__(self) -> None:
         pass
 
     def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
-        import sample_frame_tracker
+        import sample_frame_tracker as tracker
         # Now the result is written to a txt file, need to fix this later
         
         camera_config_df = pd.DataFrame([x.get_tuple() for x in frames], columns=CAMERA_COLUMNS)
         ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading']]
         camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
         
-        result = sample_frame_tracker.run(camera_config_df.filename.tolist(), save_vid=True)
+        result = tracker.run(camera_config_df.filename.tolist(), save_vid=True)
 
-        df = pd.read_csv(TEST_TRACK_FILE, sep=",", header=None, 
-                 names=["frame_idx", 
-                        "object_id", 
-                        "bbox_left", 
-                        "bbox_top", 
-                        "bbox_w", 
-                        "bbox_h", 
-                        "None1",
-                        "None2",
-                        "None3",
-                        "None",
-                        "object_type"])
+        md = monodepth()
+        depths = [md.eval(frame) for frame in camera_config_df.filename.tolist()]
+
+        df = pd.read_csv(
+            TEST_TRACK_FILE,
+            sep=",",
+            header=None,
+            names=[
+                "frame_idx",
+                "object_id",
+                "bbox_left",
+                "bbox_top",
+                "bbox_w",
+                "bbox_h",
+                "None1",
+                "None2",
+                "None3",
+                "None",
+                "object_type"
+            ]
+        )
+
+        intrinsics = camera_config_df['cameraIntrinsic'].tolist()
+
+        def find_3d_location(row: "pd.Series"):
+            x = int(row['bbox_left'] + (row['bbox_w'] / 2))
+            y = int(row['bbox_right'] + (row['bbox_h'] / 2))
+            idx = row['frame_idx']
+            depth = depths[idx][x, y]
+            intrinsic = intrinsics[idx]
+            return pd.Series(depth_to_3d(x, y, depth, intrinsic), axis=1)
+
+        df[['3d-x', '3d-y', '3d-z']] = df.apply(find_3d_location)
         df.frame_idx = df.frame_idx.add(-1)
         
         obj_info = get_obj_trajectory(df, ego_config)
@@ -179,13 +217,14 @@ class TrackingFilter(Filter):
             cv2.destroyAllWindows()
             video.release()
 
+
 if __name__ == "__main__":
     query = f"SELECT * FROM Cameras WHERE filename like '{TEST_FILE_REG}' ORDER BY frameNum"
     all_frames = database._execute_query(query)
-    
+
     frames = [Frame(x) for x in all_frames]
 
-    pipeline = Pipeline() 
+    pipeline = Pipeline()
 
     pipeline.add_filter(filter=InViewFilter(distance=10, segment_type="intersection"))
     pipeline.add_filter(filter=TrackingFilter())
