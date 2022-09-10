@@ -13,7 +13,7 @@ from pathlib import Path
 import torch
 
 FILE = Path(__file__).resolve()
-APPERCEPTION = FILE.parent.parent
+APPERCEPTION = FILE.parent.parent.parent
 ROOT = APPERCEPTION / 'submodules/Yolov5_StrongSORT_OSNet'  # yolov5 strongsort root directory
 WEIGHTS = APPERCEPTION / 'weights'
 
