@@ -1,8 +1,10 @@
 import os
+import pickle
 import pandas as pd
 import numpy as np
 import math
 import cv2
+from pathlib import Path
 
 from pyquaternion import Quaternion
 
@@ -24,10 +26,8 @@ from monodepth import monodepth
 SAMPLING_RATE = 2
 CAMERA_ID = "scene-0757"
 TEST_FILE_REG = '%CAM_FRONT/%2018-08-30-15%'
-BASE_DIR = '/Users/chanwutk/Documents'
-TEST_FILE_DIR = os.path.join(BASE_DIR, 'apperception/data/v1.0-mini/')
-TEST_TRACK_FILE = os.path.join(BASE_DIR, "apperception/optimized_ingestion/tracks/CAM_FRONT.txt")
-os.remove(TEST_TRACK_FILE) if os.path.exists(TEST_TRACK_FILE) else None
+BASE_DIR = Path(__file__).resolve().parent.parent
+TEST_FILE_DIR = os.path.join(BASE_DIR, 'data/v1.0-mini/')
 
 CAMERA_COLUMNS = [
     "cameraId",
@@ -72,7 +72,7 @@ def get_obj_trajectory(tracking_df, ego_config):
         obj_info[name] = {}
 
         object_df = group[[
-            'frame_idx', 'object_id', 'object_type', 'bbox_left', 'bbox_top', 'bbox_w', 'bbox_h']]
+            'frame_idx', 'object_id', 'object_type', 'bbox_left', 'bbox_top', 'bbox_w', 'bbox_h', '3d-x', '3d-y', '3d-z']]
         object_df = object_df.reset_index(drop=True)
         framenums = group.frame_idx.tolist()
 
@@ -100,8 +100,7 @@ def get_obj_trajectory(tracking_df, ego_config):
                                 ego_rotation=row['egoRotation']))
             x, y, z = row['3d-x'], row['3d-y'], row['3d-z']
             obj_3d_camera_trajectory.append((x, y, z))
-            rotated_offset = Quaternion(row['cameraRotation']) \
-                .rotate(np.array(x, y, z))
+            rotated_offset = Quaternion(row['cameraRotation']).rotate(np.array([x, y, z]))
             obj_3d_trajectory.append(np.array(row['cameraTranslation']) + rotated_offset)
         obj_info[name]['frame_idx'] = object_with_ego[['frame_idx']]
         obj_info[name]['trajectory'] = obj_trajectory
@@ -140,7 +139,7 @@ class InViewFilter(Filter):
         # TODO: Connection to DB for each execution might take too much time, do all at same time
         for frame in frames:
             # use sql in order to make use of mobilitydb features. TODO: Find python alternative
-            query = f"SELECT TRUE WHERE minDistance('{frame.ego_translation}', '{self.segment_type}') < {self.distance}" 
+            query = f"SELECT TRUE WHERE minDistance('POINT ({' '.join([str(f) for f in frame.ego_translation])})', '{self.segment_type}') < {self.distance}" 
             result = database._execute_query(query)
             if result:
                 intersection_filtered.append(frame)
@@ -155,15 +154,23 @@ class TrackingFilter(Filter):
     def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
         import trackers.yolov5_strongsort_osnet_tracker as tracker
         # Now the result is written to a txt file, need to fix this later
-        
+
         camera_config_df = pd.DataFrame([x.get_tuple() for x in frames], columns=CAMERA_COLUMNS)
-        ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading']]
+        ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading', 'cameraTranslation', 'cameraRotation']]
         camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
-        
-        results = tracker.track(camera_config_df.filename.tolist())
 
         md = monodepth()
         depths = [md.eval(frame) for frame in camera_config_df.filename.tolist()]
+        # with open("./depths.pickle", "wb") as pwrite:
+        #     pickle.dump(depths, pwrite)
+        # with open("./depths.pickle", "rb") as pread:
+        #     depths = pickle.load(pread)
+
+        results = tracker.track(camera_config_df.filename.tolist())
+        # with open("./results.pickle", "wb") as pwrite:
+        #     pickle.dump(results, pwrite)
+        # with open("./results.pickle", "rb") as pread:
+        #     results = pickle.load(pread)
 
         df = pd.DataFrame(results, columns=[
             "frame_idx",
@@ -184,13 +191,13 @@ class TrackingFilter(Filter):
 
         def find_3d_location(row: "pd.Series"):
             x = int(row['bbox_left'] + (row['bbox_w'] / 2))
-            y = int(row['bbox_right'] + (row['bbox_h'] / 2))
+            y = int(row['bbox_top'] + (row['bbox_h'] / 2))
             idx = row['frame_idx']
-            depth = depths[idx][x, y]
+            depth = depths[idx][y, x]
             intrinsic = intrinsics[idx]
-            return pd.Series(depth_to_3d(x, y, depth, intrinsic), axis=1)
+            return pd.Series(depth_to_3d(x, y, depth, intrinsic))
 
-        df[['3d-x', '3d-y', '3d-z']] = df.apply(find_3d_location)
+        df[['3d-x', '3d-y', '3d-z']] = df.apply(find_3d_location, axis=1)
         df.frame_idx = df.frame_idx.add(-1)
 
         obj_info = get_obj_trajectory(df, ego_config)
@@ -208,18 +215,39 @@ class TrackingFilter(Filter):
             for i in range(len(current_obj_filtered_frames)):
                 img = cv2.imread(current_obj_filtered_frames.iloc[i])
                 x, y, x_w, y_h = current_obj_bboxes[filtered_idx.index[i]]
-                cv2.rectangle(img, (x, y), (x_w, y_h), (0, 255, 0), 2)
+                cv2.rectangle(img, (int(x), int(y)), (int(x_w), int(y_h)), (0, 255, 0), 2)
                 video.write(img)
 
             cv2.destroyAllWindows()
             video.release()
+        return frames, metadata
 
 
 if __name__ == "__main__":
-    query = f"SELECT * FROM Cameras WHERE filename like '{TEST_FILE_REG}' ORDER BY frameNum"
+    query = f"""
+        SELECT
+            cameraId,
+            frameId,
+            frameNum,
+            filename,
+            ARRAY [st_x(cameraTranslation), st_y(cameraTranslation), st_z(cameraTranslation)] as cameraTranslation,
+            cameraRotation,
+            cameraIntrinsic,
+            ARRAY [st_x(egoTranslation), st_y(egoTranslation), st_z(egoTranslation)] as egoTranslation,
+            egoRotation,
+            timestamp,
+            cameraHeading,
+            egoHeading,
+            roadDirection::real
+        FROM Cameras
+        WHERE filename like '{TEST_FILE_REG}'
+        ORDER BY frameNum
+    """
     all_frames = database._execute_query(query)
+    print(all_frames[0])
 
     frames = [Frame(x) for x in all_frames]
+    print(frames[0].camera_translation)
 
     pipeline = Pipeline()
 

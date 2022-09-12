@@ -154,7 +154,7 @@ def track(
 
                 # draw boxes for visualization
                 if len(outputs[i]) > 0:
-                    for j, (output, conf) in enumerate(zip(outputs[i], confs)):
+                    for output, conf in zip(outputs[i], confs):
 
                         id = output[4]
                         cls = output[5]
@@ -166,7 +166,7 @@ def track(
                         bbox_w = output[2] - output[0]
                         bbox_h = output[3] - output[1]
                         labels.append(
-                            (frame_idx, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, i, f"{names[c]}", conf)
+                            (frame_idx, id, bbox_left, bbox_top, bbox_w, bbox_h, -1, -1, -1, i, f"{names[c]}", conf.item())
                         )
 
                 LOGGER.info(f'{s}Done. YOLO:({t3 - t2:.3f}s), StrongSORT:({t5 - t4:.3f}s)')
