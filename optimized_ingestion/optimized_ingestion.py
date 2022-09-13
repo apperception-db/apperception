@@ -18,7 +18,7 @@ if './submodules' not in sys.path:
 
 from filters import Filter
 from typing import Any, Dict, List, Tuple
-from frame import Frame
+from frame import frame, Frame
 from pipeline import Pipeline
 from monodepth import monodepth
 
@@ -155,7 +155,7 @@ class TrackingFilter(Filter):
         import trackers.yolov5_strongsort_osnet_tracker as tracker
         # Now the result is written to a txt file, need to fix this later
 
-        camera_config_df = pd.DataFrame([x.get_tuple() for x in frames], columns=CAMERA_COLUMNS)
+        camera_config_df = pd.DataFrame([tuple(x) for x in frames], columns=CAMERA_COLUMNS)
         ego_config = camera_config_df[['egoTranslation', 'egoRotation', 'egoHeading', 'cameraTranslation', 'cameraRotation']]
         camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
 
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     all_frames = database._execute_query(query)
     print(all_frames[0])
 
-    frames = [Frame(x) for x in all_frames]
+    frames = [frame(*x) for x in all_frames]
     print(frames[0].camera_translation)
 
     pipeline = Pipeline()

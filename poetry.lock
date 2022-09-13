@@ -89,6 +89,14 @@ html5lib = ["html5lib"]
 lxml = ["lxml"]
 
 [[package]]
+name = "bitarray"
+version = "2.6.0"
+description = "efficient arrays of booleans -- C extension"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "bleach"
 version = "5.0.1"
 description = "An easy safelist-based HTML-sanitizing tool."
@@ -1298,7 +1306,15 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
+<<<<<<< HEAD
 content-hash = "b30c44a25d7aa34a9454a2e58e1d82bed3c2f2a6fcdd4daa53cfaa88cf0194b6"
+=======
+<<<<<<< HEAD
+content-hash = "91d383ff9b662121db59a7b622e264b5d5c94f77aec491b48f134b60d6f506d8"
+=======
+content-hash = "e3d7751eb2c212668692dcf8c69a02dcb82025633658ffa631c89f7d47befe0c"
+>>>>>>> e4d6c03 (rework Frame)
+>>>>>>> 27b532b (rework Frame)
 
 [metadata.files]
 appnope = [
@@ -1362,13 +1378,22 @@ beautifulsoup4 = [
     {file = "beautifulsoup4-4.11.1.tar.gz", hash = "sha256:ad9aa55b65ef2808eb405f46cf74df7fcb7044d5cbc26487f96eb2ef2e436693"},
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 27b532b (rework Frame)
 <<<<<<< HEAD
 bleach = []
 certifi = []
 cffi = []
 =======
+<<<<<<< HEAD
 >>>>>>> a9b29a0 (update ingestion pipeline)
+=======
+=======
+bitarray = []
+>>>>>>> e4d6c03 (rework Frame)
+>>>>>>> 27b532b (rework Frame)
 bleach = [
     {file = "bleach-5.0.1-py3-none-any.whl", hash = "sha256:085f7f33c15bd408dd9b17a4ad77c577db66d76203e5984b1bd59baeee948b2a"},
     {file = "bleach-5.0.1.tar.gz", hash = "sha256:0d03255c47eb9bd2f26aa9bb7f2107732e7e8fe195ca2f64709fcf3b0a4a085c"},
