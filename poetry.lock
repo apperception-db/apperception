@@ -117,11 +117,7 @@ dev = ["build (==0.8.0)", "flake8 (==4.0.1)", "hashin (==0.17.0)", "pip-tools (=
 
 [[package]]
 name = "certifi"
-<<<<<<< HEAD
 version = "2022.6.15.2"
-=======
-version = "2022.6.15.1"
->>>>>>> 32f5896 (add monodepth2 and Yolov5_StrongSORT_OSNet as submodules)
 description = "Python package for providing Mozilla's CA Bundle."
 category = "dev"
 optional = false
@@ -258,7 +254,19 @@ symfont = ["sympy"]
 type1 = ["xattr"]
 ufo = ["fs (>=2.2.0,<3)"]
 unicode = ["unicodedata2 (>=14.0.0)"]
+<<<<<<< HEAD
 woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
+=======
+woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
+
+[[package]]
+name = "idna"
+version = "3.4"
+description = "Internationalized Domain Names in Applications (IDNA)"
+category = "dev"
+optional = false
+python-versions = ">=3.5"
+>>>>>>> 279a666 (update poetry.lock)
 
 [[package]]
 name = "importlib-metadata"
@@ -398,6 +406,7 @@ i18n = ["Babel (>=2.7)"]
 [[package]]
 name = "jsonschema"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "4.16.0"
 =======
 <<<<<<< HEAD
@@ -410,6 +419,9 @@ version = "4.15.0"
 version = "4.16.0"
 >>>>>>> 32f5896 (add monodepth2 and Yolov5_StrongSORT_OSNet as submodules)
 >>>>>>> fbfd46d (add monodepth2 and Yolov5_StrongSORT_OSNet as submodules)
+=======
+version = "4.16.0"
+>>>>>>> 279a666 (update poetry.lock)
 description = "An implementation of JSON Schema validation for Python"
 category = "main"
 optional = false
@@ -494,11 +506,7 @@ test = ["coverage", "ipykernel", "pre-commit", "pytest-console-scripts", "pytest
 
 [[package]]
 name = "jupyterlab"
-<<<<<<< HEAD
 version = "3.4.7"
-=======
-version = "3.4.6"
->>>>>>> ebc7950 (update ingestion pipeline)
 description = "JupyterLab computational environment"
 category = "dev"
 optional = false
@@ -541,11 +549,7 @@ python-versions = ">=3.7"
 name = "lxml"
 version = "4.9.1"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
-<<<<<<< HEAD
 category = "main"
-=======
-category = "dev"
->>>>>>> ebc7950 (update ingestion pipeline)
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, != 3.4.*"
 
@@ -598,11 +602,7 @@ traitlets = "*"
 name = "mistune"
 version = "2.0.4"
 description = "A sane Markdown parser with useful plugins and renderers"
-<<<<<<< HEAD
 category = "main"
-=======
-category = "dev"
->>>>>>> ebc7950 (update ingestion pipeline)
 optional = false
 python-versions = "*"
 
@@ -634,15 +634,7 @@ python-versions = "*"
 
 [[package]]
 name = "nbclient"
-<<<<<<< HEAD
-<<<<<<< HEAD
 version = "0.6.8"
-=======
-version = "0.6.7"
->>>>>>> ebc7950 (update ingestion pipeline)
-=======
-version = "0.6.8"
->>>>>>> 32f5896 (add monodepth2 and Yolov5_StrongSORT_OSNet as submodules)
 description = "A client library for executing notebooks. Formerly nbconvert's ExecutePreprocessor."
 category = "main"
 optional = false
@@ -762,15 +754,7 @@ test = ["coverage", "nbval", "pytest", "pytest-cov", "requests", "requests-unixs
 
 [[package]]
 name = "numpy"
-<<<<<<< HEAD
-<<<<<<< HEAD
 version = "1.23.3"
-=======
-version = "1.23.2"
->>>>>>> ebc7950 (update ingestion pipeline)
-=======
-version = "1.23.3"
->>>>>>> 32f5896 (add monodepth2 and Yolov5_StrongSORT_OSNet as submodules)
 description = "NumPy is the fundamental package for array computing with Python."
 category = "main"
 optional = false
@@ -879,11 +863,7 @@ tests = ["check-manifest", "coverage", "defusedxml", "markdown2", "olefile", "pa
 name = "pkgutil_resolve_name"
 version = "1.3.10"
 description = "Resolve a name to an object."
-<<<<<<< HEAD
 category = "main"
-=======
-category = "dev"
->>>>>>> ebc7950 (update ingestion pipeline)
 optional = false
 python-versions = ">=3.6"
 
@@ -1076,7 +1056,11 @@ coverage = {version = ">=5.2.1", extras = ["toml"]}
 pytest = ">=4.6"
 
 [package.extras]
+<<<<<<< HEAD
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtualenv"]
+=======
+testing = ["fields", "hunter", "process-tests", "six", "pytest-xdist", "virtualenv"]
+>>>>>>> 279a666 (update poetry.lock)
 
 [[package]]
 name = "python-dateutil"
@@ -1292,6 +1276,34 @@ optional = false
 python-versions = "*"
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "websocket-client"
+version = "1.4.1"
+description = "WebSocket client for Python with low level API options"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+docs = ["Sphinx (>=3.4)", "sphinx-rtd-theme (>=0.5)"]
+optional = ["python-socks", "wsaccel"]
+test = ["websockets"]
+
+[[package]]
+name = "xdis"
+version = "6.0.4"
+description = "Python cross-version byte-code disassembler and marshal routines"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+click = "*"
+six = ">=1.10.0"
+
+[[package]]
+>>>>>>> 279a666 (update poetry.lock)
 name = "zipp"
 version = "3.8.1"
 description = "Backport of pathlib-compatible object wrapper for zip files"
@@ -1307,6 +1319,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 lock-version = "1.1"
 python-versions = "^3.8"
 <<<<<<< HEAD
+<<<<<<< HEAD
 content-hash = "b30c44a25d7aa34a9454a2e58e1d82bed3c2f2a6fcdd4daa53cfaa88cf0194b6"
 =======
 <<<<<<< HEAD
@@ -1315,6 +1328,9 @@ content-hash = "91d383ff9b662121db59a7b622e264b5d5c94f77aec491b48f134b60d6f506d8
 content-hash = "e3d7751eb2c212668692dcf8c69a02dcb82025633658ffa631c89f7d47befe0c"
 >>>>>>> e4d6c03 (rework Frame)
 >>>>>>> 27b532b (rework Frame)
+=======
+content-hash = "d3d75d72e382b2c30fb8a9c1b4c2fef320c9f94b61715e77ce43cdeece6c8f59"
+>>>>>>> 279a666 (update poetry.lock)
 
 [metadata.files]
 appnope = [
@@ -1360,15 +1376,15 @@ attrs = [
 =======
 asttokens = []
 attrs = []
-<<<<<<< HEAD
-babel = []
-=======
 babel = [
     {file = "Babel-2.10.3-py3-none-any.whl", hash = "sha256:ff56f4892c1c4bf0d814575ea23471c230d544203c7748e8c68f0089478d48eb"},
     {file = "Babel-2.10.3.tar.gz", hash = "sha256:7614553711ee97490f732126dc077f8d0ae084ebc6a96e23db1482afabdb2c51"},
 ]
+<<<<<<< HEAD
 >>>>>>> ebc7950 (update ingestion pipeline)
 >>>>>>> a9b29a0 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 backcall = [
     {file = "backcall-0.2.0-py2.py3-none-any.whl", hash = "sha256:fbbce6a29f263178a1f7915c1940bde0ec2b2a967566fe1c65c1dfb7422bd255"},
     {file = "backcall-0.2.0.tar.gz", hash = "sha256:5cbdbf27be5e7cfadb448baf0aa95508f91f2bbc6c6437cd9cd06e2a4c215e1e"},
@@ -1377,6 +1393,7 @@ beautifulsoup4 = [
     {file = "beautifulsoup4-4.11.1-py3-none-any.whl", hash = "sha256:58d5c3d29f5a36ffeb94f02f0d786cd53014cf9b3b3951d42e0080d8a9498d30"},
     {file = "beautifulsoup4-4.11.1.tar.gz", hash = "sha256:ad9aa55b65ef2808eb405f46cf74df7fcb7044d5cbc26487f96eb2ef2e436693"},
 ]
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 =======
@@ -1394,6 +1411,9 @@ cffi = []
 bitarray = []
 >>>>>>> e4d6c03 (rework Frame)
 >>>>>>> 27b532b (rework Frame)
+=======
+bitarray = []
+>>>>>>> 279a666 (update poetry.lock)
 bleach = [
     {file = "bleach-5.0.1-py3-none-any.whl", hash = "sha256:085f7f33c15bd408dd9b17a4ad77c577db66d76203e5984b1bd59baeee948b2a"},
     {file = "bleach-5.0.1.tar.gz", hash = "sha256:0d03255c47eb9bd2f26aa9bb7f2107732e7e8fe195ca2f64709fcf3b0a4a085c"},
@@ -1475,6 +1495,7 @@ cffi = [
     {file = "cffi-1.15.1-cp39-cp39-win_amd64.whl", hash = "sha256:70df4e3b545a17496c9b3f41f5115e69a4f2e77e94e1d2a8e1070bc0c38c8a3c"},
     {file = "cffi-1.15.1.tar.gz", hash = "sha256:d400bfb9a37b1351253cb402671cea7e89bdecc294e8016a707f6d1d8ac934f9"},
 ]
+<<<<<<< HEAD
 <<<<<<< HEAD
 colorama = [
     {file = "colorama-0.4.5-py2.py3-none-any.whl", hash = "sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da"},
@@ -1605,19 +1626,17 @@ coverage = [
 ]
 =======
 >>>>>>> ebc7950 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 charset-normalizer = []
 click = [
     {file = "click-8.1.3-py3-none-any.whl", hash = "sha256:bb4d8133cb15a609f44e8213d9b391b0809795062913b383c62be0ee95b1db48"},
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
 ]
-<<<<<<< HEAD
-colorama = []
-=======
 colorama = [
     {file = "colorama-0.4.5-py2.py3-none-any.whl", hash = "sha256:854bf444933e37f5824ae7bfc1e98d5bce2ebe4160d46b5edf346a89358e99da"},
     {file = "colorama-0.4.5.tar.gz", hash = "sha256:e6c6b4334fc50988a639d9b98aa429a0b57da6e17b9a44f0451f930b6967b7a4"},
 ]
->>>>>>> ebc7950 (update ingestion pipeline)
 coverage = []
 >>>>>>> a9b29a0 (update ingestion pipeline)
 cycler = [
@@ -1660,6 +1679,7 @@ executing = [
     {file = "executing-1.0.0-py2.py3-none-any.whl", hash = "sha256:550d581b497228b572235e633599133eeee67073c65914ca346100ad56775349"},
     {file = "executing-1.0.0.tar.gz", hash = "sha256:98daefa9d1916a4f0d944880d5aeaf079e05585689bebd9ff9b32e31dd5e1017"},
 ]
+<<<<<<< HEAD
 fastjsonschema = [
     {file = "fastjsonschema-2.16.1-py3-none-any.whl", hash = "sha256:2f7158c4de792555753d6c2277d6a2af2d406dfd97aeca21d17173561ede4fe6"},
     {file = "fastjsonschema-2.16.1.tar.gz", hash = "sha256:d6fa3ffbe719768d70e298b9fb847484e2bdfdb7241ed052b8d57a9294a8c334"},
@@ -1681,11 +1701,14 @@ importlib-resources = [
 <<<<<<< HEAD
 importlib-metadata = []
 =======
+=======
+fonttools = []
+idna = []
+>>>>>>> 279a666 (update poetry.lock)
 importlib-metadata = [
     {file = "importlib_metadata-4.12.0-py3-none-any.whl", hash = "sha256:7401a975809ea1fdc658c3aa4f78cc2195a0e019c5cbc4c06122884e9ae80c23"},
     {file = "importlib_metadata-4.12.0.tar.gz", hash = "sha256:637245b8bab2b6502fcbc752cc4b7a6f6243bb02b31c5c26156ad103d3d45670"},
 ]
->>>>>>> ebc7950 (update ingestion pipeline)
 importlib-resources = []
 >>>>>>> a9b29a0 (update ingestion pipeline)
 iniconfig = [
@@ -1730,14 +1753,10 @@ json5 = []
 jsonschema = []
 jupyter-client = []
 jupyter-core = []
-<<<<<<< HEAD
-jupyter-server = []
-=======
 jupyter-server = [
     {file = "jupyter_server-1.18.1-py3-none-any.whl", hash = "sha256:022759b09c96a4e2feb95de59ce4283e04e17782efe197b91d23a47521609b77"},
     {file = "jupyter_server-1.18.1.tar.gz", hash = "sha256:2b72fc595bccae292260aad8157a0ead8da2c703ec6ae1bb7b36dbad0e267ea7"},
 ]
->>>>>>> ebc7950 (update ingestion pipeline)
 jupyterlab = []
 >>>>>>> a9b29a0 (update ingestion pipeline)
 jupyterlab-pygments = [
@@ -2025,8 +2044,8 @@ nbformat = [
 nbclassic = []
 nbclient = []
 nbconvert = []
-<<<<<<< HEAD
 nbformat = []
+<<<<<<< HEAD
 =======
 nbformat = [
     {file = "nbformat-5.4.0-py3-none-any.whl", hash = "sha256:0d6072aaec95dddc39735c144ee8bbc6589c383fb462e4058abc855348152dad"},
@@ -2034,6 +2053,8 @@ nbformat = [
 ]
 >>>>>>> ebc7950 (update ingestion pipeline)
 >>>>>>> a9b29a0 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 nest-asyncio = [
     {file = "nest_asyncio-1.5.5-py3-none-any.whl", hash = "sha256:b98e3ec1b246135e4642eceffa5a6c23a3ab12c82ff816a92c612d68205813b2"},
     {file = "nest_asyncio-1.5.5.tar.gz", hash = "sha256:e442291cd942698be619823a17a86a5759eabe1f8613084790de189fe9e16d65"},
@@ -2129,11 +2150,14 @@ pickleshare = [
     {file = "pickleshare-0.7.5.tar.gz", hash = "sha256:87683d47965c1da65cdacaf31c8441d12b8044cdec9aca500cd78fc2c683afca"},
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 Pillow = [
 =======
 <<<<<<< HEAD
 pillow = []
 =======
+=======
+>>>>>>> 279a666 (update poetry.lock)
 pillow = [
 >>>>>>> a9b29a0 (update ingestion pipeline)
     {file = "Pillow-9.2.0-cp310-cp310-macosx_10_10_x86_64.whl", hash = "sha256:a9c9bc489f8ab30906d7a85afac4b4944a572a7432e00698a7239f44a44e6efb"},
@@ -2201,12 +2225,15 @@ pillow = [
     {file = "Pillow-9.2.0.tar.gz", hash = "sha256:75e636fd3e0fb872693f23ccb8a5ff2cd578801251f3a4f6854c6a5d437d3c04"},
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 pkgutil_resolve_name = [
     {file = "pkgutil_resolve_name-1.3.10-py3-none-any.whl", hash = "sha256:ca27cc078d25c5ad71a9de0a7a330146c4e014c2462d9af19c6b828280649c5e"},
     {file = "pkgutil_resolve_name-1.3.10.tar.gz", hash = "sha256:357d6c9e6a755653cfd78893817c0853af365dd51ec97f3d358a819373bbd174"},
 ]
 =======
 >>>>>>> ebc7950 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 pkgutil-resolve-name = []
 >>>>>>> a9b29a0 (update ingestion pipeline)
 pluggy = [
@@ -2380,17 +2407,23 @@ pytest = [
 =======
 pytest = []
 <<<<<<< HEAD
+<<<<<<< HEAD
 pytest-cov = []
 =======
 >>>>>>> a9b29a0 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 pytest-cov = [
     {file = "pytest-cov-3.0.0.tar.gz", hash = "sha256:e7f0f5b1617d2210a2cabc266dfe2f4c75a8d32fb89eafb7ad9d06f6d076d470"},
     {file = "pytest_cov-3.0.0-py3-none-any.whl", hash = "sha256:578d5d15ac4a25e5f961c938b85a05b09fdaae9deef3bb6de9a6e766622ca7a6"},
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> ebc7950 (update ingestion pipeline)
 >>>>>>> a9b29a0 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
@@ -2475,14 +2508,10 @@ Send2Trash = [
 =======
 pywinpty = []
 pyzmq = []
-<<<<<<< HEAD
-requests = []
-=======
 requests = [
     {file = "requests-2.28.1-py3-none-any.whl", hash = "sha256:8fefa2a1a1365bf5520aac41836fbee479da67864514bdb821f31ce07ce65349"},
     {file = "requests-2.28.1.tar.gz", hash = "sha256:7c5599b102feddaa661c826c56ab4fee28bfd17f5abca1ebbe3e7f19d7c97983"},
 ]
->>>>>>> ebc7950 (update ingestion pipeline)
 send2trash = [
 >>>>>>> a9b29a0 (update ingestion pipeline)
     {file = "Send2Trash-1.8.0-py3-none-any.whl", hash = "sha256:f20eaadfdb517eaca5ce077640cb261c7d2698385a6a0f072a4a5447fd49fa08"},
@@ -2521,6 +2550,7 @@ tomli = [
     {file = "tomli-2.0.1.tar.gz", hash = "sha256:de526c12914f0c550d15924c62d72abc48d6fe7364aa87328337a31007fe8a4f"},
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 <<<<<<< HEAD
 tornado = []
@@ -2529,6 +2559,8 @@ types-psycopg2 = []
 typing-extensions = []
 =======
 >>>>>>> a9b29a0 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 tornado = [
     {file = "tornado-6.2-cp37-abi3-macosx_10_9_universal2.whl", hash = "sha256:20f638fd8cc85f3cbae3c732326e96addff0a15e22d80f049e00121651e82e72"},
     {file = "tornado-6.2-cp37-abi3-macosx_10_9_x86_64.whl", hash = "sha256:87dcafae3e884462f90c90ecc200defe5e580a7fbbb4365eda7c7c1eb809ebc9"},
@@ -2542,6 +2574,7 @@ tornado = [
     {file = "tornado-6.2-cp37-abi3-win_amd64.whl", hash = "sha256:e5f923aa6a47e133d1cf87d60700889d7eae68988704e20c75fb2d65677a8e4b"},
     {file = "tornado-6.2.tar.gz", hash = "sha256:9b630419bde84ec666bfd7ea0a4cb2a8a651c2d5cccdbdd1972a0c859dfc3c13"},
 ]
+<<<<<<< HEAD
 traitlets = [
 <<<<<<< HEAD
     {file = "traitlets-5.4.0-py3-none-any.whl", hash = "sha256:93663cc8236093d48150e2af5e2ed30fc7904a11a6195e21bab0408af4e6d6c8"},
@@ -2555,6 +2588,9 @@ types-psycopg2 = [
     {file = "traitlets-5.3.0-py3-none-any.whl", hash = "sha256:65fa18961659635933100db8ca120ef6220555286949774b9cfc106f941d1c7a"},
     {file = "traitlets-5.3.0.tar.gz", hash = "sha256:0bb9f1f9f017aa8ec187d8b1b2a7a6626a2a1d877116baba52a129bfa124f8e2"},
 ]
+=======
+traitlets = []
+>>>>>>> 279a666 (update poetry.lock)
 types-psycopg2 = []
 >>>>>>> a9b29a0 (update ingestion pipeline)
 typing-extensions = [
@@ -2562,8 +2598,11 @@ typing-extensions = [
     {file = "typing_extensions-4.3.0.tar.gz", hash = "sha256:e6d2677a32f47fc7eb2795db1dd15c1f34eff616bcaf2cfb5e997f854fa1c4a6"},
 ]
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> ebc7950 (update ingestion pipeline)
+=======
+>>>>>>> 279a666 (update poetry.lock)
 urllib3 = []
 >>>>>>> a9b29a0 (update ingestion pipeline)
 wcwidth = [
