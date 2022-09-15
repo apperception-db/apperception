@@ -1,9 +1,9 @@
 
 from dataclasses import dataclass, field
-from typing import List
 from filters.filter import Filter
-from frame import Frame
 from queue import Queue
+
+from payload import Payload
 
 
 @dataclass
@@ -16,9 +16,8 @@ class Pipeline:
     def add_filter(self, filter: Filter) -> None:
         self.filters.put(filter)
 
-    def run(self, frames: List[Frame]) -> List[Frame]:
-        metadata: dict = {}
+    def run(self, payload: "Payload") -> "Payload":
         while not self.filters.empty():
             current_filter = self.filters.get()
-            frames, metadata = current_filter.filter(frames, metadata)
-        return frames
+            payload = payload.filter(current_filter)
+        return payload

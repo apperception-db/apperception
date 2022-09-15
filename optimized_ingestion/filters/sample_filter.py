@@ -1,12 +1,21 @@
+from bitarray import bitarray
 from .filter import Filter
-from typing import Any, Dict, List, Tuple
-from frame import Frame
+from typing import TYPE_CHECKING, Optional, Tuple
+
+if TYPE_CHECKING:
+    from ..payload import Payload
+
 
 class SampleFilter(Filter):
     sampling_rate: int
 
-    def __init__(self, sampling_rate) -> None:
+    def __init__(self, sampling_rate):
         self.sampling_rate = sampling_rate
 
-    def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
-        return frames[::self.sampling_rate], metadata
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+        keep = bitarray(len(payload.keep))
+        keep[::self.sampling_rate] = 1
+        return keep, None
+
+    # def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
+    #     return frames[::self.sampling_rate], metadata

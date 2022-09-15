@@ -1,9 +1,12 @@
-from typing import Any, Dict, List, Tuple
-from frame import Frame
+from typing import Optional, Tuple
+
+from bitarray import bitarray
+from optimized_ingestion.payload import Payload
+
 
 class Filter:
     def __init__(self) -> None:
         pass
 
-    def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
-        return frames, metadata
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+        return payload.keep, payload.metadata

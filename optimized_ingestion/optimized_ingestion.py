@@ -1,5 +1,6 @@
 import os
 import pickle
+from bitarray import bitarray
 import pandas as pd
 import numpy as np
 import math
@@ -13,11 +14,15 @@ from depth_to_3d import depth_to_3d
 from apperception.database import database
 import sys
 
+
+if TYPE_CHECKING
+    from payload import Payload
+
 if './submodules' not in sys.path:
     sys.path.append('./submodules')
 
 from filters import Filter
-from typing import Any, Dict, List, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from frame import frame, Frame
 from pipeline import Pipeline
 from monodepth import monodepth
@@ -132,24 +137,116 @@ class InViewFilter(Filter):
     def __init__(self, distance: float, segment_type: str) -> None:
         self.distance = distance
         self.segment_type = segment_type
-
-    def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
-        intersection_filtered = []
-
-        # TODO: Connection to DB for each execution might take too much time, do all at same time
-        for frame in frames:
-            # use sql in order to make use of mobilitydb features. TODO: Find python alternative
+    
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+        keep = bitarray()
+        for frame in payload.frames.interpolated_frames:
             query = f"SELECT TRUE WHERE minDistance('POINT ({' '.join([str(f) for f in frame.ego_translation])})', '{self.segment_type}') < {self.distance}" 
             result = database._execute_query(query)
-            if result:
-                intersection_filtered.append(frame)
+            keep.append(bool(result))
+        
+        return keep, None
 
-        return intersection_filtered, metadata
+    # def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
+    #     intersection_filtered = []
+
+    #     # TODO: Connection to DB for each execution might take too much time, do all at same time
+    #     for frame in frames:
+    #         # use sql in order to make use of mobilitydb features. TODO: Find python alternative
+    #         query = f"SELECT TRUE WHERE minDistance('POINT ({' '.join([str(f) for f in frame.ego_translation])})', '{self.segment_type}') < {self.distance}" 
+    #         result = database._execute_query(query)
+    #         if result:
+    #             intersection_filtered.append(frame)
+
+    #     return intersection_filtered, metadata
 
 
 class TrackingFilter(Filter):
     def __init__(self) -> None:
         pass
+
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+        import trackers.yolov5_strongsort_osnet_tracker as tracker
+
+        camera_config_df = pd.DataFrame([tuple(x) for x in payload.frames.interpolated_frames], columns=CAMERA_COLUMNS)
+        camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
+
+        md = monodepth()
+        depths = []
+        video = cv2.VideoCapture(payload.frames.video)
+        idx = 0
+        while video.isOpened():
+            ret, frame = video.read()
+            if not ret:
+                break
+            if payload.keep[idx]:
+                depths.append(md.eval(frame))
+            else:
+                depths.append(None)
+            idx += 1
+        video.release()
+        cv2.destroyAllWindows()
+            
+        # with open("./depths.pickle", "wb") as pwrite:
+        #     pickle.dump(depths, pwrite)
+        # with open("./depths.pickle", "rb") as pread:
+        #     depths = pickle.load(pread)
+
+        results = tracker.track(payload)
+        # with open("./results.pickle", "wb") as pwrite:
+        #     pickle.dump(results, pwrite)
+        # with open("./results.pickle", "rb") as pread:
+        #     results = pickle.load(pread)
+
+        df = pd.DataFrame(results, columns=[
+            "frame_idx",
+            "object_id",
+            "bbox_left",
+            "bbox_top",
+            "bbox_w",
+            "bbox_h",
+            "None1",
+            "None2",
+            "None3",
+            "None",
+            "object_type",
+            "conf",
+        ])
+
+        intrinsics = camera_config_df['cameraIntrinsic'].tolist()
+
+        def find_3d_location(row: "pd.Series"):
+            x = int(row['bbox_left'] + (row['bbox_w'] / 2))
+            y = int(row['bbox_top'] + (row['bbox_h'] / 2))
+            idx = row['frame_idx']
+            depth = depths[idx][y, x]
+            intrinsic = intrinsics[idx]
+            return pd.Series(depth_to_3d(x, y, depth, intrinsic))
+
+        df[['3d-x', '3d-y', '3d-z']] = df.apply(find_3d_location, axis=1)
+        df.frame_idx = df.frame_idx.add(-1)
+
+        obj_info = get_obj_trajectory(df, camera_config_df)
+        facing_relative_filtered = facing_relative_check(obj_info, 0, camera_config_df)
+        for obj_id in facing_relative_filtered:
+            ### frame idx of current obj that satisfies the condition
+            filtered_idx = facing_relative_filtered[obj_id]
+            current_obj_filtered_frames = camera_config_df.filename.iloc[filtered_idx]
+            current_obj_bboxes = obj_info[obj_id]['bbox']
+
+            # choose codec according to format needed
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
+            video = cv2.VideoWriter('../imposed_video/' + str(obj_id) + '_video.avi', fourcc, 1, (1600, 900))
+
+            for i in range(len(current_obj_filtered_frames)):
+                img = cv2.imread(current_obj_filtered_frames.iloc[i])
+                x, y, x_w, y_h = current_obj_bboxes[filtered_idx.index[i]]
+                cv2.rectangle(img, (int(x), int(y)), (int(x_w), int(y_h)), (0, 255, 0), 2)
+                video.write(img)
+
+            cv2.destroyAllWindows()
+            video.release()
+        return frames, metadata
 
     def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
         import trackers.yolov5_strongsort_osnet_tracker as tracker

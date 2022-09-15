@@ -77,13 +77,14 @@ class monodepth:
         # torch.no_grad()
         pass
 
-    def eval(self, input_image_file):
+    def eval(self, input_image_numpy):
 
         with torch.no_grad():
             # Load image and preprocess
 
-            input_image = np.array(pil.open(input_image_file).convert('RGB'))
-            input_image = pil.fromarray(input_image)
+            # input_image = np.array(pil.open(input_image_file).convert('RGB'))
+            # input_image = pil.fromarray(input_image)
+            input_image = pil.fromarray(input_image_numpy[:, :, [2, 1, 0]])
             original_width, original_height = input_image.size
             input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
             input_image = transforms.ToTensor()(input_image).unsqueeze(0)

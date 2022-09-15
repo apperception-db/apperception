@@ -1,5 +1,7 @@
 import os
-from typing import List
+from typing import TYPE_CHECKING, List
+
+import cv2
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -11,6 +13,9 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 import sys
 from pathlib import Path
 import torch
+
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 FILE = Path(__file__).resolve()
 APPERCEPTION = FILE.parent.parent.parent
@@ -59,7 +64,7 @@ imgsz = check_img_size((640, 640), s=stride)  # check image size
 
 @torch.no_grad()
 def track(
-    source=[],  # take in a list of frames, treat it as a video
+    source: "Payload",  # take in a list of frames, treat it as a video
     conf_thres=0.25,  # confidence threshold
     iou_thres=0.45,  # NMS IOU threshold
     max_det=1000,  # maximum detections per image
@@ -68,7 +73,7 @@ def track(
     augment=False,  # augmented inference
     visualize=False,  # visualize features
 ):
-    dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt)
+    dataset = LoadImages(source.frames.video, img_size=imgsz, stride=stride, auto=pt)
     nr_sources = 1
     labels: List[tuple] = []
 
@@ -102,6 +107,8 @@ def track(
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
     curr_frames, prev_frames = [None] * nr_sources, [None] * nr_sources
     for frame_idx, (path, im, im0s, vid_cap, s) in enumerate(dataset):
+        if not source.keep[frame_idx]:
+            continue
         t1 = time_sync()
         im = torch.from_numpy(im).to(device)
         im = im.half() if half else im.float()  # uint8 to fp16/32
