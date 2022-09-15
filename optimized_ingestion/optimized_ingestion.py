@@ -13,18 +13,18 @@ from depth_to_3d import depth_to_3d
 
 from apperception.database import database
 import sys
+from filters import Filter
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from frame import frame, Frame
+from pipeline import Pipeline
 
 
-if TYPE_CHECKING
+if TYPE_CHECKING:
     from payload import Payload
 
 if './submodules' not in sys.path:
     sys.path.append('./submodules')
 
-from filters import Filter
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
-from frame import frame, Frame
-from pipeline import Pipeline
 from monodepth import monodepth
 
 ### Constants ###
