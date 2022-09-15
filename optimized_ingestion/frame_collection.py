@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import collections
+import collections.abc
 from datetime import datetime, timedelta
 from typing import List, Optional
 from frame import Frame, interpolate
@@ -6,18 +7,17 @@ from frame import Frame, interpolate
 import cv2
 
 
-@dataclass
-class FrameCollection:
+class FrameCollection(collections.abc.Iterable):
     frames: "List[Frame]"
     video: str
     start: "Optional[datetime]"
     _interpolated_frames: "Optional[List[Frame]]"
-    # metadata: "Optional[List[Any]]"
 
     def __init__(self, video: str, frames: "List[Frame]", start: datetime = None):
         self.video = video
         self.frames = frames
         self.start = start
+        self._interpolated_frames = None
 
     @property
     def interpolated_frames(self):
@@ -33,7 +33,7 @@ class FrameCollection:
                 self._interpolated_frames = [self.frames[0] for _ in range(num_frames)]
             else:
                 assert self.start is not None
-                assert self.frames[-1].timestamp < self.start + timedelta(seconds=(num_frames - 1) / fps)
+                assert self.frames[-1].timestamp > self.start + timedelta(seconds=(num_frames - 1) / fps), f"{self.frames[-1].timestamp} {self.start + timedelta(seconds=(num_frames - 1) / fps)}"
 
                 idx = 0
                 self._interpolated_frames: "List[Frame]" = []
@@ -41,10 +41,19 @@ class FrameCollection:
                     t = self.start + timedelta(seconds=i / fps)
                     while self.frames[idx + 1].timestamp < t:
                         idx += 1
-                    self._interpolated_frames.append(interpolate(self.frames[i], self.frames[i + 1], t))
+                    self._interpolated_frames.append(interpolate(self.frames[idx], self.frames[idx + 1], t))
         return self._interpolated_frames
 
+    def __getitem__(self, index):
+        return self.interpolated_frames[index]
+
+    def __iter__(self) -> "collections.abc.Iterator[Frame]":
+        return iter(self.interpolated_frames)
+
     def __len__(self):
+        if self._interpolated_frames is not None:
+            return len(self._interpolated_frames)
+
         cap = cv2.VideoCapture(self.video)
         num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         cap.release()

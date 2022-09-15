@@ -23,14 +23,22 @@ class Payload:
     def filter(self, filter):
         keep, metadata = filter(self)
 
-        assert len(metadata) == len(self.frames)
+        assert len(keep) == len(self.frames)
+        assert metadata is None or len(metadata) == len(keep)
 
-        if self.metadata is not None:
+        if metadata is None:
+            metadata = self.metadata
+        elif self.metadata is not None:
             metadata = [
                 _merge(m1, m2)
                 for m1, m2
                 in zip(self.metadata, metadata)
             ]
+
+        keep = keep & self.keep
+        print("Filter with: ", filter.__class__.__name__)
+        print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
+        print(keep)
 
         return Payload(self.frames, self.keep & keep, metadata)
 

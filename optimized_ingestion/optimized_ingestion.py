@@ -16,6 +16,8 @@ import sys
 from filters import Filter
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 from frame import frame, Frame
+from frame_collection import FrameCollection
+from payload import Payload
 from pipeline import Pipeline
 
 
@@ -118,6 +120,8 @@ def facing_relative(prev_traj_point, next_traj_point, current_ego_heading):
     diff = (next_traj_point[0] - prev_traj_point[0], next_traj_point[1] - prev_traj_point[1])
     diff_heading = math.degrees(np.arctan2(diff[1], diff[0])) - 90
     result = ((diff_heading - current_ego_heading) % 360 + 360) % 360
+    if result > 180:
+        result -= 360
     return result
 
 
@@ -127,7 +131,15 @@ def facing_relative_check(obj_info, threshold, ego_config):
         frame_idx = obj_info[obj_id]['frame_idx'].frame_idx
         trajectory = obj_info[obj_id]['trajectory']
         ego_heading = ego_config.iloc[frame_idx.tolist()].egoHeading.tolist()
-        filtered_idx = frame_idx[:len(ego_heading) - 1][[facing_relative(trajectory[i], trajectory[i + 1], ego_heading[i]) > threshold for i in range(len(ego_heading) - 1)]]
+        filtered_idx = frame_idx[:len(ego_heading) - 1][[
+            facing_relative(
+                trajectory[i],
+                trajectory[i + 1],
+                ego_heading[i]
+            ) > threshold
+            for i
+            in range(len(ego_heading) - 1)
+        ]]
         facing_relative_filtered[obj_id] = filtered_idx
     return facing_relative_filtered
 
@@ -137,28 +149,32 @@ class InViewFilter(Filter):
     def __init__(self, distance: float, segment_type: str) -> None:
         self.distance = distance
         self.segment_type = segment_type
-    
+
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         keep = bitarray()
-        for frame in payload.frames.interpolated_frames:
-            query = f"SELECT TRUE WHERE minDistance('POINT ({' '.join([str(f) for f in frame.ego_translation])})', '{self.segment_type}') < {self.distance}" 
+        for _frame in payload.frames:
+            point = f"'POINT ({' '.join([*map(str, _frame.ego_translation)])})'"
+            query = f"SELECT TRUE WHERE minDistance({point}, '{self.segment_type}') < {self.distance}"
             result = database._execute_query(query)
             keep.append(bool(result))
-        
+
         return keep, None
 
-    # def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
-    #     intersection_filtered = []
 
-    #     # TODO: Connection to DB for each execution might take too much time, do all at same time
-    #     for frame in frames:
-    #         # use sql in order to make use of mobilitydb features. TODO: Find python alternative
-    #         query = f"SELECT TRUE WHERE minDistance('POINT ({' '.join([str(f) for f in frame.ego_translation])})', '{self.segment_type}') < {self.distance}" 
-    #         result = database._execute_query(query)
-    #         if result:
-    #             intersection_filtered.append(frame)
-
-    #     return intersection_filtered, metadata
+RESULT_COLUMNS = [
+    "frame_idx",
+    "object_id",
+    "bbox_left",
+    "bbox_top",
+    "bbox_w",
+    "bbox_h",
+    "None1",
+    "None2",
+    "None3",
+    "None",
+    "object_type",
+    "conf",
+]
 
 
 class TrackingFilter(Filter):
@@ -168,8 +184,8 @@ class TrackingFilter(Filter):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         import trackers.yolov5_strongsort_osnet_tracker as tracker
 
-        camera_config_df = pd.DataFrame([tuple(x) for x in payload.frames.interpolated_frames], columns=CAMERA_COLUMNS)
-        camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
+        # camera_config_df = pd.DataFrame([tuple(x) for x in payload.frames], columns=CAMERA_COLUMNS)
+        # camera_config_df.filename = camera_config_df.filename.apply(lambda x: TEST_FILE_DIR + x)
 
         md = monodepth()
         depths = []
@@ -184,9 +200,9 @@ class TrackingFilter(Filter):
             else:
                 depths.append(None)
             idx += 1
+        assert idx == len(payload.frames)
         video.release()
         cv2.destroyAllWindows()
-            
         # with open("./depths.pickle", "wb") as pwrite:
         #     pickle.dump(depths, pwrite)
         # with open("./depths.pickle", "rb") as pread:
@@ -198,55 +214,68 @@ class TrackingFilter(Filter):
         # with open("./results.pickle", "rb") as pread:
         #     results = pickle.load(pread)
 
-        df = pd.DataFrame(results, columns=[
-            "frame_idx",
-            "object_id",
-            "bbox_left",
-            "bbox_top",
-            "bbox_w",
-            "bbox_h",
-            "None1",
-            "None2",
-            "None3",
-            "None",
-            "object_type",
-            "conf",
-        ])
+        _results = [
+            {k: v for k, v in zip(RESULT_COLUMNS, r)}
+            for r
+            in results
+        ]
+        _results = sorted(_results, key=lambda r: r['frame_idx'])
+        metadata: "List[Any]" = [None for _ in range(len(depths))]
+        trajectories: "Dict[Any, Any]" = {}
 
-        intrinsics = camera_config_df['cameraIntrinsic'].tolist()
-
-        def find_3d_location(row: "pd.Series"):
+        for row in _results:
             x = int(row['bbox_left'] + (row['bbox_w'] / 2))
             y = int(row['bbox_top'] + (row['bbox_h'] / 2))
-            idx = row['frame_idx']
+            idx = int(row['frame_idx'])
             depth = depths[idx][y, x]
-            intrinsic = intrinsics[idx]
-            return pd.Series(depth_to_3d(x, y, depth, intrinsic))
+            camera = payload.frames[idx]
+            intrinsic = camera.camera_intrinsic
+            row['3d-to-camera'] = depth_to_3d(x, y, depth, intrinsic)
+            rotated_offset = Quaternion(camera.camera_rotation).rotate(np.array(row['3d-to-camera']))
+            row['3d'] = np.array(camera.camera_translation) + rotated_offset
 
-        df[['3d-x', '3d-y', '3d-z']] = df.apply(find_3d_location, axis=1)
-        df.frame_idx = df.frame_idx.add(-1)
+            if metadata[idx] is None:
+                metadata[idx] = {}
+            if 'trackings' not in metadata[idx]:
+                metadata[idx]['trackings'] = []
+            metadata[idx]['trackings'].append(row)
 
-        obj_info = get_obj_trajectory(df, camera_config_df)
-        facing_relative_filtered = facing_relative_check(obj_info, 0, camera_config_df)
-        for obj_id in facing_relative_filtered:
-            ### frame idx of current obj that satisfies the condition
-            filtered_idx = facing_relative_filtered[obj_id]
-            current_obj_filtered_frames = camera_config_df.filename.iloc[filtered_idx]
-            current_obj_bboxes = obj_info[obj_id]['bbox']
+            if row['object_id'] not in trajectories:
+                trajectories[row['object_id']] = []
+            trajectories[row['object_id']].append(row)
 
-            # choose codec according to format needed
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-            video = cv2.VideoWriter('../imposed_video/' + str(obj_id) + '_video.avi', fourcc, 1, (1600, 900))
+        for trajectory in trajectories.values():
+            last = len(trajectory) - 1
+            for i, t in enumerate(trajectory):
+                if i > 0:
+                    t['prev'] = trajectory[i - 1]
+                if i < last:
+                    t['next'] = trajectory[i + 1]
 
-            for i in range(len(current_obj_filtered_frames)):
-                img = cv2.imread(current_obj_filtered_frames.iloc[i])
-                x, y, x_w, y_h = current_obj_bboxes[filtered_idx.index[i]]
-                cv2.rectangle(img, (int(x), int(y)), (int(x_w), int(y_h)), (0, 255, 0), 2)
-                video.write(img)
+        keep = bitarray(payload.keep)
+        for i, (f, m) in enumerate(zip(payload.frames, metadata)):
+            if m is None:
+                continue
+            trackings = m['trackings']
+            for tracking in trackings:
+                if 'prev' in tracking:
+                    _from = tracking['prev']
+                else:
+                    _from = tracking
 
-            cv2.destroyAllWindows()
-            video.release()
-        return frames, metadata
+                if 'next' in tracking:
+                    _to = tracking['next']
+                else:
+                    _to = tracking
+
+                angle = facing_relative(_from['3d'], _to['3d'], f.ego_heading)
+                if (50 < angle and angle < 135) or (-135 < angle and angle < -50):
+                    tracking['matched'] = True
+                else:
+                    tracking['matched'] = False
+                    keep[i] = 0
+
+        return keep, metadata
 
     def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
         import trackers.yolov5_strongsort_osnet_tracker as tracker
@@ -321,34 +350,48 @@ class TrackingFilter(Filter):
 
 
 if __name__ == "__main__":
-    query = f"""
-        SELECT
-            cameraId,
-            frameId,
-            frameNum,
-            filename,
-            ARRAY [st_x(cameraTranslation), st_y(cameraTranslation), st_z(cameraTranslation)] as cameraTranslation,
-            cameraRotation,
-            cameraIntrinsic,
-            ARRAY [st_x(egoTranslation), st_y(egoTranslation), st_z(egoTranslation)] as egoTranslation,
-            egoRotation,
-            timestamp,
-            cameraHeading,
-            egoHeading,
-            roadDirection::real
-        FROM Cameras
-        WHERE filename like '{TEST_FILE_REG}'
-        ORDER BY frameNum
-    """
-    all_frames = database._execute_query(query)
-    print(all_frames[0])
+    # query = f"""
+    #     SELECT
+    #         cameraId,
+    #         frameId,
+    #         frameNum,
+    #         filename,
+    #         ARRAY [st_x(cameraTranslation), st_y(cameraTranslation), st_z(cameraTranslation)] as cameraTranslation,
+    #         cameraRotation,
+    #         cameraIntrinsic,
+    #         ARRAY [st_x(egoTranslation), st_y(egoTranslation), st_z(egoTranslation)] as egoTranslation,
+    #         egoRotation,
+    #         timestamp,
+    #         cameraHeading,
+    #         egoHeading,
+    #         roadDirection::real
+    #     FROM Cameras
+    #     WHERE filename like '{TEST_FILE_REG}'
+    #     ORDER BY frameNum
+    # """
+    # all_frames = database._execute_query(query)
+    # print(all_frames[0])
 
-    frames = [frame(*x) for x in all_frames]
-    print(frames[0].camera_translation)
+    # frames = [frame(*x) for x in all_frames]
+    # print(frames[0].camera_translation)
 
+    if 'NUSCENE_DATA' in os.environ:
+        DATA_DIR = os.environ['NUSCENE_DATA']
+    else:
+        DATA_DIR = "/work/apperception/data/nuScenes/full-dataset-v1.0/Mini"
+    with open(os.path.join(DATA_DIR, 'videos', 'frames.pickle'), "rb") as f:
+        videos = pickle.load(f)
+
+    # print([_ for _ in videos])
+    video_0757 = videos['scene-0757-CAM_FRONT']
+    frames = FrameCollection(
+        os.path.join(DATA_DIR, 'videos', video_0757['filename']),
+        [frame(*f) for f in video_0757['frames']],
+        video_0757['start'],
+    )
     pipeline = Pipeline()
 
     pipeline.add_filter(filter=InViewFilter(distance=10, segment_type="intersection"))
     pipeline.add_filter(filter=TrackingFilter())
 
-    pipeline.run(frames)
+    output = pipeline.run(Payload(frames))
