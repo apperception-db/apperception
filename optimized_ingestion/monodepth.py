@@ -1,17 +1,17 @@
 import os
 import sys
-import numpy as np
+
 import PIL.Image as pil
 import torch
 from torchvision import transforms
 
-if './submodules' not in sys.path:
-    sys.path.append('./submodules')
+if "./submodules" not in sys.path:
+    sys.path.append("./submodules")
 
 
 from monodepth2.monodepth2 import networks
-from monodepth2.monodepth2.utils import download_model_if_doesnt_exist, monodepth2_models_path
-
+from monodepth2.monodepth2.utils import (download_model_if_doesnt_exist,
+                                         monodepth2_models_path)
 
 MODEL_NAMES = [
     "mono_640x192",
@@ -22,12 +22,11 @@ MODEL_NAMES = [
     "mono+stereo_no_pt_640x192",
     "mono_1024x320",
     "stereo_1024x320",
-    "mono+stereo_1024x320"
+    "mono+stereo_1024x320",
 ]
 
 
 class monodepth:
-
     def __init__(self, model_name=MODEL_NAMES[2], no_cuda=False, pred_metric_depth=False) -> None:
         assert model_name in MODEL_NAMES, "Invalid Model Name"
 
@@ -57,16 +56,19 @@ class monodepth:
         loaded_dict_enc = torch.load(encoder_path, map_location=self.device)
 
         # extract the height and width of image that this model was trained with
-        self.feed_height = loaded_dict_enc['height']
-        self.feed_width = loaded_dict_enc['width']
-        filtered_dict_enc = {k: v for k, v in loaded_dict_enc.items() if k in self.encoder.state_dict()}
+        self.feed_height = loaded_dict_enc["height"]
+        self.feed_width = loaded_dict_enc["width"]
+        filtered_dict_enc = {
+            k: v for k, v in loaded_dict_enc.items() if k in self.encoder.state_dict()
+        }
         self.encoder.load_state_dict(filtered_dict_enc)
         self.encoder.to(self.device)
         self.encoder.eval()
 
         print("   Loading pretrained decoder")
         self.depth_decoder = networks.DepthDecoder(
-            num_ch_enc=self.encoder.num_ch_enc, scales=range(4))
+            num_ch_enc=self.encoder.num_ch_enc, scales=range(4)
+        )
 
         loaded_dict = torch.load(self.depth_decoder_path, map_location=self.device)
         self.depth_decoder.load_state_dict(loaded_dict)
@@ -75,7 +77,6 @@ class monodepth:
         self.depth_decoder.eval()
 
         # torch.no_grad()
-        pass
 
     def eval(self, input_image_numpy):
 
@@ -96,7 +97,8 @@ class monodepth:
 
             disp = outputs[("disp", 0)]
             disp_resized = torch.nn.functional.interpolate(
-                disp, (original_height, original_width), mode="bilinear", align_corners=False)
+                disp, (original_height, original_width), mode="bilinear", align_corners=False
+            )
 
             # disp_resized_np = disp_resized.squeeze().cpu().numpy()
             disp_resized_np = disp_resized.squeeze().cpu().detach().numpy()

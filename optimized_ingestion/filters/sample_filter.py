@@ -1,8 +1,9 @@
-from bitarray import bitarray
-from .filter import Filter
 from typing import Optional, Tuple
 
+from bitarray import bitarray
+
 from ..payload import Payload
+from .filter import Filter
 
 
 class SampleFilter(Filter):
@@ -13,7 +14,7 @@ class SampleFilter(Filter):
 
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         keep = bitarray(len(payload.keep))
-        keep[::self.sampling_rate] = 1
+        keep[:: self.sampling_rate] = 1
         return keep, None
 
     # def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional
 
 from bitarray import bitarray
 
@@ -13,7 +13,12 @@ class Payload:
     keep: "bitarray"
     metadata: "Optional[List[Any]]"
 
-    def __init__(self, frames: "FrameCollection", keep: "Optional[bitarray]" = None, metadata: "Optional[List[Any]]" = None):
+    def __init__(
+        self,
+        frames: "FrameCollection",
+        keep: "Optional[bitarray]" = None,
+        metadata: "Optional[List[Any]]" = None,
+    ):
         self.keep = _default_keep(frames, keep)
         self.frames = frames
         if metadata is not None and len(metadata) != len(frames):
@@ -29,11 +34,7 @@ class Payload:
         if metadata is None:
             metadata = self.metadata
         elif self.metadata is not None:
-            metadata = [
-                _merge(m1, m2)
-                for m1, m2
-                in zip(self.metadata, metadata)
-            ]
+            metadata = [_merge(m1, m2) for m1, m2 in zip(self.metadata, metadata)]
 
         keep = keep & self.keep
         print("Filter with: ", filter.__class__.__name__)

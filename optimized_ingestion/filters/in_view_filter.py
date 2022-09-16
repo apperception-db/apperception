@@ -1,4 +1,5 @@
 from typing import Optional, Tuple
+
 from bitarray import bitarray
 from filter import Filter
 
@@ -16,7 +17,9 @@ class InViewFilter(Filter):
         keep = bitarray()
         for _frame in payload.frames:
             point = f"'POINT ({' '.join([*map(str, _frame.ego_translation)])})'"
-            query = f"SELECT TRUE WHERE minDistance({point}, '{self.segment_type}') < {self.distance}"
+            query = (
+                f"SELECT TRUE WHERE minDistance({point}, '{self.segment_type}') < {self.distance}"
+            )
             result = database._execute_query(query)
             keep.append(bool(result))
 

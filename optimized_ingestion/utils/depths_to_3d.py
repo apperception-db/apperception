@@ -1,8 +1,8 @@
-from math import sqrt
 import time
+from math import sqrt
 
-import numpy.typing as npt
 import numpy as np
+import numpy.typing as npt
 from numpy import newaxis as na
 
 
@@ -16,15 +16,17 @@ def depths_to_3ds_naive(depths: npt.NDArray, intrinsic: npt.NDArray) -> npt.NDAr
                 unit_x: float = (s * x - x0) / fx
                 unit_y: float = (s * y - y0) / fy
 
-                Z = depths[i, x, y] / sqrt(1 + (unit_x ** 2) + (unit_y ** 2))
+                Z = depths[i, x, y] / sqrt(1 + (unit_x**2) + (unit_y**2))
                 X = unit_x * Z
                 Y = unit_y * Z
                 out[i, x, y, :] = np.array([X, Y, Z])
     return out
 
 
-def depths_to_3ds(depths: npt.NDArray, intrinsic: npt.NDArray, true_depth: bool = False) -> npt.NDArray:
-    '''
+def depths_to_3ds(
+    depths: npt.NDArray, intrinsic: npt.NDArray, true_depth: bool = False
+) -> npt.NDArray:
+    """
     Parameters:
         depths: (N x X x Y) depth maps
         intrinsic: (3 x 3) camera intrinsic
@@ -33,7 +35,7 @@ def depths_to_3ds(depths: npt.NDArray, intrinsic: npt.NDArray, true_depth: bool 
 
     Returns:
         d3 location of each pixel (N x X x Y x 3)
-    '''
+    """
     n, lenx, leny = depths.shape
 
     # N x X x Y x 1
@@ -65,14 +67,10 @@ def depths_to_3ds(depths: npt.NDArray, intrinsic: npt.NDArray, true_depth: bool 
     return res / scale[:, :, :, na]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     np.random.seed(10)
     depths = np.random.rand(20, 1000, 700)
-    intrinsic = np.array([
-        [1000, 0, 800],
-        [0, 1000, 400],
-        [0, 0, 1]
-    ])
+    intrinsic = np.array([[1000, 0, 800], [0, 1000, 400], [0, 0, 1]])
 
     start = time.time()
     d_numpy = depths_to_3ds(depths, intrinsic)

@@ -1,9 +1,10 @@
+import itertools
 from datetime import datetime
 from typing import Optional, Tuple
-import itertools
-from pyquaternion import Quaternion
+
 import numpy as np
 import numpy.typing as npt
+from pyquaternion import Quaternion
 
 Float3 = Tuple[float, float, float]
 Float4 = Tuple[float, float, float, float]
@@ -30,17 +31,20 @@ def frame(
     _frame.frame_id = frame_id
     _frame.filename = filename
     _frame.timestamp = timestamp
-    _frame._data = np.array([
-        frame_num,
-        *camera_translation,
-        *camera_rotation,
-        *itertools.chain(*camera_intrinsic),
-        *ego_translation,
-        *ego_rotation,
-        camera_heading,
-        ego_heading,
-        road_direction
-    ], dtype=np.float32)
+    _frame._data = np.array(
+        [
+            frame_num,
+            *camera_translation,
+            *camera_rotation,
+            *itertools.chain(*camera_intrinsic),
+            *ego_translation,
+            *ego_rotation,
+            camera_heading,
+            ego_heading,
+            road_direction,
+        ],
+        dtype=np.float32,
+    )
     return _frame
 
 

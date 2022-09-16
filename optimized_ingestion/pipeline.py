@@ -1,8 +1,7 @@
-
 from dataclasses import dataclass, field
-from filters.filter import Filter
 from queue import Queue
 
+from filters.filter import Filter
 from payload import Payload
 
 

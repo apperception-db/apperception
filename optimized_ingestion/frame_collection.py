@@ -2,9 +2,9 @@ import collections
 import collections.abc
 from datetime import datetime, timedelta
 from typing import List, Optional
-from frame import Frame, interpolate
 
 import cv2
+from frame import Frame, interpolate
 
 
 class FrameCollection(collections.abc.Iterable):
@@ -33,7 +33,9 @@ class FrameCollection(collections.abc.Iterable):
                 self._interpolated_frames = [self.frames[0] for _ in range(num_frames)]
             else:
                 assert self.start is not None
-                assert self.frames[-1].timestamp > self.start + timedelta(seconds=(num_frames - 1) / fps), f"{self.frames[-1].timestamp} {self.start + timedelta(seconds=(num_frames - 1) / fps)}"
+                assert self.frames[-1].timestamp > self.start + timedelta(
+                    seconds=(num_frames - 1) / fps
+                ), f"{self.frames[-1].timestamp} {self.start + timedelta(seconds=(num_frames - 1) / fps)}"
 
                 idx = 0
                 self._interpolated_frames: "List[Frame]" = []
@@ -41,7 +43,9 @@ class FrameCollection(collections.abc.Iterable):
                     t = self.start + timedelta(seconds=i / fps)
                     while self.frames[idx + 1].timestamp < t:
                         idx += 1
-                    self._interpolated_frames.append(interpolate(self.frames[idx], self.frames[idx + 1], t))
+                    self._interpolated_frames.append(
+                        interpolate(self.frames[idx], self.frames[idx + 1], t)
+                    )
         return self._interpolated_frames
 
     def __getitem__(self, index):
