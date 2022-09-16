@@ -4,8 +4,8 @@ from bitarray import bitarray
 
 from apperception.database import database
 
-from .filter import Filter
 from ..payload import Payload
+from .filter import Filter
 
 
 class InViewFilter(Filter):
