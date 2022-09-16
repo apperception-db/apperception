@@ -68,6 +68,7 @@ pythonVersion = '3.10'
 ignore = [
   'apperception/legacy/*',
   'apperception/video_util.py',
+  'apperception/data_types/lens.py',
   'apperception/trackers/object_tracker_yolov4_deepsort.py',
   'apperception/trackers/object_tracker_yolov5_deepsort.py',
 ]
