@@ -1,10 +1,10 @@
 from typing import Optional, Tuple
 
 from bitarray import bitarray
-from filter import Filter
 
 from apperception.database import database
 
+from .filter import Filter
 from ..payload import Payload
 
 

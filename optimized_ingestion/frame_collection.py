@@ -2,9 +2,9 @@ import collections
 import collections.abc
 from datetime import datetime, timedelta
 from typing import List, Optional
-
 import cv2
-from frame import Frame, interpolate
+
+from .frame import Frame, interpolate
 
 
 class FrameCollection(collections.abc.Iterable):
