@@ -24,7 +24,6 @@ if __name__ == "__main__":
     with open(os.path.join(DATA_DIR, "videos", "frames.pickle"), "rb") as f:
         videos = pickle.load(f)
 
-    # print([_ for _ in videos])
     video_0757 = videos["scene-0757-CAM_FRONT"]
     frames = FrameCollection(
         os.path.join(DATA_DIR, "videos", video_0757["filename"]),
