@@ -1,6 +1,7 @@
 from typing import Optional, Tuple
 
 from bitarray import bitarray
+
 from ..payload import Payload
 
 
