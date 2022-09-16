@@ -1,9 +1,7 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import Optional, Tuple
 
 from bitarray import bitarray
-
-if TYPE_CHECKING:
-    from payload import Payload
+from payload import Payload
 
 
 class Filter:
