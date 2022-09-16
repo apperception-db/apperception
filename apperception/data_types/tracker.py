@@ -28,7 +28,7 @@ class Tracker:
             return self.tracker.video_track(video_data, bboxes, first_frame)
         elif self.customized_tracker is not None:
             self.tracker = self.customized_tracker()
-            return self.tracker.video_track(video_data, bboxes)
+            return self.tracker.video_track(video_data, bboxes, first_frame)
         else:
             raise Exception()
 
