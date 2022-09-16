@@ -5,7 +5,9 @@ import numpy as np
 
 
 class Tracker:
-    def __init__(self, tracker_type="default", customized_tracker: "Optional[Callable[[], Tracker]]" = None):
+    def __init__(
+        self, tracker_type="default", customized_tracker: "Optional[Callable[[], Tracker]]" = None
+    ):
         """
         Constructs a Tracker.
         Args:
