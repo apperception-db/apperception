@@ -9,7 +9,8 @@ import numpy as np
 from typing_extensions import Literal
 
 if TYPE_CHECKING:
-    from ..data_types import Lens, TrackedObject, Tracker
+    from ..data_types import Lens, TrackedObject
+    from .tracker import Tracker
 
 # TODO: add more units
 Units = Literal["metrics"]
