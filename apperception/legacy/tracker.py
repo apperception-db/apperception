@@ -1,9 +1,13 @@
+from typing import Callable, Optional
+
 import cv2
 import numpy as np
 
 
 class Tracker:
-    def __init__(self, tracker_type="default", customized_tracker=None):
+    def __init__(
+        self, tracker_type="default", customized_tracker: "Optional[Callable[[], Tracker]]" = None
+    ):
         """
         Constructs a Tracker.
         Args:
@@ -22,9 +26,10 @@ class Tracker:
             self.tracker = MultiObjectsTracker()
             print("boxes at tracker", bboxes)
             return self.tracker.video_track(video_data, bboxes, first_frame)
-        else:
+        elif self.customized_tracker is not None:
             self.tracker = self.customized_tracker()
-            return self.tracker.video_track(video_data, bboxes)
+            return self.tracker.video_track(video_data, bboxes, first_frame)
+        raise Exception()
 
     def __iter__(self):
         return iter(self.tracker)

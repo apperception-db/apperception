@@ -64,6 +64,7 @@ module = [
 ignore_missing_imports = true
 
 [tool.pyright]
+pythonVersion = '3.10'
 ignore = [
   'apperception/legacy/*',
   'apperception/video_util.py',
