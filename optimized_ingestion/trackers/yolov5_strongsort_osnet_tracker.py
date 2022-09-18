@@ -1,6 +1,9 @@
+from dataclasses import dataclass
 import os
 import sys
 from typing import TYPE_CHECKING, List
+import numpy as np
+import numpy.typing as npt
 
 if "./submodules" not in sys.path:
     sys.path.append("./submodules")
@@ -83,14 +86,14 @@ def track(
 ):
     dataset = LoadImages(source.frames.video, img_size=imgsz, stride=stride, auto=pt)
     nr_sources = 1
-    labels: List[tuple] = []
+    labels: "List[TrackingResult]" = []
 
     # initialize StrongSORT
     cfg = get_config()
     cfg.merge_from_file(config_strongsort)
 
     # Create as many strong sort instances as there are video sources
-    strongsort_list = []
+    strongsort_list: "List[StrongSORT]" = []
     for i in range(nr_sources):
         strongsort_list.append(
             StrongSORT(
@@ -107,7 +110,7 @@ def track(
             )
         )
         strongsort_list[i].model.warmup()
-    outputs = [None] * nr_sources
+    outputs: "List[npt.NDArray]" = [np.ndarray([])] * nr_sources
 
     # Run tracking
     model.warmup(imgsz=(1 if pt else nr_sources, 3, *imgsz))  # warmup
@@ -184,16 +187,13 @@ def track(
                         bbox_w = output[2] - output[0]
                         bbox_h = output[3] - output[1]
                         labels.append(
-                            (
+                            TrackingResult(
                                 frame_idx,
-                                id,
+                                int(id),
                                 bbox_left,
                                 bbox_top,
                                 bbox_w,
                                 bbox_h,
-                                -1,
-                                -1,
-                                -1,
                                 i,
                                 f"{names[c]}",
                                 conf.item(),
@@ -215,3 +215,18 @@ def track(
         % t
     )
     return labels
+
+
+@dataclass
+class TrackingResult:
+    frame_idx: int
+    object_id: float
+    bbox_left: float
+    bbox_top: float
+    bbox_w: float
+    bbox_h: float
+    pred_idx: int
+    object_type: str
+    confidence: float
+    prev: "TrackingResult | None"
+    next: "TrackingResult | None"

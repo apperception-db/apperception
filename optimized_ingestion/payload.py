@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from bitarray import bitarray
 
 if TYPE_CHECKING:
-    from frame_collection import FrameCollection
+    from .filters.filter import Filter
+    from .frame_collection import FrameCollection
 
 
 @dataclass
@@ -25,7 +26,7 @@ class Payload:
             raise Exception()
         self.metadata = metadata
 
-    def filter(self, filter):
+    def filter(self, filter: "Filter"):
         keep, metadata = filter(self)
 
         assert len(keep) == len(self.frames)

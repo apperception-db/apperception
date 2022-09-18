@@ -9,7 +9,7 @@ import pandas as pd
 from bitarray import bitarray
 from pyquaternion import Quaternion
 
-from ..depth_to_3d import depth_to_3d
+from ..utils.depth_to_3d import depth_to_3d
 from ..frame import Frame
 from ..monodepth import monodepth
 from ..payload import Payload
