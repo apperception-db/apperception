@@ -1,4 +1,4 @@
-from typing import  List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 from bitarray import bitarray

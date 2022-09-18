@@ -57,7 +57,7 @@ class FrameCollection(collections.abc.Iterable):
             return len(self._interpolated_frames)
 
         return self.__get_fps_and_num_frames()[0]
-    
+
     def __get_fps_and_num_frames(self):
         if self.__num_frames is None or self.__fps is None:
             cap = cv2.VideoCapture(self.video)
@@ -66,4 +66,3 @@ class FrameCollection(collections.abc.Iterable):
             cap.release()
             cv2.destroyAllWindows()
         return self.__num_frames, self.__fps
-

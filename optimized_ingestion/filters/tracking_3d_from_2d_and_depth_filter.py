@@ -9,8 +9,8 @@ from pyquaternion import Quaternion
 from ..payload import Payload
 from ..utils.depth_to_3d import depth_to_3d
 from .depth_estimation_filter import DepthEstimationFilter
-from .tracking_2d_filter import Tracking2DFilter
 from .filter import Filter
+from .tracking_2d_filter import Tracking2DFilter
 from .utils.is_filtered import is_filtered
 
 if TYPE_CHECKING:
@@ -21,10 +21,10 @@ class Tracking3DFrom2DAndDepthFilter(Filter):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         if not is_filtered(DepthEstimationFilter, payload):
             payload = payload.filter(DepthEstimationFilter())
-        
+
         if not is_filtered(Tracking2DFilter, payload):
             payload = payload.filter(Tracking2DFilter())
-        
+
         metadata = []
         for k, m in zip(payload.keep, payload.metadata):
             if k:
@@ -48,7 +48,7 @@ class Tracking3DFrom2DAndDepthFilter(Filter):
                 metadata.append({self.__class__.__name__: trackings3d})
             else:
                 metadata.append(None)
-        
+
         return None, metadata
 
 

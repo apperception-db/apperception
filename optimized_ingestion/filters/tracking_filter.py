@@ -9,11 +9,11 @@ import pandas as pd
 from bitarray import bitarray
 from pyquaternion import Quaternion
 
-from ..utils.depth_to_3d import depth_to_3d
 from ..frame import Frame
 from ..monodepth import monodepth
 from ..payload import Payload
 from ..trackers import yolov5_strongsort_osnet_tracker as tracker
+from ..utils.depth_to_3d import depth_to_3d
 from .filter import Filter
 
 BASE_DIR = Path(__file__).resolve().parent.parent
