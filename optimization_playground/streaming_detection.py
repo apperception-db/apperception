@@ -41,7 +41,11 @@ camera_config = database._execute_query(CAM_CONFIG_QUERY.format(date=input_date)
 camera_config_df = pd.DataFrame(camera_config, columns=CAMERA_COLUMNS)
 camera_config_df
 
-def map_roadsegment_imgsegment():
+SEGMENT_CONTAIN_QUERY = """select elementid, elementpolygon from segmentpolygon 
+                           where ST_Contains(elementpolygon, {ego_translation}::geometry);"""
+SEGMENT_DWITHIN_QUERY = """select elementid, elementpolygon from segmentpolygon"""
+
+def map_imgsegment_roadsegment():
     '''
     FULL ALGORITHM:
     Greedy
@@ -60,12 +64,22 @@ def map_roadsegment_imgsegment():
         search_space.append(find_next_segment(current_segment))
     '''
 
-def find_next_segment(ego_loc, ego_heading, current_segment):
+def road_segment_contains(ego_config):
+    return SEGMENT_CONTAIN_QUERY.format(egotranslation=ego_config['egoTranslation'])
+
+def find_segment_dwithin(start_segment, view_distance):
+    return SEGMENT_DWITHIN_QUERY.format(start_segment=start_segment, view_distance=view_distance)
+
+def construct_search_space(ego_config, view_distance=50):
     '''
-    current_segment: a segment in world coord
-    if current_segment is None:
-        return world_segment_contains(ego_loc)
-    else:
-        next_segment = find_closest_segment(current_segment)
-        if keep next_segment:
-            return get_properties(next_segment)
+    road segment: (elementid, elementpolygon)
+    view_distance: in meters, default 50 because scenic standard
+    '''
+    search_space = []
+    start_segment = road_segment_contains(ego_config)
+    search_space.append(start_segment)
+    search_space.extend(find_segment_dwithin(start_segment, view_distance))
+    return search_space
+    
+        
+    
