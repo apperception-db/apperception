@@ -1,9 +1,8 @@
 from typing import TYPE_CHECKING, Type
 
-
 if TYPE_CHECKING:
-    from ..filter import Filter
     from ...payload import Payload
+    from ..filter import Filter
 
 
 def is_filtered(cls: "Type[Filter]", payload: "Payload"):

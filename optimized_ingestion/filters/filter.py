@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, Optional, Tuple
 
 from bitarray import bitarray
 
@@ -15,7 +15,7 @@ class Filter:
     @classmethod
     def classname(cls):
         return ".".join(_get_classnames(cls))
-    
+
     @classmethod
     def get(cls, d: "Dict[str, Any]"):
         classname = cls.classname()
