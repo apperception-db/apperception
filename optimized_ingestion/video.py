@@ -9,7 +9,9 @@ from .camera_config import CameraConfig, interpolate
 
 
 class Video(collections.abc.Iterable):
-    def __init__(self, videofile: str, camera_configs: "List[CameraConfig]", start: datetime = None):
+    def __init__(
+        self, videofile: str, camera_configs: "List[CameraConfig]", start: datetime = None
+    ):
         self.videofile: str = videofile
         self._camera_configs: "List[CameraConfig]" = camera_configs
         self._start: "Optional[datetime]" = start

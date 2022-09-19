@@ -2,11 +2,11 @@ import os
 import pickle
 from pathlib import Path
 
-from .stages import InView, TrackingFilter
 from .camera_config import camera_config
-from .video import Video
 from .payload import Payload
 from .pipeline import Pipeline
+from .stages import InView, TrackingFilter
+from .video import Video
 
 ### Constants ###
 SAMPLING_RATE = 2

@@ -3,8 +3,8 @@ from queue import Queue
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .stages.stage import Stage
     from .payload import Payload
+    from .stages.stage import Stage
 
 
 @dataclass
