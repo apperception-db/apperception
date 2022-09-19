@@ -85,7 +85,7 @@ def track(
     augment=False,  # augmented inference
     visualize=False,  # visualize features
 ):
-    dataset = LoadImages(source.frames.video, img_size=imgsz, stride=stride, auto=pt)
+    dataset = LoadImages(source.video.videofile, img_size=imgsz, stride=stride, auto=pt)
     nr_sources = 1
     labels: "List[TrackingResult]" = []
 

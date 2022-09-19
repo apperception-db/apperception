@@ -1,14 +1,11 @@
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from bitarray import bitarray
 
 from ..payload import Payload
 
 
-class Filter:
-    def __init__(self) -> None:
-        pass
-
+class Stage:
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         return payload.keep, payload.metadata
 
@@ -25,8 +22,7 @@ class Filter:
         return None
 
 
-def _get_classnames(cls: "type"):
-    _name = []
-    if cls.__base__ != object:
-        _name = _get_classnames(cls.__base__)
-    return _name + [cls.__name__]
+def _get_classnames(cls: "type") -> "List[str]":
+    if cls == Stage:
+        return []
+    return [*_get_classnames(cls.__base__), cls.__name__]

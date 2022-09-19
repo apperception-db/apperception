@@ -4,32 +4,32 @@ from typing import TYPE_CHECKING, Any, List, Optional
 from bitarray import bitarray
 
 if TYPE_CHECKING:
-    from .filters.filter import Filter
-    from .frame_collection import FrameCollection
+    from .stages.stage import Stage
+    from .video import Video
 
 
 @dataclass
 class Payload:
-    frames: "FrameCollection"
+    video: "Video"
     keep: "bitarray"
     metadata: "Optional[List[Any]]"
 
     def __init__(
         self,
-        frames: "FrameCollection",
+        video: "Video",
         keep: "Optional[bitarray]" = None,
         metadata: "Optional[List[Any]]" = None,
     ):
-        self.keep = _default_keep(frames, keep)
-        self.frames = frames
-        if metadata is not None and len(metadata) != len(frames):
+        self.keep = _default_keep(video, keep)
+        self.video = video
+        if metadata is not None and len(metadata) != len(video):
             raise Exception()
         self.metadata = metadata
 
-    def filter(self, filter: "Filter"):
+    def filter(self, filter: "Stage"):
         keep, metadata = filter(self)
 
-        assert len(keep) == len(self.frames)
+        assert len(keep) == len(self.video)
         assert metadata is None or len(metadata) == len(keep)
 
         if metadata is None:
@@ -42,7 +42,7 @@ class Payload:
         print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
         print(keep)
 
-        return Payload(self.frames, self.keep & keep, metadata)
+        return Payload(self.video, self.keep & keep, metadata)
 
 
 def _merge(meta1, meta2):
@@ -53,10 +53,10 @@ def _merge(meta1, meta2):
     return {**meta1, **meta2}
 
 
-def _default_keep(frames: "FrameCollection", keep: "Optional[bitarray]" = None):
+def _default_keep(video: "Video", keep: "Optional[bitarray]" = None):
     if keep is None:
-        keep = bitarray(len(frames))
+        keep = bitarray(len(video))
         keep.setall(1)
-    elif len(keep) != len(frames):
+    elif len(keep) != len(video):
         raise Exception()
     return keep

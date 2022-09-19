@@ -11,7 +11,7 @@ Float4 = Tuple[float, float, float, float]
 Float33 = Tuple[Float3, Float3, Float3]
 
 
-def frame(
+def camera_config(
     camera_id: str,
     frame_id: str,
     frame_num: int,
@@ -26,7 +26,7 @@ def frame(
     ego_heading: float,
     road_direction: float,
 ):
-    _frame = Frame()
+    _frame = CameraConfig()
     _frame.camera_id = camera_id
     _frame.frame_id = frame_id
     _frame.filename = filename
@@ -48,7 +48,7 @@ def frame(
     return _frame
 
 
-class Frame:
+class CameraConfig:
     camera_id: str
     # TODO: remove
     frame_id: Optional[str]
@@ -111,7 +111,7 @@ class Frame:
         yield self.road_direction
 
 
-def interpolate(f1: Frame, f2: Frame, timestamp: datetime):
+def interpolate(f1: CameraConfig, f2: CameraConfig, timestamp: datetime):
     t1 = f1.timestamp
     t2 = f2.timestamp
     total_delta = (t2 - t1).total_seconds()
@@ -119,7 +119,7 @@ def interpolate(f1: Frame, f2: Frame, timestamp: datetime):
 
     ratio = delta / total_delta
 
-    _frame = Frame()
+    _frame = CameraConfig()
     _frame.camera_id = f1.camera_id
     _frame.frame_id = None
     _frame.filename = None

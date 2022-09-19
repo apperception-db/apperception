@@ -9,12 +9,12 @@ import pandas as pd
 from bitarray import bitarray
 from pyquaternion import Quaternion
 
-from ..frame import Frame
+from ..camera_config import CameraConfig
 from ..monodepth import monodepth
 from ..payload import Payload
 from ..trackers import yolov5_strongsort_osnet_tracker as tracker
 from ..utils.depth_to_3d import depth_to_3d
-from .filter import Filter
+from .stage import Stage
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEST_FILE_DIR = os.path.join(BASE_DIR, "data/v1.0-mini/")
@@ -165,14 +165,14 @@ RESULT_COLUMNS = [
 ]
 
 
-class TrackingFilter(Filter):
+class TrackingFilter(Stage):
     def __init__(self) -> None:
         pass
 
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         md = monodepth()
         depths = []
-        video = cv2.VideoCapture(payload.frames.video)
+        video = cv2.VideoCapture(payload.video.videofile)
         idx = 0
         while video.isOpened():
             ret, frame = video.read()
@@ -183,7 +183,7 @@ class TrackingFilter(Filter):
             else:
                 depths.append(None)
             idx += 1
-        assert idx == len(payload.frames)
+        assert idx == len(payload.video)
         video.release()
         cv2.destroyAllWindows()
         # with open("./depths.pickle", "wb") as pwrite:
@@ -207,7 +207,7 @@ class TrackingFilter(Filter):
             y = int(row["bbox_top"] + (row["bbox_h"] / 2))
             idx = int(row["frame_idx"])
             depth = depths[idx][y, x]
-            camera = payload.frames[idx]
+            camera = payload.video[idx]
             intrinsic = camera.camera_intrinsic
             row["3d-to-camera"] = depth_to_3d(x, y, depth, intrinsic)
             rotated_offset = Quaternion(camera.camera_rotation).rotate(
@@ -234,7 +234,7 @@ class TrackingFilter(Filter):
                     t["next"] = trajectory[i + 1]
 
         keep = bitarray(payload.keep)
-        for i, (f, m) in enumerate(zip(payload.frames, metadata)):
+        for i, (f, m) in enumerate(zip(payload.video, metadata)):
             if m is None:
                 continue
             trackings = m["trackings"]
@@ -259,8 +259,8 @@ class TrackingFilter(Filter):
         return keep, metadata
 
     def filter(
-        self, frames: List[Frame], metadata: Dict[Any, Any]
-    ) -> Tuple[List[Frame], Dict[Any, Any]]:
+        self, frames: List[CameraConfig], metadata: Dict[Any, Any]
+    ) -> Tuple[List[CameraConfig], Dict[Any, Any]]:
         import trackers.yolov5_strongsort_osnet_tracker as tracker
 
         # Now the result is written to a txt file, need to fix this later

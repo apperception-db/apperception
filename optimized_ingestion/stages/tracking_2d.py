@@ -4,15 +4,15 @@ from bitarray import bitarray
 
 from ..payload import Payload
 from ..trackers import yolov5_strongsort_osnet_tracker as tracker
-from .filter import Filter
+from .stage import Stage
 
 
-class Tracking2DFilter(Filter):
+class Tracking2D(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         _results = tracker.track(payload)
 
         _results = sorted(_results, key=lambda r: r.frame_idx)
-        metadata: "List[dict]" = [None for _ in range(len(payload.frames))]
+        metadata: "List[dict]" = [None for _ in range(len(payload.video))]
         trajectories: "Dict[float, List[tracker.TrackingResult]]" = {}
 
         for row in _results:
@@ -21,8 +21,8 @@ class Tracking2DFilter(Filter):
             if metadata[idx] is None:
                 metadata[idx] = {}
             if "trackings" not in metadata[idx]:
-                metadata[idx][Tracking2DFilter.classname()] = []
-            Tracking2DFilter.get(metadata[idx]).append(row)
+                metadata[idx][Tracking2D.classname()] = []
+            Tracking2D.get(metadata[idx]).append(row)
 
             if row.object_id not in trajectories:
                 trajectories[row.object_id] = []

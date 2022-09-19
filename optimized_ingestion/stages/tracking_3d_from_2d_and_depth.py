@@ -8,35 +8,35 @@ from pyquaternion import Quaternion
 
 from ..payload import Payload
 from ..utils.depth_to_3d import depth_to_3d
-from .depth_estimation_filter import DepthEstimationFilter
-from .filter import Filter
-from .tracking_2d_filter import Tracking2DFilter
+from .depth_estimation import DepthEstimation
+from .stage import Stage
+from .tracking_2d import Tracking2D
 from .utils.is_filtered import is_filtered
 
 if TYPE_CHECKING:
     from ..trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 
 
-class Tracking3DFrom2DAndDepthFilter(Filter):
+class Tracking3DFrom2DAndDepth(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        if not is_filtered(DepthEstimationFilter, payload):
-            payload = payload.filter(DepthEstimationFilter())
+        if not is_filtered(DepthEstimation, payload):
+            payload = payload.filter(DepthEstimation())
 
-        if not is_filtered(Tracking2DFilter, payload):
-            payload = payload.filter(Tracking2DFilter())
+        if not is_filtered(Tracking2D, payload):
+            payload = payload.filter(Tracking2D())
 
         metadata = []
         for k, m in zip(payload.keep, payload.metadata):
             if k:
-                depth = DepthEstimationFilter.get(m)
-                trackings: "List[TrackingResult]" = Tracking2DFilter.get(m)
+                depth = DepthEstimation.get(m)
+                trackings: "List[TrackingResult]" = Tracking2D.get(m)
                 trackings3d: "List[Tracking3DResult]" = []
                 for t in trackings:
                     x = int(t.bbox_left + (t.bbox_w / 2))
                     y = int(t.bbox_top + (t.bbox_h / 2))
                     idx = t.frame_idx
                     depth = depth[y, x]
-                    camera = payload.frames[idx]
+                    camera = payload.video[idx]
                     intrinsic = camera.camera_intrinsic
 
                     point_from_camera = depth_to_3d(x, y, depth, intrinsic)

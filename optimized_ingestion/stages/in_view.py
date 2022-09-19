@@ -5,17 +5,17 @@ from bitarray import bitarray
 from apperception.database import database
 
 from ..payload import Payload
-from .filter import Filter
+from .stage import Stage
 
 
-class InViewFilter(Filter):
+class InView(Stage):
     def __init__(self, distance: float, segment_type: str) -> None:
         self.distance = distance
         self.segment_type = segment_type
 
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         keep = bitarray()
-        for _frame in payload.frames:
+        for _frame in payload.video:
             point = f"'POINT ({' '.join([*map(str, _frame.ego_translation)])})'"
             query = (
                 f"SELECT TRUE WHERE minDistance({point}, '{self.segment_type}') < {self.distance}"

@@ -2,10 +2,10 @@ from typing import TYPE_CHECKING, Type
 
 if TYPE_CHECKING:
     from ...payload import Payload
-    from ..filter import Filter
+    from ..stage import Stage
 
 
-def is_filtered(cls: "Type[Filter]", payload: "Payload"):
+def is_filtered(cls: "Type[Stage]", payload: "Payload"):
     if payload.metadata is None:
         return False
 

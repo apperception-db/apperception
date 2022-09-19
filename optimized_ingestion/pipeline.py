@@ -3,18 +3,18 @@ from queue import Queue
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .filters.filter import Filter
+    from .stages.stage import Stage
     from .payload import Payload
 
 
 @dataclass
 class Pipeline:
-    filters: "Queue[Filter]" = field(default_factory=Queue)
+    filters: "Queue[Stage]" = field(default_factory=Queue)
 
     def __init__(self) -> None:
         self.filters = Queue()
 
-    def add_filter(self, filter: "Filter") -> None:
+    def add_filter(self, filter: "Stage") -> None:
         self.filters.put(filter)
 
     def run(self, payload: "Payload") -> "Payload":

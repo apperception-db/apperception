@@ -3,10 +3,10 @@ from typing import Optional, Tuple
 from bitarray import bitarray
 
 from ..payload import Payload
-from .filter import Filter
+from .stage import Stage
 
 
-class SampleFilter(Filter):
+class Sample(Stage):
     sampling_rate: int
 
     def __init__(self, sampling_rate):

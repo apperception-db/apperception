@@ -4,21 +4,21 @@ import cv2
 from bitarray import bitarray
 
 from ..payload import Payload
-from .filter import Filter
+from .stage import Stage
 
 
-class DecodeFrameFilter(Filter):
+class DecodeFrame(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         metadata: "List[dict]" = []
 
         # TODO: only decode filtered frames
-        video = cv2.VideoCapture(payload.frames.video)
+        video = cv2.VideoCapture(payload.video.videofile)
         while video.isOpened():
             ret, frame = video.read()
             if not ret:
                 break
             metadata.append({self.classname(): frame})
-        assert len(metadata) == len(payload.frames)
+        assert len(metadata) == len(payload.video)
         video.release()
         cv2.destroyAllWindows()
 

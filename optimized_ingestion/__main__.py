@@ -2,9 +2,9 @@ import os
 import pickle
 from pathlib import Path
 
-from .filters import InViewFilter, TrackingFilter
-from .frame import frame
-from .frame_collection import FrameCollection
+from .stages import InView, TrackingFilter
+from .camera_config import camera_config
+from .video import Video
 from .payload import Payload
 from .pipeline import Pipeline
 
@@ -25,14 +25,14 @@ if __name__ == "__main__":
         videos = pickle.load(f)
 
     video_0757 = videos["scene-0757-CAM_FRONT"]
-    frames = FrameCollection(
+    frames = Video(
         os.path.join(DATA_DIR, "videos", video_0757["filename"]),
-        [frame(*f) for f in video_0757["frames"]],
+        [camera_config(*f) for f in video_0757["frames"]],
         video_0757["start"],
     )
     pipeline = Pipeline()
 
-    pipeline.add_filter(filter=InViewFilter(distance=10, segment_type="intersection"))
+    pipeline.add_filter(filter=InView(distance=10, segment_type="intersection"))
     pipeline.add_filter(filter=TrackingFilter())
 
     output = pipeline.run(Payload(frames))
