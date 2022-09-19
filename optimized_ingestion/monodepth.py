@@ -76,15 +76,9 @@ class monodepth:
         self.depth_decoder.to(self.device)
         self.depth_decoder.eval()
 
-        # torch.no_grad()
-
     def eval(self, input_image_numpy):
-
         with torch.no_grad():
             # Load image and preprocess
-
-            # input_image = np.array(pil.open(input_image_file).convert('RGB'))
-            # input_image = pil.fromarray(input_image)
             input_image = pil.fromarray(input_image_numpy[:, :, [2, 1, 0]])
             original_width, original_height = input_image.size
             input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
@@ -100,13 +94,5 @@ class monodepth:
                 disp, (original_height, original_width), mode="bilinear", align_corners=False
             )
 
-            # disp_resized_np = disp_resized.squeeze().cpu().numpy()
             disp_resized_np = disp_resized.squeeze().cpu().detach().numpy()
-            # vmax = np.percentile(disp_resized_np, 95)
-            # normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
-            # mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')
-            # colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
-            # im = pil.fromarray(colormapped_im)
-
-        # return colormapped_im
         return disp_resized_np

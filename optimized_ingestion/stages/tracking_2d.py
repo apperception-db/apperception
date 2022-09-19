@@ -21,8 +21,8 @@ class Tracking2D(Stage):
             if metadata[idx] is None:
                 metadata[idx] = {}
             if "trackings" not in metadata[idx]:
-                metadata[idx][Tracking2D.classname()] = []
-            Tracking2D.get(metadata[idx]).append(row)
+                metadata[idx][Tracking2D.classname()] = {}
+            Tracking2D.get(metadata[idx])[row.object_id] = row
 
             if row.object_id not in trajectories:
                 trajectories[row.object_id] = []

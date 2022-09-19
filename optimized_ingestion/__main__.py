@@ -2,10 +2,12 @@ import os
 import pickle
 from pathlib import Path
 
+
 from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline
-from .stages import InView, TrackingFilter
+from .stages import InView
+from .stages.filter_car_facing_sideway import FilterCarFacingSideway
 from .video import Video
 
 ### Constants ###
@@ -33,6 +35,6 @@ if __name__ == "__main__":
     pipeline = Pipeline()
 
     pipeline.add_filter(filter=InView(distance=10, segment_type="intersection"))
-    pipeline.add_filter(filter=TrackingFilter())
+    pipeline.add_filter(filter=FilterCarFacingSideway())
 
     output = pipeline.run(Payload(frames))

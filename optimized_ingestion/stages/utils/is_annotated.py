@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from ..stage import Stage
 
 
-def is_filtered(cls: "Type[Stage]", payload: "Payload"):
+def is_annotated(cls: "Type[Stage]", payload: "Payload"):
     if payload.metadata is None:
         return False
 

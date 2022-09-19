@@ -6,12 +6,12 @@ from ..monodepth import monodepth
 from ..payload import Payload
 from .decode_frame import DecodeFrame
 from .stage import Stage
-from .utils.is_filtered import is_filtered
+from .utils.is_annotated import is_annotated
 
 
 class DepthEstimation(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        if not is_filtered(DecodeFrame, payload):
+        if not is_annotated(DecodeFrame, payload):
             payload = payload.filter(DecodeFrame())
 
         md = monodepth()
