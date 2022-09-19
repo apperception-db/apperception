@@ -2,7 +2,6 @@ import os
 import pickle
 from pathlib import Path
 
-
 from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline

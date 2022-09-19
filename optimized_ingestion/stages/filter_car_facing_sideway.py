@@ -1,14 +1,14 @@
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
 import math
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
-from bitarray import bitarray
 import numpy as np
+from bitarray import bitarray
 
-
-from .tracking_3d.tracking_3d import Tracking3D
-from .tracking_3d.from_2d_and_depth import From2DAndDepth, Tracking3DResult
-from .utils.is_annotated import is_annotated
 from .stage import Stage
+from .tracking_3d.from_2d_and_depth import From2DAndDepth, Tracking3DResult
+from .tracking_3d.tracking_3d import Tracking3D
+from .utils.is_annotated import is_annotated
+
 if TYPE_CHECKING:
     from ..payload import Payload
 
@@ -42,12 +42,12 @@ class FilterCarFacingSideway(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         if not is_annotated(Tracking3D, payload):
             payload = payload.filter(From2DAndDepth())
-        
+
         keep = bitarray(payload.keep)
         for i, (f, m) in enumerate(zip(payload.video, payload.metadata)):
             if m is None:
                 continue
-            
+
             keep[i] = 0
             trackings_3d: "Dict[float, Tracking3DResult]" = From2DAndDepth.get(m)
             for t in trackings_3d.values():
@@ -59,7 +59,7 @@ class FilterCarFacingSideway(Stage):
                     _to = t.next
                 else:
                     _to = t
-                
+
                 angle = facing_relative(_from.point, _to.point, f.ego_heading)
                 if (50 < angle and angle < 135) or (-135 < angle and angle < -50):
                     keep[i] = 1

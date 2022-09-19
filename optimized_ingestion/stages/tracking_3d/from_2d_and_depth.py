@@ -6,12 +6,12 @@ import numpy.typing as npt
 from bitarray import bitarray
 from pyquaternion import Quaternion
 
-from .tracking_3d import Tracking3D
 from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d import Tracking2D
 from ..utils.is_annotated import is_annotated
+from .tracking_3d import Tracking3D
 
 if TYPE_CHECKING:
     from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
@@ -52,7 +52,7 @@ class From2DAndDepth(Tracking3D):
                 metadata.append({self.classname(): trackings3d})
             else:
                 metadata.append(None)
-        
+
         for trajectory in trajectories.values():
             last = len(trajectory) - 1
             for i, t in enumerate(trajectory):

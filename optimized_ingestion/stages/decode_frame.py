@@ -10,7 +10,7 @@ from .stage import Stage
 class DecodeFrame(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         metadata: "List[dict]" = []
-        print('decoding')
+        print("decoding")
 
         # TODO: only decode filtered frames
         video = cv2.VideoCapture(payload.video.videofile)
@@ -24,6 +24,6 @@ class DecodeFrame(Stage):
         assert len(metadata) == len(payload.video)
         video.release()
         cv2.destroyAllWindows()
-        print('decoded')
+        print("decoded")
 
         return None, metadata
