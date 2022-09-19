@@ -10,10 +10,6 @@ from .filter import Filter
 class Tracking2DFilter(Filter):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         _results = tracker.track(payload)
-        # with open("./results.pickle", "wb") as pwrite:
-        #     pickle.dump(results, pwrite)
-        # with open("./results.pickle", "rb") as pread:
-        #     results = pickle.load(pread)
 
         _results = sorted(_results, key=lambda r: r.frame_idx)
         metadata: "List[dict]" = [None for _ in range(len(payload.frames))]
@@ -25,8 +21,8 @@ class Tracking2DFilter(Filter):
             if metadata[idx] is None:
                 metadata[idx] = {}
             if "trackings" not in metadata[idx]:
-                metadata[idx]["trackings"] = []
-            metadata[idx]["trackings"].append(row)
+                metadata[idx][Tracking2DFilter.classname()] = []
+            Tracking2DFilter.get(metadata[idx]).append(row)
 
             if row.object_id not in trajectories:
                 trajectories[row.object_id] = []

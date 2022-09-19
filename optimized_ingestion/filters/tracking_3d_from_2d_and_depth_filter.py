@@ -28,8 +28,8 @@ class Tracking3DFrom2DAndDepthFilter(Filter):
         metadata = []
         for k, m in zip(payload.keep, payload.metadata):
             if k:
-                depth = m[DepthEstimationFilter.__name__]
-                trackings: "List[TrackingResult]" = m[Tracking2DFilter.__name__]
+                depth = DepthEstimationFilter.get(m)
+                trackings: "List[TrackingResult]" = Tracking2DFilter.get(m)
                 trackings3d: "List[Tracking3DResult]" = []
                 for t in trackings:
                     x = int(t.bbox_left + (t.bbox_w / 2))
@@ -45,7 +45,7 @@ class Tracking3DFrom2DAndDepthFilter(Filter):
                     )
                     point = np.array(camera.camera_translation) + rotated_offset
                     trackings3d.append(Tracking3DResult(point_from_camera, point))
-                metadata.append({self.__class__.__name__: trackings3d})
+                metadata.append({self.classname(): trackings3d})
             else:
                 metadata.append(None)
 

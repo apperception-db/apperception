@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 from queue import Queue
+from typing import TYPE_CHECKING
 
-from .filters.filter import Filter
-from .payload import Payload
+if TYPE_CHECKING:
+    from .filters.filter import Filter
+    from .payload import Payload
 
 
 @dataclass
@@ -12,7 +14,7 @@ class Pipeline:
     def __init__(self) -> None:
         self.filters = Queue()
 
-    def add_filter(self, filter: Filter) -> None:
+    def add_filter(self, filter: "Filter") -> None:
         self.filters.put(filter)
 
     def run(self, payload: "Payload") -> "Payload":

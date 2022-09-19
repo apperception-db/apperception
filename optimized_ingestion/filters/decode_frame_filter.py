@@ -17,7 +17,7 @@ class DecodeFrameFilter(Filter):
             ret, frame = video.read()
             if not ret:
                 break
-            metadata.append({DecodeFrameFilter.__class__.__name__: frame})
+            metadata.append({self.classname(): frame})
         assert len(metadata) == len(payload.frames)
         video.release()
         cv2.destroyAllWindows()

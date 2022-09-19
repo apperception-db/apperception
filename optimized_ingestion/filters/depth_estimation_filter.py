@@ -19,6 +19,6 @@ class DepthEstimationFilter(Filter):
         for k, m in zip(payload.keep, payload.metadata):
             depth = None
             if k:
-                depth = md.eval(m[DecodeFrameFilter.__class__.__name__])
-            metadata.append({self.__class__.__name__: depth})
+                depth = md.eval(DecodeFrameFilter.get(m))
+            metadata.append({self.classname(): depth})
         return None, metadata

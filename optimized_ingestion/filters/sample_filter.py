@@ -16,6 +16,3 @@ class SampleFilter(Filter):
         keep = bitarray(len(payload.keep))
         keep[:: self.sampling_rate] = 1
         return keep, None
-
-    # def filter(self, frames: List[Frame], metadata: Dict[Any, Any]) -> Tuple[List[Frame], Dict[Any, Any]]:
-    #     return frames[::self.sampling_rate], metadata
