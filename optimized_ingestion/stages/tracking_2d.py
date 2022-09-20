@@ -6,6 +6,7 @@ from bitarray import bitarray
 
 from ..trackers import yolov5_strongsort_osnet_tracker as tracker
 from .stage import Stage
+
 if TYPE_CHECKING:
     from ..payload import Payload
 

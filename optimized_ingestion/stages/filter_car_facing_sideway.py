@@ -6,6 +6,7 @@ from bitarray import bitarray
 
 from .stage import Stage
 from .tracking_3d.from_2d_and_depth import From2DAndDepth, Tracking3DResult
+
 # from .tracking_3d.tracking_3d import Tracking3D
 # from .utils.is_annotated import is_annotated
 

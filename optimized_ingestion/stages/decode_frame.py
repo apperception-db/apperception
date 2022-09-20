@@ -5,6 +5,7 @@ from bitarray import bitarray
 from tqdm import tqdm
 
 from .stage import Stage
+
 if TYPE_CHECKING:
     from ..payload import Payload
 

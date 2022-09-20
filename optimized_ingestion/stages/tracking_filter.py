@@ -14,6 +14,7 @@ from ..monodepth import monodepth
 from ..trackers import yolov5_strongsort_osnet_tracker as tracker
 from ..utils.depth_to_3d import depth_to_3d
 from .stage import Stage
+
 if TYPE_CHECKING:
     from ..payload import Payload
 

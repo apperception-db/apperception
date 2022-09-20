@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 import cv2
 import numpy.typing as npt
 from bitarray import bitarray
-
-from .stages.tracking_2d import Tracking2D
-from .stages.depth_estimation import DepthEstimation
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
+from .stages.depth_estimation import DepthEstimation
+from .stages.tracking_2d import Tracking2D
+
 if TYPE_CHECKING:
-    from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
     from .stages.stage import Stage
+    from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
     from .video import Video
 
 
@@ -78,7 +78,16 @@ class Payload:
                         x = int(t.bbox_left + t.bbox_w / 2)
                         y = int(t.bbox_top + t.bbox_h / 2)
                         label = f"{id} {c} conf: {t.confidence:.2f} dist: {depth[y, x]: .4f}"
-                        annotator.box_label([t.bbox_left, t.bbox_top, t.bbox_left + t.bbox_w, t.bbox_top + t.bbox_h], label, color=colors(1, True))
+                        annotator.box_label(
+                            [
+                                t.bbox_left,
+                                t.bbox_top,
+                                t.bbox_left + t.bbox_w,
+                                t.bbox_top + t.bbox_h,
+                            ],
+                            label,
+                            color=colors(1, True),
+                        )
                     frame = annotator.result()
 
             images.append(frame)
@@ -87,7 +96,9 @@ class Payload:
         cv2.destroyAllWindows()
 
         height, width, _ = images[0].shape
-        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), int(self.video.fps), (width, height))
+        out = cv2.VideoWriter(
+            filename, cv2.VideoWriter_fourcc(*"mp4v"), int(self.video.fps), (width, height)
+        )
         for image in images:
             out.write(image)
         out.release()
