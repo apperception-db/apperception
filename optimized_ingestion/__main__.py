@@ -37,12 +37,12 @@ if __name__ == "__main__":
     )
     pipeline = Pipeline()
 
-    pipeline.add_filter(filter=InView(distance=10, segment_type="intersection"))
-    pipeline.add_filter(filter=DecodeFrame())
-    pipeline.add_filter(filter=DepthEstimation())
-    pipeline.add_filter(filter=Tracking2D())
-    pipeline.add_filter(filter=From2DAndDepth())
-    pipeline.add_filter(filter=FilterCarFacingSideway())
+    pipeline.add_filter(filter=InView(distance=10, segment_type="intersection")) \
+        .add_filter(filter=DecodeFrame()) \
+        .add_filter(filter=DepthEstimation()) \
+        .add_filter(filter=Tracking2D()) \
+        .add_filter(filter=From2DAndDepth()) \
+        .add_filter(filter=FilterCarFacingSideway())
 
     output = pipeline.run(Payload(frames))
 
