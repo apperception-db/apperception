@@ -6,7 +6,11 @@ from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline
 from .stages import InView
+from .stages.decode_frame import DecodeFrame
+from .stages.depth_estimation import DepthEstimation
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
+from .stages.tracking_2d import Tracking2D
+from .stages.tracking_3d.from_2d_and_depth import From2DAndDepth
 from .video import Video
 
 ### Constants ###
@@ -34,8 +38,12 @@ if __name__ == "__main__":
     pipeline = Pipeline()
 
     pipeline.add_filter(filter=InView(distance=10, segment_type="intersection"))
+    pipeline.add_filter(filter=DecodeFrame())
+    pipeline.add_filter(filter=DepthEstimation())
+    pipeline.add_filter(filter=Tracking2D())
+    pipeline.add_filter(filter=From2DAndDepth())
     pipeline.add_filter(filter=FilterCarFacingSideway())
 
     output = pipeline.run(Payload(frames))
 
-    output.save('./out.avi')
+    output.save('./out.mp4')

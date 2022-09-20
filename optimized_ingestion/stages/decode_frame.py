@@ -1,11 +1,12 @@
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import cv2
 from bitarray import bitarray
 from tqdm import tqdm
 
-from ..payload import Payload
 from .stage import Stage
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 
 class DecodeFrame(Stage):

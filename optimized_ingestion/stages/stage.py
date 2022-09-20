@@ -1,8 +1,9 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from bitarray import bitarray
 
-from ..payload import Payload
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 
 class Stage:

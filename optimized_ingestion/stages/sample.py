@@ -1,9 +1,10 @@
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from bitarray import bitarray
 
-from ..payload import Payload
 from .stage import Stage
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 
 class Sample(Stage):

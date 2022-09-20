@@ -1,12 +1,11 @@
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from bitarray import bitarray
 
 from apperception.database import database
-
-from ..payload import Payload
 from .stage import Stage
-
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 class InView(Stage):
     def __init__(self, distance: float, segment_type: str) -> None:

@@ -1,7 +1,7 @@
 import math
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import cv2
 import numpy as np
@@ -11,10 +11,11 @@ from pyquaternion import Quaternion
 
 from ..camera_config import CameraConfig
 from ..monodepth import monodepth
-from ..payload import Payload
 from ..trackers import yolov5_strongsort_osnet_tracker as tracker
 from ..utils.depth_to_3d import depth_to_3d
 from .stage import Stage
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 TEST_FILE_DIR = os.path.join(BASE_DIR, "data/v1.0-mini/")

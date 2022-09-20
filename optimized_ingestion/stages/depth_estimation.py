@@ -1,15 +1,16 @@
 import os
 import pickle
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from bitarray import bitarray
 from tqdm import tqdm
 
 from ..monodepth import monodepth
-from ..payload import Payload
 from .decode_frame import DecodeFrame
 from .stage import Stage
-from .utils.is_annotated import is_annotated
+# from .utils.is_annotated import is_annotated
+if TYPE_CHECKING:
+    from ..payload import Payload
 
 
 class DepthEstimation(Stage):
@@ -18,8 +19,8 @@ class DepthEstimation(Stage):
             with open("./_DepthEstimation.pickle", "rb") as f:
                 return None, pickle.load(f)
 
-        if not is_annotated(DecodeFrame, payload):
-            payload = payload.filter(DecodeFrame())
+        # if not is_annotated(DecodeFrame, payload):
+        #     payload = payload.filter(DecodeFrame())
 
         md = monodepth()
         metadata = []
