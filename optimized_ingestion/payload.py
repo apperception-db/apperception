@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, List, Optional
 
-from bitarray import bitarray
 import cv2
-from tqdm import tqdm
+from bitarray import bitarray
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -65,7 +64,9 @@ class Payload:
         cv2.destroyAllWindows()
 
         height, width, _ = images[0].shape
-        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'DIVX'), self.video.fps, (width, height))
+        out = cv2.VideoWriter(
+            filename, cv2.VideoWriter_fourcc(*"DIVX"), self.video.fps, (width, height)
+        )
         for image in images:
             out.write(image)
         out.release()

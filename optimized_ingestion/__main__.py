@@ -38,4 +38,4 @@ if __name__ == "__main__":
 
     output = pipeline.run(Payload(frames))
 
-    output.save('./out.avi')
+    output.save("./out.avi")
