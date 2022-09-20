@@ -1,3 +1,5 @@
+import pickle
+import os
 from typing import Dict, List, Optional, Tuple
 
 from bitarray import bitarray
@@ -9,13 +11,16 @@ from .stage import Stage
 
 class Tracking2D(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        _results = tracker.track(payload)
+        if os.path.exists('./_Tracking2D.pickle'):
+            with open('./_Tracking2D.pickle', "rb") as f:
+                return None, pickle.load(f)
 
-        _results = sorted(_results, key=lambda r: r.frame_idx)
-        metadata: "List[dict]" = [None for _ in range(len(payload.video))]
+        results = tracker.track(payload)
+        results = sorted(results, key=lambda r: r.frame_idx)
+        metadata: "List[dict | None]" = [None for _ in range(len(payload.video))]
         trajectories: "Dict[float, List[tracker.TrackingResult]]" = {}
 
-        for row in _results:
+        for row in results:
             idx = row.frame_idx
 
             if metadata[idx] is None:
@@ -35,5 +40,8 @@ class Tracking2D(Stage):
                     t.prev = trajectory[i - 1]
                 if i < last:
                     t.next = trajectory[i + 1]
+
+        # with open('./_Tracking2D.pickle', "wb") as f:
+        #     pickle.dump(metadata, f)
 
         return None, metadata

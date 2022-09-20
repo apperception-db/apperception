@@ -25,12 +25,15 @@ class From2DAndDepth(Tracking3D):
         if not is_annotated(Tracking2D, payload):
             payload = payload.filter(Tracking2D())
 
-        metadata = []
+        metadata: "List[dict | None]" = []
         trajectories: "Dict[float, List[Tracking3DResult]]" = {}
         for k, m in zip(payload.keep, payload.metadata):
             if k:
                 depth = DepthEstimation.get(m)
-                trackings: "Dict[float, TrackingResult]" = Tracking2D.get(m)
+                trackings: "Dict[float, TrackingResult] | None" = Tracking2D.get(m)
+                if trackings is None:
+                    metadata.append(None)
+                    continue
                 trackings3d: "Dict[float, Tracking3DResult]" = {}
                 for object_id, t in trackings.items():
                     x = int(t.bbox_left + (t.bbox_w / 2))
@@ -69,5 +72,5 @@ class Tracking3DResult:
     object_id: float
     point_from_camera: Tuple[float, float, float]
     point: "npt.NDArray[np.floating]"
-    prev: "Optional[Tracking3DResult]" = None
-    next: "Optional[Tracking3DResult]" = None
+    prev: "Tracking3DResult | None" = None
+    next: "Tracking3DResult | None" = None

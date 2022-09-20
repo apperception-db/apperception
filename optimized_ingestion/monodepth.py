@@ -32,10 +32,10 @@ class monodepth:
 
         if torch.cuda.is_available() and not no_cuda:
             self.device = torch.device("cuda")
-            print("GPU Visible")
+            # print("GPU Visible")
         else:
             self.device = torch.device("cpu")
-            print("GPU not visible; CPU mode")
+            # print("GPU not visible; CPU mode")
 
         if pred_metric_depth and "stereo" not in model_name:
             print(
@@ -46,12 +46,12 @@ class monodepth:
         download_model_if_doesnt_exist(model_name=model_name)
         model_path = os.path.join(monodepth2_models_path, model_name)
 
-        print("-> Loading model from ", model_path)
+        # print("-> Loading model from ", model_path)
         encoder_path = os.path.join(model_path, "encoder.pth")
         self.depth_decoder_path = os.path.join(model_path, "depth.pth")
 
         # LOADING PRETRAINED MODEL
-        print("   Loading pretrained encoder")
+        # print("   Loading pretrained encoder")
         self.encoder = networks.ResnetEncoder(18, False)
         loaded_dict_enc = torch.load(encoder_path, map_location=self.device)
 
@@ -65,7 +65,7 @@ class monodepth:
         self.encoder.to(self.device)
         self.encoder.eval()
 
-        print("   Loading pretrained decoder")
+        # print("   Loading pretrained decoder")
         self.depth_decoder = networks.DepthDecoder(
             num_ch_enc=self.encoder.num_ch_enc, scales=range(4)
         )

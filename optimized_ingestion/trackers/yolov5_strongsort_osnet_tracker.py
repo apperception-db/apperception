@@ -2,9 +2,11 @@ import os
 import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List
+import cv2
 
 import numpy as np
 import numpy.typing as npt
+from tqdm import tqdm
 
 if "./submodules" not in sys.path:
     sys.path.append("./submodules")
@@ -85,7 +87,12 @@ def track(
     augment=False,  # augmented inference
     visualize=False,  # visualize features
 ):
+    video = cv2.VideoCapture(source.video.videofile)
+    video_len = video.get(cv2.CAP_PROP_FRAME_COUNT)
+    video.release()
+    cv2.destroyAllWindows()
     dataset = LoadImages(source.video.videofile, img_size=imgsz, stride=stride, auto=pt)
+
     nr_sources = 1
     labels: "List[TrackingResult]" = []
 
@@ -117,7 +124,7 @@ def track(
     model.warmup(imgsz=(1 if pt else nr_sources, 3, *imgsz))  # warmup
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
     curr_frames, prev_frames = [None] * nr_sources, [None] * nr_sources
-    for frame_idx, (path, im, im0s, vid_cap, s) in enumerate(dataset):
+    for frame_idx, (path, im, im0s, vid_cap, s) in tqdm(enumerate(dataset), total=video_len):
         if not source.keep[frame_idx]:
             continue
         t1 = time_sync()
@@ -130,10 +137,7 @@ def track(
         dt[0] += t2 - t1
 
         # Inference
-        visualize = (
-            increment_path(save_dir / Path(path[0]).stem, mkdir=True) if visualize else False
-        )
-        pred = model(im, augment=augment, visualize=visualize)
+        pred = model(im, augment=augment, visualize=False)
         t3 = time_sync()
         dt[1] += t3 - t2
 
@@ -201,20 +205,20 @@ def track(
                             )
                         )
 
-                LOGGER.info(f"{s}Done. YOLO:({t3 - t2:.3f}s), StrongSORT:({t5 - t4:.3f}s)")
+                # LOGGER.info(f"{s}Done. YOLO:({t3 - t2:.3f}s), StrongSORT:({t5 - t4:.3f}s)")
 
             else:
                 strongsort_list[i].increment_ages()
-                LOGGER.info("No detections")
+                # LOGGER.info("No detections")
 
             prev_frames[i] = curr_frames[i]
 
     # Print results
-    t = tuple(x / seen * 1e3 for x in dt)  # speeds per image
-    LOGGER.info(
-        f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms strong sort update per image at shape {(1, 3, *imgsz)}"
-        % t
-    )
+    # t = tuple(x / seen * 1e3 for x in dt)  # speeds per image
+    # LOGGER.info(
+    #     f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms strong sort update per image at shape {(1, 3, *imgsz)}"
+    #     % t
+    # )
     return labels
 
 
@@ -229,5 +233,5 @@ class TrackingResult:
     pred_idx: int
     object_type: str
     confidence: float
-    prev: "TrackingResult | None"
-    next: "TrackingResult | None"
+    prev: "TrackingResult | None" = None
+    next: "TrackingResult | None" = None
