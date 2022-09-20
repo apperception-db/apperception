@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from bitarray import bitarray
 import cv2
 import numpy.typing as npt
+from bitarray import bitarray
 
 from .stages.tracking_2d import Tracking2D
 from .stages.depth_estimation import DepthEstimation
