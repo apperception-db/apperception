@@ -1,6 +1,5 @@
 import os
 import pickle
-from pathlib import Path
 
 from .camera_config import camera_config
 from .payload import Payload
@@ -12,13 +11,6 @@ from .stages.filter_car_facing_sideway import FilterCarFacingSideway
 from .stages.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_depth import From2DAndDepth
 from .video import Video
-
-### Constants ###
-SAMPLING_RATE = 2
-CAMERA_ID = "scene-0757"
-TEST_FILE_REG = "%CAM_FRONT/%2018-08-30-15%"
-BASE_DIR = Path(__file__).resolve().parent.parent
-TEST_FILE_DIR = os.path.join(BASE_DIR, "data/v1.0-mini/")
 
 
 if __name__ == "__main__":
