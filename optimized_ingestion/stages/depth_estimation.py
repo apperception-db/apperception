@@ -31,6 +31,6 @@ class DepthEstimation(Stage):
             if k:
                 depth = md.eval(DecodeFrame.get(m))
             metadata.append({self.classname(): depth})
-        # with open("./depth.pickle", "wb") as f:
-        #     pickle.dump(metadata, f)
+        with open("./depth.pickle", "wb") as f:
+            pickle.dump(metadata, f)
         return None, metadata
