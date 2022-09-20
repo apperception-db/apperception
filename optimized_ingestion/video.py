@@ -9,15 +9,17 @@ from .camera_config import CameraConfig, interpolate
 
 
 class Video(collections.abc.Iterable):
+    videofile: str
+
     def __init__(
         self, videofile: str, camera_configs: "List[CameraConfig]", start: datetime = None
     ):
-        self.videofile: str = videofile
+        self.videofile = videofile
         self._camera_configs: "List[CameraConfig]" = camera_configs
         self._start: "Optional[datetime]" = start
         self._interpolated_frames: "Optional[List[CameraConfig]]" = None
-        self._num_frames: int = None
-        self._fps: float = None
+        self._num_frames: int | None = None
+        self._fps: float | None = None
 
     @property
     def interpolated_frames(self):
@@ -43,6 +45,10 @@ class Video(collections.abc.Iterable):
                         interpolate(self._camera_configs[idx], self._camera_configs[idx + 1], t)
                     )
         return self._interpolated_frames
+
+    @property
+    def fps(self):
+        return self.__get_fps_and_num_frames()[1]
 
     def __getitem__(self, index):
         return self.interpolated_frames[index]

@@ -37,3 +37,5 @@ if __name__ == "__main__":
     pipeline.add_filter(filter=FilterCarFacingSideway())
 
     output = pipeline.run(Payload(frames))
+
+    output.save('./out.avi')

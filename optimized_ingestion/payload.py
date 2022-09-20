@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, List, Optional
 
 from bitarray import bitarray
+import cv2
+from tqdm import tqdm
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -46,6 +48,28 @@ class Payload:
         print(keep)
 
         return Payload(self.video, self.keep & keep, metadata)
+
+    def save(self, filename: str) -> None:
+        video = cv2.VideoCapture(self.video.videofile)
+        images = []
+        idx = 0
+        while video.isOpened():
+            ret, frame = video.read()
+            if not ret:
+                break
+            if not self.keep[idx]:
+                frame[:, :, 2] = 255
+            images.append(frame)
+            idx += 1
+        video.release()
+        cv2.destroyAllWindows()
+
+        height, width, _ = images[0].shape
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'DIVX'), self.video.fps, (width, height))
+        for image in images:
+            out.write(image)
+        out.release()
+        cv2.destroyAllWindows()
 
 
 def _merge(meta1, meta2):
