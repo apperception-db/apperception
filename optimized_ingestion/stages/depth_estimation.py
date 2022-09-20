@@ -1,6 +1,6 @@
-from typing import Optional, Tuple
-import pickle
 import os
+import pickle
+from typing import Optional, Tuple
 
 from bitarray import bitarray
 from tqdm import tqdm

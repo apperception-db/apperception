@@ -2,8 +2,8 @@ import os
 import sys
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List
-import cv2
 
+import cv2
 import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
@@ -46,9 +46,7 @@ from Yolov5_StrongSORT_OSNet.strong_sort.strong_sort import StrongSORT
 from Yolov5_StrongSORT_OSNet.strong_sort.utils.parser import get_config
 from Yolov5_StrongSORT_OSNet.yolov5.models.common import DetectMultiBackend
 from Yolov5_StrongSORT_OSNet.yolov5.utils.dataloaders import LoadImages
-from Yolov5_StrongSORT_OSNet.yolov5.utils.general import (LOGGER,
-                                                          check_img_size,
-                                                          increment_path,
+from Yolov5_StrongSORT_OSNet.yolov5.utils.general import (check_img_size,
                                                           non_max_suppression,
                                                           scale_coords,
                                                           xyxy2xywh)

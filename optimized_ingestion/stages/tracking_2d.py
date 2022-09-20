@@ -1,5 +1,5 @@
-import pickle
 import os
+import pickle
 from typing import Dict, List, Optional, Tuple
 
 from bitarray import bitarray
@@ -11,8 +11,8 @@ from .stage import Stage
 
 class Tracking2D(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        if os.path.exists('./_Tracking2D.pickle'):
-            with open('./_Tracking2D.pickle', "rb") as f:
+        if os.path.exists("./_Tracking2D.pickle"):
+            with open("./_Tracking2D.pickle", "rb") as f:
                 return None, pickle.load(f)
 
         results = tracker.track(payload)
