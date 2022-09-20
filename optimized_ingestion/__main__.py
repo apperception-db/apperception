@@ -12,7 +12,6 @@ from .stages.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_depth import From2DAndDepth
 from .video import Video
 
-
 if __name__ == "__main__":
     if "NUSCENE_DATA" in os.environ:
         DATA_DIR = os.environ["NUSCENE_DATA"]
