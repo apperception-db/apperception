@@ -1,12 +1,11 @@
 import os
-import sys
+from typing import List
 
 import PIL.Image as pil
 import torch
 from torchvision import transforms
-
-if "./submodules" not in sys.path:
-    sys.path.append("./submodules")
+import numpy.typing as npt
+from tqdm import tqdm
 
 
 from monodepth2.monodepth2 import networks
@@ -96,3 +95,29 @@ class monodepth:
 
             disp_resized_np = disp_resized.squeeze().cpu().detach().numpy()
         return disp_resized_np
+
+    def eval_all(self, input_images: "List[npt.NDArray | None]"):
+        output: "List[npt.NDArray | None]" = []
+        with torch.no_grad():
+            for im in tqdm(input_images):
+                if im is None:
+                    output.append(None)
+                    continue
+                # Load image and preprocess
+                input_image = pil.fromarray(im[:, :, [2, 1, 0]])
+                original_width, original_height = input_image.size
+                input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
+                input_image = transforms.ToTensor()(input_image).unsqueeze(0)
+
+                # PREDICTION
+                input_image = input_image.to(self.device)
+                features = self.encoder(input_image)
+                outputs = self.depth_decoder(features)
+
+                disp = outputs[("disp", 0)]
+                disp_resized = torch.nn.functional.interpolate(
+                    disp, (original_height, original_width), mode="bilinear", align_corners=False
+                )
+
+                output.append(disp_resized.squeeze().cpu().detach().numpy())
+        return output

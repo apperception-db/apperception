@@ -8,9 +8,6 @@ import numpy as np
 import numpy.typing as npt
 from tqdm import tqdm
 
-if "./submodules" not in sys.path:
-    sys.path.append("./submodules")
-
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"

@@ -2,12 +2,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import cv2
+import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
-from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
 from .stages.depth_estimation import DepthEstimation
 from .stages.tracking_2d import Tracking2D
+from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -56,7 +57,7 @@ class Payload:
 
         return Payload(self.video, self.keep & keep, metadata)
 
-    def save(self, filename: str, bbox: bool = True) -> None:
+    def save(self, filename: str, bbox: bool = True, depth: bool = True) -> None:
         video = cv2.VideoCapture(self.video.videofile)
         images = []
         idx = 0
@@ -69,7 +70,7 @@ class Payload:
 
             if bbox and self.metadata is not None:
                 trackings: "Dict[float, TrackingResult] | None" = Tracking2D.get(self.metadata[idx])
-                depth: "npt.NDArray" = DepthEstimation.get(self.metadata[idx])
+                _depth: "npt.NDArray" = DepthEstimation.get(self.metadata[idx])
                 if trackings is not None:
                     annotator = Annotator(frame, line_width=2)
                     for id, t in trackings.items():
@@ -77,7 +78,7 @@ class Payload:
                         id = int(id)
                         x = int(t.bbox_left + t.bbox_w / 2)
                         y = int(t.bbox_top + t.bbox_h / 2)
-                        label = f"{id} {c} conf: {t.confidence:.2f} dist: {depth[y, x]: .4f}"
+                        label = f"{id} {c} conf: {t.confidence:.2f} dist: {_depth[y, x]: .4f}"
                         annotator.box_label(
                             [
                                 t.bbox_left,
@@ -101,6 +102,28 @@ class Payload:
         )
         for image in images:
             out.write(image)
+        out.release()
+        cv2.destroyAllWindows()
+
+        _filename = filename.split(".")
+        _filename[-2] += '_depth'
+        out = cv2.VideoWriter(
+            ".".join(_filename), cv2.VideoWriter_fourcc(*"mp4v"), int(self.video.fps), (width, height)
+        )
+        blank = np.zeros((1600, 900, 3), dtype=np.uint8)
+        if depth and self.metadata is not None:
+            for m in self.metadata:
+                _depth = DepthEstimation.get(m)
+                if _depth is None:
+                    out.write(blank)
+                else:
+                    _depth = _depth[:, :, np.newaxis]
+                    _min = np.min(_depth)
+                    _max = np.max(_depth)
+                    _depth = (_depth - _min) * 256 / _max
+                    _depth = _depth.astype(np.uint8)
+                    _depth = np.concatenate((_depth, _depth, _depth), axis=2)
+                    out.write(_depth)
         out.release()
         cv2.destroyAllWindows()
 

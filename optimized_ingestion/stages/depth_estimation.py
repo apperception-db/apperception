@@ -1,9 +1,9 @@
 import os
 import pickle
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import List, TYPE_CHECKING, Optional, Tuple
 
 from bitarray import bitarray
-from tqdm import tqdm
+import numpy.typing as npt
 
 from ..monodepth import monodepth
 from .decode_frame import DecodeFrame
@@ -24,13 +24,15 @@ class DepthEstimation(Stage):
         #     payload = payload.filter(DecodeFrame())
 
         md = monodepth()
-        metadata = []
         assert payload.metadata is not None
-        for k, m in tqdm([*zip(payload.keep, payload.metadata)]):
-            depth = None
+        images: "List[npt.NDArray | None]" = []
+        for k, m in zip(payload.keep, payload.metadata):
             if k:
-                depth = md.eval(DecodeFrame.get(m))
-            metadata.append({self.classname(): depth})
-        with open("./depth.pickle", "wb") as f:
+                images.append(DecodeFrame.get(m))
+            else:
+                images.append(None)
+        metadata = [{self.classname(): depth} for depth in md.eval_all(images)]
+
+        with open("./_DepthEstimation.pickle", "wb") as f:
             pickle.dump(metadata, f)
         return None, metadata
