@@ -5,6 +5,7 @@ import numpy.typing as npt
 import PIL.Image as pil
 import torch
 from monodepth2.monodepth2 import networks
+from monodepth2.monodepth2.layers import disp_to_depth
 from monodepth2.monodepth2.utils import (download_model_if_doesnt_exist,
                                          monodepth2_models_path)
 from torchvision import transforms
@@ -24,7 +25,7 @@ MODEL_NAMES = [
 
 
 class monodepth:
-    def __init__(self, model_name=MODEL_NAMES[2], no_cuda=False, pred_metric_depth=False) -> None:
+    def __init__(self, model_name=MODEL_NAMES[2], no_cuda=False, pred_metric_depth=True) -> None:
         assert model_name in MODEL_NAMES, "Invalid Model Name"
 
         if torch.cuda.is_available() and not no_cuda:
@@ -91,7 +92,7 @@ class monodepth:
                 disp, (original_height, original_width), mode="bilinear", align_corners=False
             )
 
-            disp_resized_np = disp_resized.squeeze().cpu().detach().numpy()
+            disp_resized_np = disp_resized.squeeze().cpu().detach().numpy() * 5.4
         return disp_resized_np
 
     def eval_all(self, input_images: "List[npt.NDArray | None]"):
@@ -113,9 +114,11 @@ class monodepth:
                 outputs = self.depth_decoder(features)
 
                 disp = outputs[("disp", 0)]
-                disp_resized = torch.nn.functional.interpolate(
-                    disp, (original_height, original_width), mode="bilinear", align_corners=False
+
+                _, depth = disp_to_depth(disp, 0.1, 100)
+                depth_resized = torch.nn.functional.interpolate(
+                    depth, (original_height, original_width), mode="bilinear", align_corners=False
                 )
 
-                output.append(disp_resized.squeeze().cpu().detach().numpy())
+                output.append(depth_resized.squeeze().cpu().detach().numpy() * 5.4)
         return output

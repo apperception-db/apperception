@@ -43,17 +43,15 @@ class Payload:
         else:
             keep = keep & self.keep
 
-        print("--------------------------", self.metadata is not None, metadata is not None)
         assert metadata is None or len(metadata) == len(keep)
         if metadata is None:
             metadata = self.metadata
         elif self.metadata is not None:
             metadata = [_merge(m1, m2) for m1, m2 in zip(self.metadata, metadata)]
-        print("--------------------------", self.metadata is not None, metadata is not None)
 
         print("Filter with: ", filter.classname())
         print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
-        print(keep)
+        print("".join(["K" if k else "." for k in keep]))
 
         return Payload(self.video, self.keep & keep, metadata)
 
@@ -65,8 +63,8 @@ class Payload:
             ret, frame = video.read()
             if not ret:
                 break
-            if not self.keep[idx]:
-                frame[:, :, 2] = 255
+            # if not self.keep[idx]:
+            #     frame[:, :, 2] = 255
 
             if bbox and self.metadata is not None:
                 trackings: "Dict[float, TrackingResult] | None" = Tracking2D.get(self.metadata[idx])

@@ -28,15 +28,6 @@ APPERCEPTION = FILE.parent.parent.parent
 ROOT = APPERCEPTION / "submodules/Yolov5_StrongSORT_OSNet"  # yolov5 strongsort root directory
 WEIGHTS = APPERCEPTION / "weights"
 
-if str(ROOT) not in sys.path:
-    sys.path.append(str(ROOT))  # add ROOT to PATH
-if str(ROOT / "yolov5") not in sys.path:
-    sys.path.append(str(ROOT / "yolov5"))  # add yolov5 ROOT to PATH
-if str(ROOT / "strong_sort") not in sys.path:
-    sys.path.append(str(ROOT / "strong_sort"))  # add strong_sort ROOT to PATH
-if str(ROOT / "strong_sort/deep/reid") not in sys.path:
-    sys.path.append(str(ROOT / "strong_sort/deep/reid"))  # add strong_sort ROOT to PATH
-
 import logging
 
 from Yolov5_StrongSORT_OSNet.strong_sort.strong_sort import StrongSORT
