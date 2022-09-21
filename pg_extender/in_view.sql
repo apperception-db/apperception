@@ -11,8 +11,7 @@ BEGIN
     RETURN EXISTS(SELECT * FROM SegmentPolygon 
                         WHERE segment_type = Any(segmentTypes) 
                           AND ST_Distance(view_point, elementPolygon) < max_distance 
-                          AND viewAngle(ST_Centroid(elementPolygon) , view_point_heading, view_point) < view_angle
-                        ORDER BY elementPolygon <-> view_point ASC LIMIT 1);
+                          AND viewAngle(ST_Centroid(elementPolygon) , view_point_heading, view_point) < view_angle);
 END
 $BODY$
 LANGUAGE 'plpgsql' ;
