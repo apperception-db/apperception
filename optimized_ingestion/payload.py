@@ -5,10 +5,10 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
+from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
 from .stages.depth_estimation import DepthEstimation
 from .stages.tracking_2d import Tracking2D
-from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -106,9 +106,12 @@ class Payload:
         cv2.destroyAllWindows()
 
         _filename = filename.split(".")
-        _filename[-2] += '_depth'
+        _filename[-2] += "_depth"
         out = cv2.VideoWriter(
-            ".".join(_filename), cv2.VideoWriter_fourcc(*"mp4v"), int(self.video.fps), (width, height)
+            ".".join(_filename),
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            int(self.video.fps),
+            (width, height),
         )
         blank = np.zeros((1600, 900, 3), dtype=np.uint8)
         if depth and self.metadata is not None:

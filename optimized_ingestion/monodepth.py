@@ -1,16 +1,14 @@
 import os
 from typing import List
 
+import numpy.typing as npt
 import PIL.Image as pil
 import torch
-from torchvision import transforms
-import numpy.typing as npt
-from tqdm import tqdm
-
-
 from monodepth2.monodepth2 import networks
 from monodepth2.monodepth2.utils import (download_model_if_doesnt_exist,
                                          monodepth2_models_path)
+from torchvision import transforms
+from tqdm import tqdm
 
 MODEL_NAMES = [
     "mono_640x192",

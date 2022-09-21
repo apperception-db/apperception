@@ -1,9 +1,9 @@
 import os
 import pickle
-from typing import List, TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
-from bitarray import bitarray
 import numpy.typing as npt
+from bitarray import bitarray
 
 from ..monodepth import monodepth
 from .decode_frame import DecodeFrame
