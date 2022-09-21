@@ -566,4 +566,5 @@ def ingest_road(database: "Database", directory: str):
     for d, fn in CREATE_TABLES.items():
         with open(os.path.join(directory, d + ".json"), "r") as f:
             data = json.load(f)
+        print("Ingesting", d)
         fn(database, data)

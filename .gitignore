@@ -5,12 +5,11 @@ __pycache__
 
 yolov4-deepsort
 yolov5-deepsort
+
 .mypy_cache
 .pytest_cache
 .idea
 output
-.apperception_cache
-env
 .venv
 .coverage
 coverage.xml
@@ -19,12 +18,11 @@ coverage.xml
 maps
 samples
 sweeps
-v1.0-mini
 
+data/v1.0-mini
 data/nuscenes
 data/scenic/road_network
 
-monodepth2
 models
 
-Yolov5_StrongSORT_OSNet
+weights

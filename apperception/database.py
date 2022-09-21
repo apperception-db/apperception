@@ -45,7 +45,6 @@ CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("timestamp", "timestamptz"),
     ("cameraHeading", "real"),
     ("egoHeading", "real"),
-    ("cameraTranslationAbs", "geometry"),
 ]
 
 TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
@@ -212,35 +211,20 @@ class Database:
                 {config.frame_num},
                 '{config.filename}',
                 'POINT Z ({' '.join(map(str, config.camera_translation))})',
-                ARRAY{config.camera_rotation}::real[],
+                ARRAY[{','.join(map(str, config.camera_rotation))}]::real[],
                 ARRAY{config.camera_intrinsic}::real[][],
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
-                ARRAY{config.ego_rotation}::real[],
+                ARRAY[{','.join(map(str, config.ego_rotation))}]::real[],
                 '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.cameraHeading},
-                {config.egoHeading},
-                'POINT Z ({' '.join(map(str, config.camera_translation_abs))})'
+                {config.egoHeading}
             )"""
             for config in camera.configs
         ]
 
         self.cursor.execute(
             f"""
-            INSERT INTO Cameras (
-                cameraId,
-                frameId,
-                frameNum,
-                fileName,
-                cameraTranslation,
-                cameraRotation,
-                cameraIntrinsic,
-                egoTranslation,
-                egoRotation,
-                timestamp,
-                cameraHeading,
-                egoHeading,
-                cameraTranslationAbs
-            )
+            INSERT INTO Cameras ({",".join(col for col, _ in CAMERA_COLUMNS)})
             VALUES {','.join(values)};
             """
         )

@@ -1,23 +1,25 @@
-
-from typing import List
-from filters.filter import Filter
-from frame import Frame
+from dataclasses import dataclass, field
 from queue import Queue
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .payload import Payload
+    from .stages.stage import Stage
 
 
+@dataclass
 class Pipeline:
-    filters: "Queue[Filter]" = []
+    filters: "Queue[Stage]" = field(default_factory=Queue)
 
     def __init__(self) -> None:
         self.filters = Queue()
 
-    def add_filter(self, filter: Filter) -> None:
+    def add_filter(self, filter: "Stage"):
         self.filters.put(filter)
+        return self
 
-    def run(self, frames: List[Frame]) -> List[Frame]:
-        metadata = {}
+    def run(self, payload: "Payload") -> "Payload":
         while not self.filters.empty():
             current_filter = self.filters.get()
-            frames, metadata = current_filter.filter(frames, metadata)
-        return frames
-
+            payload = payload.filter(current_filter)
+        return payload
