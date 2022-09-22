@@ -6,7 +6,6 @@ import numpy.typing as npt
 from bitarray import bitarray
 from pyquaternion import Quaternion
 
-from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d import Tracking2D
@@ -14,6 +13,7 @@ from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D
 
 if TYPE_CHECKING:
+    from ...payload import Payload
     from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 
 
