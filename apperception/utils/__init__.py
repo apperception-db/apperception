@@ -14,7 +14,7 @@ from .import_tables import import_tables
 from .ingest_road import ingest_road
 from .join import join
 from .overlay_bboxes import overlay_bboxes
-from .overlay_trajectory import overlay_trajectory, fetch_camera_config
+from .overlay_trajectory import fetch_camera_config, overlay_trajectory
 from .query_to_str import query_to_str
 from .recognize import recognize
 from .reformat_bbox_trajectories import reformat_bbox_trajectories
