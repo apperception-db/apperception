@@ -32,19 +32,19 @@ class Payload:
         self.keep = _default_keep(video, keep)
         self.video = video
         if metadata is not None and len(metadata) != len(video):
-            raise Exception()
+            raise Exception(f"metadata: {len(metadata)}, video: {len(video)}")
         self.metadata = metadata
 
     def filter(self, filter: "Stage"):
         keep, metadata = filter(self)
 
-        assert keep is None or len(keep) == len(self.video)
+        assert keep is None or len(keep) == len(self.video), f"keep: {len(keep)}, video: {len(self.video)}"
         if keep is None:
             keep = self.keep
         else:
             keep = keep & self.keep
 
-        assert metadata is None or len(metadata) == len(keep)
+        assert metadata is None or len(metadata) == len(keep), f"metadata: {len(metadata)}, keep: {len(keep)}"
         if metadata is None:
             metadata = self.metadata
         elif self.metadata is not None:
