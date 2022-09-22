@@ -36,7 +36,7 @@ class Payload:
         self.metadata = metadata
 
     def filter(self, filter: "Stage"):
-        print("Filter with: ", filter.classname())
+        print("Stage: ", filter.classname())
         keep, metadata = filter(self)
 
         assert keep is None or len(keep) == len(self.video), f"keep: {len(keep)}, video: {len(self.video)}"
