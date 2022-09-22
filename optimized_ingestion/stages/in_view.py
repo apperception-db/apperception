@@ -7,8 +7,8 @@ from apperception.database import database
 from .stage import Stage
 
 if TYPE_CHECKING:
-    from ..payload import Payload
     from ..camera_config import Float3
+    from ..payload import Payload
 
 
 class InView(Stage):
@@ -26,9 +26,11 @@ class InView(Stage):
                 indices.append(i)
 
         points_str = ",\n".join(map(_tuple_to_point, points))
-        results = database._execute_query(f"""
+        results = database._execute_query(
+            f"""
             SELECT minDistance(p, '{self.segment_type}') < {self.distance}
-            FROM UNNEST(ARRAY[{points_str}]) AS points(p)""")
+            FROM UNNEST(ARRAY[{points_str}]) AS points(p)"""
+        )
 
         for i, (r,) in enumerate(results):
             keep[indices[i]] = r
