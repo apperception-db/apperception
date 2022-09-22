@@ -41,6 +41,7 @@ class From2DAndDepth(Tracking3D):
                     x = int(t.bbox_left + (t.bbox_w / 2))
                     y = int(t.bbox_top + (t.bbox_h / 2))
                     idx = t.frame_idx
+                    print(depth.shape, y, x)
                     depth = depth[y, x]
                     camera = payload.video[idx]
                     intrinsic = camera.camera_intrinsic
