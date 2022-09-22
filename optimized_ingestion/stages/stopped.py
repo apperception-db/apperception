@@ -11,9 +11,11 @@ if TYPE_CHECKING:
 
 
 """
-Filters all frames where the ego is stopped, since this will mean that there is a red light and as 
+Filters all frames where the ego is stopped, since this will mean that there is a red light and as
 such, there won't be cars going in the intersection in the same direction (assuming traffic rules)
 """
+
+
 class Stopped(Stage):
     def __init__(self, min_stopped_frames: int, stopped_threshold: float) -> None:
         self.min_stopped_frames = min_stopped_frames
@@ -30,17 +32,15 @@ class Stopped(Stage):
             current_point = f"'POINT ({' '.join([*map(str, _frame.ego_translation)])})'"
             prev_point = f"'POINT ({' '.join([*map(str, _prev_frame.ego_translation)])})'"
 
-            query = (
-                f"SELECT ABS(ST_Distance({current_point}, {prev_point}))"
-            )
+            query = f"SELECT ABS(ST_Distance({current_point}, {prev_point}))"
             dist = database._execute_query(query)[0][0]
-            
-            query = (
-                f"SELECT minDistance({current_point}, 'intersection')"
-            )
+
+            query = f"SELECT minDistance({current_point}, 'intersection')"
             dist_intersection = database._execute_query(query)[0][0]
 
-            if dist <= self.stopped_threshold and dist_intersection <= 5: # make sure that actually close to an intersection
+            if (
+                dist <= self.stopped_threshold and dist_intersection <= 5
+            ):  # make sure that actually close to an intersection
                 stopped.add(i)
                 stopped.add(i - 1)
 
@@ -48,7 +48,7 @@ class Stopped(Stage):
             min_stopped = set()
             for j in range(i - self.min_stopped_frames, i + self.min_stopped_frames + 1):
                 min_stopped.add(j)
-            
+
             if min_stopped.issubset(stopped):
                 keep.append(True)
             else:
