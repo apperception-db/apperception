@@ -110,7 +110,6 @@ def track(
     dt, seen = [0.0, 0.0, 0.0, 0.0], 0
     curr_frames, prev_frames = [None] * nr_sources, [None] * nr_sources
     for frame_idx, (path, im, im0s, vid_cap, s) in tqdm(enumerate(dataset), total=video_len):
-        print(frame_idx, video_len)
         if not source.keep[frame_idx]:
             continue
         t1 = time_sync()
