@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from .video import Video
 
 
+# TODO: add Generic depending on the type of stage applied
 @dataclass
 class Payload:
     video: "Video"
@@ -63,8 +64,8 @@ class Payload:
             ret, frame = video.read()
             if not ret:
                 break
-            # if not self.keep[idx]:
-            #     frame[:, :, 2] = 255
+            if not self.keep[idx]:
+                frame[:, :, 2] = 255
 
             if bbox and self.metadata is not None:
                 trackings: "Dict[float, TrackingResult] | None" = Tracking2D.get(self.metadata[idx])

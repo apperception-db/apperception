@@ -9,7 +9,7 @@ from ..monodepth import monodepth
 from .decode_frame import DecodeFrame
 from .stage import Stage
 
-# from .utils.is_annotated import is_annotated
+from .utils.is_annotated import is_annotated
 if TYPE_CHECKING:
     from ..payload import Payload
 
@@ -20,8 +20,9 @@ class DepthEstimation(Stage):
             with open("./_DepthEstimation.pickle", "rb") as f:
                 return None, pickle.load(f)
 
-        # if not is_annotated(DecodeFrame, payload):
-        #     payload = payload.filter(DecodeFrame())
+        if not is_annotated(DecodeFrame, payload):
+            raise Exception()
+            # payload = payload.filter(DecodeFrame())
 
         md = monodepth()
         assert payload.metadata is not None
@@ -33,6 +34,6 @@ class DepthEstimation(Stage):
                 images.append(None)
         metadata = [{self.classname(): depth} for depth in md.eval_all(images)]
 
-        with open("./_DepthEstimation.pickle", "wb") as f:
-            pickle.dump(metadata, f)
+        # with open("./_DepthEstimation.pickle", "wb") as f:
+        #     pickle.dump(metadata, f)
         return None, metadata

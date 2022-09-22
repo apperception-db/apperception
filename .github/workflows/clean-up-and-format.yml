@@ -54,7 +54,7 @@ jobs:
         run: python -m autopep8 --verbose --recursive --in-place --aggressive --aggressive apperception optimized_ingestion
         
       - name: Format with black
-        run: python -m black --config pyproject.toml apperception optimized_ingestion
+        run: python -m black --config pyproject.toml apperception
       
       - name: Sort imports with isort
         run: python -m isort apperception optimized_ingestion
