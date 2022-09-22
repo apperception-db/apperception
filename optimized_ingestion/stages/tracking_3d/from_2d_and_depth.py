@@ -10,7 +10,7 @@ from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d import Tracking2D
-# from ..utils.is_annotated import is_annotated
+from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D
 
 if TYPE_CHECKING:
@@ -19,11 +19,13 @@ if TYPE_CHECKING:
 
 class From2DAndDepth(Tracking3D):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        # if not is_annotated(DepthEstimation, payload):
-        #     payload = payload.filter(DepthEstimation())
+        if not is_annotated(DepthEstimation, payload):
+            # payload = payload.filter(DepthEstimation())
+            raise Exception()
 
-        # if not is_annotated(Tracking2D, payload):
-        #     payload = payload.filter(Tracking2D())
+        if not is_annotated(Tracking2D, payload):
+            # payload = payload.filter(Tracking2D())
+            raise Exception()
 
         metadata: "List[dict | None]" = []
         trajectories: "Dict[float, List[Tracking3DResult]]" = {}

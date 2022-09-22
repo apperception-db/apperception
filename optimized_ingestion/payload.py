@@ -36,6 +36,7 @@ class Payload:
         self.metadata = metadata
 
     def filter(self, filter: "Stage"):
+        print("Filter with: ", filter.classname())
         keep, metadata = filter(self)
 
         assert keep is None or len(keep) == len(self.video), f"keep: {len(keep)}, video: {len(self.video)}"
@@ -50,9 +51,7 @@ class Payload:
         elif self.metadata is not None:
             metadata = [_merge(m1, m2) for m1, m2 in zip(self.metadata, metadata)]
 
-        print("Filter with: ", filter.classname())
         print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
-        # print("".join(["K" if k else "." for k in keep]))
         print("\n".join(_split_keep(keep)))
 
         return Payload(self.video, self.keep & keep, metadata)
