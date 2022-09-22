@@ -52,7 +52,8 @@ class Payload:
 
         print("Filter with: ", filter.classname())
         print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
-        print("".join(["K" if k else "." for k in keep]))
+        # print("".join(["K" if k else "." for k in keep]))
+        print("\n".join(_split_keep(keep)))
 
         return Payload(self.video, self.keep & keep, metadata)
 
@@ -145,3 +146,15 @@ def _default_keep(video: "Video", keep: "Optional[bitarray]" = None):
     elif len(keep) != len(video):
         raise Exception()
     return keep
+
+
+def _split_keep(keep: "bitarray", size: int = 64) -> "List[str]":
+    out: "List[str]" = []
+    i = 0
+    while i * size < len(keep):
+        curr = i * size
+        next = min((i + 1) * size, len(keep))
+        out.append("".join(["K" if k else "." for k in keep[curr:next]]))
+        i += 1
+
+    return out

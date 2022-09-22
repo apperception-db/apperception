@@ -42,7 +42,7 @@ class FilterCarFacingSideway(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
         if not is_annotated(Tracking3D, payload):
             # payload = payload.filter(From2DAndDepth())
-            raise Exception()
+            raise Exception(payload.metadata)
 
         keep = bitarray(payload.keep)
         metadata = payload.metadata
