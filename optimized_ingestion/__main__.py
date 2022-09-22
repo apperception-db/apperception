@@ -12,7 +12,6 @@ from .stages.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_depth import From2DAndDepth
 from .video import Video
 
-
 """
 Query:
 Find scenes where the ego car is 10 meters near an intersection
