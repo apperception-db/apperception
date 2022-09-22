@@ -4,8 +4,7 @@ import pickle
 from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline
-from .stages import InView
-from .stages import Stopped
+from .stages import InView, Stopped
 from .stages.decode_frame import DecodeFrame
 from .stages.depth_estimation import DepthEstimation
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
@@ -29,13 +28,11 @@ if __name__ == "__main__":
     )
     pipeline = Pipeline()
 
-    pipeline.add_filter(
-        filter=InView(distance=10, segment_type="intersection")
-    ).add_filter(
+    pipeline.add_filter(filter=InView(distance=10, segment_type="intersection")).add_filter(
         filter=Stopped(min_stopped_frames=2, stopped_threshold=1.0)
+    ).add_filter(filter=DecodeFrame()).add_filter(filter=DepthEstimation()).add_filter(
+        filter=Tracking2D()
     ).add_filter(
-        filter=DecodeFrame()
-    ).add_filter(filter=DepthEstimation()).add_filter(filter=Tracking2D()).add_filter(
         filter=From2DAndDepth()
     ).add_filter(
         filter=FilterCarFacingSideway()
