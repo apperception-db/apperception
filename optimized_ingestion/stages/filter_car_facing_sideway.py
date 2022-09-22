@@ -1,5 +1,5 @@
 import math
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 from bitarray import bitarray
@@ -47,7 +47,9 @@ class FilterCarFacingSideway(Stage):
         keep = bitarray(payload.keep)
         metadata = payload.metadata
         assert metadata is not None
+        _metadata: "List[dict]]" = []
         for i, (f, m) in enumerate(zip(payload.video, metadata)):
+            _metadata.append({self.classname(): set()})
             if m is None:
                 continue
 
@@ -67,5 +69,6 @@ class FilterCarFacingSideway(Stage):
 
                 angle = facing_relative(_from.point, _to.point, f.ego_heading)
                 if (50 < angle and angle < 135) or (-135 < angle and angle < -50):
+                    self.get(_metadata[i]).add(t.object_id)
                     keep[i] = 1
         return keep, None

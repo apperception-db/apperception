@@ -30,7 +30,7 @@ BOSTON_VIDEOS = [
 if __name__ == "__main__":
     pipeline = Pipeline()
     pipeline \
-        .add_filter(filter=InView(distance=3, segment_type="intersection")) \
+        .add_filter(filter=InView(distance=10, segment_type="intersection")) \
         .add_filter(filter=DecodeFrame()) \
         .add_filter(filter=DepthEstimation()) \
         .add_filter(filter=Tracking2D()) \

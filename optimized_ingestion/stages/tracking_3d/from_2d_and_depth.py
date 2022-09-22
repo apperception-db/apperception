@@ -41,12 +41,11 @@ class From2DAndDepth(Tracking3D):
                     x = int(t.bbox_left + (t.bbox_w / 2))
                     y = int(t.bbox_top + (t.bbox_h / 2))
                     idx = t.frame_idx
-                    print(depth.shape, y, x)
-                    depth = depth[y, x]
+                    d = depth[y, x]
                     camera = payload.video[idx]
                     intrinsic = camera.camera_intrinsic
 
-                    point_from_camera = depth_to_3d(x, y, depth, intrinsic)
+                    point_from_camera = depth_to_3d(x, y, d, intrinsic)
                     rotated_offset = Quaternion(camera.camera_rotation).rotate(
                         np.array(point_from_camera)
                     )

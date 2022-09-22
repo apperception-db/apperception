@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 import cv2
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
+from optimized_ingestion.stages.filter_car_facing_sideway import FilterCarFacingSideway
 
 from .stages.depth_estimation import DepthEstimation
 from .stages.tracking_2d import Tracking2D
@@ -70,9 +71,12 @@ class Payload:
             if bbox and self.metadata is not None:
                 trackings: "Dict[float, TrackingResult] | None" = Tracking2D.get(self.metadata[idx])
                 _depth: "npt.NDArray" = DepthEstimation.get(self.metadata[idx])
+                filtered_obj: "Set[float]" = FilterCarFacingSideway.get(self.metadata[idx])
                 if trackings is not None:
                     annotator = Annotator(frame, line_width=2)
                     for id, t in trackings.items():
+                        if id not in filtered_obj:
+                            continue
                         c = t.object_type
                         id = int(id)
                         x = int(t.bbox_left + t.bbox_w / 2)
