@@ -33,9 +33,14 @@ class Stopped(Stage):
             query = (
                 f"SELECT ABS(ST_Distance({current_point}, {prev_point}))"
             )
-            result = database._execute_query(query)[0][0]
+            dist = database._execute_query(query)[0][0]
             
-            if result <= self.stopped_threshold:
+            query = (
+                f"SELECT minDistance({current_point}, 'intersection')"
+            )
+            dist_intersection = database._execute_query(query)[0][0]
+
+            if dist <= self.stopped_threshold and dist_intersection <= 5: # make sure that actually close to an intersection
                 stopped.add(i)
                 stopped.add(i - 1)
 
