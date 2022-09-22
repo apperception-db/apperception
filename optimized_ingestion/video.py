@@ -8,7 +8,7 @@ import cv2
 from .camera_config import CameraConfig, interpolate
 
 
-class Video(collections.abc.Iterable):
+class Video(collections.abc.Iterable["CameraConfig"]):
     videofile: str
 
     def __init__(

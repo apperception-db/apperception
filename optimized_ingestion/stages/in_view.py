@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from bitarray import bitarray
 
@@ -8,6 +8,7 @@ from .stage import Stage
 
 if TYPE_CHECKING:
     from ..payload import Payload
+    from ..camera_config import Float3
 
 
 class InView(Stage):
@@ -16,13 +17,24 @@ class InView(Stage):
         self.segment_type = segment_type
 
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        keep = bitarray()
-        for _frame in payload.video:
-            point = f"'POINT ({' '.join([*map(str, _frame.ego_translation)])})'"
-            query = (
-                f"SELECT TRUE WHERE minDistance({point}, '{self.segment_type}') < {self.distance}"
-            )
-            result = database._execute_query(query)
-            keep.append(bool(result))
+        keep = bitarray(payload.keep)
+        points: "List[Float3]" = []
+        indices: "List[int]" = []
+        for i, f in enumerate(payload.video):
+            if keep[i]:
+                points.append(f.ego_translation)
+                indices.append(i)
+
+        points_str = ",\n".join(map(_tuple_to_point, points))
+        results = database._execute_query(f"""
+            SELECT minDistance(p, '{self.segment_type}') < {self.distance}
+            FROM UNNEST(ARRAY[{points_str}]) AS points(p)""")
+
+        for i, (r,) in enumerate(results):
+            keep[indices[i]] = r
 
         return keep, None
+
+
+def _tuple_to_point(t: "Float3"):
+    return f"'POINT Z ({' '.join(map(str, t))})'"

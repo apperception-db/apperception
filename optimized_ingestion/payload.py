@@ -85,7 +85,7 @@ class Payload:
                                 t.bbox_top + t.bbox_h,
                             ],
                             label,
-                            color=colors(1, True),
+                            color=colors(id, True),
                         )
                     frame = annotator.result()
 
