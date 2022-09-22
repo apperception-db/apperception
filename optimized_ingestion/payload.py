@@ -6,7 +6,9 @@ import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
-from optimized_ingestion.stages.filter_car_facing_sideway import FilterCarFacingSideway
+
+from optimized_ingestion.stages.filter_car_facing_sideway import \
+    FilterCarFacingSideway
 
 from .stages.depth_estimation import DepthEstimation
 from .stages.tracking_2d import Tracking2D
