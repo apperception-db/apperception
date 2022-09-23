@@ -70,7 +70,7 @@ def test_predicate_node_exception(args, kwargs, msg):
     ((o.c1 == c.c1) & ((o.c2 < c.c2) | (o.c3 == c.c3)), "((t0.c1=c1) AND ((t0.c2<c2) OR (t0.c3=c3)))"),
 ])
 def test_nested(fn, sql):
-    assert gen(fn) == sql
+    assert gen(normalize(fn)) == sql
 
 
 @pytest.mark.parametrize("fn, sql", [
@@ -79,7 +79,7 @@ def test_nested(fn, sql):
     (o.c1 | o.c2 | (o.c3 & o.c4 & o.c5), "(t0.c1 OR t0.c2 OR (t0.c3 AND t0.c4 AND t0.c5))"),
 ])
 def test_expand_bool(fn, sql):
-    assert gen(ExpandBoolOpTransformer()(fn)) == sql
+    assert gen(ExpandBoolOpTransformer()(normalize(fn))) == sql
 
 
 @pytest.mark.parametrize("fn, tables, camera", [
@@ -89,7 +89,7 @@ def test_expand_bool(fn, sql):
     ((o.c1) + c.c2 / o.c3, {0}, True),
 ])
 def test_find_all_tables(fn, tables, camera):
-    assert gen(FindAllTablesVisitor()(fn)) == (tables, camera)
+    assert gen(FindAllTablesVisitor()(normalize(fn))) == (tables, camera)
 
 
 @pytest.mark.parametrize("fn, mapping, sql", [
@@ -97,7 +97,7 @@ def test_find_all_tables(fn, tables, camera):
     ((o.c1 + c.c1) - c.c2 + o.c2 * c.c3 / o1.c3, {0:1, 1:0}, '(((t1.c1+c1)-c2)+((t1.c2*c3)/t0.c3))'),
 ])
 def test_find_all_tables(fn, mapping, sql):
-    assert gen(MapTablesTransformer(mapping)(fn)) == sql
+    assert gen(MapTablesTransformer(mapping)(normalize(fn))) == sql
 
 
 @pytest.mark.parametrize("fn, sql", [
