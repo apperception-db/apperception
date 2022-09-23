@@ -41,8 +41,8 @@ gen = GenSqlVisitor()
 
     (-o.c1, "(-t0.c1)"),
     (~o.c1, "(NOT t0.c1)"),
-    (o.c1 & o.c2 & o.c3, "((t0.c1 AND t0.c2) AND t0.c3)"),
-    (o.c1 | o.c2 | o.c3, "((t0.c1 OR t0.c2) OR t0.c3)"),
+    (o.c1 & o.c2 & o.c3, "(t0.c1 AND t0.c2 AND t0.c3)"),
+    (o.c1 | o.c2 | o.c3, "(t0.c1 OR t0.c2 OR t0.c3)"),
     (o.c1 @ c.timestamp, "valueAtTimestamp(t0.c1,timestamp)"),
     (c.timestamp @ 1, "valueAtTimestamp(timestamp,1)"),
     ([o.c1, o.c2] @ c.timestamp, "ARRAY[valueAtTimestamp(t0.c1,timestamp),valueAtTimestamp(t0.c2,timestamp)]"),
@@ -93,10 +93,10 @@ def test_find_all_tables(fn, tables, camera):
 
 
 @pytest.mark.parametrize("fn, mapping, sql", [
-    (o.c1 & o1.c2 & c.c3, {0:1, 1:2}, '((t1.c1 AND t2.c2) AND c3)'),
+    (o.c1 & o1.c2 & c.c3, {0:1, 1:2}, '(t1.c1 AND t2.c2 AND c3)'),
     ((o.c1 + c.c1) - c.c2 + o.c2 * c.c3 / o1.c3, {0:1, 1:0}, '(((t1.c1+c1)-c2)+((t1.c2*c3)/t0.c3))'),
 ])
-def test_find_all_tables(fn, mapping, sql):
+def test_map_tables(fn, mapping, sql):
     assert gen(MapTablesTransformer(mapping)(normalize(fn))) == sql
 
 
