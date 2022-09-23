@@ -28,7 +28,7 @@ jobs:
         id: cached-poetry-dependencies 
         with:
           path: .venv
-          key: poetry-venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: poetry-venv-${{ runner.os }}-3.10-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
