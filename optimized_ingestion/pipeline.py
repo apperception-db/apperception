@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
-from queue import Queue
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
     from .payload import Payload
@@ -9,17 +8,16 @@ if TYPE_CHECKING:
 
 @dataclass
 class Pipeline:
-    filters: "Queue[Stage]" = field(default_factory=Queue)
+    filters: "List[Stage]" = field(default_factory=list)
 
     def __init__(self) -> None:
-        self.filters = Queue()
+        self.filters = []
 
     def add_filter(self, filter: "Stage"):
-        self.filters.put(filter)
+        self.filters.append(filter)
         return self
 
     def run(self, payload: "Payload") -> "Payload":
-        while not self.filters.empty():
-            current_filter = self.filters.get()
-            payload = payload.filter(current_filter)
+        for filter in self.filters:
+            payload = payload.filter(filter)
         return payload

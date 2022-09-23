@@ -6,24 +6,26 @@ import numpy.typing as npt
 from bitarray import bitarray
 from pyquaternion import Quaternion
 
-from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d import Tracking2D
-# from ..utils.is_annotated import is_annotated
+from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D
 
 if TYPE_CHECKING:
+    from ...payload import Payload
     from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 
 
 class From2DAndDepth(Tracking3D):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        # if not is_annotated(DepthEstimation, payload):
-        #     payload = payload.filter(DepthEstimation())
+        if not is_annotated(DepthEstimation, payload):
+            # payload = payload.filter(DepthEstimation())
+            raise Exception()
 
-        # if not is_annotated(Tracking2D, payload):
-        #     payload = payload.filter(Tracking2D())
+        if not is_annotated(Tracking2D, payload):
+            # payload = payload.filter(Tracking2D())
+            raise Exception()
 
         metadata: "List[dict | None]" = []
         trajectories: "Dict[float, List[Tracking3DResult]]" = {}
@@ -39,11 +41,11 @@ class From2DAndDepth(Tracking3D):
                     x = int(t.bbox_left + (t.bbox_w / 2))
                     y = int(t.bbox_top + (t.bbox_h / 2))
                     idx = t.frame_idx
-                    depth = depth[y, x]
+                    d = depth[y, x]
                     camera = payload.video[idx]
                     intrinsic = camera.camera_intrinsic
 
-                    point_from_camera = depth_to_3d(x, y, depth, intrinsic)
+                    point_from_camera = depth_to_3d(x, y, d, intrinsic)
                     rotated_offset = Quaternion(camera.camera_rotation).rotate(
                         np.array(point_from_camera)
                     )

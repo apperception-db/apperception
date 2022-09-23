@@ -1,14 +1,13 @@
 import math
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 from bitarray import bitarray
 
 from .stage import Stage
 from .tracking_3d.from_2d_and_depth import From2DAndDepth, Tracking3DResult
-
-# from .tracking_3d.tracking_3d import Tracking3D
-# from .utils.is_annotated import is_annotated
+from .tracking_3d.tracking_3d import Tracking3D
+from .utils.is_annotated import is_annotated
 
 if TYPE_CHECKING:
     from ..payload import Payload
@@ -41,13 +40,16 @@ def facing_relative_check(obj_info, threshold, ego_config):
 
 class FilterCarFacingSideway(Stage):
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        # if not is_annotated(Tracking3D, payload):
-        #     payload = payload.filter(From2DAndDepth())
+        if not is_annotated(Tracking3D, payload):
+            # payload = payload.filter(From2DAndDepth())
+            raise Exception()
 
         keep = bitarray(payload.keep)
         metadata = payload.metadata
         assert metadata is not None
+        _metadata: "List[dict]" = []
         for i, (f, m) in enumerate(zip(payload.video, metadata)):
+            _metadata.append({self.classname(): set()})
             if m is None:
                 continue
 
@@ -67,5 +69,6 @@ class FilterCarFacingSideway(Stage):
 
                 angle = facing_relative(_from.point, _to.point, f.ego_heading)
                 if (50 < angle and angle < 135) or (-135 < angle and angle < -50):
+                    self.get(_metadata[i]).add(t.object_id)
                     keep[i] = 1
-        return keep, None
+        return keep, _metadata

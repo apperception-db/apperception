@@ -19,16 +19,17 @@ class Tracking2D(Stage):
 
         results = tracker.track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
-        metadata: "List[dict | None]" = [None for _ in range(len(payload.video))]
+        metadata: "List[dict | None]" = []
         trajectories: "Dict[float, List[tracker.TrackingResult]]" = {}
+
+        for k in payload.keep:
+            if k:
+                metadata.append({Tracking2D.classname(): {}})
+            else:
+                metadata.append(None)
 
         for row in results:
             idx = row.frame_idx
-
-            if metadata[idx] is None:
-                metadata[idx] = {}
-            if "trackings" not in metadata[idx]:
-                metadata[idx][Tracking2D.classname()] = {}
             Tracking2D.get(metadata[idx])[row.object_id] = row
 
             if row.object_id not in trajectories:
