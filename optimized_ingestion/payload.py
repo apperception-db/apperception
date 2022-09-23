@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
+
 from optimized_ingestion.utils.iterate_video import iterate_video
 
 from .stages.depth_estimation import DepthEstimation
