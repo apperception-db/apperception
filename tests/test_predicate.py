@@ -89,7 +89,7 @@ def test_expand_bool(fn, sql):
     ((o.c1) + c.c2 / o.c3, {0}, True),
 ])
 def test_find_all_tables(fn, tables, camera):
-    assert gen(FindAllTablesVisitor()(normalize(fn))) == (tables, camera)
+    assert FindAllTablesVisitor()(normalize(fn)) == (tables, camera)
 
 
 @pytest.mark.parametrize("fn, mapping, sql", [
