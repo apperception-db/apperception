@@ -21,9 +21,9 @@ There is at least one car on an intersection driving in a ~perpendicular directi
 
 BOSTON_VIDEOS = [
     "scene-0757-CAM_FRONT",
-    "scene-0103-CAM_FRONT",
-    "scene-0553-CAM_FRONT",
-    "scene-0665-CAM_FRONT",
+    # "scene-0103-CAM_FRONT",
+    # "scene-0553-CAM_FRONT",
+    # "scene-0665-CAM_FRONT",
 ]
 
 

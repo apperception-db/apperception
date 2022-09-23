@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
+from tqdm import tqdm
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
 from optimized_ingestion.utils.iterate_video import iterate_video
@@ -61,14 +62,11 @@ class Payload:
 
     def save(self, filename: str, bbox: bool = True, depth: bool = True) -> None:
         video = cv2.VideoCapture(self.video.videofile)
-        n_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         images = []
         idx = 0
-        # while video.isOpened():
-        for frame in iterate_video(video):
-            # ret, frame = video.read()
-            # if not ret:
-            #     break
+
+        print("Annotating Video")
+        for frame in tqdm(iterate_video(video)):
             if not self.keep[idx]:
                 frame[:, :, 2] = 255
 
@@ -100,18 +98,18 @@ class Payload:
 
             images.append(frame)
             idx += 1
-        # video.release()
-        # cv2.destroyAllWindows()
 
+        print("Saving Video")
         height, width, _ = images[0].shape
         out = cv2.VideoWriter(
             filename, cv2.VideoWriter_fourcc(*"mp4v"), int(self.video.fps), (width, height)
         )
-        for image in images:
+        for image in tqdm(images):
             out.write(image)
         out.release()
         cv2.destroyAllWindows()
 
+        print("Saving depth")
         _filename = filename.split(".")
         _filename[-2] += "_depth"
         out = cv2.VideoWriter(
@@ -122,7 +120,7 @@ class Payload:
         )
         blank = np.zeros((1600, 900, 3), dtype=np.uint8)
         if depth and self.metadata is not None:
-            for m in self.metadata:
+            for m in tqdm(self.metadata):
                 _depth = DepthEstimation.get(m)
                 if _depth is None:
                     out.write(blank)

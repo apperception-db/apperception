@@ -34,6 +34,6 @@ class DepthEstimation(Stage):
                 images.append(None)
         metadata = [{self.classname(): depth} for depth in md.eval_all(images)]
 
-        # with open("./_DepthEstimation.pickle", "wb") as f:
-        #     pickle.dump(metadata, f)
+        with open("./_DepthEstimation.pickle", "wb") as f:
+            pickle.dump(metadata, f)
         return None, metadata

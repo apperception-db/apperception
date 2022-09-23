@@ -44,7 +44,7 @@ class Tracking2D(Stage):
                 if i < last:
                     t.next = trajectory[i + 1]
 
-        # with open("./_Tracking2D.pickle", "wb") as f:
-        #     pickle.dump(metadata, f)
+        with open("./_Tracking2D.pickle", "wb") as f:
+            pickle.dump(metadata, f)
 
         return None, metadata

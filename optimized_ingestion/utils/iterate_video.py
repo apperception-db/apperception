@@ -10,7 +10,7 @@ def iterate_video(cap: "cv2.VideoCapture"):
 
 class VideoIterator(collections.abc.Iterator["npt.NDArray"], collections.abc.Sized):
     def __init__(self, cap: "cv2.VideoCapture"):
-        self._n = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        self._n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self._count = 0
         self._cap = cap
 
@@ -26,10 +26,10 @@ class VideoIterator(collections.abc.Iterator["npt.NDArray"], collections.abc.Siz
 
         ret, frame = self._cap.read()
         self._count += 1
-        if not ret:
+        if ret:
             return frame
 
-        assert self._count == self._n
+        assert self._count == self._n + 1, f"count: {self._count}, n: {self._n}"
         self._cap.release()
         cv2.destroyAllWindows()
         raise StopIteration()
