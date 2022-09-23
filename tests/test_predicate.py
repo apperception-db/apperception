@@ -48,7 +48,7 @@ gen = GenSqlVisitor()
     ([o.c1, o.c2] @ c.timestamp, "ARRAY[valueAtTimestamp(t0.c1,timestamp),valueAtTimestamp(t0.c2,timestamp)]"),
 ])
 def test_simple_ops(fn, sql):
-    assert gen(fn) == sql
+    assert gen(normalize(fn)) == sql
 
 
 @pytest.mark.parametrize("args, kwargs, msg", [
