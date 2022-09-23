@@ -84,8 +84,11 @@ jobs:
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
 
-      - name: Check Python version
+      - name: Check Python Version
         run: poetry run python --version
+      
+      - name: Check Installed Packages
+        run: poetry run pip list
 
       - name: Extend MobilityDB with User-Defined functions
         run: |

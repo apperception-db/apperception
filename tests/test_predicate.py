@@ -84,7 +84,7 @@ def test_expand_bool(fn, sql):
 
 @pytest.mark.parametrize("fn, tables, camera", [
     (o.c1 & o1.c2 & c.c3, {0, 1}, True),
-    ((o.c1 + c.c1) - c.c2 + o.c2 * c.c3 / o.c3, {0, 1}, True),
+    ((o.c1 + c.c1) - c.c2 + o.c2 * c.c3 / o.c3, {0}, True),
     ((o.c1) + o1.c2 / o.c3, {0, 1}, False),
     ((o.c1) + c.c2 / o.c3, {0}, True),
 ])
