@@ -6,6 +6,7 @@ import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
+from optimized_ingestion.utils.iterate_video import iterate_video
 
 from .stages.depth_estimation import DepthEstimation
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
@@ -59,19 +60,21 @@ class Payload:
 
     def save(self, filename: str, bbox: bool = True, depth: bool = True) -> None:
         video = cv2.VideoCapture(self.video.videofile)
+        n_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         images = []
         idx = 0
-        while video.isOpened():
-            ret, frame = video.read()
-            if not ret:
-                break
+        # while video.isOpened():
+        for frame in iterate_video(video):
+            # ret, frame = video.read()
+            # if not ret:
+            #     break
             if not self.keep[idx]:
                 frame[:, :, 2] = 255
 
             if bbox and self.metadata is not None:
                 trackings: "Dict[float, TrackingResult] | None" = Tracking2D.get(self.metadata[idx])
                 _depth: "npt.NDArray" = DepthEstimation.get(self.metadata[idx])
-                filtered_obj: "Set[float]" = FilterCarFacingSideway.get(self.metadata[idx])
+                filtered_obj: "Set[float]" = FilterCarFacingSideway.get(self.metadata[idx]) or set()
                 if trackings is not None:
                     annotator = Annotator(frame, line_width=2)
                     for id, t in trackings.items():
@@ -96,8 +99,8 @@ class Payload:
 
             images.append(frame)
             idx += 1
-        video.release()
-        cv2.destroyAllWindows()
+        # video.release()
+        # cv2.destroyAllWindows()
 
         height, width, _ = images[0].shape
         out = cv2.VideoWriter(
