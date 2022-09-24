@@ -159,8 +159,6 @@ class Database:
         self._commit(commit)
 
     def _insert_into_camera(self, value: tuple, commit=True):
-        print(CAMERA_COLUMNS)
-        print(value)
         self.cursor.execute(
             f"INSERT INTO Cameras ({columns(_name, CAMERA_COLUMNS)}) VALUES ({place_holder(len(CAMERA_COLUMNS))})",
             tuple(value),
