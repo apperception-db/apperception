@@ -293,6 +293,9 @@ class Visitor(Generic[T]):
     def visit_CastNode(self, node: "CastNode") -> Any:
         self(node.expr)
 
+    def reset(self):
+        pass
+
 
 class BaseTransformer(Visitor[PredicateNode]):
     def visit_ArrayNode(self, node: "ArrayNode"):
@@ -364,6 +367,10 @@ class FindAllTablesVisitor(Visitor[Tuple[Set[int], bool]]):
     def visit_CameraTableNode(self, node: "CameraTableNode"):
         self.camera = True
 
+    def reset(self):
+        self.tables = set()
+        self.camera = False
+
 
 class MapTablesTransformer(BaseTransformer):
     mapping: Dict[int, int]
@@ -375,6 +382,27 @@ class MapTablesTransformer(BaseTransformer):
         if node.index in self.mapping:
             return objects[self.mapping[node.index]]
         return node
+
+
+class NormalizeArrayAtTime(BaseTransformer):
+    def visit_BinOpNode(self, node: "BinOpNode"):
+        if node.op == "matmul":
+            left = node.left
+            if isinstance(left, ArrayNode):
+                return self(
+                    ArrayNode([BinOpNode(expr, node.op, node.right) for expr in left.exprs])
+                )
+        return node
+
+
+normalizers: List[BaseTransformer] = [ExpandBoolOpTransformer(), NormalizeArrayAtTime()]
+
+
+def normalize(predicate: "PredicateNode") -> "PredicateNode":
+    for normalizer in normalizers:
+        normalizer.reset()
+        predicate = normalizer(predicate)
+    return predicate
 
 
 BIN_OP: Dict[BinOp, str] = {
@@ -414,11 +442,6 @@ class GenSqlVisitor(Visitor[str]):
         right = self(node.right)
         if node.op != "matmul":
             return f"({left}{BIN_OP[node.op]}{right})"
-
-        if isinstance(node.left, ArrayNode):
-            return self(
-                ArrayNode([BinOpNode(expr, node.op, node.right) for expr in node.left.exprs])
-            )
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
             return f"objectBBox({self(node.left.table.id)}, {right})"

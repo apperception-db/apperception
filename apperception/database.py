@@ -11,9 +11,8 @@ from pypika import CustomFunction, Table
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import Trajectory
-from apperception.predicate import (ExpandBoolOpTransformer,
-                                    FindAllTablesVisitor, GenSqlVisitor,
-                                    MapTablesTransformer)
+from apperception.predicate import (FindAllTablesVisitor, GenSqlVisitor,
+                                    MapTablesTransformer, normalize)
 from apperception.utils import (add_recognized_objects, fetch_camera,
                                 fetch_camera_framenum, overlay_bboxes,
                                 query_to_str, recognize,
@@ -54,9 +53,10 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
     ("objectType", "TEXT"),
     ("color", "TEXT"),
     ("trajCentroids", "tgeompoint"),
-    ("translations", "tgeompoint"),
+    ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
     ("largestBbox", "stbox"),
     ("itemHeadings", "tfloat"),
+    # ("period", "period") [today, nextweek]
 ]
 
 BBOX_COLUMNS: List[Tuple[str, str]] = [
@@ -271,7 +271,7 @@ class Database:
         tables, camera = FindAllTablesVisitor()(predicate)
         tables = sorted(tables)
         mapping = {t: i for i, t in enumerate(tables)}
-        predicate = ExpandBoolOpTransformer()(predicate)
+        predicate = normalize(predicate)
         predicate = MapTablesTransformer(mapping)(predicate)
         query_str = query_to_str(query)
         joins = [f"JOIN ({query_str}) as t{i} USING (cameraId)" for i in range(1, len(tables))]
