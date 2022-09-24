@@ -23,6 +23,9 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
           virtualenvs-prefer-active-python: true
+      
+      - name: List Dir
+        run: ls -lah
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v2
