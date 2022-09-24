@@ -6,7 +6,9 @@ from apperception.database import CAMERA_COLUMNS, TRAJECTORY_COLUMNS
 def export_tables(conn: Connection, data_path: str):
     # create a query to specify which values we want from the database.
     s = "SELECT * FROM "
-    s_trajectory = f"SELECT {','.join([c for c, _ in TRAJECTORY_COLUMNS])} FROM Item_General_Trajectory"
+    s_trajectory = (
+        f"SELECT {','.join([c for c, _ in TRAJECTORY_COLUMNS])} FROM Item_General_Trajectory"
+    )
     s_bbox = s + "General_Bbox"
     s_camera = f"SELECT {','.join([c for c, _ in CAMERA_COLUMNS])} FROM Cameras"
 

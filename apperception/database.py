@@ -19,7 +19,8 @@ from apperception.utils.fetch_camera_framenum import fetch_camera_framenum
 from apperception.utils.overlay_bboxes import overlay_bboxes
 from apperception.utils.query_to_str import query_to_str
 from apperception.utils.recognize import recognize
-from apperception.utils.reformat_bbox_trajectories import reformat_bbox_trajectories
+from apperception.utils.reformat_bbox_trajectories import \
+    reformat_bbox_trajectories
 from apperception.utils.timestamp_to_framenum import timestamp_to_framenum
 
 if TYPE_CHECKING:

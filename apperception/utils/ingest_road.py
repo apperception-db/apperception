@@ -144,7 +144,9 @@ def create_polygon_table(database: "Database", polygons, drop=True):
         database._execute_update("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
     database._execute_update(CREATE_POLYGON_SQL)
     database._execute_update("CREATE INDEX IF NOT EXISTS element_idx ON SegmentPolygon(elementId);")
-    database._execute_update("CREATE INDEX IF NOT EXISTS segPoly_idx ON SegmentPolygon USING GiST(elementPolygon);")
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS segPoly_idx ON SegmentPolygon USING GiST(elementPolygon);"
+    )
 
     values = []
     for poly in polygons:
