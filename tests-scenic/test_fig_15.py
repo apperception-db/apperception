@@ -33,7 +33,7 @@ def test_fig_15():
         F.ahead(car2.traj@cam.time, opposite_car.traj@cam.time)
     )
 
-    assert world.get_id_time_camId_filename(1) == [
+    assert set(world.get_id_time_camId_filename(1)) == set([
         (
             '6a81ab78eee3477e8509569a5d0a2217',
             datetime(2018, 7, 26, 9, 18, 40, 162404, tzinfo=timezone.utc),
@@ -46,4 +46,4 @@ def test_fig_15():
             'scene-0207',
             'samples/CAM_FRONT/n008-2018-07-26-12-13-50-0400__CAM_FRONT__1532621920662404.jpg'
         ),
-    ]
+    ])

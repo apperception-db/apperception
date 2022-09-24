@@ -23,20 +23,29 @@ jobs:
           virtualenvs-in-project: true
           installer-parallel: true
 
-      - name: Cache Poetry virtualenv
-        uses: actions/cache@v2
-        id: cached-poetry-dependencies 
-        with:
-          path: .venv
-          key: poetry-venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      # - name: Cache Poetry virtualenv
+      #   uses: actions/cache@v3
+      #   id: cached-poetry-dependencies 
+      #   with:
+      #     path: .venv
+      #     key: poetry-venv-${{ runner.os }}-py3.10-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction
+      
+      - name: Check Python Version
+        run: poetry run python --version
+      
+      - name: Check Installed Packages
+        run: poetry run pip list
       
       - name: Type Check with mypy
         if: always()
-        run: yes | poetry run mypy --install-types apperception || poetry run mypy apperception
+        run: |
+          poetry run mypy apperception || true
+          (yes | poetry run mypy --install-types apperception) || true
+          poetry run mypy apperception
       
       - name: Type Check with pyright
         if: always()
