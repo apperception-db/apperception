@@ -71,14 +71,13 @@ jobs:
           virtualenvs-create: true
           virtualenvs-in-project: true
           installer-parallel: true
-          virtualenvs-prefer-active-python: true
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v2
         id: cached-poetry-dependencies 
         with:
           path: .venv
-          key: poetry-venv-${{ runner.os }}-${{matrix.python-version}}-${{ hashFiles('**/poetry.lock') }}
+          key: poetry-venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
