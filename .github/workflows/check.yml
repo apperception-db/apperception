@@ -30,22 +30,22 @@ jobs:
         with:
           path: .venv
           key: poetry-venv-${{ runner.os }}-3.10-${{ hashFiles('**/poetry.lock') }}
+
+      - name: Install Dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: poetry install --no-interaction
       
       - name: Check Python Version
         run: poetry run python --version
       
       - name: Check Installed Packages
         run: poetry run pip list
-
-      - name: Install Dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
       
       - name: Type Check with mypy
         if: always()
         run: |
           poetry run mypy apperception || true
-          yes | poetry run mypy --install-types apperception || true
+          (yes | poetry run mypy --install-types apperception) || true
           poetry run mypy apperception
       
       - name: Type Check with pyright
