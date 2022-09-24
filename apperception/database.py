@@ -13,11 +13,14 @@ from pypika.dialects import Query, SnowflakeQuery
 from apperception.data_types import Trajectory
 from apperception.predicate import (FindAllTablesVisitor, GenSqlVisitor,
                                     MapTablesTransformer, normalize)
-from apperception.utils import (add_recognized_objects, fetch_camera,
-                                fetch_camera_framenum, overlay_bboxes,
-                                query_to_str, recognize,
-                                reformat_bbox_trajectories,
-                                timestamp_to_framenum)
+from apperception.utils.add_recognized_objects import add_recognized_objects
+from apperception.utils.fetch_camera import fetch_camera
+from apperception.utils.fetch_camera_framenum import fetch_camera_framenum
+from apperception.utils.overlay_bboxes import overlay_bboxes
+from apperception.utils.query_to_str import query_to_str
+from apperception.utils.recognize import recognize
+from apperception.utils.reformat_bbox_trajectories import reformat_bbox_trajectories
+from apperception.utils.timestamp_to_framenum import timestamp_to_framenum
 
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
