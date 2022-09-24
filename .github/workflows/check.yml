@@ -24,14 +24,11 @@ jobs:
           installer-parallel: true
 
       - name: Cache Poetry virtualenv
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cached-poetry-dependencies 
         with:
           path: .venv
-          key: poetry-venv-${{ runner.os }}-3.10-${{ hashFiles('**/poetry.lock') }}
-      
-      - name: List Dir
-        run: ls -lah
+          key: poetry-venv-${{ runner.os }}-py3.10-${{ hashFiles('**/poetry.lock') }}
 
       - name: Install Dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
