@@ -6,7 +6,6 @@ HEADINGS = {
     "translations": "itemHeadings",
     "egoTranslation": "egoHeading",
     "cameraTranslation": "cameraHeading",
-    "cameraTranslationAbs": "cameraHeading",
 }
 
 ROAD_TYPES = {
