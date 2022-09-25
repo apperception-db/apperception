@@ -584,4 +584,5 @@ def ingest_road(database: "Database", directory: str):
             data = json.load(f)
         print("Ingesting", d)
         fn(database, data)
+    print("adding segment types")
     add_segment_type(database)
