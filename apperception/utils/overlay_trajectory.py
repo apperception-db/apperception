@@ -197,12 +197,12 @@ def fetch_camera_config(filename: str, database):
         "egoTranslation": result[1],
         "egoRotation": result[2],
         "cameraTranslation": result[3],
-        "cameraRotation": result[5],
-        "cameraIntrinsic": result[6],
-        "frameNum": result[7],
-        "fileName": result[8],
-        "cameraHeading": result[9],
-        "egoHeading": result[10],
+        "cameraRotation": result[4],
+        "cameraIntrinsic": result[5],
+        "frameNum": result[5],
+        "fileName": result[7],
+        "cameraHeading": result[8],
+        "egoHeading": result[9],
     }
     return camera_config
 
