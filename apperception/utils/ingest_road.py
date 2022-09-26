@@ -552,12 +552,14 @@ ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 
 def add_segment_type(database: "Database"):
     database._execute_query("ALTER TABLE SegmentPolygon ADD segmentTypes text[];")
+    print("altered table")
     for road_type in ROAD_TYPES:
         # Add road type to all polygons of that type
         query = f"""UPDATE SegmentPolygon
                 SET segmentTypes = ARRAY_APPEND(segmentTypes, '{road_type}')
                 WHERE elementId IN (SELECT id FROM {road_type});"""
         database._execute_query(query)
+        print("added type:", road_type)
 
 
 CREATE_TABLES = {
