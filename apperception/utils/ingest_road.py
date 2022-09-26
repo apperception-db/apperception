@@ -144,6 +144,9 @@ def create_polygon_table(database: "Database", polygons, drop=True):
         database._execute_update("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
     database._execute_update(CREATE_POLYGON_SQL)
     database._execute_update("CREATE INDEX IF NOT EXISTS element_idx ON SegmentPolygon(elementId);")
+    database._execute_update(
+        "CREATE INDEX IF NOT EXISTS segPoly_idx ON SegmentPolygon USING GiST(elementPolygon);"
+    )
 
     values = []
     for poly in polygons:
@@ -544,6 +547,21 @@ def create_intersection_table(database: "Database", intersections, drop=True):
     )
 
 
+ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
+
+
+def add_segment_type(database: "Database"):
+    database._execute_update("ALTER TABLE SegmentPolygon ADD segmentTypes text[];")
+    print("altered table")
+    for road_type in ROAD_TYPES:
+        # Add road type to all polygons of that type
+        query = f"""UPDATE SegmentPolygon
+                SET segmentTypes = ARRAY_APPEND(segmentTypes, '{road_type}')
+                WHERE elementId IN (SELECT id FROM {road_type});"""
+        database._execute_update(query)
+        print("added type:", road_type)
+
+
 CREATE_TABLES = {
     "polygon": create_polygon_table,
     "segment": create_segment_table,
@@ -568,3 +586,5 @@ def ingest_road(database: "Database", directory: str):
             data = json.load(f)
         print("Ingesting", d)
         fn(database, data)
+    print("adding segment types")
+    add_segment_type(database)

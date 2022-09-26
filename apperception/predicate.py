@@ -184,7 +184,6 @@ class CameraTableNode(TableNode):
         self.time = TableAttrNode("timestamp", self, True)
         self.ego = TableAttrNode("egoTranslation", self, True)
         self.cam = TableAttrNode("cameraTranslation", self, True)
-        self.camAbs = TableAttrNode("cameraTranslationAbs", self, True)
 
 
 class TableAttrNode(PredicateNode):
@@ -537,7 +536,6 @@ CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("timestamp", "timestamptz"),
     ("cameraHeading", "real"),
     ("egoHeading", "real"),
-    ("cameraTranslationAbs", "geometry"),
 ]
 
 
