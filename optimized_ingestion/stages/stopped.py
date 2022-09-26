@@ -44,7 +44,7 @@ class Stopped(Stage):
                 stopped.add(i)
                 stopped.add(i - 1)
 
-        for i in len(frames):
+        for i in range(len(frames)):
             min_stopped = set()
             for j in range(i - self.min_stopped_frames, i + self.min_stopped_frames + 1):
                 min_stopped.add(j)
