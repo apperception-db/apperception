@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 from bitarray import bitarray
 
@@ -14,7 +14,7 @@ class Sample(Stage):
     def __init__(self, sampling_rate):
         self.sampling_rate = sampling_rate
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray(len(payload.keep))
         keep[:: self.sampling_rate] = 1
         return keep, None

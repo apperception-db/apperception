@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from bitarray import bitarray
 
@@ -16,7 +16,7 @@ class InView(Stage):
         self.distance = distance
         self.segment_type = segment_type
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray(payload.keep)
         points: "List[Float3]" = []
         indices: "List[int]" = []

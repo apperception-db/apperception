@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 from bitarray import bitarray
 
@@ -21,7 +21,7 @@ class Stopped(Stage):
         self.min_stopped_frames = min_stopped_frames
         self.stopped_threshold = stopped_threshold
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray()
         frames = list(payload.video)
         stopped = set()
@@ -38,9 +38,8 @@ class Stopped(Stage):
             query = f"SELECT minDistance({current_point}, 'intersection')"
             dist_intersection = database._execute_query(query)[0][0]
 
-            if (
-                dist <= self.stopped_threshold and dist_intersection <= 5
-            ):  # make sure that actually close to an intersection
+            if dist <= self.stopped_threshold and dist_intersection <= 5:
+                # make sure that actually close to an intersection
                 stopped.add(i)
                 stopped.add(i - 1)
 
