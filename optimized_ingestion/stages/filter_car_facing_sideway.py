@@ -1,5 +1,5 @@
 import math
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 import numpy as np
 from bitarray import bitarray

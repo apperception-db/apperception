@@ -8,6 +8,7 @@ from .stage import Stage
 
 if TYPE_CHECKING:
     import numpy.typing as npt
+
     from ..payload import Payload
 
 
