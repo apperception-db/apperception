@@ -204,7 +204,7 @@ class Database:
             self.connection.rollback()
             raise error
 
-    def insert_cam(self, camera: "Camera"):
+    def insert_cam                          (self, camera: "Camera"):
         values = [
             f"""(
                 '{camera.id}',
