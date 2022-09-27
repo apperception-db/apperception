@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import cv2
 from bitarray import bitarray
@@ -7,12 +7,13 @@ from tqdm import tqdm
 from .stage import Stage
 
 if TYPE_CHECKING:
+    import numpy.typing as npt
     from ..payload import Payload
 
 
 class DecodeFrame(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
-        metadata: "List[dict]" = []
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+        metadata: "List[npt.NDArray]" = []
 
         # TODO: only decode filtered frames
         video = cv2.VideoCapture(payload.video.videofile)
@@ -21,10 +22,10 @@ class DecodeFrame(Stage):
             if not video.isOpened():
                 break
             frame = video.read()[1]
-            metadata.append({self.classname(): frame})
+            metadata.append(frame)
         assert len(metadata) == len(payload.video)
         assert not video.read()[0]
         video.release()
         cv2.destroyAllWindows()
 
-        return None, metadata
+        return None, {self.classname(): metadata}

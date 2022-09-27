@@ -6,11 +6,12 @@ if TYPE_CHECKING:
 
 
 def is_annotated(cls: "Type[Stage]", payload: "Payload"):
-    if payload.metadata is None:
+    metadata = cls.get(payload.metadata)
+
+    if metadata is None:
         return False
 
-    for k, m in zip(payload.keep, payload.metadata):
-        if k and cls.get(m) is None:
+    for k, m in zip(payload.keep, metadata):
+        if k and m is None:
             return False
-
     return True

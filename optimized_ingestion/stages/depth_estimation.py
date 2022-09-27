@@ -1,6 +1,6 @@
 import os
 import pickle
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy.typing as npt
 from bitarray import bitarray
@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 
 
 class DepthEstimation(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         if os.path.exists("./_DepthEstimation.pickle"):
             with open("./_DepthEstimation.pickle", "rb") as f:
-                return None, pickle.load(f)
+                return None, {self.classname(): pickle.load(f)}
 
         if not is_annotated(DecodeFrame, payload):
             raise Exception()
@@ -27,13 +27,13 @@ class DepthEstimation(Stage):
         md = monodepth()
         assert payload.metadata is not None
         images: "List[npt.NDArray | None]" = []
-        for k, m in zip(payload.keep, payload.metadata):
+        for k, m in zip(payload.keep, DecodeFrame.get(payload.metadata)):
             if k:
-                images.append(DecodeFrame.get(m))
+                images.append(m)
             else:
                 images.append(None)
-        metadata = [{self.classname(): depth} for depth in md.eval_all(images)]
+        metadata = md.eval_all(images)
 
         with open("./_DepthEstimation.pickle", "wb") as f:
             pickle.dump(metadata, f)
-        return None, metadata
+        return None, {self.classname(): metadata}

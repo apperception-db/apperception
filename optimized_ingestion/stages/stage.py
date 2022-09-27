@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from bitarray import bitarray
 
@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 
 class Stage:
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         return payload.keep, payload.metadata
 
     @classmethod
@@ -15,9 +15,9 @@ class Stage:
         return ".".join(_get_classnames(cls))
 
     @classmethod
-    def get(cls, d: "Dict[str, Any]"):
+    def get(cls, d: "Dict[str, list]"):
         classname = cls.classname()
-        for k, v in [*d.items()][::-1]:
+        for k, v in reversed(d.items()):
             if k.startswith(classname):
                 return v
         return None

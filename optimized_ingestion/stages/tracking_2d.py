@@ -12,25 +12,25 @@ if TYPE_CHECKING:
 
 
 class Tracking2D(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[list]]":
+    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         if os.path.exists("./_Tracking2D.pickle"):
             with open("./_Tracking2D.pickle", "rb") as f:
-                return None, pickle.load(f)
+                return None, {self.classname(): pickle.load(f)}
 
         results = tracker.track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
-        metadata: "List[dict | None]" = []
+        metadata: "List[Dict[float, tracker.TrackingResult] | None]" = []
         trajectories: "Dict[float, List[tracker.TrackingResult]]" = {}
 
         for k in payload.keep:
             if k:
-                metadata.append({Tracking2D.classname(): {}})
+                metadata.append({})
             else:
                 metadata.append(None)
 
         for row in results:
             idx = row.frame_idx
-            Tracking2D.get(metadata[idx])[row.object_id] = row
+            metadata[idx][row.object_id] = row
 
             if row.object_id not in trajectories:
                 trajectories[row.object_id] = []
@@ -47,4 +47,4 @@ class Tracking2D(Stage):
         with open("./_Tracking2D.pickle", "wb") as f:
             pickle.dump(metadata, f)
 
-        return None, metadata
+        return None, {self.classname(): metadata}
