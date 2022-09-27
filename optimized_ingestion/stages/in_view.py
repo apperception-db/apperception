@@ -18,21 +18,27 @@ class InView(Stage):
 
     def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray(payload.keep)
-        points: "List[Float3]" = []
+        translations: "List[Float3]" = []
         headings: "List[float]" = []
         indices: "List[int]" = []
         for i, f in enumerate(payload.video):
             if keep[i]:
-                points.append(f.ego_translation)
+                translations.append(f.ego_translation)
                 headings.append(f.ego_heading)
                 indices.append(i)
 
-        points_str = ",\n".join(map(_tuple_to_point, points))
-        headings_str = ",\n".join(headings)
+        translations_str = ",\n".join(map(_tuple_to_point, translations))
+        headings_str = ",\n".join(map(str, headings))
         results = database._execute_query(
             f"""
-            SELECT minDistance(p, '{self.segment_type}') < {self.distance} AND inView('intersection', h, p, {self.distance}, 35)
-            FROM UNNEST(ARRAY[{points_str}]) AS points(p), UNNEST(ARRAY[{headings_str}]) AS headings(h)"""
+            SELECT
+                minDistance(t, '{self.segment_type}') < {self.distance} AND
+                inView('intersection', h, t, {self.distance}, 35)
+            FROM
+                UNNEST(
+                    ARRAY[{translations_str}],
+                    ARRAY[{headings_str}]
+                ) AS ego(t, h)"""
         )
 
         for i, (r,) in enumerate(results):
