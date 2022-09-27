@@ -2,7 +2,7 @@
 
 ## Clone dependencies
 ```sh
-git submodule --init --recursive
+git submodule update --init --recursive
 ```
 
 ## Setup
