@@ -1,7 +1,11 @@
-""" Goal of Streaming Detection Optimization:
+""" Goal to map the road segment to the frame segment
 
-Input: a video, camera config, road network
-Output: estimation of object trajectory
+Usage example:
+    from optimization_playground.segment_mapping import map_imgsegment_roadsegment
+    from apperception.utils import fetch_camera_config
+    
+    test_config = fetch_camera_config(test_img, database)
+    mapping = map_imgsegment_roadsegment(test_config)
 """
 
 from typing import Any, Dict, Tuple, List, Set, Union
