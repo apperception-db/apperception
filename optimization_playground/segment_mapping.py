@@ -282,4 +282,4 @@ if __name__ == '__main__':
         test_img, 
         database)
     mapping = map_imgsegment_roadsegment(test_config)
-    visualization(test_img_path, test_config, mapping)
+    #visualization(test_img_path, test_config, mapping)
