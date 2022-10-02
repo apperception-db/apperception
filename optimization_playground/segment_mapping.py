@@ -245,6 +245,8 @@ def visualization(test_img_path, test_config, mapping):
     visualize the mapping from camera segment to road segment
     for testing only
     """
+    from moviepy.editor import VideoClip
+    from moviepy.video.io.bindings import mplfig_to_npimage
     frame = cv2.imread(test_img_path)
     fig, axs = plt.subplots()
     axs.set_aspect('equal', 'datalim')
@@ -282,4 +284,4 @@ if __name__ == '__main__':
         test_img, 
         database)
     mapping = map_imgsegment_roadsegment(test_config)
-    #visualization(test_img_path, test_config, mapping)
+    visualization(test_img_path, test_config, mapping)
