@@ -8,23 +8,26 @@ from collections import namedtuple
 import os
 import math
 import time
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 import cv2
 import numpy as np
 import pandas as pd
-pd.get_option("display.max_columns")
-
+from matplotlib import pyplot as plt
 from shapely.geometry import Point, Polygon, LineString
 from plpygis import Geometry
+pd.get_option("display.max_columns")
 
-os.chdir('../')
 from apperception.database import database
 from apperception.world import empty_world
 from apperception.utils import F, transformation, fetch_camera_config
 
-input_video_dir = '/home/yongming/workspace/research/apperception/v1.0-mini/sample_videos/'
+data_path = '/home/yongming/workspace/research/apperception/v1.0-mini/'
+input_video_dir = os.path.join(data_path, 'sample_videos/')
 input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
+test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__1535385105912404.jpg'
 
 CAMERA_COLUMNS = [
     "cameraId",
@@ -211,19 +214,11 @@ def map_imgsegment_roadsegment(ego_config, frame_size=(1600, 900)):
     fov_lines = get_fov_lines(ego_config)
     start_time = time.time()
     search_space = construct_search_space(ego_config, view_distance=100)
-    print('construct_search_space time: ', time.time() - start_time)
     mapping = []
-    total_mapping_time = 0
-    total_intersection_compute_time = 0
-    total_decode_segment_time = 0
-    cardinality = len(search_space)
     for road_segment in search_space:
-        start_analyze_time = time.time()
         segmentid, segmentpolygon, segmenttype, contains_ego = road_segment
         segmentpolygon_points = tuple(zip(*Geometry(segmentpolygon).exterior.shapely.xy))
         segmentpolygon = Polygon(segmentpolygon_points)
-        decode_segment_time = time.time()
-        total_decode_segment_time += decode_segment_time - start_analyze_time
 
         road_filter = all(map(
             lambda point: not in_view(
@@ -235,25 +230,56 @@ def map_imgsegment_roadsegment(ego_config, frame_size=(1600, 900)):
         intersection_points = tuple(
             intersection(fov_lines, segmentpolygon))
         decoded_road_segment = segmentpolygon_points+intersection_points
-        compute_intersection_time = time.time()
-        total_intersection_compute_time += compute_intersection_time - decode_segment_time
 
         valid_mapping, current_mapping = construct_mapping(
             decoded_road_segment, frame_size, fov_lines, segmentid,
             segmenttype, contains_ego, ego_config)
         if valid_mapping:
             mapping.append(current_mapping)
-        total_mapping_time += time.time() - compute_intersection_time
-    print('total_decode_segment_time: ', total_decode_segment_time)
-    print('total intersection compute time', total_intersection_compute_time)
-    print('avg intersection compute time', total_intersection_compute_time/cardinality)
-    print('total mapping time: ', total_mapping_time)
-    print('avg mapping time: ', total_mapping_time/cardinality)
-    print('total time: ', time.time() - start_time)
+
+    print('total mapping time: ', time.time() - start_time)
     return mapping
 
+def visualization(test_img_path, test_config, mapping):
+    """
+    visualize the mapping from camera segment to road segment
+    for testing only
+    """
+    frame = cv2.imread(test_img_path)
+    fig, axs = plt.subplots()
+    axs.set_aspect('equal', 'datalim')
+    x_ego, y_ego = test_config['egoTranslation'][:2]
+    axs.plot(x_ego, y_ego, color='green', marker='o', markersize=5)
+    colormap = plt.cm.get_cmap('hsv', len(mapping))
+    i = 0
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    display_video = cv2.VideoWriter('in_videw_test_display.avi',fourcc, 1, (1600, 900))
+    for cam_segment, road_segment_info in mapping:
+        color = colormap(i)
+        xs = [point[0] for point in road_segment_info.segment_polygon]
+        ys = [point[1] for point in road_segment_info.segment_polygon]
+        segmenttype = road_segment_info.segment_type
+        axs.fill(xs, ys, alpha=0.5, fc=color, ec='none')
+        axs.text(np.mean(np.array(xs)), np.mean(np.array(ys)), 
+                ','.join(segmenttype) if segmenttype and ('lane' in segmenttype or 'intersection' in segmenttype) else '')
+        current_plt = mplfig_to_npimage(fig)
+        i += 1
+        
+        fov_lines = road_segment_info.fov_lines
+        axs.plot([p[0] for p in fov_lines[0]], [p[1] for p in fov_lines[0]], color='red', marker='o', markersize=2)
+        axs.plot([p[0] for p in fov_lines[1]], [p[1] for p in fov_lines[1]], color='red', marker='o', markersize=2)
+
+        display_frame = frame.copy()
+        cv2.polylines(display_frame, [np.array(cam_segment, np.int32).reshape((-1, 1, 2))], True, (0, 255, 0), 2)
+        display_frame[:current_plt.shape[0], :current_plt.shape[1]] = current_plt
+        display_video.write(display_frame)
+
+    display_video.release()
+
 if __name__ == '__main__':
+    test_img_path = os.path.join(data_path, test_img)
     test_config = fetch_camera_config(
-        'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__1535385105912404.jpg', 
+        test_img, 
         database)
     mapping = map_imgsegment_roadsegment(test_config)
+    visualization(test_img_path, test_config, mapping)
