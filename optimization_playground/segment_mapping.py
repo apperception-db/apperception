@@ -1,5 +1,7 @@
 """ Goal to map the road segment to the frame segment
-
+    Now only get the segment of type lane and intersection
+    except for the segment that contains the ego camera
+    
 Usage example:
     from optimization_playground.segment_mapping import map_imgsegment_roadsegment
     from apperception.utils import fetch_camera_config
@@ -26,14 +28,13 @@ from plpygis import Geometry
 pd.get_option("display.max_columns")
 
 from apperception.database import database
-from apperception.world import empty_world
 from apperception.utils import F, transformation, fetch_camera_config
 
 data_path = '/home/yongming/workspace/research/apperception/v1.0-mini/'
 input_video_dir = os.path.join(data_path, 'sample_videos/')
 input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
-test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__1535385105912404.jpg'
+test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__1535385108412412.jpg'
 
 CAMERA_COLUMNS = [
     "cameraId",
@@ -58,10 +59,13 @@ camera_config = database._execute_query(CAM_CONFIG_QUERY.format(date=input_date)
 camera_config_df = pd.DataFrame(camera_config, columns=CAMERA_COLUMNS)
 camera_config_df
 
-SEGMENT_CONTAIN_QUERY = """select * from segmentpolygon 
-                           where ST_Contains(elementpolygon, \'{ego_translation}\'::geometry);"""
-SEGMENT_DWITHIN_QUERY = """select * from segmentpolygon
-                           where ST_DWithin(elementpolygon, \'{start_segment}\'::geometry, {view_distance});"""
+SEGMENT_CONTAIN_QUERY = """SELECT segmentpolygon.*, segment.heading FROM segmentpolygon 
+                            LEFT OUTER JOIN segment ON segmentpolygon.elementid = segment.elementid
+                           WHERE ST_Contains(segmentpolygon.elementpolygon, \'{ego_translation}\'::geometry);"""
+SEGMENT_DWITHIN_QUERY = """SELECT segmentpolygon.*, segment.heading FROM segmentpolygon 
+                            LEFT OUTER JOIN segment ON segmentpolygon.elementid = segment.elementid
+                           WHERE ST_DWithin(elementpolygon, \'{start_segment}\'::geometry, {view_distance})
+                            AND segmentpolygon.segmenttypes in (ARRAY[\'lane\'], ARRAY[\'intersection\']);"""
 
 cam_segment_mapping = namedtuple('cam_segment_mapping', ['cam_segment', 'road_segment_info'])
 
@@ -71,6 +75,7 @@ class roadSegmentInfo:
         segment_id: int,
         segment_polygon: Tuple[Tuple[float, float]],
         segment_type: str,
+        segment_heading: float,
         contains_ego: bool,
         ego_config: Dict[str, Any],
         fov_lines: Tuple[Tuple[Tuple[float, float], Tuple[float, float]],
@@ -87,6 +92,7 @@ class roadSegmentInfo:
         self.segment_id = segment_id
         self.segment_polygon = segment_polygon
         self.segment_type = segment_type
+        self.segment_heading = segment_heading
         self.contains_ego = contains_ego
         self.ego_config = ego_config
         self.facing_relative = self.facing_relative(ego_config['egoHeading'], segment_id)
@@ -102,9 +108,9 @@ def road_segment_contains(ego_config: Dict[str, Any])\
 
     return database._execute_query(query)
 
-def find_segment_dwithin(start_segment: str,
+def find_segment_dwithin(start_segment: Tuple[str],
                          view_distance=50) -> Tuple[Tuple[str, str, set]]:
-    start_segment_id, start_segment_polygon, segmenttype, contains_ego = start_segment
+    start_segment_id, start_segment_polygon, segmenttype, segmentheading, contains_ego = start_segment
     query = SEGMENT_DWITHIN_QUERY.format(
         start_segment=start_segment_polygon, view_distance=view_distance)
 
@@ -113,7 +119,7 @@ def find_segment_dwithin(start_segment: str,
 def reformat_return_segment(segments: Tuple[str, str, set])\
         -> List[Tuple[str, str, Tuple[str]]]:
     return list(map(
-        lambda x: (x[0], x[1], tuple(x[2]) if x[2] is not None else None), segments))
+        lambda x: (x[0], x[1], tuple(x[2]) if x[2] is not None else None, x[3]), segments))
 
 def annotate_contain(segments: tuple, contain=False):
     for i in range(len(segments)):
@@ -194,6 +200,7 @@ def construct_mapping(
                      Tuple[Tuple[float, float], Tuple[float, float]]],
     segmentid: str,
     segmenttype: str,
+    segmentheading: float,
     contains_ego: bool,
     ego_config: Dict[str, Any]) -> Tuple[bool, cam_segment_mapping]:
     """
@@ -215,13 +222,15 @@ def construct_mapping(
             in_view(current_road_point, ego_translation, fov_lines):
             keep_cam_segment_point.append(current_cam_point)
             keep_road_segment_point.append(current_road_point)
-    return (len(keep_cam_segment_point) > 2, 
+    return (len(keep_cam_segment_point) > 2 \
+            and Polygon(tuple(keep_cam_segment_point)).area > 100,
             cam_segment_mapping(
                 keep_cam_segment_point, 
                 roadSegmentInfo(
                     segmentid,
                     keep_road_segment_point,
                     segmenttype,
+                    segmentheading,
                     contains_ego,
                     ego_config,
                     fov_lines
@@ -252,7 +261,7 @@ def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
     search_space = construct_search_space(ego_config, view_distance=100)
     mapping = []
     for road_segment in search_space:
-        segmentid, segmentpolygon, segmenttype, contains_ego = road_segment
+        segmentid, segmentpolygon, segmenttype, segmentheading, contains_ego = road_segment
         segmentpolygon_points = tuple(zip(*Geometry(segmentpolygon).exterior.shapely.xy))
         segmentpolygon = Polygon(segmentpolygon_points)
 
@@ -269,7 +278,7 @@ def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
 
         valid_mapping, current_mapping = construct_mapping(
             decoded_road_segment, frame_size, fov_lines, segmentid,
-            segmenttype, contains_ego, ego_config)
+            segmenttype, segmentheading, contains_ego, ego_config)
         if valid_mapping:
             mapping.append(current_mapping)
 
