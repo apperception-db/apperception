@@ -207,6 +207,44 @@ def fetch_camera_config(filename: str, database):
     return camera_config
 
 
+def fetch_camera_trajectory(video_name: str, database):
+    query = f"""
+    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+        BEGIN
+            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+        END;
+    $$ LANGUAGE plpgsql;
+
+    SELECT
+        cameraId,
+        ST_XYZ(egoTranslation),
+        frameNum,
+        timestamp,
+        fileName,
+        cameraHeading,
+        egoHeading
+    FROM Cameras
+    WHERE
+        fileName LIKE '%{video_name}%'
+    ORDER BY cameraId ASC, frameNum ASC;
+    """
+    result = database._execute_query(query)
+    camera_config = []
+    for row in result:
+        camera_config.append(
+            {
+                "cameraId": row[0],
+                "egoTranslation": row[1],
+                "frameNum": row[2],
+                "timestamp": row[3],
+                "fileName": row[4],
+                "cameraHeading": row[5],
+                "egoHeading": row[6],
+            }
+        )
+    return camera_config
+
+
 def fetch_trajectory(itemId: str, time: str, database):
     query = f"""
         CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$

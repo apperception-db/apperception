@@ -73,7 +73,7 @@ class roadSegmentInfo:
     def __init__(
         self, 
         segment_id: int,
-        segment_polygon: Tuple[Tuple[float, float]],
+        segment_polygon: Polygon,
         segment_type: str,
         segment_heading: float,
         contains_ego: bool,
@@ -228,7 +228,7 @@ def construct_mapping(
                 keep_cam_segment_point, 
                 roadSegmentInfo(
                     segmentid,
-                    keep_road_segment_point,
+                    Polygon(keep_road_segment_point),
                     segmenttype,
                     segmentheading,
                     contains_ego,
@@ -303,8 +303,8 @@ def visualization(test_img_path: str, test_config: Dict[str, Any], mapping: Tupl
     display_video = cv2.VideoWriter('in_videw_test_display.avi',fourcc, 1, (1600, 900))
     for cam_segment, road_segment_info in mapping:
         color = colormap(i)
-        xs = [point[0] for point in road_segment_info.segment_polygon]
-        ys = [point[1] for point in road_segment_info.segment_polygon]
+        xs = [point[0] for point in road_segment_info.segment_polygon.exterior.coords]
+        ys = [point[1] for point in road_segment_info.segment_polygon.exterior.coords]
         segmenttype = road_segment_info.segment_type
         axs.fill(xs, ys, alpha=0.5, fc=color, ec='none')
         axs.text(np.mean(np.array(xs)), np.mean(np.array(ys)), 
