@@ -1,9 +1,11 @@
 import cv2
 import numpy as np
 from pyquaternion import Quaternion
+
 from apperception.database import database
-from .iterate_video import iterate_video
+
 from ..payload import Payload
+from .iterate_video import iterate_video
 
 
 def overlay_road(payload: "Payload"):

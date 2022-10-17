@@ -38,8 +38,6 @@ class From2DAndRoad(Tracking3D):
                 xs = [*range(int(t.bbox_left), int(t.bbox_left + t.bbox_w) + 1)]
                 idx = t.frame_idx
 
-
-
         for k, depth, tracking in zip(payload.keep, depths, trackings):
             if not k or tracking is None or depth is None:
                 metadata.append(None)
@@ -74,4 +72,3 @@ class From2DAndRoad(Tracking3D):
                     t.next = trajectory[i + 1]
 
         return None, {self.classname(): metadata}
-    pass
