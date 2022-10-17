@@ -4,7 +4,12 @@ import pickle
 from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline
-from .utils.overlay_road import overlay_road
+from .stages.decode_frame import DecodeFrame
+from .stages.filter_car_facing_sideway import FilterCarFacingSideway
+from .stages.in_view import InView
+from .stages.stopped import Stopped
+from .stages.tracking_2d import Tracking2D
+from .stages.tracking_3d.from_2d_and_road import From2DAndRoad
 from .video import Video
 
 """
@@ -21,6 +26,8 @@ BOSTON_VIDEOS = [
     # "scene-0665-CAM_FRONT",
 ]
 
+NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
+
 
 if __name__ == "__main__":
     pipeline = Pipeline()
@@ -32,9 +39,16 @@ if __name__ == "__main__":
     #     .add_filter(filter=Tracking2D()) \
     #     .add_filter(filter=From2DAndDepth()) \
     #     .add_filter(filter=FilterCarFacingSideway())
+    pipeline \
+        .add_filter(filter=InView(distance=10, segment_type="intersection")) \
+        .add_filter(filter=Stopped(min_stopped_frames=2, stopped_threshold=1.0)) \
+        .add_filter(filter=DecodeFrame()) \
+        .add_filter(filter=Tracking2D()) \
+        .add_filter(filter=From2DAndRoad()) \
+        .add_filter(filter=FilterCarFacingSideway())
 
-    if "NUSCENE_DATA" in os.environ:
-        DATA_DIR = os.environ["NUSCENE_DATA"]
+    if NUSCENES_PROCESSED_DATA in os.environ:
+        DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
     else:
         DATA_DIR = "/work/apperception/data/nuScenes/full-dataset-v1.0/Mini"
     with open(os.path.join(DATA_DIR, "videos/boston-seaport", "frames.pickle"), "rb") as f:
@@ -52,6 +66,6 @@ if __name__ == "__main__":
         )
 
         output = pipeline.run(Payload(frames))
-        p = overlay_road(output)
-        print(p[0][0])
-        # output.save(f"./outputs/{name}.mp4")
+        # p = overlay_road(output)
+        # print(p[0][0])
+        output.save(f"./outputs/{name}.mp4")

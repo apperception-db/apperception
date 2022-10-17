@@ -70,14 +70,15 @@ class Payload:
 
         print("Annotating Video")
         trackings: "List[Dict[float, TrackingResult] | None]" = Tracking2D.get(self.metadata)
-        depth_estimations: "List[npt.NDArray | None]" = DepthEstimation.get(self.metadata)
+        # depth_estimations: "List[npt.NDArray | None]" = DepthEstimation.get(self.metadata)
         filtered_objs: "List[Set[float] | None]" = FilterCarFacingSideway.get(self.metadata)
         frames = iterate_video(video)
         assert len(self.keep) == len(frames)
         assert len(self.keep) == len(trackings)
-        assert len(self.keep) == len(depth_estimations)
+        # assert len(self.keep) == len(depth_estimations)
         assert len(self.keep) == len(filtered_objs)
-        for frame, k, tracking, depth_estimation, filtered_obj in tqdm(zip(iterate_video(video), self.keep, trackings, depth_estimations, filtered_objs), total=len(self.keep)):
+        # for frame, k, tracking, depth_estimation, filtered_obj in tqdm(zip(iterate_video(video), self.keep, trackings, depth_estimations, filtered_objs), total=len(self.keep)):
+        for frame, k, tracking, filtered_obj in tqdm(zip(iterate_video(video), self.keep, trackings, filtered_objs), total=len(self.keep)):
             if not k:
                 frame[:, :, 2] = 255
 
@@ -90,9 +91,10 @@ class Payload:
                             continue
                         c = t.object_type
                         id = int(id)
-                        x = int(t.bbox_left + t.bbox_w / 2)
-                        y = int(t.bbox_top + t.bbox_h / 2)
-                        label = f"{id} {c} conf: {t.confidence:.2f} dist: {depth_estimation[y, x]: .4f}"
+                        # x = int(t.bbox_left + t.bbox_w / 2)
+                        # y = int(t.bbox_top + t.bbox_h / 2)
+                        # label = f"{id} {c} conf: {t.confidence:.2f} dist: {depth_estimation[y, x]: .4f}"
+                        label = f"{id} {c} conf: {t.confidence:.2f}"
                         annotator.box_label(
                             [
                                 t.bbox_left,
