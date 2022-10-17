@@ -6,8 +6,11 @@ if TYPE_CHECKING:
     from ..payload import Payload
 
 
+StageOutput = Tuple[Optional[bitarray], Optional[Dict[str, list]]]
+
+
 class Stage:
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def __call__(self, payload: "Payload") -> "StageOutput":
         return payload.keep, payload.metadata
 
     @classmethod

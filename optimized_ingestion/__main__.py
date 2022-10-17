@@ -11,6 +11,7 @@ from .stages.filter_car_facing_sideway import FilterCarFacingSideway
 from .stages.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_depth import From2DAndDepth
 from .video import Video
+from .utils.overlay_road import overlay_road
 
 """
 Query:
@@ -29,20 +30,20 @@ BOSTON_VIDEOS = [
 
 if __name__ == "__main__":
     pipeline = Pipeline()
-    pipeline \
-        .add_filter(filter=InView(distance=10, segment_type="intersection")) \
-        .add_filter(filter=Stopped(min_stopped_frames=2, stopped_threshold=1.0)) \
-        .add_filter(filter=DecodeFrame()) \
-        .add_filter(filter=DepthEstimation()) \
-        .add_filter(filter=Tracking2D()) \
-        .add_filter(filter=From2DAndDepth()) \
-        .add_filter(filter=FilterCarFacingSideway())
+    # pipeline \
+    #     .add_filter(filter=InView(distance=10, segment_type="intersection")) \
+    #     .add_filter(filter=Stopped(min_stopped_frames=2, stopped_threshold=1.0)) \
+    #     .add_filter(filter=DecodeFrame()) \
+    #     .add_filter(filter=DepthEstimation()) \
+    #     .add_filter(filter=Tracking2D()) \
+    #     .add_filter(filter=From2DAndDepth()) \
+    #     .add_filter(filter=FilterCarFacingSideway())
 
     if "NUSCENE_DATA" in os.environ:
         DATA_DIR = os.environ["NUSCENE_DATA"]
     else:
         DATA_DIR = "/work/apperception/data/nuScenes/full-dataset-v1.0/Mini"
-    with open(os.path.join(DATA_DIR, "videos", "frames.pickle"), "rb") as f:
+    with open(os.path.join(DATA_DIR, "videos/boston-seaport", "frames.pickle"), "rb") as f:
         videos = pickle.load(f)
 
     for name, video in videos.items():
@@ -51,10 +52,12 @@ if __name__ == "__main__":
 
         print(name)
         frames = Video(
-            os.path.join(DATA_DIR, "videos", video["filename"]),
-            [camera_config(*f) for f in video["frames"]],
+            os.path.join(DATA_DIR, "videos/boston-seaport", video["filename"]),
+            [camera_config(*f, 0) for f in video["frames"]],
             video["start"],
         )
 
         output = pipeline.run(Payload(frames))
-        output.save(f"./outputs/{name}.mp4")
+        p = overlay_road(output)
+        print(p[0][0])
+        # output.save(f"./outputs/{name}.mp4")
