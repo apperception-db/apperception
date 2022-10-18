@@ -2,13 +2,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 import cv2
-import numpy as np
-import numpy.typing as npt
 from bitarray import bitarray
 from tqdm import tqdm
 from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
 
-from .stages.depth_estimation import DepthEstimation
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
 from .stages.tracking_2d import Tracking2D
 from .stages.tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
