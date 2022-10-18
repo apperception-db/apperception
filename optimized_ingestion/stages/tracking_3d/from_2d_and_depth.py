@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -10,7 +9,7 @@ from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d import Tracking2D
 from ..utils.is_annotated import is_annotated
-from .tracking_3d import Tracking3D
+from .tracking_3d import Tracking3D, Tracking3DResult
 
 if TYPE_CHECKING:
     from ...payload import Payload
@@ -59,19 +58,10 @@ class From2DAndDepth(Tracking3D):
 
         for trajectory in trajectories.values():
             last = len(trajectory) - 1
-            for i, t in enumerate(trajectory):
+            for i, traj in enumerate(trajectory):
                 if i > 0:
-                    t.prev = trajectory[i - 1]
+                    traj.prev = trajectory[i - 1]
                 if i < last:
-                    t.next = trajectory[i + 1]
+                    traj.next = trajectory[i + 1]
 
         return None, {self.classname(): metadata}
-
-
-@dataclass
-class Tracking3DResult:
-    object_id: float
-    point_from_camera: Tuple[float, float, float]
-    point: "npt.NDArray[np.floating]"
-    prev: "Tracking3DResult | None" = None
-    next: "Tracking3DResult | None" = None
