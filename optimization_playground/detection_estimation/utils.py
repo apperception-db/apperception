@@ -1,12 +1,8 @@
 from collections import namedtuple
-import os
-import sys
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
-from apperception.database import database
-from apperception.utils import F, transformation, fetch_camera_config, fetch_camera_trajectory
-from shapely.geometry import Point, Polygon, LineString
 
+SAME_DIRECTION = 'same_direction'
+OPPOSITE_DIRECTION = 'opposite_direction'
 trajectory_3d = namedtuple('trajectory_3d', ['coordinates', 'timestamp'])
 
 def mph_to_mps(mph):
@@ -87,14 +83,20 @@ def point_to_nearest_trajectory(point, trajectory):
                key=lambda x: compute_distance(x.coordinates, point))
 
 def time_to_exit_current_segment(current_segment_info, 
-                                 current_time, car_loc):
+                                 current_time, car_loc, car_trajectory=None):
     """Return the time that the car exit the current segment
 
     Assumption: 
     car heading is the same as road heading
-    car drives at max speed
+    car drives at max speed if no trajectory is given
     """
     segmentpolygon = current_segment_info.segment_polygon
+    if car_trajectory:
+        for i in range(len(car_trajectory)):
+            if (car_trajectory[i].timestamp > current_time and
+               not point_in_polygon(point.coordinates, segmentpolygon)):
+                return point.timestamp
+        return None
     segmentheading = current_segment_info.segment_heading
     car_vector = (car_loc.x + cos(math.radians(segmentheading)), car_loc.y + sin(math.radians(segmentheading)))
     car_heading_line = LineString([car_loc, car_vector])
@@ -111,15 +113,15 @@ def time_to_exit_current_segment(current_segment_info,
             return distance2 / max_car_speed(current_segment_info.road_type)
 
 
-def meetup_point(car1_loc,
-                 car2_loc,
-                 car1_heading,
-                 car2_heading,
-                 road_type,
-                 car1_trajectory=None,
-                 car2_trajectory=None,
-                 car1_speed=None,
-                 car2_speed=None):
+def meetup(car1_loc,
+           car2_loc,
+           car1_heading,
+           car2_heading,
+           road_type,
+           car1_trajectory=None,
+           car2_trajectory=None,
+           car1_speed=None,
+           car2_speed=None):
     """estimate the meetup point as the middle point between car1's loc and car2's loc
 
     If both trajectories are given, the meetup point is the point where the two trajectories meets
@@ -154,7 +156,6 @@ def meetup_point(car1_loc,
             time2 = distance2 / car2_speed
             return (min(time1, time2), meetup_point)
             
-
 def catchup_time(car1_loc,
                  car2_loc,
                  road_type=None,
@@ -178,28 +179,27 @@ def in_view(car_loc, ego_loc, view_distance):
     """
     return compute_distance(car_loc, ego_loc) < view_distance
 
-def time_to_go_beyond_view(ego_loc, car_loc, car_heading, ego_trajectory, view_distance):
+def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, view_distance):
     """Return the time, and location that the car goes beyond ego's view distance
 
     Assumption: car drives at max speed
     """
     ego_speed = get_ego_speed(ego_trajectory)
     car_speed = max_car_speed(road_type)
-    go_beyond_time = view_distance/car_speed - ego_speed
-    return timestamp_to_nearest_trajectory(ego_trajectory, go_beyond_time)
+    exit_view_time = view_distance/car_speed - ego_speed
+    return timestamp_to_nearest_trajectory(ego_trajectory, exit_view_time)
 
-def generate_single_sample_plan(detection_info, ego_trajectory, view_distance, fps):
-    """Generate a sample plan for the given detection of a single car
-
-    Return: a list of (priority, timestamp, action) pairs
+def relative_direction_to_ego(detection_info, ego_loc, ego_heading):
+    """Return the relative direction to ego
+       Now only support opposite and same direction
+       TODO: add driving into and driving away from
     """
-    pass
+    relative_heading = abs(detection_info.heading - ego_heading) % 360
+    if math.cos(math.radians(relative_heading)) > 0:
+        return SAME_DIRECTION
+    else:
+        return OPPOSITE_DIRECTION
 
-def generate_sample_plan(all_detection_info, ego_trajectory, view_distance, fps):
-    compute_priority(all_detection_info)
-    ### the object detection with higher priority doesn't necessarily get sampled first,
-    # it also based on the sample plan
-    sample_plan = samplePlan()
+def compute_priority(all_detection_info):
     for detection_info in all_detection_info:
-        sample_plan.add(
-            generate_single_sample_plan(detection_info, ego_trajectory, view_distance, fps))
+        detection_info.priority = detection_info.area/detection_info.distance
