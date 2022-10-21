@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class Tracking2D(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         if os.path.exists("./_Tracking2D.pickle"):
             with open("./_Tracking2D.pickle", "rb") as f:
                 return None, {self.classname(): pickle.load(f)}

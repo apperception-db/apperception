@@ -16,6 +16,8 @@ psycopg2-binary = "^2.9.3"
 notebook = "^6.4.12"
 bitarray = "^2.6.0"
 tqdm = "^4.64.1"
+python-mobilitydb = "^0.1.2"
+postgis = "^1.0.4"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.961"
@@ -59,8 +61,8 @@ module = [
   'cv2',
   'pyquaternion',
   'pyquaternion.quaternion',
-  'uncompyle6',
-  'decompyle3',
+  'postgis.psycopg',
+  'mobilitydb.psycopg',
 ]
 ignore_missing_imports = true
 

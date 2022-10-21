@@ -18,10 +18,11 @@ such, there won't be cars going in the intersection in the same direction (assum
 
 class Stopped(Stage):
     def __init__(self, min_stopped_frames: int, stopped_threshold: float) -> None:
+        super().__init__()
         self.min_stopped_frames = min_stopped_frames
         self.stopped_threshold = stopped_threshold
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray()
         frames = list(payload.video)
         stopped = set()

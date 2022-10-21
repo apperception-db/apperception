@@ -5,8 +5,7 @@ import numpy as np
 from bitarray import bitarray
 
 from .stage import Stage
-from .tracking_3d.from_2d_and_depth import From2DAndDepth, Tracking3DResult
-from .tracking_3d.tracking_3d import Tracking3D
+from .tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
 from .utils.is_annotated import is_annotated
 
 if TYPE_CHECKING:
@@ -39,14 +38,14 @@ def facing_relative_check(obj_info, threshold, ego_config):
 
 
 class FilterCarFacingSideway(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[dict[str, list]]]":
         if not is_annotated(Tracking3D, payload):
             # payload = payload.filter(From2DAndDepth())
             raise Exception()
 
         keep = bitarray(payload.keep)
         metadata: "List[Set[float]]" = []
-        for i, (f, m) in enumerate(zip(payload.video, From2DAndDepth.get(payload.metadata))):
+        for i, (f, m) in enumerate(zip(payload.video, Tracking3D.get(payload.metadata))):
             metadata.append(set())
             if m is None:
                 continue

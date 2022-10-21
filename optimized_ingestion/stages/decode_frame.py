@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 
 class DecodeFrame(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         metadata: "List[npt.NDArray]" = []
 
         # TODO: only decode filtered frames

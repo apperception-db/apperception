@@ -13,10 +13,11 @@ if TYPE_CHECKING:
 
 class InView(Stage):
     def __init__(self, distance: float, segment_type: str) -> None:
+        super().__init__()
         self.distance = distance
         self.segment_type = segment_type
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray(payload.keep)
         translations: "List[Float3]" = []
         headings: "List[float]" = []
