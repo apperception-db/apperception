@@ -61,8 +61,8 @@ module = [
   'cv2',
   'pyquaternion',
   'pyquaternion.quaternion',
-  'uncompyle6',
-  'decompyle3',
+  'postgis.psycopg',
+  'mobilitydb.psycopg',
 ]
 ignore_missing_imports = true
 
