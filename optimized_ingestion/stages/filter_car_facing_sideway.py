@@ -38,7 +38,7 @@ def facing_relative_check(obj_info, threshold, ego_config):
 
 
 class FilterCarFacingSideway(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[dict[str, list]]]":
         if not is_annotated(Tracking3D, payload):
             # payload = payload.filter(From2DAndDepth())
             raise Exception()

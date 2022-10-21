@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class DepthEstimation(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         if os.path.exists("./_DepthEstimation.pickle"):
             with open("./_DepthEstimation.pickle", "rb") as f:
                 return None, {self.classname(): pickle.load(f)}

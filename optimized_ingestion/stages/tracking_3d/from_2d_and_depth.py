@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class From2DAndDepth(Tracking3D):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         if not is_annotated(DepthEstimation, payload):
             # payload = payload.filter(DepthEstimation())
             raise Exception()

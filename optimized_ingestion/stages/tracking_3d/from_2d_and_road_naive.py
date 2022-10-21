@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..stage import StageOutput
 
 
-class From2DAndRoad(Tracking3D):
+class From2DAndRoadNaive(Tracking3D):
     def _run(self, payload: "Payload") -> "StageOutput":
         if not is_annotated(Tracking2D, payload):
             # payload = payload.filter(Tracking2D())
@@ -39,33 +39,28 @@ class From2DAndRoad(Tracking3D):
             rotation = Quaternion(frame.camera_rotation).unit
             translation = np.array(frame.camera_translation)
 
-            ids: "List[float]" = []
-            dirx = []
-            diry = []
-            N = len(tracking)
             for oid, t in tracking.items():
-                ids.append(oid)
-                dirx.append(t.bbox_left + t.bbox_w / 2)
-                diry.append(t.bbox_top + t.bbox_h)
+                x = t.bbox_left + t.bbox_w / 2
+                y = t.bbox_top + t.bbox_h
 
-            directions = np.stack([
-                (s * np.array(dirx) - x0) / fx,
-                (s * np.array(diry) - y0) / fy,
-                np.ones(N),
-            ])
-            rotated_directions = rotate(directions, rotation)
+                x = (s * x - x0) / fx
+                y = (s * y - y0) / fy
+                z = 1
 
-            # find t that z=0
-            ts = -translation[2] / rotated_directions[2, :]
+                direction = np.array([x, y, z])
+                assert direction.shape == (3,)
+                rotated_direction = rotation.rotate(direction)
+                assert rotated_direction.shape == (3,)
 
-            # XY = rotated_directions[:2, :] * ts + translation[:2, np.newaxis]
-            # points = np.concatenate([XY, np.zeros((1, N))])
-            points = rotated_directions * ts + translation[:, np.newaxis]
-            points_from_camera = rotate(points - translation[:, np.newaxis], rotation.inverse)
+                # find t that z=0
+                t = -translation[2] / rotated_direction[2]
 
-            for oid, point, point_from_camera in zip(ids, points.T, points_from_camera.T):
+                point = rotated_direction * t + translation
+                assert point.shape == (3,)
+                point_from_camera = direction * t
                 assert point_from_camera.shape == (3,)
                 point_from_camera = (point_from_camera[0], point_from_camera[1], point_from_camera[2])
+
                 trackings3d[oid] = Tracking3DResult(oid, point_from_camera, point)
                 if oid not in trajectories:
                     trajectories[oid] = []
@@ -93,19 +88,23 @@ def rotate(vectors: "npt.NDArray", rotation: "Quaternion") -> "npt.NDArray":
     Returns:
         The rotated vectors (3 x N).
     """
-    N = vectors.shape[1]
+    _3, N = vectors.shape
+    assert _3 == 3
 
     # Get rotation matrix
     # 4 x 4
     rmatrix = rotation.unit._q_matrix()
+    assert rmatrix.shape == (4, 4)
 
     # Create quaternions from vectors
     # 4 x N
     qvectors = np.concatenate([np.zeros((1, N)), vectors])
+    assert qvectors.shape == (4, N)
 
     # rotated vectors is Q * v * Q^{-1} -----> (Q * (Q * v)^{-1})^{-1}
     # 4 x N
     ret = conj(rmatrix @ conj(rmatrix @ qvectors))
+    assert ret.shape == (4, N)
 
     # assert np.allclose(np.zeros((N,)), a[0, :])
     # assert np.allclose(ret[1:, :], slow_rotate_multiple(vectors, rotation))

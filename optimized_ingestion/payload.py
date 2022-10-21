@@ -43,7 +43,7 @@ class Payload:
 
     def filter(self, filter: "Stage"):
         print("Stage: ", filter.classname())
-        keep, metadata = filter(self)
+        keep, metadata = filter.run(self)
 
         if keep is None:
             keep = self.keep
@@ -83,6 +83,8 @@ class Payload:
                     annotator = Annotator(frame, line_width=2)
                     for id, t in tracking.items():
                         t3d = tracking3d[id]
+                        if t3d.point_from_camera[2] >= 0:
+                            continue
                         if id not in filtered_obj:
                             continue
                         c = t.object_type
