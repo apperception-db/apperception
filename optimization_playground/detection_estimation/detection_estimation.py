@@ -76,7 +76,7 @@ def detection_estimation(sorted_ego_config, video):
         while i < len(sorted_ego_config):
             current_ego_config = sorted_ego_config[i]
             cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
-            all_detection_info = detection_all(decode video frame 1
+            all_detection_info = detection_all(decode video frame 1)
             sample_plan = generate_sample_plan(all_detection_info, current_ego_config)
             skipped_framenum = sample_plan.next_framenum - current_ego_config.frame_num
             i += skipped_framenum
