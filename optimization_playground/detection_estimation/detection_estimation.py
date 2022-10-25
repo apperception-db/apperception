@@ -83,4 +83,3 @@ def detection_estimation(sorted_ego_config, video):
              
     """
     pass
-
