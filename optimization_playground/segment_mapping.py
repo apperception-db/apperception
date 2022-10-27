@@ -222,40 +222,33 @@ def construct_mapping(
             in_view(current_road_point, ego_translation, fov_lines):
             keep_cam_segment_point.append(current_cam_point)
             keep_road_segment_point.append(current_road_point)
-    return (len(keep_cam_segment_point) > 2 \
-            and Polygon(tuple(keep_cam_segment_point)).area > 100,
-            cam_segment_mapping(
-                keep_cam_segment_point, 
-                roadSegmentInfo(
-                    segmentid,
-                    Polygon(keep_road_segment_point),
-                    segmenttype,
-                    segmentheading,
-                    contains_ego,
-                    ego_config,
-                    fov_lines
-                ))
+    if len(keep_cam_segment_point) > 2 and Polygon(tuple(keep_cam_segment_point)).area > 100:
+        return cam_segment_mapping(
+            keep_cam_segment_point, 
+            roadSegmentInfo(
+                segmentid,
+                Polygon(keep_road_segment_point),
+                segmenttype,
+                segmentheading,
+                contains_ego,
+                ego_config,
+                fov_lines
             )
+        )
 
 def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
                                frame_size=(1600, 900)) -> List[cam_segment_mapping]:
-    '''
-    FULL ALGORITHM:
-    road_segment_info: {segmentid,
-                        segmentpolygon,
-                        segment_type, 
-                        ego_in_segment?,
-                        ego_config,
-                        fov_line,
-                        facing_relative(ego_heading, segment_direction)}
-    1. Get the lines of fov in world coord
-    2. For road_segment in search_space:
-        intersect_point = intersection(fov_lines, road_segment)
-        cam_segment = filter([road_segment_world_coord, intersection_point], 
-                              lambda point: point in view)
-        if cam_segment is valid:
-            append_to_mapping({cam_segments:road_segment})
-    '''
+    """Construct a mapping from frame segment to road segment
+
+    Given an image, we know that different roads/lanes belong to different
+    road segment in the road network. We want to find a mapping
+    from the road/lane/intersection to the real world road segment so that
+    we know which part of the image belong to which part of the real world
+
+    Return List[namedtuple(cam_segment_mapping)]: each tuple looks like this
+    (polygon in frame that represents a portion of lane/road/intersection,
+     roadSegmentInfo)
+    """
     fov_lines = get_fov_lines(ego_config)
     start_time = time.time()
     search_space = construct_search_space(ego_config, view_distance=100)
@@ -276,10 +269,10 @@ def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
             intersection(fov_lines, segmentpolygon))
         decoded_road_segment = segmentpolygon_points+intersection_points
 
-        valid_mapping, current_mapping = construct_mapping(
+        current_mapping = construct_mapping(
             decoded_road_segment, frame_size, fov_lines, segmentid,
             segmenttype, segmentheading, contains_ego, ego_config)
-        if valid_mapping:
+        if current_mapping:
             mapping.append(current_mapping)
 
     print('total mapping time: ', time.time() - start_time)

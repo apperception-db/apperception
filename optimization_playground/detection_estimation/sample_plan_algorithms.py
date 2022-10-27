@@ -1,4 +1,4 @@
-from utils import *
+from .utils import *
 
 """
 Action:
@@ -11,19 +11,19 @@ Action:
 EGO_EXIT_SEGMENT = 'ego_exit_segment'
 CAR_EXIT_SEGMENT = 'car_exit_segment'
 EXIT_VIEW = 'exit_view'
-SAMPLE_ALGORITHMS = {
-    SAME_DIRECTION: same_direction_sample_plan,
-    OPPOSITE_DIRECTION: opposite_direction_sample_plan,
-}
 
 class Action:
-    def __init__(self, start_time, finish_action_time, start_loc, end_loc, action_type):
+    def __init__(self, start_time, finish_action_time, start_loc, end_loc, action_type, video):
         """Assume the action is always straight line"""
         self.start_time = start_time
         self.finish_time = finish_time
         self.start_loc = loc
         self.end_loc = end_loc
         self.action_type = action_type
+        self.video = video
+        self.next_frame_num = time_to_nearest_frame()
+        self.estimated_time = self.finish_time - self.start_time
+        #TODO: self.heuristic
 
 def ego_exit_current_segment(ego_trajectory, ego_config):
     current_segment_info = ego_config.road_segment_info
@@ -98,3 +98,11 @@ def opposite_direction_sample_action(detection_info, view_distance):
     return combine_sample_actions([ego_exit_segment_action,
                                    car_exit_segment_action,
                                    meet_ego_action])
+
+def get_sample_action_alg(road_type):
+    if road_type == SAME_DIRECTION:
+        return same_direction_sample_action
+    elif road_type == OPPOSITE_DIRECTION:
+        return opposite_direction_sample_action
+    else:
+        raise ValueError('Invalid road type')

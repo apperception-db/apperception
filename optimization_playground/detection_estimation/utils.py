@@ -1,5 +1,9 @@
 from collections import namedtuple
 
+from apperception.database import database
+from apperception.utils import F, transformation, fetch_camera_config, fetch_camera_trajectory
+from shapely.geometry import Point, Polygon, LineString
+
 
 SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
@@ -32,8 +36,11 @@ def min_car_speed(road_type):
 
 
 ### HELPER FUNCTIONS ###
-def get_ego_trajectory(video):
-    camera_trajectory_config = fetch_camera_trajectory(video, database)
+def get_ego_trajectory(video, sorted_ego_config=None):
+    if sorted_ego_config is None:
+        camera_trajectory_config = fetch_camera_trajectory(video, database)
+    else:
+        camera_trajectory_config = sorted_ego_config
     return [trajectory_3d(config['egoTranslation'], config['timestamp']) for config in camera_trajectory_config]
 
 def get_ego_speed(ego_trajectory):
@@ -46,6 +53,12 @@ def get_ego_speed(ego_trajectory):
         distance = compute_distance((x,y), (x_next, y_next))
         point_wise_speed.append(distance/(timestamp_next - timestamp).total_seconds())
     return point_wise_speed
+
+def detection_to_img_segment(car_loc2d, cam_segment_mapping):
+    for mapping in cam_segment_mapping:
+        cam_segment, road_segment_info = mapping
+        if Polygon(mapping).contains(Point(car_loc2d)):
+            return mapping
 
 def time_to_nearest_frame(video, timestamp):
     """Return the frame that is closest to the timestamp
