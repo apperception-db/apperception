@@ -12,6 +12,7 @@ from .stages.tracking_3d.from_2d_and_road import From2DAndRoad
 from .stages.tracking_3d.tracking_3d import Tracking3DResult
 from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 from .video import Video
+from .utils.overlay_roads import overlay_roads
 
 """
 Query:
@@ -89,6 +90,7 @@ if __name__ == "__main__":
 
         output = pipeline.run(Payload(frames))
         output.save(f"./outputs/{name}.mp4")
+        overlay_roads(output, f"./outputs/{name}_road.mp4")
 
         # with open("./tracking2d.json", "w") as f2:
         #     tracking = Tracking2D.get(output.metadata)
