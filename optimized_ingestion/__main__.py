@@ -11,8 +11,8 @@ from .stages.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_road import From2DAndRoad
 from .stages.tracking_3d.tracking_3d import Tracking3DResult
 from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
-from .video import Video
 from .utils.overlay_roads import overlay_roads
+from .video import Video
 
 """
 Query:

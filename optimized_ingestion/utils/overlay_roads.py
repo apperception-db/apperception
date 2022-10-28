@@ -1,14 +1,14 @@
 from typing import TYPE_CHECKING
-from apperception.database import database
+
+import cv2
 import numpy as np
 from pyquaternion import Quaternion
-import cv2
 from tqdm import tqdm
 
-from ..utils.iterate_video import iterate_video
-
+from apperception.database import database
 
 from ..stages.tracking_3d.from_2d_and_road import rotate
+from ..utils.iterate_video import iterate_video
 
 if TYPE_CHECKING:
     from ..payload import Payload
