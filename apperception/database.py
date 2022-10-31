@@ -1,6 +1,6 @@
 from datetime import datetime
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 
 import pandas as pd
 import psycopg2
@@ -191,7 +191,7 @@ class Database:
         if commit:
             self.connection.commit()
 
-    def execute(self, query: str | sql.SQL, vars: "Union[tuple, list, None]" = None) -> List[tuple]:
+    def execute(self, query: "str | sql.SQL", vars: "tuple | list | None" = None) -> List[tuple]:
         try:
             self.cursor.execute(query, vars)
             for notice in self.cursor.connection.notices:
