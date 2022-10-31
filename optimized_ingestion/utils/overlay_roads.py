@@ -1,19 +1,19 @@
+from multiprocessing import Pool
+from os import environ
 from typing import TYPE_CHECKING, List, Tuple
 
 import cv2
 import numpy as np
+import numpy.typing as npt
+import postgis
+import psycopg2
+from psycopg2 import sql
 from pyquaternion import Quaternion
 from tqdm import tqdm
-from psycopg2 import sql
-import postgis
-from multiprocessing import Pool
-import numpy.typing as npt
-from os import environ
-import psycopg2
 
 from apperception.database import Database
-from ..camera_config import CameraConfig
 
+from ..camera_config import CameraConfig
 from ..stages.tracking_3d.from_2d_and_road import rotate
 from ..utils.iterate_video import iterate_video
 
