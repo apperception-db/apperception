@@ -93,23 +93,7 @@ def rotate(vectors: "npt.NDArray", rotation: "Quaternion") -> "npt.NDArray":
     Returns:
         The rotated vectors (3 x N).
     """
-    N = vectors.shape[1]
-
-    # Get rotation matrix
-    # 4 x 4
-    rmatrix = rotation.unit._q_matrix()
-
-    # Create quaternions from vectors
-    # 4 x N
-    qvectors = np.concatenate([np.zeros((1, N)), vectors])
-
-    # rotated vectors is Q * v * Q^{-1} -----> (Q * (Q * v)^{-1})^{-1}
-    # 4 x N
-    ret = conj(rmatrix @ conj(rmatrix @ qvectors))
-
-    # assert np.allclose(np.zeros((N,)), a[0, :])
-    # assert np.allclose(ret[1:, :], slow_rotate_multiple(vectors, rotation))
-    return ret[1:, :]
+    return rotation.unit.rotation_matrix @ vectors
 
 
 def slow_rotate(vectors: "npt.NDArray", rotation: "Quaternion") -> "npt.NDArray":

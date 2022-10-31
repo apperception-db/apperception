@@ -1,11 +1,18 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Tuple
 
 import cv2
 import numpy as np
 from pyquaternion import Quaternion
 from tqdm import tqdm
+from psycopg2 import sql
+import postgis
+from multiprocessing import Pool
+import numpy.typing as npt
+from os import environ
+import psycopg2
 
-from apperception.database import database
+from apperception.database import Database
+from ..camera_config import CameraConfig
 
 from ..stages.tracking_3d.from_2d_and_road import rotate
 from ..utils.iterate_video import iterate_video
@@ -14,58 +21,65 @@ if TYPE_CHECKING:
     from ..payload import Payload
 
 
+def overlay_to_frame(args: "Tuple[CameraConfig, npt.NDArray]") -> "npt.NDArray":
+    database = Database(
+        psycopg2.connect(
+            dbname=environ.get("AP_DB", "mobilitydb"),
+            user=environ.get("AP_USER", "docker"),
+            host=environ.get("AP_HOST", "localhost"),
+            port=environ.get("AP_PORT", "25432"),
+            password=environ.get("AP_PASSWORD", "docker"),
+        )
+    )
+    frame, img = args
+    intrinsic = np.array(frame.camera_intrinsic)
+    polygons: "List[Tuple[postgis.Polygon, str]]" = database.execute(sql.SQL("""
+        SELECT elementPolygon
+        FROM SegmentPolygon
+        WHERE ST_Distance({camera}, elementPolygon) < 10
+    """).format(
+        camera=sql.Literal(postgis.Point(*frame.camera_translation))
+    ))
+    polygons = [p[0] for p in polygons]
+    width = 1600
+    height = 900
+    for (p,) in polygons:
+        if isinstance(p, postgis.polygon.Polygon):
+            raise Exception()
+        coords = np.vstack([
+            np.array(p.coords).T,
+            np.zeros((1, len(p.coords)))
+        ])
+        coords = coords - np.array(frame.camera_translation)[:, np.newaxis]
+        coords = rotate(coords, Quaternion(frame.camera_rotation).inverse.unit)
+        coords = intrinsic @ coords
+        coords = coords / coords[2:3, :]
+
+        prev = None
+        for c in coords.T[:, :2]:
+            if prev is not None:
+                ret, p1, p2 = cv2.clipLine((0, 0, width, height), prev.astype(int), c.astype(int))
+                if ret:
+                    img = cv2.line(img, p1, p2, (0, 0, 200), 3)
+            prev = c
+    return img
+
+
 def overlay_roads(payload: "Payload", filename: str) -> None:
     video = cv2.VideoCapture(payload.video.videofile)
 
-    images = []
-    for frame, img in tqdm(zip(payload.video, iterate_video(video)), total=len(payload.video)):
-        camera_translation = to_point(frame.camera_translation)
-        [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
-        points = []
-
-        # TODO: use matrix
-        for y in range(900):
-            for x in range(1600):
-                points.append((
-                    (s * x - x0) / fx,
-                    (s * y - y0) / fy,
-                    1
-                ))
-
-        np_points = np.array(points).T
-        rotated_directions = rotate(np_points, Quaternion(frame.camera_rotation).unit)
-        ts = -frame.camera_translation[2] / rotated_directions[2, :]
-        _points = (rotated_directions * ts + np.array(frame.camera_translation)[:, np.newaxis]).T
-        points_str = [*map(to_point, _points)]
-        XYs = database._execute_query(f"""
-            SELECT ST_X(p), ST_Y(p)
-            FROM UNNEST(
-                ARRAY[{",".join(points_str)}]
-            ) as points(p)
-            WHERE EXISTS (
-                SELECT TRUE
-                FROM SegmentPolygon
-                WHERE
-                    ST_Distance({camera_translation}, elementPolygon) < 100
-                AND
-                    ST_Covers(elementPolygon, p)
-            )
-        """)
-
-        XYs_np = np.array(XYs).T
-        img[XYs_np[0], XYs_np[1], 2] = 255
-        images.append(img)
-
-    height, width, _ = images[0].shape
-    out = cv2.VideoWriter(
-        filename, cv2.VideoWriter_fourcc(*"mp4v"), int(payload.video.fps), (width, height)
-    )
-    for image in tqdm(images):
-        out.write(image)
-    out.release()
-    cv2.destroyAllWindows()
-
-
-def to_point(point):
-    x, y, z = point
-    return f"st_pointz({x}, {y}, {z})"
+    with Pool() as pool:
+        imgs = pool.imap(
+            overlay_to_frame,
+            zip(payload.video, iterate_video(video))
+        )
+        out = None
+        for image in tqdm(imgs, total=len(payload.video)):
+            if out is None:
+                height, width, _ = image.shape
+                out = cv2.VideoWriter(
+                    filename, cv2.VideoWriter_fourcc(*"mp4v"), int(payload.video.fps), (width, height)
+                )
+            out.write(image)
+        out.release()
+        cv2.destroyAllWindows()

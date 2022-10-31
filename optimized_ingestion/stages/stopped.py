@@ -34,10 +34,10 @@ class Stopped(Stage):
             prev_point = f"'POINT ({' '.join([*map(str, _prev_frame.ego_translation)])})'"
 
             query = f"SELECT ABS(ST_Distance({current_point}, {prev_point}))"
-            dist = database._execute_query(query)[0][0]
+            dist = database.execute(query)[0][0]
 
             query = f"SELECT minDistance({current_point}, 'intersection')"
-            dist_intersection = database._execute_query(query)[0][0]
+            dist_intersection = database.execute(query)[0][0]
 
             if dist <= self.stopped_threshold and dist_intersection <= 5:
                 # make sure that actually close to an intersection
