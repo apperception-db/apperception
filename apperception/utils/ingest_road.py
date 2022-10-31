@@ -316,9 +316,7 @@ def create_lanegroup_lane_table(database: "Database", lanegroup_lane, drop=True)
         database.update("DROP TABLE IF EXISTS LaneGroup_Lane")
     database.update(CREATE_LANEGROUP_LANE_SQL)
     database.update("CREATE INDEX IF NOT EXISTS lane_idx ON LaneGroup_Lane(laneId);")
-    database.update(
-        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON LaneGroup_Lane(laneGroupId);"
-    )
+    database.update("CREATE INDEX IF NOT EXISTS laneGroup_idx ON LaneGroup_Lane(laneGroupId);")
 
     values = []
     for ll in lanegroup_lane:
@@ -344,12 +342,8 @@ def create_opposite_lanegroup_table(database: "Database", opposite_lanegroup, dr
     if drop:
         database.update("DROP TABLE IF EXISTS Opposite_LaneGroup")
     database.update(CREATE_OPPOSITE_LANEGROUP_SQL)
-    database.update(
-        "CREATE INDEX IF NOT EXISTS opposite_idx ON Opposite_LaneGroup(oppositeId);"
-    )
-    database.update(
-        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON Opposite_LaneGroup(laneGroupId);"
-    )
+    database.update("CREATE INDEX IF NOT EXISTS opposite_idx ON Opposite_LaneGroup(oppositeId);")
+    database.update("CREATE INDEX IF NOT EXISTS laneGroup_idx ON Opposite_LaneGroup(laneGroupId);")
 
     values = []
     for oppo in opposite_lanegroup:
@@ -404,9 +398,7 @@ def create_road_lanegroup_table(database: "Database", road_lanegroup, drop=True)
         database.update("DROP TABLE IF EXISTS Road_LaneGroup")
     database.update(CREATE_ROAD_LANEGROUP_SQL)
     database.update("CREATE INDEX IF NOT EXISTS road_idx ON Road_LaneGroup(roadId);")
-    database.update(
-        "CREATE INDEX IF NOT EXISTS laneGroup_idx ON Road_LaneGroup(laneGroupId);"
-    )
+    database.update("CREATE INDEX IF NOT EXISTS laneGroup_idx ON Road_LaneGroup(laneGroupId);")
 
     values = []
     for rl in road_lanegroup:
@@ -433,9 +425,7 @@ def create_road_roadsec_table(database: "Database", road_roadsec, drop=True):
         database.update("DROP TABLE IF EXISTS Road_RoadSection")
     database.update(CREATE_ROAD_ROADSECTION_SQL)
     database.update("CREATE INDEX IF NOT EXISTS road_idx ON Road_RoadSection(roadId);")
-    database.update(
-        "CREATE INDEX IF NOT EXISTS roadsec_idx ON Road_RoadSection(roadSectionId);"
-    )
+    database.update("CREATE INDEX IF NOT EXISTS roadsec_idx ON Road_RoadSection(roadSectionId);")
 
     values = []
     for rr in road_roadsec:

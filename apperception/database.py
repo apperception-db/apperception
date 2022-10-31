@@ -1,13 +1,13 @@
 from datetime import datetime
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Tuple, Union
 
 import pandas as pd
 import psycopg2
 import psycopg2.errors
-from psycopg2 import sql
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
+from psycopg2 import sql
 from pypika import CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
@@ -485,9 +485,7 @@ class Database:
         overlay_bboxes(_fetched_meta, cams, boxed)
 
     def sql(self, query: str) -> pd.DataFrame:
-        return pd.DataFrame(
-            self.execute(query), columns=[d.name for d in self.cursor.description]
-        )
+        return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
 
 
 database = Database(
