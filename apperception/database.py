@@ -7,7 +7,6 @@ import psycopg2
 import psycopg2.errors
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
-from psycopg2 import sql
 from pypika import CustomFunction, Table
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
