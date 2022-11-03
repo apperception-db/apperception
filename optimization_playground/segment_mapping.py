@@ -29,6 +29,7 @@ pd.get_option("display.max_columns")
 
 from apperception.database import database
 from apperception.utils import F, transformation, fetch_camera_config
+from detection_estimation.utils import line_to_polygon_intersection
 
 data_path = '/home/yongming/workspace/research/apperception/v1.0-mini/'
 input_video_dir = os.path.join(data_path, 'sample_videos/')
@@ -49,7 +50,6 @@ CAMERA_COLUMNS = [
     "timestamp",
     "cameraHeading",
     "egoHeading",
-    "cameraTranslationAbs",
     "roadDirection"]
 CAM_CONFIG_QUERY = """SELECT * FROM Cameras 
                     WHERE filename like 'samples/CAM_FRONT/%{date}%' 
@@ -116,10 +116,11 @@ def find_segment_dwithin(start_segment: Tuple[str],
 
     return database._execute_query(query)
 
-def reformat_return_segment(segments: Tuple[str, str, set])\
-        -> List[Tuple[str, str, Tuple[str]]]:
+def reformat_return_segment(segments: Tuple[str, str, set, float])\
+        -> List[Tuple[str, str, str, float]]:
     return list(map(
-        lambda x: (x[0], x[1], tuple(x[2]) if x[2] is not None else None, x[3]), segments))
+        lambda x: (x[0], x[1], tuple(x[2])[0] if x[2] is not None else None,
+        math.degrees(x[3]) if x[3] is not None else None), segments))
 
 def annotate_contain(segments: tuple, contain=False):
     for i in range(len(segments)):
@@ -168,8 +169,8 @@ def intersection(fov_line: Tuple[Tuple[Tuple[float, float], Tuple[float, float]]
     return: intersection point: tuple[tuple]
     '''
     left_fov_line, right_fov_line = fov_line
-    left_intersection = tuple(LineString(left_fov_line).intersection(segmentpolygon).coords)
-    right_intersection = tuple(LineString(right_fov_line).intersection(segmentpolygon).coords)
+    left_intersection = line_to_polygon_intersection(segmentpolygon, left_fov_line)
+    right_intersection = line_to_polygon_intersection(segmentpolygon, right_fov_line)
     return left_intersection + right_intersection
 
 def in_frame(transformed_point: np.array, frame_size: Tuple[int, int]):

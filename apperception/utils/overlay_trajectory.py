@@ -184,6 +184,7 @@ def fetch_camera_config(filename: str, database):
         cameraIntrinsic,
         frameNum,
         fileName,
+        timestamp,
         cameraHeading,
         egoHeading
     FROM Cameras
@@ -199,10 +200,11 @@ def fetch_camera_config(filename: str, database):
         "cameraTranslation": result[3],
         "cameraRotation": result[4],
         "cameraIntrinsic": result[5],
-        "frameNum": result[5],
+        "frameNum": result[6],
         "fileName": result[7],
-        "cameraHeading": result[8],
-        "egoHeading": result[9],
+        "timestamp": result[8],
+        "cameraHeading": result[9],
+        "egoHeading": result[10],
     }
     return camera_config
 
