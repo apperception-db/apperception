@@ -2,6 +2,12 @@
 	path = submodules/monodepth2
 	url = git@github.com:PW22-SBN-01/monodepth2.git
 	branch = pip-module
+
 [submodule "Yolov5_StrongSORT_OSNet"]
 	path = submodules/Yolov5_StrongSORT_OSNet
 	url = git@github.com:mikel-brostrom/Yolov5_StrongSORT_OSNet.git
+
+[submodule "MonoDTR"]
+	path = submodules/MonoDTR
+	url = git@github.com:chanwutk/MonoDTR.git
+	branch = predict
