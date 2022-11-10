@@ -27,7 +27,7 @@ WEIGHTS = APPERCEPTION / "weights"
 import logging
 
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
-from yolo_tracker.yolov5.models.common import DetectMultiBackend
+# from yolo_tracker.yolov5.models.common import DetectMultiBackend
 from yolo_tracker.yolov5.utils.dataloaders import LoadImages
 from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                non_max_suppression,
@@ -37,14 +37,13 @@ from yolo_tracker.yolov5.utils.torch_utils import select_device, time_sync
 # remove duplicated stream handler to avoid duplicated logging
 logging.getLogger().removeHandler(logging.getLogger().handlers[0])
 
-yolo_weights = WEIGHTS / "yolov5s.pt"
 reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"  # model.pt path
 
 
 # Load model
 device = select_device("")
 half = False
-model = DetectMultiBackend(yolo_weights, device=device, dnn=False, data=None, fp16=half)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(device)
 stride, names, pt = model.stride, model.names, model.pt
 imgsz = check_img_size((640, 640), s=stride)  # check image size
 
@@ -69,10 +68,10 @@ def track(
     labels: "List[TrackingResult]" = []
 
     # Create a strong sort instances as there is an only one video source
-    tracker = create_tracker('strongsort', reid_weights, device, half)
-    if hasattr(tracker, 'model'):
-        if hasattr(tracker.model, 'warmup'):
-            tracker.model.warmup()
+    strongsort = create_tracker('strongsort', reid_weights, device, half)
+    if hasattr(strongsort, 'model'):
+        if hasattr(strongsort.model, 'warmup'):
+            strongsort.model.warmup()
 
     # Run tracking
     model.warmup(imgsz=(1 if pt else nr_sources, 3, *imgsz))  # warmup
@@ -106,15 +105,14 @@ def track(
         assert len(pred) == 1
         det = pred[0]
         seen += 1
-        p, im0, _ = path, im0s.copy(), getattr(dataset, "frame", 0)
-        p = Path(p)  # to Path
+        im0, _ = im0s.copy(), getattr(dataset, "frame", 0)
         curr_frame = im0
 
         s += "%gx%g " % im.shape[2:]  # print string
 
-        if hasattr(tracker, 'tracker') and hasattr(tracker.tracker, 'camera_update'):
+        if hasattr(strongsort, 'tracker') and hasattr(strongsort.tracker, 'camera_update'):
             if prev_frame is not None and curr_frame is not None:  # camera motion compensation
-                tracker.tracker.camera_update(prev_frame, curr_frame)
+                strongsort.tracker.camera_update(prev_frame, curr_frame)
 
         if det is not None and len(det):
             # Rescale boxes from img_size to im0 size
@@ -129,7 +127,7 @@ def track(
 
             # pass detections to strongsort
             t4 = time_sync()
-            output_ = tracker.update(det.cpu(), im0)
+            output_ = strongsort.update(det.cpu(), im0)
             t5 = time_sync()
             dt[3] += t5 - t4
 
@@ -159,11 +157,10 @@ def track(
                             conf.item(),
                         )
                     )
-
             # LOGGER.info(f"{s}Done. YOLO:({t3 - t2:.3f}s), StrongSORT:({t5 - t4:.3f}s)")
 
         else:
-            tracker.increment_ages()
+            strongsort.increment_ages()
             # LOGGER.info("No detections")
 
         prev_frame = curr_frame
