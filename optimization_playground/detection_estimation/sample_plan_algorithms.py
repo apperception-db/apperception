@@ -19,11 +19,14 @@ class Action:
         """Assume the action is always straight line"""
         self.start_time = start_time
         self.finish_time = finish_time
+        self.invalid_action = False
+        if self.finish_time < self.start_time:
+            self.invalid_action = True
         self.start_loc = start_loc
         self.end_loc = end_loc
         self.action_type = action_type
         self.estimated_time = self.finish_time - self.start_time
-        if action_type in OBJ_BASED_ACTION:
+        if action_type and action_type in OBJ_BASED_ACTION:
             assert target_obj_id
             self.target_obj_id = target_obj_id
 
@@ -35,7 +38,8 @@ class Action:
         start time: {self.start_time},
         finish time: {self.finish_time},
         start loc: {self.start_loc},
-        end loc: {self.end_loc}'''
+        end loc: {self.end_loc}
+        estimated time: {self.estimated_time}'''
 
 def ego_exit_current_segment(detection_info, ego_trajectory, ego_config):
     current_segment_info = detection_info.road_segment_info
@@ -70,6 +74,8 @@ def car_meet_up_with_ego(detection_info, ego_trajectory, ego_config):
     ego_loc = tuple(ego_config['egoTranslation'])
     meet_up_time, meetup_point = meetup(ego_loc, car2_loc, car1_heading,
                                         car2_heading, road_type, current_time, car1_trajectory)
+    if meet_up_time < current_time:
+        return None
     meet_up_action = Action(current_time, meet_up_time, start_loc=car2_loc,
                             end_loc=meetup_point, action_type=MEET_UP,
                             target_obj_id=detection_info.obj_id)
@@ -98,15 +104,14 @@ def same_direction_sample_action(detection_info, view_distance):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    print('ego_exit_segment_action', ego_exit_segment_action)
+    # print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
-    print('car_exit_segment_action', car_exit_segment_action)
+    # print('car_exit_segment_action', car_exit_segment_action)
     car_go_beyong_view_action = car_exit_view(
         detection_info, ego_trajectory, ego_config, view_distance)
-    print('car_go_beyong_view_action', car_go_beyong_view_action)
+    # print('car_go_beyong_view_action', car_go_beyong_view_action)
     # ego_by_pass_car_action = ego_by_pass_car(detection_info, ego_trajectory, ego_config)
-    return combine_sample_actions([ego_exit_segment_action,
-                                   car_exit_segment_action,
+    return combine_sample_actions([car_exit_segment_action,
                                    car_go_beyong_view_action,])
                                    # ego_by_pass_car_action])
 
@@ -114,14 +119,13 @@ def opposite_direction_sample_action(detection_info, view_distance):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    print('ego_exit_segment_action', ego_exit_segment_action)
+    # print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
-    print('car_exit_segment_action', car_exit_segment_action)
+    # print('car_exit_segment_action', car_exit_segment_action)
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
-    print('meet_ego_action', meet_ego_action)
-    return meet_ego_action
-    return combine_sample_actions([ego_exit_segment_action,
-                                   car_exit_segment_action,
+    # print('meet_ego_action', meet_ego_action)
+    # return car_exit_segment_action
+    return combine_sample_actions([car_exit_segment_action,
                                    meet_ego_action])
 
 def get_sample_action_alg(relative_direction):
@@ -129,5 +133,3 @@ def get_sample_action_alg(relative_direction):
         return same_direction_sample_action
     elif relative_direction == OPPOSITE_DIRECTION:
         return opposite_direction_sample_action
-    else:
-        raise ValueError('relative direction not support yet')

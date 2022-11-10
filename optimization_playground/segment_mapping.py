@@ -65,7 +65,8 @@ SEGMENT_CONTAIN_QUERY = """SELECT segmentpolygon.*, segment.heading FROM segment
 SEGMENT_DWITHIN_QUERY = """SELECT segmentpolygon.*, segment.heading FROM segmentpolygon 
                             LEFT OUTER JOIN segment ON segmentpolygon.elementid = segment.elementid
                            WHERE ST_DWithin(elementpolygon, \'{start_segment}\'::geometry, {view_distance})
-                            AND segmentpolygon.segmenttypes in (ARRAY[\'lane\'], ARRAY[\'intersection\']);"""
+                            AND segmentpolygon.segmenttypes in (
+                                ARRAY[\'lane\'], ARRAY[\'intersection\'], ARRAY[\'laneSection\']);"""
 
 cam_segment_mapping = namedtuple('cam_segment_mapping', ['cam_segment', 'road_segment_info'])
 
@@ -95,11 +96,8 @@ class roadSegmentInfo:
         self.segment_heading = segment_heading
         self.contains_ego = contains_ego
         self.ego_config = ego_config
-        self.facing_relative = self.facing_relative(ego_config['egoHeading'], segment_id)
         self.fov_lines = fov_lines
     
-    def facing_relative(self, ego_heading: float, segment_id: str) -> float:
-        return
 
 def road_segment_contains(ego_config: Dict[str, Any])\
         -> Tuple[Tuple[str, str, set]]:
@@ -302,7 +300,7 @@ def visualization(test_img_path: str, test_config: Dict[str, Any], mapping: Tupl
         segmenttype = road_segment_info.segment_type
         axs.fill(xs, ys, alpha=0.5, fc=color, ec='none')
         axs.text(np.mean(np.array(xs)), np.mean(np.array(ys)), 
-                ','.join(segmenttype) if segmenttype and ('lane' in segmenttype or 'intersection' in segmenttype) else '')
+                segmenttype if segmenttype else '')
         current_plt = mplfig_to_npimage(fig)
         i += 1
         

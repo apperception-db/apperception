@@ -15,9 +15,12 @@ temporal_speed = namedtuple('temporal_speed', ['speed', 'timestamp'])
 def mph_to_mps(mph):
     return mph * 0.44704
 MAX_CAR_SPEED = {
-    'lane': 45,
+    'lane': 35,
+    'road': 35,
+    'laneSection': 35,
+    'roadSection': 35,
     'intersection': 25,
-    'highway': 65,
+    'highway': 55,
     'residential': 25,
 }
 MAX_CAR_SPEED.update({k: mph_to_mps(v) for k, v in MAX_CAR_SPEED.items()})
@@ -30,6 +33,9 @@ def compute_area(polygon):
 
 def compute_distance(loc1, loc2):
     return Point(loc1).distance(Point(loc2))
+
+def relative_direction(vec1, vec2):
+    return (vec1[0]*vec2[0] + vec1[1]*vec2[1])/math.sqrt(vec1[0]**2 + vec1[1]**2)/math.sqrt(vec2[0]**2 + vec2[1]**2) > 0
 
 def _construct_extended_line(polygon, line):
     polygon = Polygon(polygon)
@@ -59,14 +65,17 @@ def intersection_between_line_and_trajectory(line, trajectory):
     trajectory_to_polygon = Polygon(trajectory)
     extended_line = _construct_extended_line(trajectory, line)
     intersection = extended_line.intersection(LineString(trajectory))
-    if intersection.is_empty:
+    if not isinstance(intersection, LineString) or intersection.is_empty:
         return tuple()
     elif isinstance(intersection, LineString):
         return tuple(intersection.coords)
 
 def line_to_polygon_intersection(polygon, line):
-    extended_line = _construct_extended_line(polygon, line)
-    intersection = extended_line.intersection(polygon)
+    try:
+        extended_line = _construct_extended_line(polygon, line)
+        intersection = extended_line.intersection(polygon)
+    except:
+        return tuple()
     if intersection.is_empty:
         return tuple()
     elif isinstance(intersection, LineString):
@@ -119,10 +128,15 @@ def get_ego_avg_speed(ego_trajectory):
     return sum([speed.speed for speed in point_wise_ego_speed]) / len(point_wise_ego_speed)
 
 def detection_to_img_segment(car_loc2d, cam_segment_mapping):
+    maximum_mapping = None
+    maximum_mapping_area = 0
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
         if Polygon(cam_segment).contains(Point(car_loc2d)):
-            return mapping
+            if Polygon(cam_segment).area > maximum_mapping_area:
+                maximum_mapping = mapping
+                maximum_mapping_area = Polygon(cam_segment).area
+    return maximum_mapping
 
 def time_to_nearest_frame(video, timestamp):
     """Return the frame that is closest to the timestamp
@@ -174,20 +188,21 @@ def time_to_exit_current_segment(current_segment_info,
                not Polygon(segmentpolygon).contains(Point(point.coordinates))):
                 return point.timestamp, point.coordinates
         return None
-    segmentheading = current_segment_info.segment_heading
+    segmentheading = current_segment_info.segment_heading + 90
     car_loc = Point(car_loc)
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
                   car_loc.y + math.sin(math.radians(segmentheading)))
     car_heading_line = LineString([car_loc, car_vector])
+    # print('car_heading_vector', car_heading_line)
     intersection = line_to_polygon_intersection(segmentpolygon, car_heading_line)
-    assert len(intersection) == 0 or len(intersection) == 2
-    if len(intersection) == 0:
-        raise ValueError("The car is not drivable in the segment")
-    elif len(intersection) == 2:
-        relative_direction_1 = ((car_vector[0] - car_loc.x) * (intersection[0][0] - car_vector[0]) > 0 and
-                                (car_vector[1] - car_loc.y) * (intersection[0][1] - car_vector[1]) > 0)
-        relative_direction_2 = ((car_vector[0] - car_loc.x) * (intersection[1][0] - car_vector[0]) > 0 and
-                                (car_vector[1] - car_loc.y) * (intersection[1][1] - car_vector[1]) > 0)
+    # print("mapped polygon", segat intersection
+    if len(intersection) == 2:
+        intersection_1_vector = (intersection[0][0] - car_loc.x,
+                                 intersection[0][1] - car_loc.y)
+        relative_direction_1 = relative_direction(car_vector, intersection_1_vector)
+        intersection_2_vector = (intersection[1][0] - car_loc.x,
+                                 intersection[1][1] - car_loc.y)
+        relative_direction_2 = relative_direction(car_vector, intersection_2_vector)
         distance1 = compute_distance(car_loc, intersection[0])
         distance2 = compute_distance(car_loc, intersection[1])
         if relative_direction_1:
@@ -195,9 +210,9 @@ def time_to_exit_current_segment(current_segment_info,
         elif relative_direction_2:
             return time_elapse(current_time, distance2 / max_car_speed(current_segment_info.segment_type)), intersection[1]
         else:
-            print(segmentpolygon)
-            print(car_loc)
-            raise ValueError("exit segment direction computed incorrectly", intersection, car_vector, tuple(car_loc.coords))
+            print("wrong car moving direction")
+            return time_elapse(current_time, -1), None
+    return time_elapse(current_time, -1), None
 
 def meetup(car1_loc,
            car2_loc,
@@ -228,6 +243,7 @@ def meetup(car1_loc,
     car2_loc = Point(car2_loc) if isinstance(car2_loc, tuple) else car2_loc
     if car1_trajectory is not None and car2_trajectory is None:
         car2_speed = max_car_speed(road_type) if car2_speed is None else car2_speed
+        car2_heading += 90
         car2_vector = (car2_loc.x + math.cos(math.radians(car2_heading)),
                        car2_loc.y + math.sin(math.radians(car2_heading)),)
         car2_heading_line = (car2_loc, car2_vector)
@@ -236,16 +252,22 @@ def meetup(car1_loc,
         intersection = intersection_between_line_and_trajectory(
             car2_heading_line, car1_trajectory_points)
         if len(intersection) == 1: # i.e. one car drives towards south, the other towards east
+            # print("at intersection 1")
             meetup_point = intersection[0]
             time1 = point_to_nearest_trajectory_timestamp(meetup_point, car1_trajectory)
             distance2 = compute_distance(car2_loc, meetup_point)
             time2 = time_elapse(current_time, distance2 / car2_speed)
             return (min(time1, time2), meetup_point)
         elif len(intersection) == 0: # i.e. one car drives towards south, the other towards north
+            # print("at intersection 0")
             meetup_point = Point((car1_loc.x + car2_loc.x) / 2, (car1_loc.y + car2_loc.y) / 2)
             time1 = point_to_nearest_trajectory(meetup_point, car1_trajectory).timestamp
+            if time1 < current_time:
+                time1 = current_time
             distance2 = compute_distance(car2_loc, meetup_point)
             time2 = time_elapse(current_time, distance2 / car2_speed)
+            if time2 < current_time:
+                time2 = current_time
             return (min(time1, time2), meetup_point)
             
 def catchup_time(car1_loc,
@@ -286,7 +308,8 @@ def relative_direction_to_ego(obj_heading, ego_heading):
        Now only support opposite and same direction
        TODO: add driving into and driving away from
     """
-    print(obj_heading, ego_heading)
+    if obj_heading is None:
+        return None
     relative_heading = abs(obj_heading - ego_heading) % 360
     if math.cos(math.radians(relative_heading)) > 0:
         return SAME_DIRECTION
