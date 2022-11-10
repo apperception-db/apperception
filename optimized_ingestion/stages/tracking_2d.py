@@ -1,5 +1,3 @@
-import os
-import pickle
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from bitarray import bitarray
@@ -13,9 +11,9 @@ if TYPE_CHECKING:
 
 class Tracking2D(Stage):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        if os.path.exists("./_Tracking2D.pickle"):
-            with open("./_Tracking2D.pickle", "rb") as f:
-                return None, {self.classname(): pickle.load(f)}
+        # if os.path.exists("./_Tracking2D.pickle"):
+        #     with open("./_Tracking2D.pickle", "rb") as f:
+        #         return None, {self.classname(): pickle.load(f)}
 
         results = tracker.track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
@@ -44,7 +42,7 @@ class Tracking2D(Stage):
                 if i < last:
                     t.next = trajectory[i + 1]
 
-        with open("./_Tracking2D.pickle", "wb") as f:
-            pickle.dump(metadata, f)
+        # with open("./_Tracking2D.pickle", "wb") as f:
+        #     pickle.dump(metadata, f)
 
         return None, {self.classname(): metadata}
