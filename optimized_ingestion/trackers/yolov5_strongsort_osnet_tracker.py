@@ -1,11 +1,8 @@
 import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List
-import pickle
 
 import cv2
-import numpy as np
-import numpy.typing as npt
 from tqdm import tqdm
 
 # limit the number of cpus used by high performance libraries
@@ -29,11 +26,13 @@ WEIGHTS = APPERCEPTION / "weights"
 
 import logging
 
+from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.models.common import DetectMultiBackend
 from yolo_tracker.yolov5.utils.dataloaders import LoadImages
-from yolo_tracker.yolov5.utils.general import check_img_size, non_max_suppression, scale_boxes
+from yolo_tracker.yolov5.utils.general import (check_img_size,
+                                               non_max_suppression,
+                                               scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device, time_sync
-from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 
 # remove duplicated stream handler to avoid duplicated logging
 logging.getLogger().removeHandler(logging.getLogger().handlers[0])
@@ -114,7 +113,7 @@ def track(
         s += "%gx%g " % im.shape[2:]  # print string
 
         if hasattr(tracker, 'tracker') and hasattr(tracker.tracker, 'camera_update'):
-            if prev_frame is not None and curr_frame is not None: # camera motion compensation
+            if prev_frame is not None and curr_frame is not None:  # camera motion compensation
                 tracker.tracker.camera_update(prev_frame, curr_frame)
 
         if det is not None and len(det):
