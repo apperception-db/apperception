@@ -1,6 +1,7 @@
 import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, List
+import pickle
 
 import cv2
 import numpy as np
@@ -30,8 +31,8 @@ import logging
 
 from yolo_tracker.yolov5.models.common import DetectMultiBackend
 from yolo_tracker.yolov5.utils.dataloaders import LoadImages
-from yolo_tracker.yolov5.utils.general import check_img_size, non_max_suppression, scale_coords
-from yolo_tracker.yolov5.utils.torch_utils import select_device
+from yolo_tracker.yolov5.utils.general import check_img_size, non_max_suppression, scale_boxes
+from yolo_tracker.yolov5.utils.torch_utils import select_device, time_sync
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 
 # remove duplicated stream handler to avoid duplicated logging
@@ -118,7 +119,7 @@ def track(
 
         if det is not None and len(det):
             # Rescale boxes from img_size to im0 size
-            det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()  # xyxy
+            det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()  # xyxy
 
             # Print results
             for c in det[:, -1].unique():
