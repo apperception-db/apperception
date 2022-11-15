@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import pandas as pd
 import psycopg2
 import psycopg2.errors
+import psycopg2.sql
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
 from pypika import CustomFunction, Table
@@ -190,7 +191,7 @@ class Database:
         if commit:
             self.connection.commit()
 
-    def execute(self, query: "str | sql.SQL", vars: "tuple | list | None" = None) -> List[tuple]:
+    def execute(self, query: "str | psycopg2.sql.SQL", vars: "tuple | list | None" = None) -> List[tuple]:
         try:
             self.cursor.execute(query, vars)
             for notice in self.cursor.connection.notices:
