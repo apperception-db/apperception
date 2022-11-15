@@ -7,7 +7,7 @@ from .payload import Payload
 from .pipeline import Pipeline
 from .stages.decode_frame import DecodeFrame
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
-from .stages.tracking_2d import Tracking2D
+from .stages.tracking_2d.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_road import From2DAndRoad
 from .stages.tracking_3d.tracking_3d import Tracking3DResult
 from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
@@ -77,8 +77,8 @@ if __name__ == "__main__":
         videos = pickle.load(f)
 
     for name, video in videos.items():
-        if name not in BOSTON_VIDEOS:
-            continue
+        # if name not in BOSTON_VIDEOS:
+        #     continue
 
         print(name)
         frames = Video(
@@ -88,7 +88,8 @@ if __name__ == "__main__":
         )
 
         output = pipeline.run(Payload(frames))
-        output.save(f"./outputs/{name}.mp4")
+        # output.save(f"./outputs/{name}.mp4")
+        # overlay_roads(output, f"./outputs/{name}_road.mp4")
 
         # with open("./tracking2d.json", "w") as f2:
         #     tracking = Tracking2D.get(output.metadata)

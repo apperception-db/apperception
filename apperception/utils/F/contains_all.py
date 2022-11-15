@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from typing import List
 
-from apperception.predicate import (ArrayNode, GenSqlVisitor, LiteralNode,
-                                    PredicateNode, call_node)
+from apperception.predicate import ArrayNode, GenSqlVisitor, LiteralNode, PredicateNode, call_node
 
 ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
 

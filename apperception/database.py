@@ -5,24 +5,29 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import pandas as pd
 import psycopg2
 import psycopg2.errors
+import psycopg2.sql
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
 from pypika import CustomFunction, Table
+
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import Trajectory
-from apperception.predicate import (FindAllTablesVisitor, GenSqlVisitor,
-                                    MapTablesTransformer, normalize)
+from apperception.predicate import (
+    FindAllTablesVisitor,
+    GenSqlVisitor,
+    MapTablesTransformer,
+    normalize,
+)
 from apperception.utils.add_recognized_objects import add_recognized_objects
 from apperception.utils.fetch_camera import fetch_camera
 from apperception.utils.fetch_camera_framenum import fetch_camera_framenum
 from apperception.utils.overlay_bboxes import overlay_bboxes
 from apperception.utils.query_to_str import query_to_str
 from apperception.utils.recognize import recognize
-from apperception.utils.reformat_bbox_trajectories import \
-    reformat_bbox_trajectories
+from apperception.utils.reformat_bbox_trajectories import reformat_bbox_trajectories
 from apperception.utils.timestamp_to_framenum import timestamp_to_framenum
 
 if TYPE_CHECKING:
@@ -190,9 +195,11 @@ class Database:
         if commit:
             self.connection.commit()
 
-    def _execute_query(self, query: str) -> List[tuple]:
+    def execute(
+        self, query: "str | psycopg2.sql.SQL", vars: "tuple | list | None" = None
+    ) -> List[tuple]:
         try:
-            self.cursor.execute(query)
+            self.cursor.execute(query, vars)
             for notice in self.cursor.connection.notices:
                 print(notice)
             if self.cursor.pgresult_ptr is not None:
@@ -203,7 +210,7 @@ class Database:
             self.connection.rollback()
             raise error
 
-    def _execute_update(self, query: str, commit: bool = True) -> None:
+    def update(self, query: str, commit: bool = True) -> None:
         try:
             self.cursor.execute(query)
             self._commit(commit)
@@ -313,7 +320,7 @@ class Database:
             "SELECT cameraID, frameId, frameNum, fileName, cameraTranslation, cameraRotation, cameraIntrinsic, egoTranslation, egoRotation, timestamp, cameraHeading, egoHeading"
             + f" FROM ({query.get_sql()}) AS final"
         )
-        return self._execute_query(q)
+        return self.execute(q)
 
     def fetch_camera(self, scene_name: str, frame_timestamp: List[str]):
         return fetch_camera(self.connection, scene_name, frame_timestamp)
@@ -334,7 +341,7 @@ class Database:
             "SELECT ratio, ST_X(origin), ST_Y(origin), ST_Z(origin), fov, skev_factor"
             + f" FROM ({query.get_sql()}) AS final"
         )
-        return self._execute_query(q)
+        return self.execute(q)
 
     def insert_bbox_traj(self, camera: "Camera", annotation):
         tracking_results = recognize(camera.configs, annotation)
@@ -351,15 +358,15 @@ class Database:
         return query + q if query else q  # UNION
 
     def road_direction(self, x: float, y: float, default_dir: float):
-        return self._execute_query(f"SELECT roadDirection({x}, {y}, {default_dir});")
+        return self.execute(f"SELECT roadDirection({x}, {y}, {default_dir});")
 
     def road_coords(self, x: float, y: float):
-        return self._execute_query(f"SELECT roadCoords({x}, {y});")
+        return self.execute(f"SELECT roadCoords({x}, {y});")
 
     def select_all(self, query: "Query") -> List[tuple]:
         _query = query_to_str(query)
         print("select_all:", _query)
-        return self._execute_query(_query)
+        return self.execute(_query)
 
     def get_traj(self, query: Query) -> List[List[Trajectory]]:
         # hack
@@ -369,7 +376,7 @@ class Database:
         """
 
         print("get_traj", query)
-        trajectories = self._execute_query(query)
+        trajectories = self.execute(query)
         return [
             [
                 Trajectory(
@@ -389,7 +396,7 @@ class Database:
         """
 
         print("get_traj_key", _query)
-        return self._execute_query(_query)
+        return self.execute(_query)
 
     def get_id_time_camId_filename(self, query: Query, num_joined_tables: int):
         itemId = ",".join([f"t{i}.itemId" for i in range(num_joined_tables)])
@@ -401,7 +408,7 @@ class Database:
         )
 
         print("get_id_time_camId_filename", _query)
-        return self._execute_query(_query)
+        return self.execute(_query)
 
     def get_traj_attr(self, query: Query, attr: str):
         _query = f"""
@@ -409,7 +416,7 @@ class Database:
         """
 
         print("get_traj_attr:", attr, _query)
-        return self._execute_query(_query)
+        return self.execute(_query)
 
     def get_bbox_geo(self, query: Query):
         Xmin = CustomFunction("Xmin", ["stbox"])
@@ -427,12 +434,12 @@ class Database:
             Ymax(query.trajBbox),
             Zmax(query.trajBbox),
         )
-        return self._execute_query(q.get_sql())
+        return self.execute(q.get_sql())
 
     def get_time(self, query: Query):
         Tmin = CustomFunction("Tmin", ["stbox"])
         q = SnowflakeQuery.from_(query).select(Tmin(query.trajBbox))
-        return self._execute_query(q.get_sql())
+        return self.execute(q.get_sql())
 
     def get_distance(self, query: Query, start: str, end: str):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
@@ -441,7 +448,7 @@ class Database:
             cumulativeLength(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
-        return self._execute_query(q.get_sql())
+        return self.execute(q.get_sql())
 
     def get_speed(self, query, start, end):
         atPeriodSet = CustomFunction("atPeriodSet", ["centroids", "param"])
@@ -451,7 +458,7 @@ class Database:
             speed(atPeriodSet(query.trajCentroids, "{[%s, %s)}" % (start, end)))
         )
 
-        return self._execute_query(q.get_sql())
+        return self.execute(q.get_sql())
 
     def get_video(self, query, cams, boxed):
         bbox = Table(BBOX_TABLE)
@@ -479,14 +486,12 @@ class Database:
             )
         )
 
-        fetched_meta = self._execute_query(query.get_sql())
+        fetched_meta = self.execute(query.get_sql())
         _fetched_meta = reformat_bbox_trajectories(fetched_meta)
         overlay_bboxes(_fetched_meta, cams, boxed)
 
     def sql(self, query: str) -> pd.DataFrame:
-        return pd.DataFrame(
-            self._execute_query(query), columns=[d.name for d in self.cursor.description]
-        )
+        return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
 
 
 database = Database(

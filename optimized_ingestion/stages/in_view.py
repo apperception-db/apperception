@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from apperception.database import database
 
 from bitarray import bitarray
-
-from apperception.database import database
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .stage import Stage
 
@@ -30,7 +29,7 @@ class InView(Stage):
 
         translations_str = ",\n".join(map(_tuple_to_point, translations))
         headings_str = ",\n".join(map(str, headings))
-        results = database._execute_query(
+        results = database.execute(
             f"""
             SELECT
                 minDistance(t, '{self.segment_type}') < {self.distance} AND

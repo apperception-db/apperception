@@ -1,11 +1,14 @@
-import os
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, List
-
 import cv2
+import json
 import numpy as np
 import numpy.typing as npt
+import os
+import torch
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
+from pathlib import Path
 from tqdm import tqdm
+from typing import TYPE_CHECKING, List, Tuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -15,48 +18,29 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 
-from pathlib import Path
-
-import torch
-
 if TYPE_CHECKING:
     from ..payload import Payload
 
+from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
+from yolo_tracker.yolov5.utils.augmentations import letterbox
+from yolo_tracker.yolov5.utils.general import (check_img_size,
+                                               non_max_suppression,
+                                               scale_boxes)
+from yolo_tracker.yolov5.utils.torch_utils import select_device  # , time_sync
+
+from ..stages.decode_frame import DecodeFrame
+
 FILE = Path(__file__).resolve()
 APPERCEPTION = FILE.parent.parent.parent
-ROOT = APPERCEPTION / "submodules/Yolov5_StrongSORT_OSNet"  # yolov5 strongsort root directory
 WEIGHTS = APPERCEPTION / "weights"
+reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"  # model.pt path
 
-import logging
-
-from Yolov5_StrongSORT_OSNet.strong_sort.strong_sort import StrongSORT
-from Yolov5_StrongSORT_OSNet.strong_sort.utils.parser import get_config
-from Yolov5_StrongSORT_OSNet.yolov5.models.common import DetectMultiBackend
-from Yolov5_StrongSORT_OSNet.yolov5.utils.dataloaders import LoadImages
-from Yolov5_StrongSORT_OSNet.yolov5.utils.general import (check_img_size,
-                                                          non_max_suppression,
-                                                          scale_coords,
-                                                          xyxy2xywh)
-from Yolov5_StrongSORT_OSNet.yolov5.utils.torch_utils import (select_device,
-                                                              time_sync)
-
-# remove duplicated stream handler to avoid duplicated logging
-logging.getLogger().removeHandler(logging.getLogger().handlers[0])
-
-yolo_weights = WEIGHTS / "yolov5s.pt"
-config_strongsort = ROOT / "strong_sort/configs/strong_sort.yaml"
-print(config_strongsort)
-strong_sort_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"  # model.pt path
-save_txt = True
-exist_ok = False
-
-project = (APPERCEPTION / "runs/track",)  # save results to project/name
-save_dir = str(APPERCEPTION / "tracks/") + "/"
 
 # Load model
 device = select_device("")
+print("Using", device)
 half = False
-model = DetectMultiBackend(yolo_weights, device=device, dnn=False, data=None, fp16=half)
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(device)
 stride, names, pt = model.stride, model.names, model.pt
 imgsz = check_img_size((640, 640), s=stride)  # check image size
 
@@ -70,133 +54,111 @@ def track(
     classes=None,  # filter by class: --class 0, or --class 0 2 3
     agnostic_nms=False,  # class-agnostic NMS
     augment=False,  # augmented inference
-    visualize=False,  # visualize features
 ):
-    video = cv2.VideoCapture(source.video.videofile)
-    video_len = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    video.release()
-    cv2.destroyAllWindows()
-    dataset = LoadImages(source.video.videofile, img_size=imgsz, stride=stride, auto=pt)
+    dataset = LoadImages(source, img_size=imgsz, stride=stride, auto=pt)
 
     nr_sources = 1
     labels: "List[TrackingResult]" = []
 
-    # initialize StrongSORT
-    cfg = get_config()
-    cfg.merge_from_file(config_strongsort)
-
-    # Create as many strong sort instances as there are video sources
-    strongsort_list: "List[StrongSORT]" = []
-    for i in range(nr_sources):
-        strongsort_list.append(
-            StrongSORT(
-                strong_sort_weights,
-                device,
-                half,
-                max_dist=cfg.STRONGSORT.MAX_DIST,
-                max_iou_distance=cfg.STRONGSORT.MAX_IOU_DISTANCE,
-                max_age=cfg.STRONGSORT.MAX_AGE,
-                n_init=cfg.STRONGSORT.N_INIT,
-                nn_budget=cfg.STRONGSORT.NN_BUDGET,
-                mc_lambda=cfg.STRONGSORT.MC_LAMBDA,
-                ema_alpha=cfg.STRONGSORT.EMA_ALPHA,
-            )
-        )
-        strongsort_list[i].model.warmup()
-    outputs: "List[npt.NDArray]" = [np.ndarray([])] * nr_sources
+    # Create a strong sort instances as there is an only one video source
+    strongsort = create_tracker('strongsort', reid_weights, device, half)
+    if hasattr(strongsort, 'model'):
+        if hasattr(strongsort.model, 'warmup'):
+            strongsort.model.warmup()
 
     # Run tracking
+    model.eval()
     model.warmup(imgsz=(1 if pt else nr_sources, 3, *imgsz))  # warmup
-    dt, seen = [0.0, 0.0, 0.0, 0.0], 0
-    curr_frames, prev_frames = [None] * nr_sources, [None] * nr_sources
-    for frame_idx, (path, im, im0s, vid_cap, s) in tqdm(enumerate(dataset), total=video_len):
+    # dt, seen = [0.0, 0.0, 0.0, 0.0], 0
+    curr_frame, prev_frame = None, None
+    for frame_idx, im, im0s in tqdm(dataset):
         if not source.keep[frame_idx]:
             continue
-        t1 = time_sync()
+
+        # t1 = time_sync()
         im = torch.from_numpy(im).to(device)
         im = im.half() if half else im.float()  # uint8 to fp16/32
         im /= 255.0  # 0 - 255 to 0.0 - 1.0
         if len(im.shape) == 3:
             im = im[None]  # expand for batch dim
-        t2 = time_sync()
-        dt[0] += t2 - t1
+        # t2 = time_sync()
+        # dt[0] += t2 - t1
 
         # Inference
         pred = model(im, augment=augment, visualize=False)
-        t3 = time_sync()
-        dt[1] += t3 - t2
+        # t3 = time_sync()
+        # dt[1] += t3 - t2
 
         # Apply NMS
         pred = non_max_suppression(
             pred, conf_thres, iou_thres, classes, agnostic_nms, max_det=max_det
         )
-        dt[2] += time_sync() - t3
+        # dt[2] += time_sync() - t3
 
         # Process detections
-        for i, det in enumerate(pred):  # detections per image
-            seen += 1
-            p, im0, _ = path, im0s.copy(), getattr(dataset, "frame", 0)
-            p = Path(p)  # to Path
-            curr_frames[i] = im0
+        assert isinstance(pred, list)
+        assert len(pred) == 1
+        det = pred[0]
+        # seen += 1
+        im0, _ = im0s.copy(), getattr(dataset, "frame", 0)
+        curr_frame = im0
 
-            s += "%gx%g " % im.shape[2:]  # print string
+        # s += "%gx%g " % im.shape[2:]  # print string
 
-            if cfg.STRONGSORT.ECC:  # camera motion compensation
-                strongsort_list[i].tracker.camera_update(prev_frames[i], curr_frames[i])
+        if hasattr(strongsort, 'tracker') and hasattr(strongsort.tracker, 'camera_update'):
+            if prev_frame is not None and curr_frame is not None:  # camera motion compensation
+                strongsort.tracker.camera_update(prev_frame, curr_frame)
+        if det is not None and len(det):
 
-            if det is not None and len(det):
-                # Rescale boxes from img_size to im0 size
-                det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
+            # Rescale boxes from img_size to im0 size
+            det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0.shape).round()  # xyxy
 
-                # Print results
-                for c in det[:, -1].unique():
-                    n = (det[:, -1] == c).sum()  # detections per class
-                    s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
+            # Print results
+            # for c in det[:, -1].unique():
+            #     n = (det[:, -1] == c).sum()  # detections per class
+            #     s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
 
-                xywhs = xyxy2xywh(det[:, 0:4])
-                confs = det[:, 4]
-                clss = det[:, 5]
+            confs = det[:, 4]
 
-                # pass detections to strongsort
-                t4 = time_sync()
-                outputs[i] = strongsort_list[i].update(xywhs.cpu(), confs.cpu(), clss.cpu(), im0)
-                t5 = time_sync()
-                dt[3] += t5 - t4
+            # pass detections to strongsort
+            # t4 = time_sync()
+            output_ = strongsort.update(det.cpu(), im0)
+            # t5 = time_sync()
+            # dt[3] += t5 - t4
 
-                # draw boxes for visualization
-                if len(outputs[i]) > 0:
-                    for output, conf in zip(outputs[i], confs):
+            # draw boxes for visualization
+            if len(output_) > 0:
+                for output, conf in zip(output_, confs):
 
-                        id = output[4]
-                        cls = output[5]
-                        c = int(cls)
+                    id = output[4]
+                    cls = output[5]
+                    c = int(cls)
 
-                        # to MOT format
-                        bbox_left = output[0]
-                        bbox_top = output[1]
-                        bbox_w = output[2] - output[0]
-                        bbox_h = output[3] - output[1]
-                        labels.append(
-                            TrackingResult(
-                                frame_idx,
-                                int(id),
-                                bbox_left,
-                                bbox_top,
-                                bbox_w,
-                                bbox_h,
-                                i,
-                                f"{names[c]}",
-                                conf.item(),
-                            )
+                    # to MOT format
+                    bbox_left = output[0]
+                    bbox_top = output[1]
+                    bbox_w = output[2] - output[0]
+                    bbox_h = output[3] - output[1]
+                    labels.append(
+                        TrackingResult(
+                            frame_idx,
+                            int(id),
+                            bbox_left,
+                            bbox_top,
+                            bbox_w,
+                            bbox_h,
+                            0,  # TODO: remove
+                            f"{names[c]}",
+                            conf.item(),
                         )
+                    )
+            # LOGGER.info(f"{s}Done. YOLO:({t3 - t2:.3f}s), StrongSORT:({t5 - t4:.3f}s)")
 
-                # LOGGER.info(f"{s}Done. YOLO:({t3 - t2:.3f}s), StrongSORT:({t5 - t4:.3f}s)")
+        else:
+            strongsort.increment_ages()
+            # LOGGER.info("No detections")
 
-            else:
-                strongsort_list[i].increment_ages()
-                # LOGGER.info("No detections")
-
-            prev_frames[i] = curr_frames[i]
+        prev_frame = curr_frame
 
     # Print results
     # t = tuple(x / seen * 1e3 for x in dt)  # speeds per image
@@ -204,13 +166,15 @@ def track(
     #     f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms strong sort update per image at shape {(1, 3, *imgsz)}"
     #     % t
     # )
+    with open(f"strongsort_{source.video.videofile.split('/')[-1]}.json", "w") as f:
+        json.dump(strongsort.benchmark, f)
     return labels
 
 
 @dataclass
 class TrackingResult:
     frame_idx: int
-    object_id: float
+    object_id: int
     bbox_left: float
     bbox_top: float
     bbox_w: float
@@ -220,3 +184,75 @@ class TrackingResult:
     confidence: float
     prev: "TrackingResult | None" = None
     next: "TrackingResult | None" = None
+
+
+# ImageOutput = Tuple[int, npt.NDArray, npt.NDArray, str]
+ImageOutput = Tuple[int, npt.NDArray, npt.NDArray]
+
+
+class LoadImages(Iterator[ImageOutput], Iterable[ImageOutput]):
+    # YOLOv5 image/video dataloader, i.e. `python detect.py --source image.jpg/vid.mp4`
+    def __init__(self, payload: "Payload", img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
+
+        self.img_size = img_size
+        self.stride = stride
+        self.mode = 'image'
+        self.auto = auto
+        self.transforms = transforms  # optional
+        self.vid_stride = vid_stride  # video frame-rate stride
+        self._new_video(payload.video.videofile)  # new video
+        self.keep = payload.keep
+
+        images = DecodeFrame.get(payload)
+        assert images is not None
+        self.images = images
+
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self) -> "ImageOutput":
+        if self.frame >= self.frames:
+            raise StopIteration
+
+        # Read video
+        self.mode = 'video'
+        im0 = self.images[self.frame]
+        assert isinstance(im0, np.ndarray)
+
+        frame_idx = self.frame
+        self.frame += self.vid_stride
+        # im0 = self._cv2_rotate(im0)  # for use if cv2 autorotation is False
+        # s = f'video {self.count + 1}/{self.len} ({self.frame}/{self.frames}): '
+
+        if self.transforms:
+            im = self.transforms(im0)  # transforms
+        else:
+            im = letterbox(im0, self.img_size, stride=self.stride, auto=self.auto)[0]  # padded resize
+            im = im.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+            im = np.ascontiguousarray(im)  # contiguous
+
+        # return frame_idx, im, im0, s
+        return frame_idx, im, im0
+
+    def _new_video(self, path):
+        # Create a new video capture object
+        self.frame = 0
+        self.cap = cv2.VideoCapture(path)
+        self.frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.len = int(self.frames / self.vid_stride)
+        self.orientation = int(self.cap.get(cv2.CAP_PROP_ORIENTATION_META))  # rotation degrees
+        # self.cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 0)  # disable https://github.com/ultralytics/yolov5/issues/8493
+
+    def _cv2_rotate(self, im):
+        # Rotate a cv2 video manually
+        if self.orientation == 0:
+            return cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
+        elif self.orientation == 180:
+            return cv2.rotate(im, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        elif self.orientation == 90:
+            return cv2.rotate(im, cv2.ROTATE_180)
+        return im
+
+    def __len__(self):
+        return self.len
