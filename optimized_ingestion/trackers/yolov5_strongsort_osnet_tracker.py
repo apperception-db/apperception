@@ -1,3 +1,4 @@
+import json
 import os
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
@@ -8,7 +9,6 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-import json
 from tqdm import tqdm
 
 # limit the number of cpus used by high performance libraries
