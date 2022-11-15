@@ -23,7 +23,8 @@ class detectionInfo:
                  car_bbox3d,
                  car_bbox2d,
                  ego_trajectory,
-                 ego_config):
+                 ego_config,
+                 ego_road_segment_info):
         self.obj_id = obj_id
         self.frame_segment = frame_segment
         self.road_segment_info = road_segment_info
@@ -35,6 +36,7 @@ class detectionInfo:
         self.ego_config = ego_config
         self.timestamp = self.ego_config['timestamp']
         self.road_type = self.road_segment_info.segment_type
+        self.ego_road_segment_info = ego_road_segment_info
         self.compute_geo_info()
         self.compute_priority()
 
@@ -112,7 +114,9 @@ class samplePlan:
         return self.next_frame_num
 
 def yolo_detect(current_frame):
-    #TODO
+    #TODO: return a list of obj_detection
+    # onj_detection : namedtuple('id', 'car_loc3d', 'car_loc2d', 'car_bbox3d',
+    #   'car_bbox2d')
     return []
 
 def construct_all_detection_info(current_frame, cam_segment_mapping, ego_trajectory,
@@ -122,12 +126,21 @@ def construct_all_detection_info(current_frame, cam_segment_mapping, ego_traject
         all_detections = yolo_detect(current_frame)
     if len(all_detections) == 0:
         return all_detection_info
+    ego_mapping = detection_to_img_segment(
+        ego_config['egoTranslation'], cam_segment_mapping, ego=True)
+    if ego_mapping is None:
+        for mapping in cam_segment_mapping:
+            cam_segment, road_segment_info = mapping
+        raise ValueError('Ego segment not included')
+    ego_cam_segment, ego_road_segment_info = ego_mapping
+
     for detection in all_detections:
         obj_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
         related_mapping = detection_to_img_segment(car_loc2d, cam_segment_mapping)
         if related_mapping is None:
             continue
         cam_segment, road_segment_info = related_mapping
+        
         detection_info = detectionInfo(obj_id,
                                        cam_segment,
                                        road_segment_info,
@@ -136,8 +149,10 @@ def construct_all_detection_info(current_frame, cam_segment_mapping, ego_traject
                                        car_bbox3d,
                                        car_bbox2d,
                                        ego_trajectory,
-                                       ego_config)
+                                       ego_config,
+                                       ego_road_segment_info)
         all_detection_info.append(detection_info)
+
     return all_detection_info
 
 def generate_sample_plan(video, next_frame_num, all_detection_info, view_distance):
@@ -147,8 +162,16 @@ def generate_sample_plan(video, next_frame_num, all_detection_info, view_distanc
     sample_plan.generate_sample_plan(view_distance)
     return sample_plan
 
-def detection_estimation(sorted_ego_config, video, start_frame_num, metadata, view_distance=50):
+def detection_estimation(sorted_ego_config, video, start_frame_num, view_distance=50, img_base_dir=''):
     """Estimated detection throughout the whole video
+
+    Args:
+        sorted_ego_config: a sorted list of ego_configs of the given video
+        video: the video name
+        start_frame_num: the frame number to start the sample
+        view_distance: the maximum view distance from ego
+        img_base_dir: the base directory of the images,
+                      TODO:deprecate later
     
     Return: metadata of the video including all object trajectories
             and other useful info tbd
@@ -156,20 +179,15 @@ def detection_estimation(sorted_ego_config, video, start_frame_num, metadata, vi
     """
     ego_trajectory = get_ego_trajectory(video, sorted_ego_config)
     next_frame_num = start_frame_num
-    current_frame = video.capture()
-    next_sample_plan = samplePlan(video, metadata)
-    while current_frame:
-        if next_frame_config.get_frame_num() == next_frame_num:
-            current_ego_config = next_frame_config
-            cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
-            all_detection_info = construct_all_detection_info(
-                current_frame, cam_segment_mapping, ego_trajectory, current_ego_config, next_sample_plan)
-            # TODO: metadata.sync(all_detection_info, previous_sample_plan), this is the step that does the object matching
-            # It update the current detection info with matched id and save unmatched object to the metadata
-            # It keeps to branch, one for terminated tracking, one for ongoing tracking
-            # A match object will keep in the ongoing tracking while unmatched previous detection would terminate
-            # its ongoing tack
-            # We need the previous sample plan to provide spatial temporal info to estimate the object trajectory
-            next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, next_sample_plan, metadata)
-            next_frame_num = sample_plan.get_next_frame_num(next_frame_num)
-        next_frame_config = sorted_ego_config.get_next()
+    for i in range(len(sorted_ego_config)-1):
+        current_ego_config = sorted_ego_configs[i]
+        next_frame_num = sprted_ego_configs[i+1]['frame_num']
+        if current_ego_config['frame_num'] != next_frame_num:
+            continue
+        cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
+        current_frame = img_base_dir + current_ego_config['fileName']
+        all_detection_info = construct_all_detection_info(
+            current_frame, cam_segment_mapping, current_ego_config, ego_trajectory)
+        next_sample_plan, next_frame = generate_sample_plan_once(
+            video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)
+        current_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)

@@ -42,9 +42,9 @@ class Action:
         estimated time: {self.estimated_time}'''
 
 def ego_exit_current_segment(detection_info, ego_trajectory, ego_config):
-    current_segment_info = detection_info.road_segment_info
+    current_segment_info = detection_info.ego_road_segment_info
     current_time = detection_info.timestamp
-    ego_loc = ego_config['egoTranslation']
+    ego_loc = ego_config['egoTranslation'][:2]
     exit_time, exit_point = time_to_exit_current_segment(
         current_segment_info, current_time, ego_loc, ego_trajectory)
     exit_action = Action(current_time, exit_time, ego_loc, exit_point,
@@ -104,14 +104,15 @@ def same_direction_sample_action(detection_info, view_distance):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    # print('ego_exit_segment_action', ego_exit_segment_action)
+    print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # print('car_exit_segment_action', car_exit_segment_action)
     car_go_beyong_view_action = car_exit_view(
         detection_info, ego_trajectory, ego_config, view_distance)
     # print('car_go_beyong_view_action', car_go_beyong_view_action)
     # ego_by_pass_car_action = ego_by_pass_car(detection_info, ego_trajectory, ego_config)
-    return combine_sample_actions([car_exit_segment_action,
+    return combine_sample_actions([ego_exit_segment_action,
+                                   car_exit_segment_action,
                                    car_go_beyong_view_action,])
                                    # ego_by_pass_car_action])
 
@@ -119,13 +120,14 @@ def opposite_direction_sample_action(detection_info, view_distance):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    # print('ego_exit_segment_action', ego_exit_segment_action)
+    print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # print('car_exit_segment_action', car_exit_segment_action)
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
     # print('meet_ego_action', meet_ego_action)
     # return car_exit_segment_action
-    return combine_sample_actions([car_exit_segment_action,
+    return combine_sample_actions([ego_exit_segment_action,
+                                   car_exit_segment_action,
                                    meet_ego_action])
 
 def get_sample_action_alg(relative_direction):

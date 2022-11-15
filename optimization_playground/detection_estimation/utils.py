@@ -127,12 +127,16 @@ def get_ego_avg_speed(ego_trajectory):
     point_wise_ego_speed = get_ego_speed(ego_trajectory)
     return sum([speed.speed for speed in point_wise_ego_speed]) / len(point_wise_ego_speed)
 
-def detection_to_img_segment(car_loc2d, cam_segment_mapping):
+def detection_to_img_segment(car_loc2d, cam_segment_mapping, ego=False):
     maximum_mapping = None
     maximum_mapping_area = 0
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
-        if Polygon(cam_segment).contains(Point(car_loc2d)):
+        if ego and road_segment_info.contains_ego:
+            if Polygon(road_segment_info.segment_polygon).area > maximum_mapping_area:
+                maximum_mapping = mapping
+                maximum_mapping_area = Polygon(road_segment_info.segment_polygon).area
+        elif Polygon(cam_segment).contains(Point(car_loc2d)):
             if Polygon(cam_segment).area > maximum_mapping_area:
                 maximum_mapping = mapping
                 maximum_mapping_area = Polygon(cam_segment).area
@@ -187,7 +191,7 @@ def time_to_exit_current_segment(current_segment_info,
             if (point.timestamp > current_time and
                not Polygon(segmentpolygon).contains(Point(point.coordinates))):
                 return point.timestamp, point.coordinates
-        return None
+        return time_elapse(current_time, -1), None
     segmentheading = current_segment_info.segment_heading + 90
     car_loc = Point(car_loc)
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),

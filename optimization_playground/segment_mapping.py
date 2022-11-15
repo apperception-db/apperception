@@ -207,21 +207,24 @@ def construct_mapping(
     determine whether add it to the mapping
     """
     ego_translation = ego_config['egoTranslation'][:2]
-    if contains_ego:
-        decoded_road_segment += (ego_translation,)
     deduced_cam_segment = tuple(map(
             lambda point: transformation(tuple(point)+(0,), ego_config), decoded_road_segment))
     assert len(deduced_cam_segment) == len(decoded_road_segment)
-    keep_cam_segment_point = []
-    keep_road_segment_point = []
-    for i in range(len(decoded_road_segment)):
-        current_cam_point = deduced_cam_segment[i]
-        current_road_point = decoded_road_segment[i]
-        if in_frame(current_cam_point, frame_size) and \
-            in_view(current_road_point, ego_translation, fov_lines):
-            keep_cam_segment_point.append(current_cam_point)
-            keep_road_segment_point.append(current_road_point)
-    if len(keep_cam_segment_point) > 2 and Polygon(tuple(keep_cam_segment_point)).area > 100:
+    if contains_ego:
+        keep_cam_segment_point = deduced_cam_segment
+        keep_road_segment_point = decoded_road_segment
+    else:
+        keep_cam_segment_point = []
+        keep_road_segment_point = []
+        for i in range(len(decoded_road_segment)):
+            current_cam_point = deduced_cam_segment[i]
+            current_road_point = decoded_road_segment[i]
+            if in_frame(current_cam_point, frame_size) and \
+                in_view(current_road_point, ego_translation, fov_lines):
+                keep_cam_segment_point.append(current_cam_point)
+                keep_road_segment_point.append(current_road_point)
+    if contains_ego or (len(keep_cam_segment_point) > 2 
+        and Polygon(tuple(keep_cam_segment_point)).area > 100):
         return cam_segment_mapping(
             keep_cam_segment_point, 
             roadSegmentInfo(
@@ -256,17 +259,18 @@ def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
         segmentid, segmentpolygon, segmenttype, segmentheading, contains_ego = road_segment
         segmentpolygon_points = tuple(zip(*Geometry(segmentpolygon).exterior.shapely.xy))
         segmentpolygon = Polygon(segmentpolygon_points)
+        decoded_road_segment = segmentpolygon_points
+        if not contains_ego:
+            road_filter = all(map(
+                lambda point: not in_view(
+                    point, ego_config['egoTranslation'], fov_lines), 
+                segmentpolygon_points))
+            if road_filter:
+                continue
 
-        road_filter = all(map(
-            lambda point: not in_view(
-                point, ego_config['egoTranslation'], fov_lines), 
-            segmentpolygon_points))
-        if road_filter:
-            continue
-
-        intersection_points = tuple(
-            intersection(fov_lines, segmentpolygon))
-        decoded_road_segment = segmentpolygon_points+intersection_points
+            intersection_points = tuple(
+                    intersection(fov_lines, segmentpolygon))
+            decoded_road_segment +=intersection_points
 
         current_mapping = construct_mapping(
             decoded_road_segment, frame_size, fov_lines, segmentid,
