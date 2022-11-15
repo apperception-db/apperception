@@ -1,15 +1,14 @@
+import cv2
 import json
+import numpy as np
+import numpy.typing as npt
 import os
+import torch
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Tuple
-
-import cv2
-import numpy as np
-import numpy.typing as npt
-import torch
 from tqdm import tqdm
+from typing import TYPE_CHECKING, List, Tuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"

@@ -1,9 +1,8 @@
 import collections
 import collections.abc
+import cv2
 from datetime import datetime, timedelta
 from typing import List, Optional
-
-import cv2
 
 from .camera_config import CameraConfig, interpolate
 

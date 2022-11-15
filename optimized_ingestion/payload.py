@@ -1,9 +1,8 @@
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
-
 import cv2
 from bitarray import bitarray
+from dataclasses import dataclass
 from tqdm import tqdm
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 from yolo_tracker.yolov5.utils.plots import Annotator, colors
 
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway

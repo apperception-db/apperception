@@ -1,5 +1,4 @@
-from typing import (Any, Callable, Dict, Generic, List, Literal, Optional, Set,
-                    Tuple, TypeVar)
+from typing import Any, Callable, Dict, Generic, List, Literal, Optional, Set, Tuple, TypeVar
 
 BinOp = Literal["add", "sub", "mul", "div", "matmul"]
 BoolOp = Literal["and", "or"]

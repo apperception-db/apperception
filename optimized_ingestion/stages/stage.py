@@ -1,7 +1,6 @@
 import time
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-
 from bitarray import bitarray
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..payload import Payload

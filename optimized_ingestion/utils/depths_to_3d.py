@@ -1,8 +1,7 @@
-import time
-from math import sqrt
-
 import numpy as np
 import numpy.typing as npt
+import time
+from math import sqrt
 from numpy import newaxis as na
 
 
