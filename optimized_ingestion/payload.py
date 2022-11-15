@@ -7,7 +7,7 @@ from tqdm import tqdm
 from yolo_tracker.yolov5.utils.plots import Annotator, colors
 
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
-from .stages.tracking_2d import Tracking2D
+from .stages.tracking_2d.tracking_2d import Tracking2D
 from .stages.tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
 from .utils.iterate_video import iterate_video
 

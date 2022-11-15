@@ -6,7 +6,7 @@ from pyquaternion import Quaternion
 from tqdm import tqdm
 
 from ...payload import Payload
-from ..tracking_2d import Tracking2D
+from ..tracking_2d.tracking_2d import Tracking2D
 from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
