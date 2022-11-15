@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-
 import cv2
 from bitarray import bitarray
 from tqdm import tqdm
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .stage import Stage
 

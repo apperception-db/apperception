@@ -1,5 +1,4 @@
-from apperception.predicate import (BinOpNode, CastNode, PredicateNode,
-                                    TableAttrNode)
+from apperception.predicate import BinOpNode, CastNode, PredicateNode, TableAttrNode
 
 HEADINGS = {
     "trajCentroids": "itemHeadings",

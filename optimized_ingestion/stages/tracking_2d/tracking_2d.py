@@ -1,6 +1,5 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-
 from bitarray import bitarray
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ...trackers import yolov5_strongsort_osnet_tracker as tracker
 from ..stage import Stage
