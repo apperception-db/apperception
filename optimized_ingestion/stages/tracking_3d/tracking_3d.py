@@ -1,8 +1,7 @@
-from dataclasses import dataclass
-from typing import Tuple
-
 import numpy as np
 import numpy.typing as npt
+from dataclasses import dataclass
+from typing import Tuple
 
 from ..stage import Stage
 

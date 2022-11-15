@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from apperception.database import database
 
 from bitarray import bitarray
-
-from apperception.database import database
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .stage import Stage
 

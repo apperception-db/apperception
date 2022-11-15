@@ -5,24 +5,29 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
 import pandas as pd
 import psycopg2
 import psycopg2.errors
+import psycopg2.sql
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
 from pypika import CustomFunction, Table
+
 # https://github.com/kayak/pypika/issues/553
 # workaround. because the normal Query will fail due to mobility db
 from pypika.dialects import Query, SnowflakeQuery
 
 from apperception.data_types import Trajectory
-from apperception.predicate import (FindAllTablesVisitor, GenSqlVisitor,
-                                    MapTablesTransformer, normalize)
+from apperception.predicate import (
+    FindAllTablesVisitor,
+    GenSqlVisitor,
+    MapTablesTransformer,
+    normalize,
+)
 from apperception.utils.add_recognized_objects import add_recognized_objects
 from apperception.utils.fetch_camera import fetch_camera
 from apperception.utils.fetch_camera_framenum import fetch_camera_framenum
 from apperception.utils.overlay_bboxes import overlay_bboxes
 from apperception.utils.query_to_str import query_to_str
 from apperception.utils.recognize import recognize
-from apperception.utils.reformat_bbox_trajectories import \
-    reformat_bbox_trajectories
+from apperception.utils.reformat_bbox_trajectories import reformat_bbox_trajectories
 from apperception.utils.timestamp_to_framenum import timestamp_to_framenum
 
 if TYPE_CHECKING:
@@ -190,7 +195,9 @@ class Database:
         if commit:
             self.connection.commit()
 
-    def execute(self, query: "str | sql.SQL", vars: "tuple | list | None" = None) -> List[tuple]:
+    def execute(
+        self, query: "str | psycopg2.sql.SQL", vars: "tuple | list | None" = None
+    ) -> List[tuple]:
         try:
             self.cursor.execute(query, vars)
             for notice in self.cursor.connection.notices:

@@ -1,5 +1,4 @@
 import collections.abc
-
 import cv2
 import numpy.typing as npt
 

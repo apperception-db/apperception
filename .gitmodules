@@ -2,6 +2,7 @@
 	path = submodules/monodepth2
 	url = git@github.com:PW22-SBN-01/monodepth2.git
 	branch = pip-module
-[submodule "Yolov5_StrongSORT_OSNet"]
-	path = submodules/Yolov5_StrongSORT_OSNet
-	url = git@github.com:mikel-brostrom/Yolov5_StrongSORT_OSNet.git
+[submodule "yolo_tracker"]
+	path = submodules/yolo_tracker
+	url = git@github.com:apperception-db/Yolov5_StrongSORT_OSNet.git
+	branch = module

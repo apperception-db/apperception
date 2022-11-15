@@ -1,21 +1,18 @@
-import os
-import pickle
+from bitarray import bitarray
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-from bitarray import bitarray
-
-from ..trackers import yolov5_strongsort_osnet_tracker as tracker
-from .stage import Stage
+from ...trackers import yolov5_strongsort_osnet_tracker as tracker
+from ..stage import Stage
 
 if TYPE_CHECKING:
-    from ..payload import Payload
+    from ...payload import Payload
 
 
 class Tracking2D(Stage):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        if os.path.exists("./_Tracking2D.pickle"):
-            with open("./_Tracking2D.pickle", "rb") as f:
-                return None, {self.classname(): pickle.load(f)}
+        # if os.path.exists("./_Tracking2D.pickle"):
+        #     with open("./_Tracking2D.pickle", "rb") as f:
+        #         return None, {self.classname(): pickle.load(f)}
 
         results = tracker.track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
@@ -44,7 +41,7 @@ class Tracking2D(Stage):
                 if i < last:
                     t.next = trajectory[i + 1]
 
-        with open("./_Tracking2D.pickle", "wb") as f:
-            pickle.dump(metadata, f)
+        # with open("./_Tracking2D.pickle", "wb") as f:
+        #     pickle.dump(metadata, f)
 
         return None, {self.classname(): metadata}

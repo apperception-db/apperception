@@ -1,13 +1,12 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from pyquaternion import Quaternion
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
-from ..tracking_2d import Tracking2D
+from ..tracking_2d.tracking_2d import Tracking2D
 from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
