@@ -181,13 +181,13 @@ def detection_estimation(sorted_ego_config, video, start_frame_num, view_distanc
     next_frame_num = start_frame_num
     for i in range(len(sorted_ego_config)-1):
         current_ego_config = sorted_ego_configs[i]
-        next_frame_num = sprted_ego_configs[i+1]['frame_num']
         if current_ego_config['frame_num'] != next_frame_num:
             continue
+        next_frame_num = sprted_ego_configs[i+1]['frame_num']
         cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
         current_frame = img_base_dir + current_ego_config['fileName']
         all_detection_info = construct_all_detection_info(
             current_frame, cam_segment_mapping, current_ego_config, ego_trajectory)
         next_sample_plan, next_frame = generate_sample_plan_once(
             video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)
-        current_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+        next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
