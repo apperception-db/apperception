@@ -104,7 +104,7 @@ def same_direction_sample_action(detection_info, view_distance):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    print('ego_exit_segment_action', ego_exit_segment_action)
+    # print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # print('car_exit_segment_action', car_exit_segment_action)
     car_go_beyong_view_action = car_exit_view(
@@ -120,7 +120,7 @@ def opposite_direction_sample_action(detection_info, view_distance):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    print('ego_exit_segment_action', ego_exit_segment_action)
+    # print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # print('car_exit_segment_action', car_exit_segment_action)
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)

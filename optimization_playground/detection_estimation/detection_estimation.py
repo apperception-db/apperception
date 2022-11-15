@@ -188,6 +188,6 @@ def detection_estimation(sorted_ego_config, video, start_frame_num, view_distanc
         current_frame = img_base_dir + current_ego_config['fileName']
         all_detection_info = construct_all_detection_info(
             current_frame, cam_segment_mapping, current_ego_config, ego_trajectory)
-        next_sample_plan, next_frame = generate_sample_plan_once(
+        next_sample_plan, next_frame = generate_sample_plan(
             video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)

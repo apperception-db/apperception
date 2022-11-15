@@ -132,11 +132,13 @@ def detection_to_img_segment(car_loc2d, cam_segment_mapping, ego=False):
     maximum_mapping_area = 0
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
-        if ego and road_segment_info.contains_ego:
-            if Polygon(road_segment_info.segment_polygon).area > maximum_mapping_area:
+        if ego:
+            if (road_segment_info.contains_ego and
+                Polygon(road_segment_info.segment_polygon).area > maximum_mapping_area):
                 maximum_mapping = mapping
                 maximum_mapping_area = Polygon(road_segment_info.segment_polygon).area
-        elif Polygon(cam_segment).contains(Point(car_loc2d)):
+        elif (Polygon(cam_segment).contains(Point(car_loc2d)) and
+              road_segment_info.segment_type in ['lane', 'laneSection']):
             if Polygon(cam_segment).area > maximum_mapping_area:
                 maximum_mapping = mapping
                 maximum_mapping_area = Polygon(cam_segment).area
