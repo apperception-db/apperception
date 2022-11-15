@@ -28,6 +28,7 @@ from apperception.utils.timestamp_to_framenum import timestamp_to_framenum
 if TYPE_CHECKING:
     from psycopg2 import connection as Connection
     from psycopg2 import cursor as Cursor
+    from psycopg2 import sql
 
     from .data_types import Camera
     from .predicate import PredicateNode
