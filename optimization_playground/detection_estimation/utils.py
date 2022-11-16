@@ -1,6 +1,8 @@
 from collections import namedtuple
+from typing import NamedTuple, Tuple
 import datetime
 import math
+from dataclasses import dataclass
 
 from apperception.database import database
 from apperception.utils import F, transformation, fetch_camera_config, fetch_camera_trajectory
@@ -9,8 +11,33 @@ from shapely.geometry import Point, Polygon, LineString, MultiLineString, box
 
 SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
-trajectory_3d = namedtuple('trajectory_3d', ['coordinates', 'timestamp'])
-temporal_speed = namedtuple('temporal_speed', ['speed', 'timestamp'])
+
+
+@dataclass
+class trajectory_3d:
+    coordinates: "Tuple[float, float, float]"
+    timestamp: datetime.datetime
+
+    def validate_coordinates(self, value, **_) -> "Tuple[float, float, float]":
+        if isinstance(value, list):
+            value = tuple(value)
+        
+        if not isinstance(value, tuple) or len(value) != 3:
+            raise Exception()
+        
+        return value
+    
+    def validate_timestamp(self, value, **_) -> "datetime.datetime":
+        if not isinstance(value, datetime.datetime):
+            raise Exception()
+        return value
+
+
+@dataclass
+class temporal_speed:
+    speed: float
+    timestamp: datetime.datetime
+
 
 def mph_to_mps(mph):
     return mph * 0.44704
