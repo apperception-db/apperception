@@ -1,3 +1,20 @@
+"""Detection Estimation Module
+
+This module is responsible for estimating the object detection throughout the whole video.
+The sampling algorithm skips frames based on the current frame geo information.
+We estimate objects' metadata only based on the sampled frames.
+
+Usage example:
+    from detection_estimation import detection_estimation
+    detection_estimation(sorted_ego_config, video, start_frame_num, view_distance=50, img_base_dir='')
+
+TODO:
+    1. incoporate yolo detection, either merge this module to the tracking pipeline
+    or call yolo detection in this module
+    2. ssave the detection and tracking result in the sample plan object
+
+"""
+
 from collections import namedtuple
 import os
 import sys
@@ -30,7 +47,7 @@ class detectionInfo:
         self.road_segment_info = road_segment_info
         self.car_loc3d = car_loc3d
         self.car_loc2d = car_loc2d
-        self.car_bbox3d = car_bbox3d
+        self.car_bbox3d = car_bbox3dDetection
         self.car_bbox2d = car_bbox2d
         self.ego_trajectory = ego_trajectory
         self.ego_config = ego_config
@@ -173,8 +190,8 @@ def detection_estimation(sorted_ego_config, video, start_frame_num, view_distanc
         img_base_dir: the base directory of the images,
                       TODO:deprecate later
     
-    Return: metadata of the video including all object trajectories
-            and other useful info tbd
+    Return: TODO metadata of the video including all object trajectories
+            and other useful information
              
     """
     ego_trajectory = get_ego_trajectory(video, sorted_ego_config)
