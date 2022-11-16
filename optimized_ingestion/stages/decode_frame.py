@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-
 import cv2
 from bitarray import bitarray
 from tqdm import tqdm
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .stage import Stage
 
@@ -13,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class DecodeFrame(Stage):
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         metadata: "List[npt.NDArray]" = []
 
         # TODO: only decode filtered frames

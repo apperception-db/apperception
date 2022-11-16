@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Dict, Optional, Tuple
+from apperception.database import database
 
 from bitarray import bitarray
-
-from apperception.database import database
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 from .stage import Stage
 
@@ -18,10 +17,11 @@ such, there won't be cars going in the intersection in the same direction (assum
 
 class Stopped(Stage):
     def __init__(self, min_stopped_frames: int, stopped_threshold: float) -> None:
+        super().__init__()
         self.min_stopped_frames = min_stopped_frames
         self.stopped_threshold = stopped_threshold
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray()
         frames = list(payload.video)
         stopped = set()
@@ -33,10 +33,10 @@ class Stopped(Stage):
             prev_point = f"'POINT ({' '.join([*map(str, _prev_frame.ego_translation)])})'"
 
             query = f"SELECT ABS(ST_Distance({current_point}, {prev_point}))"
-            dist = database._execute_query(query)[0][0]
+            dist = database.execute(query)[0][0]
 
             query = f"SELECT minDistance({current_point}, 'intersection')"
-            dist_intersection = database._execute_query(query)[0][0]
+            dist_intersection = database.execute(query)[0][0]
 
             if dist <= self.stopped_threshold and dist_intersection <= 5:
                 # make sure that actually close to an intersection

@@ -1,18 +1,14 @@
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
-
 import cv2
-import numpy as np
-import numpy.typing as npt
 from bitarray import bitarray
+from dataclasses import dataclass
 from tqdm import tqdm
-from Yolov5_StrongSORT_OSNet.yolov5.utils.plots import Annotator, colors
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
+from yolo_tracker.yolov5.utils.plots import Annotator, colors
 
-from optimized_ingestion.utils.iterate_video import iterate_video
-
-from .stages.depth_estimation import DepthEstimation
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
-from .stages.tracking_2d import Tracking2D
+from .stages.tracking_2d.tracking_2d import Tracking2D
+from .stages.tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
+from .utils.iterate_video import iterate_video
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -46,7 +42,7 @@ class Payload:
 
     def filter(self, filter: "Stage"):
         print("Stage: ", filter.classname())
-        keep, metadata = filter(self)
+        keep, metadata = filter.run(self)
 
         if keep is None:
             keep = self.keep
@@ -70,14 +66,13 @@ class Payload:
 
         print("Annotating Video")
         trackings: "List[Dict[float, TrackingResult] | None]" = Tracking2D.get(self.metadata)
-        depth_estimations: "List[npt.NDArray | None]" = DepthEstimation.get(self.metadata)
+        trackings3d: "List[Dict[float, Tracking3DResult]]" = Tracking3D.get(self.metadata)
         filtered_objs: "List[Set[float] | None]" = FilterCarFacingSideway.get(self.metadata)
         frames = iterate_video(video)
         assert len(self.keep) == len(frames)
         assert len(self.keep) == len(trackings)
-        assert len(self.keep) == len(depth_estimations)
         assert len(self.keep) == len(filtered_objs)
-        for frame, k, tracking, depth_estimation, filtered_obj in tqdm(zip(iterate_video(video), self.keep, trackings, depth_estimations, filtered_objs), total=len(self.keep)):
+        for frame, k, tracking, tracking3d, filtered_obj in tqdm(zip(iterate_video(video), self.keep, trackings, trackings3d, filtered_objs), total=len(self.keep)):
             if not k:
                 frame[:, :, 2] = 255
 
@@ -86,13 +81,14 @@ class Payload:
                 if tracking is not None:
                     annotator = Annotator(frame, line_width=2)
                     for id, t in tracking.items():
+                        t3d = tracking3d[id]
+                        if t3d.point_from_camera[2] >= 0:
+                            continue
                         if id not in filtered_obj:
                             continue
                         c = t.object_type
                         id = int(id)
-                        x = int(t.bbox_left + t.bbox_w / 2)
-                        y = int(t.bbox_top + t.bbox_h / 2)
-                        label = f"{id} {c} conf: {t.confidence:.2f} dist: {depth_estimation[y, x]: .4f}"
+                        label = f"{id} {c} conf: {t.confidence:.2f} dist: {t3d.point_from_camera[2]: .4f}"
                         annotator.box_label(
                             [
                                 t.bbox_left,
@@ -118,30 +114,30 @@ class Payload:
         out.release()
         cv2.destroyAllWindows()
 
-        print("Saving depth")
-        _filename = filename.split(".")
-        _filename[-2] += "_depth"
-        out = cv2.VideoWriter(
-            ".".join(_filename),
-            cv2.VideoWriter_fourcc(*"mp4v"),
-            int(self.video.fps),
-            (width, height),
-        )
-        blank = np.zeros((1600, 900, 3), dtype=np.uint8)
-        if depth and depth_estimations is not None:
-            for depth_estimation in tqdm(depth_estimations):
-                if depth_estimation is None:
-                    out.write(blank)
-                    continue
-                depth_estimation = depth_estimation[:, :, np.newaxis]
-                _min = np.min(depth_estimation)
-                _max = np.max(depth_estimation)
-                depth_estimation = (depth_estimation - _min) * 256 / _max
-                depth_estimation = depth_estimation.astype(np.uint8)
-                depth_estimation = np.concatenate((depth_estimation, depth_estimation, depth_estimation), axis=2)
-                out.write(depth_estimation)
-        out.release()
-        cv2.destroyAllWindows()
+        # print("Saving depth")
+        # _filename = filename.split(".")
+        # _filename[-2] += "_depth"
+        # out = cv2.VideoWriter(
+        #     ".".join(_filename),
+        #     cv2.VideoWriter_fourcc(*"mp4v"),
+        #     int(self.video.fps),
+        #     (width, height),
+        # )
+        # blank = np.zeros((1600, 900, 3), dtype=np.uint8)
+        # if depth and depth_estimations is not None:
+        #     for depth_estimation in tqdm(depth_estimations):
+        #         if depth_estimation is None:
+        #             out.write(blank)
+        #             continue
+        #         depth_estimation = depth_estimation[:, :, np.newaxis]
+        #         _min = np.min(depth_estimation)
+        #         _max = np.max(depth_estimation)
+        #         depth_estimation = (depth_estimation - _min) * 256 / _max
+        #         depth_estimation = depth_estimation.astype(np.uint8)
+        #         depth_estimation = np.concatenate((depth_estimation, depth_estimation, depth_estimation), axis=2)
+        #         out.write(depth_estimation)
+        # out.release()
+        # cv2.destroyAllWindows()
 
 
 def metadata_len(metadata: "Dict[str, list]") -> "int | None":

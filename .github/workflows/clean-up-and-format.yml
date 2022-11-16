@@ -57,7 +57,7 @@ jobs:
         run: python -m black --config pyproject.toml apperception
       
       - name: Sort imports with isort
-        run: python -m isort apperception optimized_ingestion
+        run: python -m isort -vb apperception optimized_ingestion
       
       - name: Commit formatted changes
         run: ./scripts/commit-and-push.sh "[CI] format"

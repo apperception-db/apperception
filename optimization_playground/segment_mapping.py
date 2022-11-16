@@ -55,7 +55,7 @@ CAM_CONFIG_QUERY = """SELECT * FROM Cameras
                     WHERE filename like 'samples/CAM_FRONT/%{date}%' 
                     ORDER BY frameNum""" 
 
-camera_config = database._execute_query(CAM_CONFIG_QUERY.format(date=input_date))
+camera_config = database.execute(CAM_CONFIG_QUERY.format(date=input_date))
 camera_config_df = pd.DataFrame(camera_config, columns=CAMERA_COLUMNS)
 camera_config_df
 
@@ -104,7 +104,7 @@ def road_segment_contains(ego_config: Dict[str, Any])\
     query = SEGMENT_CONTAIN_QUERY.format(
         ego_translation=Point(*ego_config['egoTranslation']).wkb_hex)
 
-    return database._execute_query(query)
+    return database.execute(query)
 
 def find_segment_dwithin(start_segment: Tuple[str],
                          view_distance=50) -> Tuple[Tuple[str, str, set]]:
@@ -112,7 +112,7 @@ def find_segment_dwithin(start_segment: Tuple[str],
     query = SEGMENT_DWITHIN_QUERY.format(
         start_segment=start_segment_polygon, view_distance=view_distance)
 
-    return database._execute_query(query)
+    return database.execute(query)
 
 def reformat_return_segment(segments: Tuple[str, str, set, float])\
         -> List[Tuple[str, str, str, float]]:

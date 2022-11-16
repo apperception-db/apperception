@@ -21,10 +21,12 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from core.config import cfg
+
 # deep sort imports
 from deep_sort import nn_matching, preprocessing
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
+
 # from PIL import Image
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.python.saved_model import tag_constants

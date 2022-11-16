@@ -8,16 +8,16 @@ if TYPE_CHECKING:
 
 @dataclass
 class Pipeline:
-    filters: "List[Stage]" = field(default_factory=list)
+    stages: "List[Stage]" = field(default_factory=list)
 
     def __init__(self) -> None:
-        self.filters = []
+        self.stages = []
 
     def add_filter(self, filter: "Stage"):
-        self.filters.append(filter)
+        self.stages.append(filter)
         return self
 
     def run(self, payload: "Payload") -> "Payload":
-        for filter in self.filters:
+        for filter in self.stages:
             payload = payload.filter(filter)
         return payload

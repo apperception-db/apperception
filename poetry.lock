@@ -52,6 +52,19 @@ six = "*"
 test = ["astroid (<=2.5.3)", "pytest"]
 
 [[package]]
+name = "asyncpg"
+version = "0.26.0"
+description = "An asyncio PostgreSQL driver"
+category = "main"
+optional = false
+python-versions = ">=3.6.0"
+
+[package.extras]
+dev = ["Cython (>=0.29.24,<0.30.0)", "Sphinx (>=4.1.2,<4.2.0)", "flake8 (>=3.9.2,<3.10.0)", "pycodestyle (>=2.7.0,<2.8.0)", "pytest (>=6.0)", "sphinx-rtd-theme (>=0.5.2,<0.6.0)", "sphinxcontrib-asyncio (>=0.3.0,<0.4.0)", "uvloop (>=0.15.3)"]
+docs = ["Sphinx (>=4.1.2,<4.2.0)", "sphinx-rtd-theme (>=0.5.2,<0.6.0)", "sphinxcontrib-asyncio (>=0.3.0,<0.4.0)"]
+test = ["flake8 (>=3.9.2,<3.10.0)", "pycodestyle (>=2.7.0,<2.8.0)", "uvloop (>=0.15.3)"]
+
+[[package]]
 name = "attrs"
 version = "22.1.0"
 description = "Classes Without Boilerplate"
@@ -292,7 +305,7 @@ testing = ["pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)",
 name = "iniconfig"
 version = "1.1.1"
 description = "iniconfig: brain-dead simple config-ini parsing"
-category = "dev"
+category = "main"
 optional = false
 python-versions = "*"
 
@@ -695,10 +708,10 @@ python-versions = ">=3.6"
 
 [package.dependencies]
 numpy = [
+    {version = ">=1.21.2", markers = "python_version >= \"3.10\" or python_version >= \"3.6\" and platform_system == \"Darwin\" and platform_machine == \"arm64\""},
     {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
     {version = ">=1.14.5", markers = "python_version >= \"3.7\""},
     {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
-    {version = ">=1.21.2", markers = "python_version >= \"3.10\" or python_version >= \"3.6\" and platform_system == \"Darwin\" and platform_machine == \"arm64\""},
 ]
 
 [[package]]
@@ -722,10 +735,8 @@ python-versions = ">=3.8"
 
 [package.dependencies]
 numpy = [
-    {version = ">=1.18.5", markers = "platform_machine != \"aarch64\" and platform_machine != \"arm64\" and python_version < \"3.10\""},
-    {version = ">=1.19.2", markers = "platform_machine == \"aarch64\" and python_version < \"3.10\""},
-    {version = ">=1.20.0", markers = "platform_machine == \"arm64\" and python_version < \"3.10\""},
     {version = ">=1.21.0", markers = "python_version >= \"3.10\""},
+    {version = ">=1.20.3", markers = "python_version < \"3.10\""},
 ]
 python-dateutil = ">=2.8.1"
 pytz = ">=2020.1"
@@ -740,6 +751,14 @@ description = "Utilities for writing pandoc filters in python"
 category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+
+[[package]]
+name = "parsec"
+version = "3.14"
+description = "parser combinator."
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "parso"
@@ -796,13 +815,25 @@ python-versions = ">=3.6"
 name = "pluggy"
 version = "1.0.0"
 description = "plugin and hook calling mechanisms for python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.6"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
 testing = ["pytest", "pytest-benchmark"]
+
+[[package]]
+name = "postgis"
+version = "1.0.4"
+description = "Pyscopg and asyncpg helpers to work with PostGIS."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+docs = ["mkdocs"]
+test = ["pytest"]
 
 [[package]]
 name = "prometheus-client"
@@ -968,7 +999,7 @@ python-versions = ">=3.7"
 name = "pytest"
 version = "7.1.3"
 description = "pytest: simple powerful testing with Python"
-category = "dev"
+category = "main"
 optional = false
 python-versions = ">=3.7"
 
@@ -983,6 +1014,20 @@ tomli = ">=1.0.0"
 
 [package.extras]
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.7.2)", "requests", "xmlschema"]
+
+[[package]]
+name = "pytest-asyncio"
+version = "0.19.0"
+description = "Pytest support for asyncio"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+pytest = ">=6.1.0"
+
+[package.extras]
+testing = ["coverage (>=6.2)", "flaky (>=3.5.0)", "hypothesis (>=5.7.1)", "mypy (>=0.931)", "pytest-trio (>=0.7.0)"]
 
 [[package]]
 name = "pytest-cov"
@@ -1009,6 +1054,24 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 
 [package.dependencies]
 six = ">=1.5"
+
+[[package]]
+name = "python-mobilitydb"
+version = "0.1.2"
+description = "A database adapter to access MobilityDB from Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+asyncpg = "*"
+parsec = "*"
+postgis = "*"
+psycopg2-binary = "*"
+pytest = "*"
+pytest-asyncio = "*"
+python-dateutil = "*"
+Spans = "*"
 
 [[package]]
 name = "pytz"
@@ -1105,6 +1168,17 @@ description = "A modern CSS selector implementation for Beautiful Soup."
 category = "main"
 optional = false
 python-versions = ">=3.6"
+
+[[package]]
+name = "Spans"
+version = "1.1.1"
+description = "Continuous set support for Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.extras]
+dev = ["Sphinx", "codecov", "pytest (>=3.0)", "pytest-cov", "sphinx-rtd-theme", "twine"]
 
 [[package]]
 name = "stack-data"
@@ -1244,7 +1318,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=6)", "pytest-black (>=
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "fab5d5aebe5ebbb5444f2dfa8fe260444831663d368f48285b4c9189719b949c"
+content-hash = "487a4cadddafa0d77632067d26cf179f9286536006972bd0edc753394103fc3a"
 
 [metadata.files]
 appnope = [
@@ -1281,6 +1355,34 @@ argon2-cffi-bindings = [
 asttokens = [
     {file = "asttokens-2.0.8-py2.py3-none-any.whl", hash = "sha256:e3305297c744ae53ffa032c45dc347286165e4ffce6875dc662b205db0623d86"},
     {file = "asttokens-2.0.8.tar.gz", hash = "sha256:c61e16246ecfb2cde2958406b4c8ebc043c9e6d73aaa83c941673b35e5d3a76b"},
+]
+asyncpg = [
+    {file = "asyncpg-0.26.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:2ed3880b3aec8bda90548218fe0914d251d641f798382eda39a17abfc4910af0"},
+    {file = "asyncpg-0.26.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e5bd99ee7a00e87df97b804f178f31086e88c8106aca9703b1d7be5078999e68"},
+    {file = "asyncpg-0.26.0-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:868a71704262834065ca7113d80b1f679609e2df77d837747e3d92150dd5a39b"},
+    {file = "asyncpg-0.26.0-cp310-cp310-win32.whl", hash = "sha256:838e4acd72da370ad07243898e886e93d3c0c9413f4444d600ba60a5cc206014"},
+    {file = "asyncpg-0.26.0-cp310-cp310-win_amd64.whl", hash = "sha256:a254d09a3a989cc1839ba2c34448b879cdd017b528a0cda142c92fbb6c13d957"},
+    {file = "asyncpg-0.26.0-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:3ecbe8ed3af4c739addbfbd78f7752866cce2c4e9cc3f953556e4960349ae360"},
+    {file = "asyncpg-0.26.0-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f3ce7d8c0ab4639bbf872439eba86ef62dd030b245ad0e17c8c675d93d7a6b2d"},
+    {file = "asyncpg-0.26.0-cp36-cp36m-musllinux_1_1_x86_64.whl", hash = "sha256:7129bd809990fd119e8b2b9982e80be7712bb6041cd082be3e415e60e5e2e98f"},
+    {file = "asyncpg-0.26.0-cp36-cp36m-win32.whl", hash = "sha256:03f44926fa7ff7ccd59e98f05c7e227e9de15332a7da5bbcef3654bf468ee597"},
+    {file = "asyncpg-0.26.0-cp36-cp36m-win_amd64.whl", hash = "sha256:b1f7b173af649b85126429e11a628d01a5b75973d2a55d64dba19ad8f0e9f904"},
+    {file = "asyncpg-0.26.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:efe056fd22fc6ed5c1ab353b6510808409566daac4e6f105e2043797f17b8dad"},
+    {file = "asyncpg-0.26.0-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d96cf93e01df9fb03cef5f62346587805e6c0ca6f654c23b8d35315bdc69af59"},
+    {file = "asyncpg-0.26.0-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:235205b60d4d014921f7b1cdca0e19669a9a8978f7606b3eb8237ca95f8e716e"},
+    {file = "asyncpg-0.26.0-cp37-cp37m-win32.whl", hash = "sha256:0de408626cfc811ef04f372debfcdd5e4ab5aeb358f2ff14d1bdc246ed6272b5"},
+    {file = "asyncpg-0.26.0-cp37-cp37m-win_amd64.whl", hash = "sha256:f92d501bf213b16fabad4fbb0061398d2bceae30ddc228e7314c28dcc6641b79"},
+    {file = "asyncpg-0.26.0-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:9acb22a7b6bcca0d80982dce3d67f267d43e960544fb5dd934fd3abe20c48014"},
+    {file = "asyncpg-0.26.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e550d8185f2c4725c1e8d3c555fe668b41bd092143012ddcc5343889e1c2a13d"},
+    {file = "asyncpg-0.26.0-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:050e339694f8c5d9aebcf326ca26f6622ef23963a6a3a4f97aeefc743954afd5"},
+    {file = "asyncpg-0.26.0-cp38-cp38-win32.whl", hash = "sha256:b0c3f39ebfac06848ba3f1e280cb1fada7cc1229538e3dad3146e8d1f9deb92a"},
+    {file = "asyncpg-0.26.0-cp38-cp38-win_amd64.whl", hash = "sha256:49fc7220334cc31d14866a0b77a575d6a5945c0fa3bb67f17304e8b838e2a02b"},
+    {file = "asyncpg-0.26.0-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:d156e53b329e187e2dbfca8c28c999210045c45ef22a200b50de9b9e520c2694"},
+    {file = "asyncpg-0.26.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4b4051012ca75defa9a1dc6b78185ca58cdc3a247187eb76a6bcf55dfaa2fad4"},
+    {file = "asyncpg-0.26.0-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:6d60f15a0ac18c54a6ca6507c28599c06e2e87a0901e7b548f15243d71905b18"},
+    {file = "asyncpg-0.26.0-cp39-cp39-win32.whl", hash = "sha256:ede1a3a2c377fe12a3930f4b4dd5340e8b32929541d5db027a21816852723438"},
+    {file = "asyncpg-0.26.0-cp39-cp39-win_amd64.whl", hash = "sha256:8e1e79f0253cbd51fc43c4d0ce8804e46ee71f6c173fdc75606662ad18756b52"},
+    {file = "asyncpg-0.26.0.tar.gz", hash = "sha256:77e684a24fee17ba3e487ca982d0259ed17bae1af68006f4cf284b23ba20ea2c"},
 ]
 attrs = [
     {file = "attrs-22.1.0-py2.py3-none-any.whl", hash = "sha256:86efa402f67bf2df34f51a335487cf46b1ec130d02b8d39fd248abfd30da551c"},
@@ -2033,6 +2135,9 @@ pandocfilters = [
     {file = "pandocfilters-1.5.0-py2.py3-none-any.whl", hash = "sha256:33aae3f25fd1a026079f5d27bdd52496f0e0803b3469282162bafdcbdf6ef14f"},
     {file = "pandocfilters-1.5.0.tar.gz", hash = "sha256:0b679503337d233b4339a817bfc8c50064e2eff681314376a47cb582305a7a38"},
 ]
+parsec = [
+    {file = "parsec-3.14.tar.gz", hash = "sha256:aaa67d41bfa4844f53cb989b551dd076d51dafe097c67f72bb0560ecad175c28"},
+]
 parso = [
     {file = "parso-0.8.3-py2.py3-none-any.whl", hash = "sha256:c001d4636cd3aecdaf33cbb40aebb59b094be2a74c556778ef5576c175e19e75"},
     {file = "parso-0.8.3.tar.gz", hash = "sha256:8c07be290bb59f03588915921e29e8a50002acaf2cdc5fa0e0114f91709fafa0"},
@@ -2112,6 +2217,10 @@ pkgutil_resolve_name = [
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
     {file = "pluggy-1.0.0.tar.gz", hash = "sha256:4224373bacce55f955a878bf9cfa763c1e360858e330072059e10bad68531159"},
+]
+postgis = [
+    {file = "postgis-1.0.4-py3-none-any.whl", hash = "sha256:1dfa62d33c585d68a54bdd47c21bdcb9302f9cbb0ef5aec360e64d2c3e0e1a93"},
+    {file = "postgis-1.0.4.tar.gz", hash = "sha256:3d41f087e249a2a8b6720931e6f8f22b7747801f250265a8b8ac5f9d48221e63"},
 ]
 prometheus-client = [
     {file = "prometheus_client-0.14.1-py3-none-any.whl", hash = "sha256:522fded625282822a89e2773452f42df14b5a8e84a86433e3f8a189c1d54dc01"},
@@ -2284,6 +2393,10 @@ pytest = [
     {file = "pytest-7.1.3-py3-none-any.whl", hash = "sha256:1377bda3466d70b55e3f5cecfa55bb7cfcf219c7964629b967c37cf0bda818b7"},
     {file = "pytest-7.1.3.tar.gz", hash = "sha256:4f365fec2dff9c1162f834d9f18af1ba13062db0c708bf7b946f8a5c76180c39"},
 ]
+pytest-asyncio = [
+    {file = "pytest-asyncio-0.19.0.tar.gz", hash = "sha256:ac4ebf3b6207259750bc32f4c1d8fcd7e79739edbc67ad0c58dd150b1d072fed"},
+    {file = "pytest_asyncio-0.19.0-py3-none-any.whl", hash = "sha256:7a97e37cfe1ed296e2e84941384bdd37c376453912d397ed39293e0916f521fa"},
+]
 pytest-cov = [
     {file = "pytest-cov-3.0.0.tar.gz", hash = "sha256:e7f0f5b1617d2210a2cabc266dfe2f4c75a8d32fb89eafb7ad9d06f6d076d470"},
     {file = "pytest_cov-3.0.0-py3-none-any.whl", hash = "sha256:578d5d15ac4a25e5f961c938b85a05b09fdaae9deef3bb6de9a6e766622ca7a6"},
@@ -2291,6 +2404,9 @@ pytest-cov = [
 python-dateutil = [
     {file = "python-dateutil-2.8.2.tar.gz", hash = "sha256:0123cacc1627ae19ddf3c27a5de5bd67ee4586fbdd6440d9748f8abb483d3e86"},
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
+]
+python-mobilitydb = [
+    {file = "python-mobilitydb-0.1.2.tar.gz", hash = "sha256:58c3a760de033563235a3d51f0784ba8ab31dff8da37a2062ec0c632efb3b11e"},
 ]
 pytz = [
     {file = "pytz-2022.2.1-py2.py3-none-any.whl", hash = "sha256:220f481bdafa09c3955dfbdddb7b57780e9a94f5127e35456a48589b9e0c0197"},
@@ -2413,6 +2529,10 @@ six = [
 soupsieve = [
     {file = "soupsieve-2.3.2.post1-py3-none-any.whl", hash = "sha256:3b2503d3c7084a42b1ebd08116e5f81aadfaea95863628c80a3b774a11b7c759"},
     {file = "soupsieve-2.3.2.post1.tar.gz", hash = "sha256:fc53893b3da2c33de295667a0e19f078c14bf86544af307354de5fcf12a3f30d"},
+]
+Spans = [
+    {file = "Spans-1.1.1-py2.py3-none-any.whl", hash = "sha256:2d64ea863ceb2cce77f93fc78cf4f68759828bcef0cd82087cfa22f09f47652a"},
+    {file = "Spans-1.1.1.tar.gz", hash = "sha256:7f3e94492ba131d5ff062a5d631424e613fbeb38bb7ea613d8fd11f6e755fd79"},
 ]
 stack-data = [
     {file = "stack_data-0.5.0-py3-none-any.whl", hash = "sha256:66d2ebd3d7f29047612ead465b6cae5371006a71f45037c7e2507d01367bce3b"},

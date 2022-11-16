@@ -1,8 +1,7 @@
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from apperception.database import database
 
 from bitarray import bitarray
-
-from apperception.database import database
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from .stage import Stage
 
@@ -13,10 +12,11 @@ if TYPE_CHECKING:
 
 class InView(Stage):
     def __init__(self, distance: float, segment_type: str) -> None:
+        super().__init__()
         self.distance = distance
         self.segment_type = segment_type
 
-    def __call__(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray(payload.keep)
         translations: "List[Float3]" = []
         headings: "List[float]" = []
@@ -29,7 +29,7 @@ class InView(Stage):
 
         translations_str = ",\n".join(map(_tuple_to_point, translations))
         headings_str = ",\n".join(map(str, headings))
-        results = database._execute_query(
+        results = database.execute(
             f"""
             SELECT
                 minDistance(t, '{self.segment_type}') < {self.distance} AND

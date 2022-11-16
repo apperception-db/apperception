@@ -2,9 +2,16 @@ import numpy as np
 import psycopg2
 
 from apperception.data_types.views import View, metadata_view
-from apperception.legacy.metadata_context import (Aggregate, Column, Filter,
-                                                  MetadataContext, Predicate,
-                                                  Project, Scan, asMFJSON)
+from apperception.legacy.metadata_context import (
+    Aggregate,
+    Column,
+    Filter,
+    MetadataContext,
+    Predicate,
+    Project,
+    Scan,
+    asMFJSON,
+)
 from apperception.legacy.metadata_util import common_aggregation
 from apperception.utils import join
 

@@ -162,7 +162,7 @@ def fetch_camera_video(camId: str, database):
         cameraId = '{camId}'
     ORDER BY frameNum ASC;
     """
-    result = database._execute_query(query)
+    result = database.execute(query)
     filenames = [x[0] for x in result]
     return filenames
 
@@ -192,7 +192,7 @@ def fetch_camera_config(filename: str, database):
         fileName = '{filename}'
     ORDER BY cameraId ASC, frameNum ASC;
     """
-    result = database._execute_query(query)[0]
+    result = database.execute(query)[0]
     camera_config = {
         "cameraId": result[0],
         "egoTranslation": result[1],
@@ -260,7 +260,7 @@ def fetch_trajectory(itemId: str, time: str, database):
         WHERE itemId = '{itemId}';
         """
 
-    traj = database._execute_query(query)[0][0]
+    traj = database.execute(query)[0][0]
     return traj
 
 
