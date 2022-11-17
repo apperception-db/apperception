@@ -8,6 +8,9 @@ from apperception.database import database
 from apperception.utils import F, transformation, fetch_camera_config, fetch_camera_trajectory
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, box
 
+Float2 = Tuple[float, float]
+Float22 = Tuple[Float2, Float2]
+
 
 SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
@@ -38,6 +41,16 @@ class temporal_speed:
     speed: float
     timestamp: datetime.datetime
 
+    def validate_speed(self, value, **_) -> float:
+        if not isinstance(value, float):
+            raise Exception()
+        return value
+    
+    def validate_timestamp(self, value, **_) -> "datetime.datetime":
+        if not isinstance(value, datetime.datetime):
+            raise Exception()
+        return value
+
 
 def mph_to_mps(mph):
     return mph * 0.44704
@@ -64,7 +77,10 @@ def compute_distance(loc1, loc2):
 def relative_direction(vec1, vec2):
     return (vec1[0]*vec2[0] + vec1[1]*vec2[1])/math.sqrt(vec1[0]**2 + vec1[1]**2)/math.sqrt(vec2[0]**2 + vec2[1]**2) > 0
 
-def _construct_extended_line(polygon, line):
+def _construct_extended_line(polygon: "Polygon", line: "Float22"):
+    """
+    Construct a line segment that TODO: explaination
+    """
     polygon = Polygon(polygon)
     line = LineString(line)
     minx, miny, maxx, maxy = polygon.bounds
@@ -97,7 +113,7 @@ def intersection_between_line_and_trajectory(line, trajectory):
     elif isinstance(intersection, LineString):
         return tuple(intersection.coords)
 
-def line_to_polygon_intersection(polygon, line):
+def line_to_polygon_intersection(polygon: "Polygon", line: "Float22"):
     try:
         extended_line = _construct_extended_line(polygon, line)
         intersection = extended_line.intersection(polygon)
@@ -130,7 +146,7 @@ def min_car_speed(road_type):
 
 
 ### HELPER FUNCTIONS ###
-def get_ego_trajectory(video, sorted_ego_config=None):
+def get_ego_trajectory(video: str, sorted_ego_config=None):
     if sorted_ego_config is None:
         camera_trajectory_config = fetch_camera_trajectory(video, database)
     else:

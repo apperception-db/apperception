@@ -180,7 +180,12 @@ def generate_sample_plan(video, next_frame_num, all_detection_info, view_distanc
     return sample_plan
 
 def detection_estimation(
-    sorted_ego_config: "List[trajectory_3d]", video, start_frame_num: "int", view_distance=50, img_base_dir=''):
+    sorted_ego_config: "List[trajectory_3d]",
+    video: str,
+    start_frame_num: int,
+    view_distance=50,
+    img_base_dir=''
+):
     """Estimated detection throughout the whole video
 
     Args:

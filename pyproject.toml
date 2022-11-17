@@ -18,6 +18,8 @@ bitarray = "^2.6.0"
 tqdm = "^4.64.1"
 python-mobilitydb = "^0.1.2"
 postgis = "^1.0.4"
+shapely = "^1.8.5.post1"
+plpygis = "^0.2.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.961"

@@ -25,6 +25,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from shapely.geometry import Point, Polygon, LineString
 from plpygis import Geometry
+import postgis
 pd.get_option("display.max_columns")
 
 from apperception.database import database
@@ -59,16 +60,53 @@ camera_config = database.execute(CAM_CONFIG_QUERY.format(date=input_date))
 camera_config_df = pd.DataFrame(camera_config, columns=CAMERA_COLUMNS)
 camera_config_df
 
-SEGMENT_CONTAIN_QUERY = """SELECT segmentpolygon.*, segment.heading FROM segmentpolygon 
-                            LEFT OUTER JOIN segment ON segmentpolygon.elementid = segment.elementid
-                           WHERE ST_Contains(segmentpolygon.elementpolygon, \'{ego_translation}\'::geometry);"""
-SEGMENT_DWITHIN_QUERY = """SELECT segmentpolygon.*, segment.heading FROM segmentpolygon 
-                            LEFT OUTER JOIN segment ON segmentpolygon.elementid = segment.elementid
-                           WHERE ST_DWithin(elementpolygon, \'{start_segment}\'::geometry, {view_distance})
-                            AND segmentpolygon.segmenttypes in (
-                                ARRAY[\'lane\'], ARRAY[\'intersection\'], ARRAY[\'laneSection\']);"""
+SegmentPolygonWithHeading = Tuple[
+    str,
+    postgis.polygon.Polygon,
+    List[str] | None,
+    float | None,
+]
+SEGMENT_CONTAIN_QUERY = """
+SELECT
+    segmentpolygon.elementid,
+    segmentpolygon.elementpolygon,
+    segmentpolygon.segmenttypes,
+    segment.heading
+FROM segmentpolygon 
+    LEFT OUTER JOIN segment
+        ON segmentpolygon.elementid = segment.elementid
+WHERE ST_Contains(
+    segmentpolygon.elementpolygon,
+    \'{ego_translation}\'::geometry
+);
+"""
+
+SEGMENT_DWITHIN_QUERY = """
+SELECT
+    segmentpolygon.elementid,
+    segmentpolygon.elementpolygon,
+    segmentpolygon.segmenttypes,
+    segment.heading
+FROM segmentpolygon 
+    LEFT OUTER JOIN segment
+        ON segmentpolygon.elementid = segment.elementid
+WHERE ST_DWithin(
+        elementpolygon,
+        \'{start_segment}\'::geometry,
+        {view_distance}
+    ) AND
+    segmentpolygon.segmenttypes in (
+        ARRAY[\'lane\'],
+        ARRAY[\'intersection\'],
+        ARRAY[\'laneSection\']
+    );"""
 
 cam_segment_mapping = namedtuple('cam_segment_mapping', ['cam_segment', 'road_segment_info'])
+
+Float2 = Tuple[float, float]
+Float22 = Tuple[Float2, Float2]
+Segment = Tuple[str, postgis.polygon.Polygon, str | None, float | None]
+AnnotatedSegment = Tuple[str, postgis.polygon.Polygon, str | None, float | None, bool]
 
 class roadSegmentInfo:
     def __init__(
@@ -79,8 +117,7 @@ class roadSegmentInfo:
         segment_heading: float,
         contains_ego: bool,
         ego_config: Dict[str, Any],
-        fov_lines: Tuple[Tuple[Tuple[float, float], Tuple[float, float]],
-                         Tuple[Tuple[float, float], Tuple[float, float]]]):
+        fov_lines: Tuple[Float22, Float22]):
         """
         segment_id: unique segment id
         segment_polygon: tuple of (x, y) coordinates
@@ -100,56 +137,67 @@ class roadSegmentInfo:
     
 
 def road_segment_contains(ego_config: Dict[str, Any])\
-        -> Tuple[Tuple[str, str, set]]:
+        -> List[SegmentPolygonWithHeading]:
     query = SEGMENT_CONTAIN_QUERY.format(
         ego_translation=Point(*ego_config['egoTranslation']).wkb_hex)
 
     return database.execute(query)
 
-def find_segment_dwithin(start_segment: Tuple[str],
-                         view_distance=50) -> Tuple[Tuple[str, str, set]]:
-    start_segment_id, start_segment_polygon, segmenttype, segmentheading, contains_ego = start_segment
+def find_segment_dwithin(start_segment: "AnnotatedSegment",
+                         view_distance=50) -> "List[SegmentPolygonWithHeading]":
+    _, start_segment_polygon, _, _, _ = start_segment
     query = SEGMENT_DWITHIN_QUERY.format(
         start_segment=start_segment_polygon, view_distance=view_distance)
 
     return database.execute(query)
 
-def reformat_return_segment(segments: Tuple[str, str, set, float])\
-        -> List[Tuple[str, str, str, float]]:
-    return list(map(
-        lambda x: (x[0], x[1], tuple(x[2])[0] if x[2] is not None else None,
-        math.degrees(x[3]) if x[3] is not None else None), segments))
+def reformat_return_segment(segments: "List[SegmentPolygonWithHeading]") -> "List[Segment]":
+    def _(x: "SegmentPolygonWithHeading") -> Segment:
+        i, polygon, types, heading = x
+        return (
+            i,
+            polygon,
+            types[0] if types is not None else None,
+            math.degrees(heading) if heading is not None else None,
+        )
+    return list(map(_, segments))
 
-def annotate_contain(segments: tuple, contain=False):
-    for i in range(len(segments)):
-        segments[i] = segments[i] + (contain,)
+def annotate_contain(
+    segments: "List[Segment]",
+    contain: bool = False
+) -> "List[AnnotatedSegment]":
+    return [s + (contain,) for s in segments]
 
-def construct_search_space(ego_config: Dict[str, Any],
-                           view_distance=50) -> Set[Tuple[str, str, Tuple[str]]]:
+def construct_search_space(
+    ego_config: Dict[str, Any],
+    view_distance=50
+) -> "Set[AnnotatedSegment]":
     '''
-    road segment: (elementid, elementpolygon, segmenttype, contains_ego?)
+    road segment: (elementid, elementpolygon, segmenttype, heading, contains_ego?)
     view_distance: in meters, default 50 because scenic standard
     return: set(road_segment)
     '''
-    search_space = set()
     all_contain_segment = reformat_return_segment(road_segment_contains(ego_config))
-    annotate_contain(all_contain_segment, contain=True)
-    search_space.update(all_contain_segment)
+    all_contain_segment = annotate_contain(all_contain_segment, contain=True)
     start_segment = all_contain_segment[0]
     
     segment_within_distance = reformat_return_segment(find_segment_dwithin(start_segment, view_distance))
-    annotate_contain(segment_within_distance, contain=False)
-    search_space.update(segment_within_distance)
-    return search_space
+    segment_within_distance = annotate_contain(segment_within_distance, contain=False)
 
-def get_fov_lines(ego_config: Dict[str, Any],
-                  ego_fov=70) -> Tuple[Tuple[Tuple[float, float], Tuple[float, float]],
-                                       Tuple[Tuple[float, float], Tuple[float, float]]]:
+    return {
+        *all_contain_segment,
+        *segment_within_distance
+    }
+
+def get_fov_lines(ego_config: Dict[str, Any], ego_fov=70) -> Tuple[Float22, Float22]:
     '''
     return: two lines representing fov in world coord
+            ((lx1, ly1), (lx2, ly2)), ((rx1, ry1), (rx2, ry2))
     '''
-    ego_heading = ego_config['egoHeading']
-    x_ego, y_ego = ego_config['egoTranslation'][:2]
+
+    # TODO: accuracy improvement: find fov in 3d -> project down to z=0 plane
+    ego_heading: float = ego_config['egoHeading']
+    x_ego, y_ego: "Float2" = ego_config['egoTranslation'][:2]
     left_degree = math.radians(ego_heading + ego_fov/2 + 90)
     left_fov_line = ((x_ego, y_ego), 
         (x_ego + math.cos(left_degree)*50, 
@@ -160,9 +208,7 @@ def get_fov_lines(ego_config: Dict[str, Any],
          y_ego + math.sin(right_degree)*50))
     return left_fov_line, right_fov_line
 
-def intersection(fov_line: Tuple[Tuple[Tuple[float, float], Tuple[float, float]],
-                                 Tuple[Tuple[float, float], Tuple[float, float]]],
-                 segmentpolygon: Polygon) -> Tuple[Tuple[float, float]]:
+def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: Polygon) -> Tuple[Float2]:
     '''
     return: intersection point: tuple[tuple]
     '''
@@ -176,10 +222,10 @@ def in_frame(transformed_point: np.array, frame_size: Tuple[int, int]):
         transformed_point[1] < frame_size[1] and transformed_point[1] > 0
 
 def in_view(
-    road_point: Tuple,
+    road_point: "Float2",
     ego_translation: List[float],
-    fov_lines: Tuple[Tuple[Tuple[float, float], Tuple[float, float]],
-                     Tuple[Tuple[float, float], Tuple[float, float]]]) -> bool:
+    fov_lines: Tuple[Float22, Float22]
+) -> bool:
     '''
     return if the road_point is on the left of the left fov line and 
                                 on the right of the right fov line
@@ -193,15 +239,15 @@ def in_view(
               (right_fov_line_x - Ax) * (My - Ay) - (right_fov_line_y - Ay) * (Mx - Ax) >= 0
 
 def construct_mapping(
-    decoded_road_segment: Tuple[Tuple[float, float]],
+    decoded_road_segment: Tuple[Float2],
     frame_size: Tuple[int, int],
-    fov_lines: Tuple[Tuple[Tuple[float, float], Tuple[float, float]],
-                     Tuple[Tuple[float, float], Tuple[float, float]]],
+    fov_lines: Tuple[Float22, Float22],
     segmentid: str,
     segmenttype: str,
     segmentheading: float,
     contains_ego: bool,
-    ego_config: Dict[str, Any]) -> Tuple[bool, cam_segment_mapping]:
+    ego_config: Dict[str, Any]
+) -> Tuple[bool, cam_segment_mapping]:
     """
     Given current road segment
     determine whether add it to the mapping
@@ -255,16 +301,23 @@ def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
     start_time = time.time()
     search_space = construct_search_space(ego_config, view_distance=100)
     mapping = []
+
+    def not_in_view(point: "Float2"):
+        return not in_view(point, ego_config['egoTranslation'], fov_lines)
+
     for road_segment in search_space:
         segmentid, segmentpolygon, segmenttype, segmentheading, contains_ego = road_segment
-        segmentpolygon_points = tuple(zip(*Geometry(segmentpolygon).exterior.shapely.xy))
+        XYs: "Tuple[List[float], List[float]]" = Geometry(segmentpolygon).exterior.shapely.xy
+        assert isinstance(XYs, tuple)
+        assert isinstance(XYs[0], list)
+        assert isinstance(XYs[1], list)
+        assert isinstance(XYs[0][0], float)
+        assert isinstance(XYs[1][0], float)
+        segmentpolygon_points = list(zip(*XYs))
         segmentpolygon = Polygon(segmentpolygon_points)
         decoded_road_segment = segmentpolygon_points
         if not contains_ego:
-            road_filter = all(map(
-                lambda point: not in_view(
-                    point, ego_config['egoTranslation'], fov_lines), 
-                segmentpolygon_points))
+            road_filter = all(map(not_in_view, segmentpolygon_points))
             if road_filter:
                 continue
 
