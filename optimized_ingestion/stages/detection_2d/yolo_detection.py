@@ -1,7 +1,6 @@
-from typing import TYPE_CHECKING, Iterable, Iterator, NamedTuple, Tuple
 import os
-
 from tqdm import tqdm
+from typing import TYPE_CHECKING, Iterable, Iterator, NamedTuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -11,17 +10,17 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import cv2
-import torch
 import numpy as np
 import numpy.typing as npt
-from yolo_tracker.yolov5.utils.torch_utils import select_device
+import torch
 from yolo_tracker.yolov5.utils.augmentations import letterbox
 from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                non_max_suppression,
                                                scale_boxes)
+from yolo_tracker.yolov5.utils.torch_utils import select_device
 
-from .detection_2d import Detection2D
 from ...stages.decode_frame import DecodeFrame
+from .detection_2d import Detection2D
 
 if TYPE_CHECKING:
     from yolo_tracker.yolov5.models.common import DetectMultiBackend
@@ -34,7 +33,7 @@ class YoloDetection(Detection2D):
     def __init__(
         self,
         half: bool = False,
-        conf_thres: float = 0.25, 
+        conf_thres: float = 0.25,
         iou_thres: float = 0.45,
         max_det: int = 1000,
         classes=None,  # filter by class: --class 0, or --class 0 2 3
