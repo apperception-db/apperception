@@ -30,7 +30,7 @@ pd.get_option("display.max_columns")
 
 from apperception.database import database
 from apperception.utils import F, transformation, fetch_camera_config
-from detection_estimation.utils import line_to_polygon_intersection
+from .utils import line_to_polygon_intersection
 
 data_path = '/home/yongming/workspace/research/apperception/v1.0-mini/'
 input_video_dir = os.path.join(data_path, 'sample_videos/')
@@ -195,6 +195,8 @@ def get_fov_lines(ego_config: Dict[str, Any], ego_fov=70) -> Tuple[Float22, Floa
     # TODO: accuracy improvement: find fov in 3d -> project down to z=0 plane
     ego_heading: float = ego_config['egoHeading']
     x_ego, y_ego = ego_config['egoTranslation'][:2]
+    assert isinstance(x_ego, float)
+    assert isinstance(y_ego, float)
     left_degree = math.radians(ego_heading + ego_fov/2 + 90)
     left_fov_line = ((x_ego, y_ego), 
         (x_ego + math.cos(left_degree)*50, 

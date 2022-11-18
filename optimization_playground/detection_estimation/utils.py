@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, Iterable, List, Literal, NamedTuple, Tuple, TypeVar
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Literal, NamedTuple, Tuple, TypeVar
 import datetime
 import math
 
@@ -6,7 +6,8 @@ from apperception.database import database
 from apperception.utils import fetch_camera_trajectory
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, box
 
-from ..segment_mapping import CameraSegmentMapping
+if TYPE_CHECKING:
+    from .segment_mapping import CameraSegmentMapping
 
 Float2 = Tuple[float, float]
 Float3 = Tuple[float, float, float]

@@ -24,7 +24,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 import numpy as np
 import numpy.typing as np
 
-from segment_mapping import *
+from optimization_playground.detection_estimation.segment_mapping import *
 from .utils import *
 from .sample_plan_algorithms import *
 
