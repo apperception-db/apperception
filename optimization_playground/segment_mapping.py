@@ -194,7 +194,7 @@ def get_fov_lines(ego_config: Dict[str, Any], ego_fov=70) -> Tuple[Float22, Floa
 
     # TODO: accuracy improvement: find fov in 3d -> project down to z=0 plane
     ego_heading: float = ego_config['egoHeading']
-    x_ego, y_ego: "Float2" = ego_config['egoTranslation'][:2]
+    x_ego, y_ego = ego_config['egoTranslation'][:2]
     left_degree = math.radians(ego_heading + ego_fov/2 + 90)
     left_fov_line = ((x_ego, y_ego), 
         (x_ego + math.cos(left_degree)*50, 

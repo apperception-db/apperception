@@ -211,6 +211,23 @@ def point_to_nearest_trajectory(point, trajectory):
     return min(trajectory,
                key=lambda x: compute_distance(x.coordinates, point))
 
+def ego_departure(ego_trajectory, current_time):
+    for i in range(len(ego_trajectory)):
+        point = ego_trajectory[i]
+        if point.timestamp > current_time:
+            for j in range(i, len(ego_trajectory)):
+                if compute_distance(ego_trajectory[j].coordinates,
+                                    point.coordinates) < 5:
+                    non_stop_point = ego_trajectory[j]
+                    break
+            if i == j:
+                return False, point.timestamp, point.coordinates
+            elif j == len(ego_trajectory) - 1:
+                return True, ego_trajectory[j].timestamp, ego_trajectory[j].coordinates
+            return True, non_stop_point.timestamp, non_stop_point.coordinates
+    return False, ego_trajectory[-1].timestamp, ego_trajectory[-1].coordinates
+            
+
 def time_to_exit_current_segment(current_segment_info, 
                                  current_time, car_loc, car_trajectory=None):
     """Return the time that the car exit the current segment

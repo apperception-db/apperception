@@ -18,9 +18,10 @@ EGO_EXIT_SEGMENT = 'ego_exit_segment'
 CAR_EXIT_SEGMENT = 'car_exit_segment'
 EXIT_VIEW = 'exit_view'
 MEET_UP = 'meet_up'
+EGO_STOP = 'ego_stop'
 OBJ_BASED_ACTION = [CAR_EXIT_SEGMENT, EXIT_VIEW, MEET_UP]
 
-ActionType = Literal['ego_exit_segment', 'car_exit_segment', 'exit_view', 'meet_up']
+ActionType = Literal['ego_exit_segment', 'car_exit_segment', 'exit_view', 'meet_up', 'ego_stop']
 
 
 @dataclass
@@ -51,6 +52,15 @@ class Action:
         start loc: {self.start_loc},
         end loc: {self.end_loc}
         estimated time: {self.estimated_time}'''
+
+def ego_stop(ego_trajectory: "trajectory_3d", ego_config: "Dict[str, Any]") -> "Action":
+    current_time = ego_config['timestamp']
+    ego_loc = ego_config['egoTranslation'][:2]
+    ego_stop, ego_departure_time, ego_departure_loc = ego_departure(ego_trajectory, current_time)
+    action = None
+    if ego_stop:
+        action = Action(current_time, ego_departure_time, ego_loc, ego_departure_loc, action_type=EGO_STOP)
+    return ego_stop, action
 
 def ego_exit_current_segment(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "Dict[str, Any]"):
     current_segment_info = detection_info.ego_road_segment_info
@@ -114,6 +124,9 @@ def combine_sample_actions(sample_plan: "List[Action]"):
 def same_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
+    ego_stop, ego_stop_action = ego_stop(ego_trajectory, ego_config)
+    if ego_stop:
+        return ego_stop_action
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
     # print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
@@ -130,6 +143,9 @@ def same_direction_sample_action(detection_info: "DetectionInfo", view_distance:
 def opposite_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
+    ego_stop, ego_stop_action = ego_stop(ego_trajectory, ego_config)
+    if ego_stop:
+        return ego_stop_action
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
     # print('ego_exit_segment_action', ego_exit_segment_action)
     car_exit_segment_action = car_exit_current_segment(detection_info)
