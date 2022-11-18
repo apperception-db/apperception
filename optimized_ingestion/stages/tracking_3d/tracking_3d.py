@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.typing as npt
-from dataclasses import dataclass
-from typing import Tuple
+from typing import NamedTuple, Tuple
 
 from ..stage import Stage
 
@@ -10,8 +9,7 @@ class Tracking3D(Stage):
     pass
 
 
-@dataclass
-class Tracking3DResult:
+class Tracking3DResult(NamedTuple):
     object_id: float
     point_from_camera: Tuple[float, float, float]
     point: "npt.NDArray[np.floating]"

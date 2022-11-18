@@ -85,7 +85,7 @@ def track(
         # dt[0] += t2 - t1
 
         # Inference
-        pred = model(im, augment=augment, visualize=False)
+        pred = model(im, augment=augment)
         # t3 = time_sync()
         # dt[1] += t3 - t2
 
