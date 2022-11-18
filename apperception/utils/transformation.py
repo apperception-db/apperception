@@ -6,7 +6,8 @@ from pyquaternion import Quaternion
 
 
 def transformation(
-    copy_centroid_3d: "npt.NDArray[np.floating] | Tuple[float, float, float]", camera_config: Dict[str, Any]
+    copy_centroid_3d: "npt.NDArray[np.floating] | Tuple[float, float, float]",
+    camera_config: Dict[str, Any],
 ) -> "npt.NDArray[np.floating]":
     """
     Transformation from 3d world coordinate to 2d frame coordinate given the camera config
