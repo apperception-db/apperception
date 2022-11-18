@@ -1,14 +1,15 @@
-from collections import namedtuple
-from typing import NamedTuple, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Literal, NamedTuple, Tuple, TypeVar
 import datetime
 import math
-from dataclasses import dataclass
 
 from apperception.database import database
-from apperception.utils import F, transformation, fetch_camera_config, fetch_camera_trajectory
+from apperception.utils import fetch_camera_trajectory
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, box
 
+from ..segment_mapping import CameraSegmentMapping
+
 Float2 = Tuple[float, float]
+Float3 = Tuple[float, float, float]
 Float22 = Tuple[Float2, Float2]
 
 
@@ -16,40 +17,14 @@ SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
 
 
-@dataclass
-class trajectory_3d:
-    coordinates: "Tuple[float, float, float]"
-    timestamp: datetime.datetime
-
-    def validate_coordinates(self, value, **_) -> "Tuple[float, float, float]":
-        if isinstance(value, list):
-            value = tuple(value)
-        
-        if not isinstance(value, tuple) or len(value) != 3:
-            raise Exception()
-        
-        return value
-    
-    def validate_timestamp(self, value, **_) -> "datetime.datetime":
-        if not isinstance(value, datetime.datetime):
-            raise Exception()
-        return value
+class trajectory_3d(NamedTuple):
+    coordinates: "Float3"
+    timestamp: "datetime.datetime"
 
 
-@dataclass
-class temporal_speed:
+class temporal_speed(NamedTuple):
     speed: float
-    timestamp: datetime.datetime
-
-    def validate_speed(self, value, **_) -> float:
-        if not isinstance(value, float):
-            raise Exception()
-        return value
-    
-    def validate_timestamp(self, value, **_) -> "datetime.datetime":
-        if not isinstance(value, datetime.datetime):
-            raise Exception()
-        return value
+    timestamp: "datetime.datetime"
 
 
 def mph_to_mps(mph):
@@ -68,10 +43,10 @@ MAX_CAR_SPEED.update({k: mph_to_mps(v) for k, v in MAX_CAR_SPEED.items()})
 def time_elapse(current_time, elapsed_time):
     return current_time + datetime.timedelta(seconds=elapsed_time)
 
-def compute_area(polygon):
+def compute_area(polygon) -> float:
     return box(*polygon).area
 
-def compute_distance(loc1, loc2):
+def compute_distance(loc1, loc2) -> float:
     return Point(loc1).distance(Point(loc2))
 
 def relative_direction(vec1, vec2):
@@ -79,7 +54,8 @@ def relative_direction(vec1, vec2):
 
 def _construct_extended_line(polygon: "Polygon", line: "Float22"):
     """
-    Construct a line segment that TODO: explaination
+    line: represented by 2 points
+    Find the line segment that can possibly intersect with the polygon
     """
     polygon = Polygon(polygon)
     line = LineString(line)
@@ -92,12 +68,13 @@ def _construct_extended_line(polygon: "Polygon", line: "Float22"):
         extended_line = LineString([(minx, a.y), (maxx, a.y)])
     else:
         # linear equation: y = k*x + m
-        k = (b.y - a.y) / (b.x - a.x)
-        m = a.y - k * a.x
-        y0 = k * minx + m
-        y1 = k * maxx + m
-        x0 = (miny - m) / k
-        x1 = (maxy - m) / k
+        slope = (b.y - a.y) / (b.x - a.x)
+        y_intercept = a.y - slope * a.x
+
+        y0 = slope * minx + y_intercept
+        y1 = slope * maxx + y_intercept
+        x0 = (miny - y_intercept) / slope
+        x1 = (maxy - y_intercept) / slope
         points_on_boundary_lines = [Point(minx, y0), Point(maxx, y1), 
                                     Point(x0, miny), Point(x1, maxy)]
         points_sorted_by_distance = sorted(points_on_boundary_lines, key=bounding_box.distance)
@@ -113,21 +90,21 @@ def intersection_between_line_and_trajectory(line, trajectory):
     elif isinstance(intersection, LineString):
         return tuple(intersection.coords)
 
-def line_to_polygon_intersection(polygon: "Polygon", line: "Float22"):
+def line_to_polygon_intersection(polygon: "Polygon", line: "Float22") -> "List[Float2]":
     try:
         extended_line = _construct_extended_line(polygon, line)
         intersection = extended_line.intersection(polygon)
     except:
-        return tuple()
+        return []
     if intersection.is_empty:
-        return tuple()
+        return []
     elif isinstance(intersection, LineString):
-        return tuple(intersection.coords)
+        return list(intersection.coords)
     elif isinstance(intersection, MultiLineString):
         all_intersections = []
         for intersect in intersection:
             all_intersections.extend(list(intersect.coords))
-        return tuple(all_intersections)
+        return list(all_intersections)
     else:
         raise ValueError('Unexpected intersection type')
 
@@ -146,7 +123,7 @@ def min_car_speed(road_type):
 
 
 ### HELPER FUNCTIONS ###
-def get_ego_trajectory(video: str, sorted_ego_config=None):
+def get_ego_trajectory(video: str, sorted_ego_config: "Dict[str, Any]" = None):
     if sorted_ego_config is None:
         camera_trajectory_config = fetch_camera_trajectory(video, database)
     else:
@@ -170,45 +147,57 @@ def get_ego_avg_speed(ego_trajectory):
     point_wise_ego_speed = get_ego_speed(ego_trajectory)
     return sum([speed.speed for speed in point_wise_ego_speed]) / len(point_wise_ego_speed)
 
-def detection_to_img_segment(car_loc2d, cam_segment_mapping, ego=False):
-    maximum_mapping = None
-    maximum_mapping_area = 0
+def detection_to_img_segment(
+    car_loc2d: "Float2",
+    cam_segment_mapping: "List[CameraSegmentMapping]",
+):
+    maximum_mapping: "CameraSegmentMapping | None" = None
+    maximum_mapping_area: float = 0.0
+    point = Point(car_loc2d)
+
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
-        if ego:
-            if (road_segment_info.contains_ego and
-                Polygon(road_segment_info.segment_polygon).area > maximum_mapping_area):
+        p_cam_segment = Polygon(cam_segment)
+        if p_cam_segment.contains(point) and road_segment_info.segment_type in ['lane', 'laneSection']:
+            area = p_cam_segment.area
+            if area > maximum_mapping_area:
                 maximum_mapping = mapping
-                maximum_mapping_area = Polygon(road_segment_info.segment_polygon).area
-        elif (Polygon(cam_segment).contains(Point(car_loc2d)) and
-              road_segment_info.segment_type in ['lane', 'laneSection']):
-            if Polygon(cam_segment).area > maximum_mapping_area:
-                maximum_mapping = mapping
-                maximum_mapping_area = Polygon(cam_segment).area
+                maximum_mapping_area = area
+
     return maximum_mapping
 
-def time_to_nearest_frame(video, timestamp):
+
+def get_largest_segment(cam_segment_mapping: "List[CameraSegmentMapping]"):
+    maximum_mapping: "CameraSegmentMapping | None" = None
+    maximum_mapping_area: float = 0.0
+
+    for mapping in cam_segment_mapping:
+        _, road_segment_info = mapping
+        area = Polygon(road_segment_info.segment_polygon).area
+        if road_segment_info.contains_ego and area > maximum_mapping_area:
+            maximum_mapping = mapping
+            maximum_mapping_area = area
+    
+    return maximum_mapping
+
+def time_to_nearest_frame(video: str, timestamp: "datetime.datetime") -> "Tuple[str, int, datetime.datetime]":
     """Return the frame that is closest to the timestamp
     """
     query = f"""
-    With nearest_timestamp as (
-        SELECT 
-            timestamp, abs(extract(epoch from timestamp-\'{timestamp}\')) as diff
+    WITH Cameras_with_diff as (
+        SELECT *, abs(extract(epoch from timestamp-\'{timestamp}\')) as diff
         FROM Cameras
         WHERE fileName LIKE '%{video}%'
-        Order By diff
-        LIMIT 1
     )
     SELECT
         fileName,
         frameNum,
         cameras.timestamp
-    FROM cameras, nearest_timestamp
-    WHERE
-        fileName LIKE '%{video}%'
-        AND cameras.timestamp=nearest_timestamp.timestamp
+    FROM Cameras_with_diff c1
+    WHERE c1.diff = (SELECT MIN(c2.diff) from Cameras_with_diff c2)
+    LIMIT 1
     """
-    return database._execute_query(query)[0]
+    return database.execute(query)[0]
 
 def timestamp_to_nearest_trajectory(trajectory, timestamp):
     """Return the trajectory point that is closest to the timestamp
@@ -352,13 +341,13 @@ def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, current_tim
     exit_view_time = time_elapse(current_time, view_distance/(car_speed - ego_speed))
     return timestamp_to_nearest_trajectory(ego_trajectory, exit_view_time)
 
-def relative_direction_to_ego(obj_heading, ego_heading):
+def relative_direction_to_ego(obj_heading: float, ego_heading: float):
     """Return the relative direction to ego
        Now only support opposite and same direction
        TODO: add driving into and driving away from
     """
-    if obj_heading is None:
-        return None
+    assert obj_heading is not None
+
     relative_heading = abs(obj_heading - ego_heading) % 360
     if math.cos(math.radians(relative_heading)) > 0:
         return SAME_DIRECTION

@@ -1,4 +1,10 @@
+from dataclasses import dataclass, field
+from typing import Literal, TYPE_CHECKING
 from .utils import *
+
+if TYPE_CHECKING:
+    from .detection_estimation import DetectionInfo
+
 
 """
 Action:
@@ -14,21 +20,26 @@ EXIT_VIEW = 'exit_view'
 MEET_UP = 'meet_up'
 OBJ_BASED_ACTION = [CAR_EXIT_SEGMENT, EXIT_VIEW, MEET_UP]
 
+ActionType = Literal['ego_exit_segment', 'car_exit_segment', 'exit_view', 'meet_up']
+
+
+@dataclass
 class Action:
-    def __init__(self, start_time, finish_time, start_loc, end_loc, action_type, target_obj_id=None):
-        """Assume the action is always straight line"""
-        self.start_time = start_time
-        self.finish_time = finish_time
-        self.invalid_action = False
-        if self.finish_time < self.start_time:
-            self.invalid_action = True
-        self.start_loc = start_loc
-        self.end_loc = end_loc
-        self.action_type = action_type
+    start_time: "datetime.datetime"
+    finish_time: "datetime.datetime"
+    start_loc: "Float2 | Float3"  # TODO: should either be Float2 or Float3
+    end_loc: "Float2 | Float3"  # TODO: should either be Float2 or Float3
+    action_type: "ActionType"
+    target_obj_id: "str | None" = None
+    invalid_action: bool = field(init=False)
+    estimated_time: "datetime.timedelta" = field(init=False)
+    
+    def __post_init__(self):
+        self.invalid_action = self.finish_time < self.start_time
         self.estimated_time = self.finish_time - self.start_time
-        if action_type and action_type in OBJ_BASED_ACTION:
-            assert target_obj_id
-            self.target_obj_id = target_obj_id
+
+        if self.action_type and self.action_type in OBJ_BASED_ACTION:
+            assert self.target_obj_id is not None
 
     def __repr__(self):
         return self.__str__()
@@ -41,7 +52,7 @@ class Action:
         end loc: {self.end_loc}
         estimated time: {self.estimated_time}'''
 
-def ego_exit_current_segment(detection_info, ego_trajectory, ego_config):
+def ego_exit_current_segment(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "Dict[str, Any]"):
     current_segment_info = detection_info.ego_road_segment_info
     current_time = detection_info.timestamp
     ego_loc = ego_config['egoTranslation'][:2]
@@ -51,7 +62,7 @@ def ego_exit_current_segment(detection_info, ego_trajectory, ego_config):
                          action_type=EGO_EXIT_SEGMENT)
     return exit_action
 
-def car_exit_current_segment(detection_info):
+def car_exit_current_segment(detection_info: "DetectionInfo"):
     """
         Assumption: detected car drives at max speed
     """
@@ -64,7 +75,7 @@ def car_exit_current_segment(detection_info):
                          target_obj_id=detection_info.obj_id)
     return exit_action
 
-def car_meet_up_with_ego(detection_info, ego_trajectory, ego_config):
+def car_meet_up_with_ego(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "Dict[str, Any]"):
     current_time = detection_info.timestamp
     car2_loc = detection_info.car_loc3d
     car1_heading = ego_config['egoHeading']
@@ -81,7 +92,7 @@ def car_meet_up_with_ego(detection_info, ego_trajectory, ego_config):
                             target_obj_id=detection_info.obj_id)
     return meet_up_action
 
-def car_exit_view(detection_info, ego_trajectory, ego_config, view_distance):
+def car_exit_view(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "Dict[str, Any]", view_distance: float):
     current_time = detection_info.timestamp
     road_type = detection_info.road_type
     ego_loc = ego_config['egoTranslation']
@@ -94,13 +105,13 @@ def car_exit_view(detection_info, ego_trajectory, ego_config, view_distance):
                               target_obj_id=detection_info.obj_id)
     return exit_view_action
 
-def ego_by_pass_car(detection_info):
-    pass
+def ego_by_pass_car(detection_info: "DetectionInfo") -> "Action":
+    raise Exception()
 
-def combine_sample_actions(sample_plan):
+def combine_sample_actions(sample_plan: "List[Action]"):
     return min(sample_plan, key=lambda x: x.finish_time)
 
-def same_direction_sample_action(detection_info, view_distance):
+def same_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
@@ -116,7 +127,7 @@ def same_direction_sample_action(detection_info, view_distance):
                                    car_go_beyong_view_action,])
                                    # ego_by_pass_car_action])
 
-def opposite_direction_sample_action(detection_info, view_distance):
+def opposite_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
     ego_trajectory = detection_info.ego_trajectory
     ego_config = detection_info.ego_config
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
@@ -130,7 +141,7 @@ def opposite_direction_sample_action(detection_info, view_distance):
                                    car_exit_segment_action,
                                    meet_ego_action])
 
-def get_sample_action_alg(relative_direction):
+def get_sample_action_alg(relative_direction: "Literal['same_direction', 'opposite_direction']"):
     if relative_direction == SAME_DIRECTION:
         return same_direction_sample_action
     elif relative_direction == OPPOSITE_DIRECTION:

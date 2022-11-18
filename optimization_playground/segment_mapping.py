@@ -10,9 +10,8 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from typing import Any, Dict, Tuple, List, Set, Union
+from typing import Any, Dict, Tuple, List, Set, NamedTuple
 
-from collections import namedtuple
 import os
 import math
 import time
@@ -21,9 +20,10 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from matplotlib import pyplot as plt
-from shapely.geometry import Point, Polygon, LineString
+from shapely.geometry import Point, Polygon
 from plpygis import Geometry
 import postgis
 pd.get_option("display.max_columns")
@@ -101,39 +101,36 @@ WHERE ST_DWithin(
         ARRAY[\'laneSection\']
     );"""
 
-cam_segment_mapping = namedtuple('cam_segment_mapping', ['cam_segment', 'road_segment_info'])
 
 Float2 = Tuple[float, float]
+Float3 = Tuple[float, float, float]
 Float22 = Tuple[Float2, Float2]
 Segment = Tuple[str, postgis.polygon.Polygon, str | None, float | None]
 AnnotatedSegment = Tuple[str, postgis.polygon.Polygon, str | None, float | None, bool]
 
-class roadSegmentInfo:
-    def __init__(
-        self, 
-        segment_id: int,
-        segment_polygon: Polygon,
-        segment_type: str,
-        segment_heading: float,
-        contains_ego: bool,
-        ego_config: Dict[str, Any],
-        fov_lines: Tuple[Float22, Float22]):
-        """
-        segment_id: unique segment id
-        segment_polygon: tuple of (x, y) coordinates
-        segment_type: road segment type
-        contains_ego: whether the segment contains ego camera
-        ego_config: ego camfig for the frame we asks info for
-        facing_relative: float
-        fov_lines: field of view lines
-        """
-        self.segment_id = segment_id
-        self.segment_polygon = segment_polygon
-        self.segment_type = segment_type
-        self.segment_heading = segment_heading
-        self.contains_ego = contains_ego
-        self.ego_config = ego_config
-        self.fov_lines = fov_lines
+class RoadSegmentInfo(NamedTuple):
+    """
+    segment_id: unique segment id
+    segment_polygon: tuple of (x, y) coordinates
+    segment_type: road segment type
+    contains_ego: whether the segment contains ego camera
+    ego_config: ego camfig for the frame we asks info for
+    facing_relative: float
+    fov_lines: field of view lines
+    """
+    segment_id: int
+    segment_polygon: Polygon
+    segment_type: str
+    segment_heading: float
+    contains_ego: bool
+    ego_config: Dict[str, Any]
+    fov_lines: "Tuple[Float22, Float22]"
+
+
+# CameraSegmentMapping = namedtuple('cam_segment_mapping', ['cam_segment', 'road_segment_info'])
+class CameraSegmentMapping(NamedTuple):
+    cam_segment: "List[npt.NDArray[np.floating]]"
+    road_segment_info: "RoadSegmentInfo"
     
 
 def road_segment_contains(ego_config: Dict[str, Any])\
@@ -208,7 +205,7 @@ def get_fov_lines(ego_config: Dict[str, Any], ego_fov=70) -> Tuple[Float22, Floa
          y_ego + math.sin(right_degree)*50))
     return left_fov_line, right_fov_line
 
-def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: Polygon) -> Tuple[Float2]:
+def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: Polygon):
     '''
     return: intersection point: tuple[tuple]
     '''
@@ -239,7 +236,7 @@ def in_view(
               (right_fov_line_x - Ax) * (My - Ay) - (right_fov_line_y - Ay) * (Mx - Ax) >= 0
 
 def construct_mapping(
-    decoded_road_segment: Tuple[Float2],
+    decoded_road_segment: "List[Float2]",
     frame_size: Tuple[int, int],
     fov_lines: Tuple[Float22, Float22],
     segmentid: str,
@@ -247,33 +244,33 @@ def construct_mapping(
     segmentheading: float,
     contains_ego: bool,
     ego_config: Dict[str, Any]
-) -> Tuple[bool, cam_segment_mapping]:
+) -> "CameraSegmentMapping | None":
     """
     Given current road segment
     determine whether add it to the mapping
+     - segment that contains the ego
+     - segment that is larger than 100 pixel x pixel
     """
-    ego_translation = ego_config['egoTranslation'][:2]
-    deduced_cam_segment = tuple(map(
-            lambda point: transformation(tuple(point)+(0,), ego_config), decoded_road_segment))
+    ego_translation: "Float2" = ego_config['egoTranslation'][:2]
+    deduced_cam_segment = list(map(
+            lambda point: transformation(point + (0,), ego_config), decoded_road_segment))
     assert len(deduced_cam_segment) == len(decoded_road_segment)
     if contains_ego:
         keep_cam_segment_point = deduced_cam_segment
         keep_road_segment_point = decoded_road_segment
     else:
-        keep_cam_segment_point = []
-        keep_road_segment_point = []
-        for i in range(len(decoded_road_segment)):
-            current_cam_point = deduced_cam_segment[i]
-            current_road_point = decoded_road_segment[i]
+        keep_cam_segment_point: "List[npt.NDArray[np.floating]]" = []
+        keep_road_segment_point: "List[Float2]" = []
+        for current_cam_point, current_road_point in zip(deduced_cam_segment, decoded_road_segment):
             if in_frame(current_cam_point, frame_size) and \
                 in_view(current_road_point, ego_translation, fov_lines):
                 keep_cam_segment_point.append(current_cam_point)
                 keep_road_segment_point.append(current_road_point)
     if contains_ego or (len(keep_cam_segment_point) > 2 
         and Polygon(tuple(keep_cam_segment_point)).area > 100):
-        return cam_segment_mapping(
+        return CameraSegmentMapping(
             keep_cam_segment_point, 
-            roadSegmentInfo(
+            RoadSegmentInfo(
                 segmentid,
                 Polygon(keep_road_segment_point),
                 segmenttype,
@@ -284,8 +281,10 @@ def construct_mapping(
             )
         )
 
-def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
-                               frame_size=(1600, 900)) -> List[cam_segment_mapping]:
+def map_imgsegment_roadsegment(
+    ego_config: Dict[str, Any],
+    frame_size: "Tuple[int, int]" = (1600, 900)
+) -> List[CameraSegmentMapping]:
     """Construct a mapping from frame segment to road segment
 
     Given an image, we know that different roads/lanes belong to different
@@ -321,14 +320,13 @@ def map_imgsegment_roadsegment(ego_config: Dict[str, Any],
             if road_filter:
                 continue
 
-            intersection_points = tuple(
-                    intersection(fov_lines, segmentpolygon))
-            decoded_road_segment +=intersection_points
+            intersection_points = intersection(fov_lines, segmentpolygon)
+            decoded_road_segment += intersection_points
 
         current_mapping = construct_mapping(
             decoded_road_segment, frame_size, fov_lines, segmentid,
             segmenttype, segmentheading, contains_ego, ego_config)
-        if current_mapping:
+        if current_mapping is not None:
             mapping.append(current_mapping)
 
     print('total mapping time: ', time.time() - start_time)
