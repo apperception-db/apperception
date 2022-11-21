@@ -10,8 +10,12 @@ StageOutput = Tuple[Optional[bitarray], Optional[Dict[str, list]]]
 
 
 class Stage:
-    def __init__(self) -> None:
-        self.runtimes: "List[float]" = []
+    runtimes: "List[float]"
+
+    def __new__(cls):
+        obj = object.__new__(cls)
+        obj.runtimes = []
+        return obj
 
     def _run(self, payload: "Payload") -> "StageOutput":
         return payload.keep, payload.metadata

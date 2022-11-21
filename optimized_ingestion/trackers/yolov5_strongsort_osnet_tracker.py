@@ -73,6 +73,8 @@ def track(
     curr_frame, prev_frame = None, None
     for frame_idx, im, im0s in tqdm(dataset):
         if not source.keep[frame_idx]:
+            strongsort.increment_ages()
+            prev_frame = im0s.copy()
             continue
 
         # t1 = time_sync()
@@ -166,8 +168,8 @@ def track(
     #     f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms strong sort update per image at shape {(1, 3, *imgsz)}"
     #     % t
     # )
-    with open(f"strongsort_{source.video.videofile.split('/')[-1]}.json", "w") as f:
-        json.dump(strongsort.benchmark, f)
+    # with open(f"strongsort_{source.video.videofile.split('/')[-1]}.json", "w") as f:
+    #     json.dump(strongsort.benchmark, f)
     return labels
 
 

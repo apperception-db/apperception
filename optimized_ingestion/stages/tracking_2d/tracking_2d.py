@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from bitarray import bitarray
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -25,7 +26,7 @@ class Tracking2D(Stage):
             else:
                 metadata.append(None)
 
-        for row in results:
+        for row in map(tracking_result_to_tracking_2d_result, results):
             idx = row.frame_idx
             metadata[idx][row.object_id] = row
 
@@ -45,3 +46,30 @@ class Tracking2D(Stage):
         #     pickle.dump(metadata, f)
 
         return None, {self.classname(): metadata}
+
+
+def tracking_result_to_tracking_2d_result(t: "tracker.TrackingResult"):
+    return Tracking2DResult(
+        t.frame_idx,
+        t.object_id,
+        t.bbox_left,
+        t.bbox_top,
+        t.bbox_w,
+        t.bbox_h,
+        t.object_type,
+        t.confidence
+    )
+
+
+@dataclass
+class Tracking2DResult:
+    frame_idx: int
+    object_id: int
+    bbox_left: float
+    bbox_top: float
+    bbox_w: float
+    bbox_h: float
+    object_type: str
+    confidence: float
+    next: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
+    prev: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)

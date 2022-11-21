@@ -1,6 +1,6 @@
 import os
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Iterable, Iterator, NamedTuple
+from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -42,7 +42,7 @@ class YoloDetection(Detection2D):
     ):
         self.device = select_device("")
         self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(self.device)
-        stride, names, pt = self.model.stride, self.model.names, self.model.pt
+        stride, pt = self.model.stride, self.model.pt
         self.imgsz = check_img_size((640, 640), s=stride)
         self.half = half
         self.conf_thres = conf_thres
@@ -54,11 +54,14 @@ class YoloDetection(Detection2D):
 
     def _run(self, payload: "Payload") -> "StageOutput":
         with torch.no_grad():
+            names: "List[str]" = self.model.names
             dataset = LoadImages(payload, img_size=self.imgsz)
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
+            metadata: "List[npt.NDArray]" = []
             for frame_idx, im, im0s in tqdm(dataset):
                 if not payload.keep[frame_idx]:
+                    metadata.append(np.ndarray([]))
                     continue
                 # t1 = time_sync()
                 im = torch.from_numpy(im).to(self.device)
@@ -66,26 +69,28 @@ class YoloDetection(Detection2D):
                 im /= 255.0  # 0 - 255 to 0.0 - 1.0
                 if len(im.shape) == 3:
                     im = im[None]  # expand for batch dim
-                # t2 = time_sync()
-                # dt[0] += t2 - t1
 
                 # Inference
                 pred = self.model(im, augment=self.augment)
-                # t3 = time_sync()
-                # dt[1] += t3 - t2
 
                 # Apply NMS
                 pred = non_max_suppression(
-                    pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms, max_det=self.max_det
+                    pred,
+                    self.conf_thres,
+                    self.iou_thres,
+                    self.classes,
+                    self.agnostic_nms,
+                    max_det=self.max_det
                 )
-                # dt[2] += time_sync() - t3
 
                 # Process detections
-                assert isinstance(pred, list)
-                assert len(pred) == 1
+                assert isinstance(pred, list), type(pred)
+                assert len(pred) == 1, len(pred)
                 det = pred[0]
+                assert isinstance(det, torch.Tensor), type(det)
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0s.shape).round()
-        return super()._run(payload)
+                metadata.append((det, names))
+        return None, {self.classname(): metadata}
 
 
 class ImageOutput(NamedTuple):

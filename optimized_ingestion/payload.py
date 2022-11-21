@@ -55,7 +55,7 @@ class Payload:
         metadata = {**self.metadata, **metadata}
 
         print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
-        print("\n".join(_split_keep(keep)))
+        print("\n".join(_split_keep(keep, 100)))
 
         return Payload(self.video, keep, metadata)
 
