@@ -1,20 +1,21 @@
-from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-from pathlib import Path
 import numpy.typing as npt
 import torch
+from bitarray import bitarray
+from pathlib import Path
 from tqdm import tqdm
-
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
-from ..detection_2d.detection_2d import Detection2D
-from .tracking_2d import Tracking2D, Tracking2DResult
+
 from ..decode_frame import DecodeFrame
+from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
+from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
-    from ...payload import Payload
     from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT
+
+    from ...payload import Payload
 
 
 FILE = Path(__file__).resolve()
@@ -53,7 +54,7 @@ class FromDetection(Tracking2D):
                 if hasattr(strongsort, 'tracker') and hasattr(strongsort.tracker, 'camera_update'):
                     if prev_frame is not None and curr_frame is not None:
                         strongsort.tracker.camera_update(prev_frame, curr_frame)
-                
+
                 confs = det[:, 4]
                 output_ = strongsort.update(det.cpu(), im0)
 
@@ -84,7 +85,7 @@ class FromDetection(Tracking2D):
                 else:
                     metadata.append({})
                 prev_frame = curr_frame
-        
+
         for trajectory in trajectories.values():
             last = len(trajectory) - 1
             for i, t in enumerate(trajectory):

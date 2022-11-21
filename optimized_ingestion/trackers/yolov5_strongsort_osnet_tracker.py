@@ -1,5 +1,4 @@
 import cv2
-import json
 import numpy as np
 import numpy.typing as npt
 import os

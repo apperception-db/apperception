@@ -1,5 +1,5 @@
-from dataclasses import dataclass, field
 from bitarray import bitarray
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ...trackers import yolov5_strongsort_osnet_tracker as tracker
