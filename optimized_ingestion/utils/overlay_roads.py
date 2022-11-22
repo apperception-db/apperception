@@ -50,7 +50,7 @@ def overlay_to_frame(args: "Tuple[CameraConfig, npt.NDArray]") -> "npt.NDArray":
             np.zeros((1, len(p.coords)))
         ])
         coords = coords - np.array(frame.camera_translation)[:, np.newaxis]
-        coords = rotate(coords, Quaternion(frame.camera_rotation).inverse.unit)
+        coords = rotate(coords, frame.camera_rotation.inverse.unit)
         coords = intrinsic @ coords
         coords = coords / coords[2:3, :]
 

@@ -18,16 +18,19 @@ TODO:
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Literal, NamedTuple, Any, List
+import datetime
+
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
 import numpy as np
-import numpy.typing as np
+import numpy.typing as npt
 
-from optimization_playground.detection_estimation.segment_mapping import *
-from .utils import *
-from .sample_plan_algorithms import *
-
+from ..video import Video
+from ..camera_config import CameraConfig
+from .segment_mapping import RoadSegmentInfo, CameraSegmentMapping, map_imgsegment_roadsegment
+from .sample_plan_algorithms import get_sample_action_alg, Action
+from .utils import trajectory_3d, compute_distance, compute_area, relative_direction_to_ego, time_to_nearest_frame, get_largest_segment, detection_to_img_segment, get_ego_trajectory, Float2, Float3, Float22
 
 
 class obj_detection(NamedTuple):
@@ -48,7 +51,7 @@ class DetectionInfo:
     car_bbox3d: Any
     car_bbox2d: "Float22"
     ego_trajectory: "trajectory_3d"
-    ego_config: "Dict[str, Any]"
+    ego_config: "CameraConfig"
     ego_road_segment_info: "RoadSegmentInfo"
     timestamp: "datetime.datetime" = field(init=False)
     road_type: str = field(init=False)
@@ -58,7 +61,7 @@ class DetectionInfo:
     priority: float = field(init=False)
 
     def __post_init__(self):
-        timestamp = self.ego_config['timestamp']
+        timestamp = self.ego_config.timestamp
         assert isinstance(timestamp, datetime.datetime)
         self.timestamp = timestamp
         self.road_type = self.road_segment_info.segment_type
@@ -67,10 +70,10 @@ class DetectionInfo:
         self.compute_priority()
 
     def compute_geo_info(self):
-        self.distance = compute_distance(self.car_loc3d, self.ego_config['egoTranslation'])
-        self.segment_area_2d = compute_area(self.car_bbox2d)
+        self.distance = compute_distance(self.car_loc3d, self.ego_config.ego_translation)
+        self.segment_area_2d = compute_area([*self.car_bbox2d[0], *self.car_bbox2d[1]])
 
-        ego_heading = self.ego_config['egoHeading']
+        ego_heading = self.ego_config.ego_heading
         assert isinstance(ego_heading, float)
         self.relative_direction = relative_direction_to_ego(self.road_segment_info.segment_heading, ego_heading)
 
@@ -96,7 +99,7 @@ class DetectionInfo:
 #TODO
 @dataclass
 class samplePlan:
-    video: str
+    video: "Video"
     next_frame_num: int
     all_detection_info: "List[DetectionInfo]"
     metadata: Any = None
@@ -111,7 +114,9 @@ class samplePlan:
 
     def add(self, priority: float, sample_action: "Action", time_threshold: float = 0.5):
         assert sample_action is not None
-        assert not sample_action.invalid_action
+        if sample_action.invalid_action:
+            return
+        # assert not sample_action.invalid_action
 
         assert (self.action == None) == (self.current_priority == None)
         if self.action is None or self.current_priority is None:
@@ -136,7 +141,19 @@ class samplePlan:
     def get_next_sample_frame_info(self):
         if self.action is None:
             return None
-        return time_to_nearest_frame(self.video, self.action.finish_time)
+
+        nearest_index = None
+        min_diff = None
+        for i, config in enumerate(self.video):
+            timestamp = config.timestamp
+            diff = self.action.finish_time - timestamp
+            if diff.total_seconds() < 0:
+                diff = -diff
+            if min_diff is None or min_diff > diff:
+                min_diff = diff
+                nearest_index = i
+
+        return None, nearest_index, None
 
     def get_next_frame_num(self, next_frame_num: int):
         next_sample_frame_info = self.get_next_sample_frame_info()
@@ -152,15 +169,12 @@ def yolo_detect(current_frame: str) -> "List[obj_detection]":
     return []
 
 def construct_all_detection_info(
-    current_frame: str,
     cam_segment_mapping: "List[CameraSegmentMapping]",
-    ego_config: "Dict[str, Any]",
+    ego_config: "CameraConfig",
     ego_trajectory: "trajectory_3d",
-    all_detections: "List[obj_detection] | None" = None
+    all_detections: "List[obj_detection]"
 ):
     all_detection_info: "List[DetectionInfo]" = []
-    if all_detections is None:
-        all_detections = yolo_detect(current_frame)
     if len(all_detections) == 0:
         return all_detection_info
     ego_mapping = get_largest_segment(cam_segment_mapping)
@@ -193,9 +207,7 @@ def construct_all_detection_info(
     return all_detection_info
 
 def generate_sample_plan(
-    video: str,
-    current_ego_config: Dict[str, Any],
-    cam_segment_mapping: "List[CameraSegmentMapping]",
+    video: "Video",
     next_frame_num: int,
     all_detection_info: "List[DetectionInfo]",
     view_distance: float,
@@ -206,8 +218,9 @@ def generate_sample_plan(
     sample_plan.generate_sample_plan(view_distance)
     return sample_plan
 
+
 def detection_estimation(
-    sorted_ego_config: "List[Dict[str, Any]]",
+    sorted_ego_config: "List[CameraConfig]",
     video: str,
     start_frame_num: int,
     view_distance: float = 50,
@@ -232,18 +245,15 @@ def detection_estimation(
     next_frame_num = start_frame_num
     for i in range(len(sorted_ego_config)-1):
         current_ego_config = sorted_ego_config[i]
-        if current_ego_config['frame_num'] != next_frame_num:
+        if i != next_frame_num:
             continue
-        next_frame_num = sorted_ego_config[i+1]['frame_num']
+        next_frame_num = i + 1
         assert isinstance(next_frame_num, int)
         cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
-        current_frame: str = img_base_dir + current_ego_config['fileName']
-        all_detection_info = construct_all_detection_info(
-            current_frame, cam_segment_mapping, current_ego_config, ego_trajectory)
+        # current_frame: str = img_base_dir + current_ego_config['fileName']
+        all_detection_info = construct_all_detection_info(cam_segment_mapping, current_ego_config, ego_trajectory)
         next_sample_plan = generate_sample_plan(
             video,
-            current_ego_config,
-            cam_segment_mapping,
             next_frame_num,
             all_detection_info=all_detection_info,
             view_distance=view_distance

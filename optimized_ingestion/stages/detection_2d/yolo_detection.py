@@ -19,7 +19,7 @@ from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
-from ...stages.decode_frame import DecodeFrame
+from ...stages.decode_frame.decode_frame import DecodeFrame
 from .detection_2d import Detection2D
 
 if TYPE_CHECKING:

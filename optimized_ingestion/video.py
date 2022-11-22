@@ -64,6 +64,7 @@ class Video(collections.abc.Iterable["CameraConfig"]):
     def __get_fps_and_num_frames(self):
         if self._num_frames is None or self._fps is None:
             cap = cv2.VideoCapture(self.videofile)
+            assert cap.isOpened(), self.videofile
             self._num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             self._fps = float(cap.get(cv2.CAP_PROP_FPS))
             cap.release()

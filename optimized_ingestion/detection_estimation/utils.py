@@ -8,6 +8,7 @@ from shapely.geometry import Point, Polygon, LineString, MultiLineString, box
 
 if TYPE_CHECKING:
     from .segment_mapping import CameraSegmentMapping
+    from ..camera_config import CameraConfig
 
 Float2 = Tuple[float, float]
 Float3 = Tuple[float, float, float]
@@ -124,12 +125,13 @@ def min_car_speed(road_type):
 
 
 ### HELPER FUNCTIONS ###
-def get_ego_trajectory(video: str, sorted_ego_config: "Dict[str, Any]" = None):
+def get_ego_trajectory(video: str, sorted_ego_config: "List[CameraConfig]"):
     if sorted_ego_config is None:
+        raise Exception()
         camera_trajectory_config = fetch_camera_trajectory(video, database)
     else:
         camera_trajectory_config = sorted_ego_config
-    return [trajectory_3d(config['egoTranslation'], config['timestamp']) for config in camera_trajectory_config]
+    return [trajectory_3d(config.ego_translation, config.timestamp) for config in camera_trajectory_config]
 
 def get_ego_speed(ego_trajectory):
     point_wise_temporal_speed = []
@@ -262,8 +264,10 @@ def time_to_exit_current_segment(current_segment_info,
         distance1 = compute_distance(car_loc, intersection[0])
         distance2 = compute_distance(car_loc, intersection[1])
         if relative_direction_1:
+            print('relative_dierction_1', distance1, current_time, max_car_speed(current_segment_info.segment_type))
             return time_elapse(current_time, distance1 / max_car_speed(current_segment_info.segment_type)), intersection[0]
         elif relative_direction_2:
+            print('relative_direction_2', distance2, current_time)
             return time_elapse(current_time, distance2 / max_car_speed(current_segment_info.segment_type)), intersection[1]
         else:
             print("wrong car moving direction")
