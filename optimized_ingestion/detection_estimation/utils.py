@@ -92,7 +92,7 @@ def _construct_extended_line(polygon: "Polygon", line: "Float22"):
 
 
 def intersection_between_line_and_trajectory(line, trajectory):
-    trajectory_to_polygon = Polygon(trajectory)
+    # trajectory_to_polygon = Polygon(trajectory)
     extended_line = _construct_extended_line(trajectory, line)
     intersection = extended_line.intersection(LineString(trajectory))
     if not isinstance(intersection, LineString) or intersection.is_empty:
@@ -332,7 +332,7 @@ def meetup(car1_loc,
         if len(intersection) == 1:  # i.e. one car drives towards south, the other towards east
             # print("at intersection 1")
             meetup_point = intersection[0]
-            time1 = point_to_nearest_trajectory_timestamp(meetup_point, car1_trajectory)
+            time1 = point_to_nearest_trajectory(meetup_point, car1_trajectory)
             distance2 = compute_distance(car2_loc, meetup_point)
             time2 = time_elapse(current_time, distance2 / car2_speed)
             return (min(time1, time2), meetup_point)

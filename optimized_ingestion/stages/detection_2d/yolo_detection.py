@@ -42,7 +42,7 @@ class YoloDetection(Detection2D):
     ):
         self.device = select_device("")
         self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(self.device)
-        stride, pt = self.model.stride, self.model.pt
+        stride, self.pt = self.model.stride, self.model.pt
         self.imgsz = check_img_size((640, 640), s=stride)
         self.half = half
         self.conf_thres = conf_thres
@@ -55,7 +55,7 @@ class YoloDetection(Detection2D):
     def _run(self, payload: "Payload") -> "StageOutput":
         with torch.no_grad():
             names: "List[str]" = self.model.names
-            dataset = LoadImages(payload, img_size=self.imgsz)
+            dataset = LoadImages(payload, img_size=self.imgsz, auto=self.pt)
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
             metadata: "List[npt.NDArray]" = []
