@@ -15,22 +15,26 @@ TODO:
 
 """
 
+import datetime
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Literal, NamedTuple, Any, List
-import datetime
+from typing import Any, List, Literal, NamedTuple
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
 import numpy as np
 import numpy.typing as npt
 
-from ..video import Video
 from ..camera_config import CameraConfig
-from .segment_mapping import RoadSegmentInfo, CameraSegmentMapping, map_imgsegment_roadsegment
-from .sample_plan_algorithms import get_sample_action_alg, Action
-from .utils import trajectory_3d, compute_distance, compute_area, relative_direction_to_ego, time_to_nearest_frame, get_largest_segment, detection_to_img_segment, get_ego_trajectory, Float2, Float3, Float22
+from ..video import Video
+from .sample_plan_algorithms import Action, get_sample_action_alg
+from .segment_mapping import (CameraSegmentMapping, RoadSegmentInfo,
+                              map_imgsegment_roadsegment)
+from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
+                    detection_to_img_segment, get_ego_trajectory,
+                    get_largest_segment, relative_direction_to_ego,
+                    trajectory_3d)
 
 
 class obj_detection(NamedTuple):
@@ -96,7 +100,7 @@ class DetectionInfo:
         return self.priority, sample_action_alg(self, view_distance)
 
 
-#TODO
+# TODO
 @dataclass
 class samplePlan:
     video: "Video"
@@ -118,15 +122,15 @@ class samplePlan:
             return
         # assert not sample_action.invalid_action
 
-        assert (self.action == None) == (self.current_priority == None)
+        assert (self.action is None) == (self.current_priority is None)
         if self.action is None or self.current_priority is None:
             self.current_priority = priority
             self.action = sample_action
         else:
             if sample_action.estimated_time < self.action.estimated_time:
-                if (priority >= self.current_priority or 
-                    sample_action.estimated_time / self.action.estimated_time < \
-                        time_threshold):
+                if (priority >= self.current_priority
+                    or sample_action.estimated_time / self.action.estimated_time
+                        < time_threshold):
                     self.current_priority = priority
                     self.action = sample_action
 
@@ -162,11 +166,13 @@ class samplePlan:
             self.next_frame_num = max(next_sample_frame_num, next_frame_num)
         return self.next_frame_num
 
+
 def yolo_detect(current_frame: str) -> "List[obj_detection]":
-    #TODO: return a list of obj_detection
+    # TODO: return a list of obj_detection
     # onj_detection : namedtuple('id', 'car_loc3d', 'car_loc2d', 'car_bbox3d',
     #   'car_bbox2d')
     return []
+
 
 def construct_all_detection_info(
     cam_segment_mapping: "List[CameraSegmentMapping]",
@@ -191,7 +197,7 @@ def construct_all_detection_info(
         if related_mapping is None:
             continue
         cam_segment, road_segment_info = related_mapping
-        
+
         detection_info = DetectionInfo(obj_id,
                                        cam_segment,
                                        road_segment_info,
@@ -205,6 +211,7 @@ def construct_all_detection_info(
         all_detection_info.append(detection_info)
 
     return all_detection_info
+
 
 def generate_sample_plan(
     video: "Video",
@@ -235,15 +242,15 @@ def detection_estimation(
         view_distance: the maximum view distance from ego
         img_base_dir: the base directory of the images,
                       TODO:deprecate later
-    
+
     Return: TODO metadata of the video including all object trajectories
             and other useful information
-             
+
     """
     # TODO: use camera configuration from the frames.pickle
     ego_trajectory = get_ego_trajectory(video, sorted_ego_config)
     next_frame_num = start_frame_num
-    for i in range(len(sorted_ego_config)-1):
+    for i in range(len(sorted_ego_config) - 1):
         current_ego_config = sorted_ego_config[i]
         if i != next_frame_num:
             continue

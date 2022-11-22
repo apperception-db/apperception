@@ -8,7 +8,6 @@ import psycopg2
 from multiprocessing import Pool
 from os import environ
 from psycopg2 import sql
-from pyquaternion import Quaternion
 from tqdm import tqdm
 from typing import TYPE_CHECKING, List, Tuple
 

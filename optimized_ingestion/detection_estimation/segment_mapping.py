@@ -1,39 +1,37 @@
 """ Goal to map the road segment to the frame segment
     Now only get the segment of type lane and intersection
     except for the segment that contains the ego camera
-    
+
 Usage example:
     from optimization_playground.segment_mapping import map_imgsegment_roadsegment
     from apperception.utils import fetch_camera_config
-    
+
     test_config = fetch_camera_config(test_img, database)
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from typing import Tuple, List, Set, NamedTuple
-
-import os
+import array
 import math
-import time
-import sys
-
-from ..camera_config import CameraConfig
-# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
-
-import cv2
 import numpy as np
 import numpy.typing as npt
+import os
 import pandas as pd
-from matplotlib import pyplot as plt
-from shapely.geometry import Point, Polygon
-from plpygis import Geometry
 import postgis
 import psycopg2
-import array
+import time
+from plpygis import Geometry
+from shapely.geometry import Polygon
+from typing import List, NamedTuple, Tuple
+
+from ..camera_config import CameraConfig
+
+# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
+
 # from pyquaternion import Quaternion
 pd.get_option("display.max_columns")
 
 from apperception.database import database
+
 # from apperception.utils import fetch_camera_config
 from .utils import line_to_polygon_intersection
 
@@ -57,9 +55,9 @@ test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__15353851
 #     "cameraHeading",
 #     "egoHeading",]
 #     # "roadDirection"]
-# CAM_CONFIG_QUERY = """SELECT * FROM Cameras 
-#                     WHERE filename like 'samples/CAM_FRONT/%{date}%' 
-#                     ORDER BY frameNum""" 
+# CAM_CONFIG_QUERY = """SELECT * FROM Cameras
+#                     WHERE filename like 'samples/CAM_FRONT/%{date}%'
+#                     ORDER BY frameNum"""
 
 # _camera_config = database.execute(CAM_CONFIG_QUERY.format(date=input_date))
 # camera_config_df = pd.DataFrame(_camera_config, columns=CAMERA_COLUMNS)
@@ -77,7 +75,7 @@ SELECT
     segmentpolygon.elementpolygon,
     segmentpolygon.segmenttypes,
     segment.heading
-FROM segmentpolygon 
+FROM segmentpolygon
     LEFT OUTER JOIN segment
         ON segmentpolygon.elementid = segment.elementid
 WHERE ST_Contains(
@@ -92,7 +90,7 @@ SELECT
     segmentpolygon.elementpolygon,
     segmentpolygon.segmenttypes,
     segment.heading
-FROM segmentpolygon 
+FROM segmentpolygon
     LEFT OUTER JOIN segment
         ON segmentpolygon.elementid = segment.elementid
 WHERE ST_DWithin(
@@ -112,6 +110,7 @@ Float3 = Tuple[float, float, float]
 Float22 = Tuple[Float2, Float2]
 Segment = Tuple[str, postgis.polygon.Polygon, str | None, float | None]
 AnnotatedSegment = Tuple[str, postgis.polygon.Polygon, str | None, float | None, bool]
+
 
 class RoadSegmentInfo(NamedTuple):
     """
@@ -136,7 +135,7 @@ class RoadSegmentInfo(NamedTuple):
 class CameraSegmentMapping(NamedTuple):
     cam_segment: "List[npt.NDArray[np.floating]]"
     road_segment_info: "RoadSegmentInfo"
-    
+
 
 def road_segment_contains(ego_config: "CameraConfig")\
         -> List[SegmentPolygonWithHeading]:
@@ -145,6 +144,7 @@ def road_segment_contains(ego_config: "CameraConfig")\
     )
 
     return database.execute(query)
+
 
 def find_segment_dwithin(start_segment: "AnnotatedSegment",
                          view_distance=50) -> "List[SegmentPolygonWithHeading]":
@@ -155,6 +155,7 @@ def find_segment_dwithin(start_segment: "AnnotatedSegment",
     )
 
     return database.execute(query)
+
 
 def reformat_return_segment(segments: "List[SegmentPolygonWithHeading]") -> "List[Segment]":
     def _(x: "SegmentPolygonWithHeading") -> Segment:
@@ -167,18 +168,20 @@ def reformat_return_segment(segments: "List[SegmentPolygonWithHeading]") -> "Lis
         )
     return list(map(_, segments))
 
+
 def annotate_contain(
     segments: "List[Segment]",
     contain: bool = False
 ) -> "List[AnnotatedSegment]":
     return [s + (contain,) for s in segments]
 
+
 class HashableAnnotatedSegment:
     val: "AnnotatedSegment"
 
     def __init__(self, val: "AnnotatedSegment"):
         self.val = val
-    
+
     def __hash__(self):
         h1 = hash(self.val[0])
         h2 = hash(self.val[1].wkt_coords)
@@ -189,6 +192,7 @@ class HashableAnnotatedSegment:
         if not isinstance(__o, HashableAnnotatedSegment):
             return False
         return self.val == __o.val
+
 
 def construct_search_space(
     ego_config: "CameraConfig",
@@ -202,7 +206,7 @@ def construct_search_space(
     all_contain_segment = reformat_return_segment(road_segment_contains(ego_config))
     all_contain_segment = annotate_contain(all_contain_segment, contain=True)
     start_segment = all_contain_segment[0]
-    
+
     segment_within_distance = reformat_return_segment(find_segment_dwithin(start_segment, view_distance))
     segment_within_distance = annotate_contain(segment_within_distance, contain=False)
 
@@ -215,6 +219,7 @@ def construct_search_space(
         }
     ]
 
+
 def get_fov_lines(ego_config: "CameraConfig", ego_fov: float = 70.) -> Tuple[Float22, Float22]:
     '''
     return: two lines representing fov in world coord
@@ -224,15 +229,16 @@ def get_fov_lines(ego_config: "CameraConfig", ego_fov: float = 70.) -> Tuple[Flo
     # TODO: accuracy improvement: find fov in 3d -> project down to z=0 plane
     ego_heading = ego_config.ego_heading
     x_ego, y_ego = ego_config.ego_translation[:2]
-    left_degree = math.radians(ego_heading + ego_fov/2 + 90)
-    left_fov_line = ((x_ego, y_ego), 
-        (x_ego + math.cos(left_degree)*50, 
-         y_ego + math.sin(left_degree)*50))
-    right_degree = math.radians(ego_heading - ego_fov/2 + 90)
-    right_fov_line = ((x_ego, y_ego), 
-        (x_ego + math.cos(right_degree)*50, 
-         y_ego + math.sin(right_degree)*50))
+    left_degree = math.radians(ego_heading + ego_fov / 2 + 90)
+    left_fov_line = ((x_ego, y_ego),
+                     (x_ego + math.cos(left_degree) * 50,
+                      y_ego + math.sin(left_degree) * 50))
+    right_degree = math.radians(ego_heading - ego_fov / 2 + 90)
+    right_fov_line = ((x_ego, y_ego),
+                      (x_ego + math.cos(right_degree) * 50,
+                       y_ego + math.sin(right_degree) * 50))
     return left_fov_line, right_fov_line
+
 
 def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: Polygon):
     '''
@@ -243,9 +249,11 @@ def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: Polygon):
     right_intersection = line_to_polygon_intersection(segmentpolygon, right_fov_line)
     return left_intersection + right_intersection
 
+
 def in_frame(transformed_point: np.array, frame_size: Tuple[int, int]):
     return transformed_point[0] > 0 and transformed_point[0] < frame_size[0] and \
         transformed_point[1] < frame_size[1] and transformed_point[1] > 0
+
 
 def in_view(
     road_point: "Float2",
@@ -253,7 +261,7 @@ def in_view(
     fov_lines: Tuple[Float22, Float22]
 ) -> bool:
     '''
-    return if the road_point is on the left of the left fov line and 
+    return if the road_point is on the left of the left fov line and
                                 on the right of the right fov line
     '''
     left_fov_line, right_fov_line = fov_lines
@@ -262,7 +270,7 @@ def in_view(
     left_fov_line_x, left_fov_line_y = left_fov_line[1]
     right_fov_line_x, right_fov_line_y = right_fov_line[1]
     return (left_fov_line_x - Ax) * (My - Ay) - (left_fov_line_y - Ay) * (Mx - Ax) <= 0 and \
-              (right_fov_line_x - Ax) * (My - Ay) - (right_fov_line_y - Ay) * (Mx - Ax) >= 0
+        (right_fov_line_x - Ax) * (My - Ay) - (right_fov_line_y - Ay) * (Mx - Ax) >= 0
 
 
 def worl2pixel_factory(config: "CameraConfig"):
@@ -314,13 +322,13 @@ def construct_mapping(
         keep_road_segment_point: "List[Float2]" = []
         for current_cam_point, current_road_point in zip(deduced_cam_segment, decoded_road_segment):
             if in_frame(current_cam_point, frame_size) and \
-                in_view(current_road_point, ego_translation, fov_lines):
+                    in_view(current_road_point, ego_translation, fov_lines):
                 keep_cam_segment_point.append(current_cam_point)
                 keep_road_segment_point.append(current_road_point)
-    if contains_ego or (len(keep_cam_segment_point) > 2 
-        and Polygon(tuple(keep_cam_segment_point)).area > 100):
+    if contains_ego or (len(keep_cam_segment_point) > 2
+                        and Polygon(tuple(keep_cam_segment_point)).area > 100):
         return CameraSegmentMapping(
-            keep_cam_segment_point, 
+            keep_cam_segment_point,
             RoadSegmentInfo(
                 segmentid,
                 Polygon(keep_road_segment_point),
@@ -331,6 +339,7 @@ def construct_mapping(
                 fov_lines
             )
         )
+
 
 def map_imgsegment_roadsegment(
     ego_config: "CameraConfig",
@@ -405,11 +414,11 @@ def map_imgsegment_roadsegment(
 #         ys = [point[1] for point in road_segment_info.segment_polygon.exterior.coords]
 #         segmenttype = road_segment_info.segment_type
 #         axs.fill(xs, ys, alpha=0.5, fc=color, ec='none')
-#         axs.text(np.mean(np.array(xs)), np.mean(np.array(ys)), 
+#         axs.text(np.mean(np.array(xs)), np.mean(np.array(ys)),
 #                 segmenttype if segmenttype else '')
 #         current_plt = mplfig_to_npimage(fig)
 #         i += 1
-        
+
 #         fov_lines = road_segment_info.fov_lines
 #         axs.plot([p[0] for p in fov_lines[0]], [p[1] for p in fov_lines[0]], color='red', marker='o', markersize=2)
 #         axs.plot([p[0] for p in fov_lines[1]], [p[1] for p in fov_lines[1]], color='red', marker='o', markersize=2)
@@ -424,7 +433,7 @@ def map_imgsegment_roadsegment(
 # if __name__ == '__main__':
 #     test_img_path = os.path.join(data_path, test_img)
 #     test_config = fetch_camera_config(
-#         test_img, 
+#         test_img,
 #         database)
 #     mapping = map_imgsegment_roadsegment(test_config)
 #     visualization(test_img_path, test_config, mapping)

@@ -1,10 +1,10 @@
 import cv2
+import math
+import multiprocessing
 from bitarray import bitarray
+from multiprocessing import Pool
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
-import multiprocessing
-from multiprocessing import Pool
-import math
 
 from .decode_frame import DecodeFrame
 

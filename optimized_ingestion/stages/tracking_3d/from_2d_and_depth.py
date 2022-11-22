@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
-from pyquaternion import Quaternion
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ...utils.depth_to_3d import depth_to_3d
