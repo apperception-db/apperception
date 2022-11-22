@@ -185,8 +185,8 @@ def fetch_camera_config(filename: str, database):
         frameNum,
         fileName,
         cameraHeading,
-        egoHeading
-        timestamp,
+        egoHeading,
+        timestamp
     FROM Cameras
     WHERE
         fileName = '{filename}'
