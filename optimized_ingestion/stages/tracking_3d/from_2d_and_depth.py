@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
-from pyquaternion import Quaternion
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ...utils.depth_to_3d import depth_to_3d
@@ -45,7 +44,7 @@ class From2DAndDepth(Tracking3D):
                 intrinsic = camera.camera_intrinsic
 
                 point_from_camera = depth_to_3d(x, y, d, intrinsic)
-                rotated_offset = Quaternion(camera.camera_rotation).rotate(
+                rotated_offset = camera.camera_rotation.rotate(
                     np.array(point_from_camera)
                 )
                 point = np.array(camera.camera_translation) + rotated_offset

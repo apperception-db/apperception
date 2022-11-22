@@ -3,12 +3,12 @@ from bitarray import bitarray
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-from .stage import Stage
+from ..stage import Stage
 
 if TYPE_CHECKING:
     import numpy.typing as npt
 
-    from ..payload import Payload
+    from ...payload import Payload
 
 
 class DecodeFrame(Stage):

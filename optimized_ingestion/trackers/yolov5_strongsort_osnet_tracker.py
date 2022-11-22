@@ -1,5 +1,4 @@
 import cv2
-import json
 import numpy as np
 import numpy.typing as npt
 import os
@@ -28,7 +27,7 @@ from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device  # , time_sync
 
-from ..stages.decode_frame import DecodeFrame
+from ..stages.decode_frame.decode_frame import DecodeFrame
 
 FILE = Path(__file__).resolve()
 APPERCEPTION = FILE.parent.parent.parent
@@ -73,6 +72,8 @@ def track(
     curr_frame, prev_frame = None, None
     for frame_idx, im, im0s in tqdm(dataset):
         if not source.keep[frame_idx]:
+            strongsort.increment_ages()
+            prev_frame = im0s.copy()
             continue
 
         # t1 = time_sync()
@@ -85,7 +86,7 @@ def track(
         # dt[0] += t2 - t1
 
         # Inference
-        pred = model(im, augment=augment, visualize=False)
+        pred = model(im, augment=augment)
         # t3 = time_sync()
         # dt[1] += t3 - t2
 
@@ -166,8 +167,8 @@ def track(
     #     f"Speed: %.1fms pre-process, %.1fms inference, %.1fms NMS, %.1fms strong sort update per image at shape {(1, 3, *imgsz)}"
     #     % t
     # )
-    with open(f"strongsort_{source.video.videofile.split('/')[-1]}.json", "w") as f:
-        json.dump(strongsort.benchmark, f)
+    # with open(f"strongsort_{source.video.videofile.split('/')[-1]}.json", "w") as f:
+    #     json.dump(strongsort.benchmark, f)
     return labels
 
 

@@ -6,7 +6,9 @@ from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline
 from .stages.decode_frame import DecodeFrame
+from .stages.detection_2d.yolo_detection import YoloDetection
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
+from .stages.tracking_2d.from_detection import FromDetection
 from .stages.tracking_2d.tracking_2d import Tracking2D
 from .stages.tracking_3d.from_2d_and_road import From2DAndRoad
 from .stages.tracking_3d.tracking_3d import Tracking3DResult
@@ -55,19 +57,26 @@ class DataclassJSONEncoder(json.JSONEncoder):
 
 if __name__ == "__main__":
     pipeline = Pipeline()
-    # pipeline \
-    #     .add_filter(filter=InView(distance=10, segment_type="intersection")) \
-    #     .add_filter(filter=Stopped(min_stopped_frames=2, stopped_threshold=1.0))
-    pipeline \
-        .add_filter(filter=DecodeFrame()) \
-        .add_filter(filter=Tracking2D())
-    pipeline \
-        .add_filter(filter=From2DAndRoad())
-    # # pipeline \
-    #     .add_filter(filter=DepthEstimation()) \
-    #     .add_filter(filter=From2DAndDepth())
-
+    # pipeline.add_filter(filter=InView(distance=10, segment_type="intersection"))
+    # pipeline.add_filter(filter=Stopped(min_stopped_frames=2, stopped_threshold=1.0))
+    pipeline.add_filter(filter=DecodeFrame())
+    # pipeline.add_filter(filter=Tracking2D())
+    pipeline.add_filter(filter=YoloDetection())
+    pipeline.add_filter(filter=FromDetection())
+    pipeline.add_filter(filter=From2DAndRoad())
+    # pipeline.add_filter(filter=DepthEstimation())
+    # pipeline.add_filter(filter=From2DAndDepth())
     pipeline.add_filter(filter=FilterCarFacingSideway())
+
+    pbase = Pipeline()
+    pbase.add_filter(filter=DecodeFrame())
+
+    p1 = Pipeline()
+    p1.add_filter(filter=YoloDetection())
+    p1.add_filter(filter=FromDetection())
+
+    p2 = Pipeline()
+    p2.add_filter(filter=Tracking2D())
 
     if NUSCENES_PROCESSED_DATA in os.environ:
         DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
@@ -77,8 +86,8 @@ if __name__ == "__main__":
         videos = pickle.load(f)
 
     for name, video in videos.items():
-        # if name not in BOSTON_VIDEOS:
-        #     continue
+        if name not in BOSTON_VIDEOS:
+            continue
 
         print(name)
         frames = Video(
