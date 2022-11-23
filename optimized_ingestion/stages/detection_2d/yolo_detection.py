@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple
 
@@ -27,6 +28,12 @@ if TYPE_CHECKING:
 
     from ...payload import Payload
     from ...stages.stage import StageOutput
+
+
+FILE = Path(__file__).resolve()
+APPERCEPTION = FILE.parent.parent.parent.parent
+WEIGHTS = APPERCEPTION / "weights"
+torch.hub.set_dir(str(WEIGHTS))
 
 
 class YoloDetection(Detection2D):

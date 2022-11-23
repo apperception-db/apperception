@@ -24,7 +24,7 @@ WEIGHTS = APPERCEPTION / "weights"
 reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 
 
-class FromDetection(Tracking2D):
+class StrongSORT(Tracking2D):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         if Detection2D.get(payload) is None:
             raise Exception()
