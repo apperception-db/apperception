@@ -1,16 +1,14 @@
-from bitarray import bitarray
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 import numpy.typing as npt
 import os
 import torch
+from bitarray import bitarray
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from tqdm import tqdm
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -26,12 +24,12 @@ from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device  # , time_sync
 
-
-from ..stage import Stage
 from ..decode_frame.decode_frame import DecodeFrame
+from ..stage import Stage
 
 if TYPE_CHECKING:
     from yolo_tracker.trackers.strong_sort.strong_sort import StrongSORT
+
     from ...payload import Payload
 
 
