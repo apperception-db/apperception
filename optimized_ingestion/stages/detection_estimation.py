@@ -1,22 +1,20 @@
+import numpy.typing as npt
 import time
 from bitarray import bitarray
-
 from shapely.geometry import Polygon
-import numpy.typing as npt
-
 from typing import List, Tuple
 
-from ..video import Video
 from ..camera_config import CameraConfig
-
-from ..detection_estimation.segment_mapping import map_imgsegment_roadsegment, CameraSegmentMapping
+from ..detection_estimation.detection_estimation import (
+    DetectionInfo, construct_all_detection_info, detection_to_img_segment,
+    generate_sample_plan, obj_detection, samplePlan)
+from ..detection_estimation.segment_mapping import (CameraSegmentMapping,
+                                                    map_imgsegment_roadsegment)
 from ..detection_estimation.utils import trajectory_3d
-from ..detection_estimation.detection_estimation import construct_all_detection_info, detection_to_img_segment, obj_detection, generate_sample_plan, DetectionInfo, samplePlan
-
-from .detection_2d.yolo_detection import YoloDetection
-from .detection_2d.detection_2d import Detection2D
-
 from ..payload import Payload
+from ..video import Video
+from .detection_2d.detection_2d import Detection2D
+from .detection_2d.yolo_detection import YoloDetection
 from .stage import Stage, StageOutput
 
 
@@ -24,7 +22,7 @@ class DetectionEstimation(Stage):
     def _run(self, payload: "Payload") -> "StageOutput":
         if Detection2D.get(payload) is None:
             raise Exception()
-        
+
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         return dry_run(payload, 0, ego_trajectory)
 
@@ -50,7 +48,7 @@ def generate_sample_plan_once(
     assert all_detection_info is not None
     if all_detection_info:
         print(all_detection_info[0].road_type)
-    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info,  50)
+    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
     # next_frame = None
     next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
     if next_sample_frame_info:
@@ -76,12 +74,12 @@ def construct_estimated_all_detection_info(
     for det in detections:
         bbox = det[:4]
         obj_cls = det[5]
-        x, y, x2, y2 = list(map(int,bbox))
+        x, y, x2, y2 = list(map(int, bbox))
         w = x2 - x
         h = y2 - y
-        car_loc2d = (x + w // 2, y+h//2)
+        car_loc2d = (x + w // 2, y + h // 2)
         # print(car_loc2d)
-        car_bbox2d = ((x-w//2, y-h//2), (x+w//2, y+h//2))
+        car_bbox2d = ((x - w // 2, y - h // 2), (x + w // 2, y + h // 2))
         car_bbox3d = None
         estimate_3d = detection_to_img_segment(car_loc2d, cam_segment_mapping)
         if estimate_3d and estimate_3d.road_segment_info.segment_type in ['lane', 'laneSection']:
@@ -104,7 +102,7 @@ def dry_run(
     # start_time = time.time()
     total_detection_time = 0
     total_sample_plan_time = 0
-    for i in range(len(payload.video)-1):
+    for i in range(len(payload.video) - 1):
         current_ego_config = payload.video[i]
         if i != next_frame_num:
             skipped_frame_num.append(i)
@@ -117,7 +115,7 @@ def dry_run(
         assert dets is not None
         det = dets[i]
         all_detection_info = construct_estimated_all_detection_info(det[0], cam_segment_mapping, current_ego_config, ego_trajectory[i])
-        total_detection_time += time.time()-start_detection_time
+        total_detection_time += time.time() - start_detection_time
         start_generate_sample_plan = time.time()
         next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)
         total_sample_plan_time += time.time() - start_generate_sample_plan
@@ -139,10 +137,10 @@ def dry_run(
     # print("avg detection time", total_detection_time/num_runs)
     # print("total_generate_sample_plan_time", total_sample_plan_time)
     # print("avg generate_sample_plan time", total_sample_plan_time/num_runs)
-    
+
     keep = bitarray(len(payload.video))
     keep[:] = 1
     for f in skipped_frame_num:
         keep[f] = 0
-    
+
     return keep, None
