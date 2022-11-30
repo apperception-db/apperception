@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Literal, Tuple
+from typing import TYPE_CHECKING, List, Literal
 
 from .utils import (OPPOSITE_DIRECTION, SAME_DIRECTION, Float2, Float3,
                     ego_departure, meetup, time_to_exit_current_segment,

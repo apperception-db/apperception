@@ -13,7 +13,8 @@ from ..detection_2d.yolo_detection import YoloDetection
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
-    from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as StrongSORTTracker
+    from yolo_tracker.trackers.multi_tracker_zoo import \
+        StrongSORT as StrongSORTTracker
 
     from ...payload import Payload
 
