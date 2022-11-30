@@ -11,6 +11,7 @@ Usage example:
 """
 
 import array
+import logging
 import math
 import numpy as np
 import numpy.typing as npt
@@ -22,7 +23,6 @@ import time
 from plpygis import Geometry
 from shapely.geometry import Polygon
 from typing import List, NamedTuple, Tuple
-import logging
 
 from ...camera_config import CameraConfig
 
@@ -35,7 +35,6 @@ from apperception.database import database
 
 # from apperception.utils import fetch_camera_config
 from .utils import line_to_polygon_intersection
-
 
 logger = logging.getLogger(__name__)
 

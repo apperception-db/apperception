@@ -2,10 +2,10 @@ from apperception.database import database
 from apperception.utils import fetch_camera_trajectory
 
 import datetime
+import logging
 import math
 from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
-import logging
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig

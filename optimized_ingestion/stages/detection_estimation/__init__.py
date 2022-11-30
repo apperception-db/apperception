@@ -1,25 +1,23 @@
+import logging
 import numpy.typing as npt
 import time
 from bitarray import bitarray
 from shapely.geometry import Polygon
-from typing import List, Tuple
-import logging
-
 from tqdm import tqdm
+from typing import List, Tuple
 
 from ...camera_config import CameraConfig
-from .detection_estimation import (
-    DetectionInfo, construct_all_detection_info, detection_to_img_segment,
-    generate_sample_plan, obj_detection, samplePlan)
-from .segment_mapping import (CameraSegmentMapping,
-                                                    map_imgsegment_roadsegment)
-from .utils import trajectory_3d
 from ...payload import Payload
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
 from ..stage import Stage, StageOutput
-
+from .detection_estimation import (DetectionInfo, construct_all_detection_info,
+                                   detection_to_img_segment,
+                                   generate_sample_plan, obj_detection,
+                                   samplePlan)
+from .segment_mapping import CameraSegmentMapping, map_imgsegment_roadsegment
+from .utils import trajectory_3d
 
 logging.basicConfig()
 
@@ -138,7 +136,7 @@ def dry_run(
     logger.info(f"number of skipped {len(skipped_frame_num)}")
     logger.info(skipped_frame_num)
     logger.info(action_type_counts)
-    total_run_time = time.time()-start_time
+    total_run_time = time.time() - start_time
     num_runs = len(payload.video) - len(skipped_frame_num)
     logger.info(f"total_run_time {total_run_time}")
     logger.info(f"avg run time {total_run_time/num_runs}")
