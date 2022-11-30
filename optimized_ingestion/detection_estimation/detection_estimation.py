@@ -54,7 +54,7 @@ class DetectionInfo:
     car_loc2d: "Float2"
     car_bbox3d: Any
     car_bbox2d: "Float22"
-    ego_trajectory: "trajectory_3d"
+    ego_trajectory: "List[trajectory_3d]"
     ego_config: "CameraConfig"
     ego_road_segment_info: "RoadSegmentInfo"
     timestamp: "datetime.datetime" = field(init=False)
@@ -114,7 +114,8 @@ class samplePlan:
         assert self.all_detection_info is not None
         for detection_info in self.all_detection_info:
             priority, sample_action = detection_info.generate_single_sample_action(view_distance)
-            self.add(priority, sample_action)
+            if sample_action is not None:
+                self.add(priority, sample_action)
 
     def add(self, priority: float, sample_action: "Action", time_threshold: float = 0.5):
         assert sample_action is not None
@@ -177,7 +178,7 @@ def yolo_detect(current_frame: str) -> "List[obj_detection]":
 def construct_all_detection_info(
     cam_segment_mapping: "List[CameraSegmentMapping]",
     ego_config: "CameraConfig",
-    ego_trajectory: "trajectory_3d",
+    ego_trajectory: "List[trajectory_3d]",
     all_detections: "List[obj_detection]"
 ):
     all_detection_info: "List[DetectionInfo]" = []

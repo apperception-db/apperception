@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
-from ..decode_frame import DecodeFrame
+from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
-    from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT
+    from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as StrongSORTTracker
 
     from ...payload import Payload
 
@@ -34,7 +34,7 @@ class StrongSORT(Tracking2D):
         metadata: "List[Dict[int, Tracking2DResult]]" = []
         trajectories: "Dict[int, List[Tracking2DResult]]" = {}
         device = select_device("")
-        strongsort: "StrongSORT" = create_tracker('strongsort', reid_weights, device, False)
+        strongsort: "StrongSORTTracker" = create_tracker('strongsort', reid_weights, device, False)
         curr_frame, prev_frame = None, None
         with torch.no_grad():
             if hasattr(strongsort, 'model'):

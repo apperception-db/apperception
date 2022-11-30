@@ -68,7 +68,7 @@ def construct_estimated_all_detection_info(
     detections: "npt.NDArray",
     cam_segment_mapping: "List[CameraSegmentMapping]",
     ego_config: "CameraConfig",
-    ego_trajectory: "trajectory_3d"
+    ego_trajectory: "List[trajectory_3d]"
 ) -> "List[DetectionInfo]":
     all_detections = []
     for det in detections:
@@ -114,7 +114,7 @@ def dry_run(
         dets = YoloDetection.get(payload)
         assert dets is not None
         det = dets[i]
-        all_detection_info = construct_estimated_all_detection_info(det[0], cam_segment_mapping, current_ego_config, ego_trajectory[i])
+        all_detection_info = construct_estimated_all_detection_info(det[0], cam_segment_mapping, current_ego_config, ego_trajectory)
         total_detection_time += time.time() - start_detection_time
         start_generate_sample_plan = time.time()
         next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)

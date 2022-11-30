@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Literal
+from typing import TYPE_CHECKING, List, Literal, Tuple
 
 from .utils import (OPPOSITE_DIRECTION, SAME_DIRECTION, Float2, Float3,
                     ego_departure, meetup, time_to_exit_current_segment,
@@ -58,7 +58,7 @@ class Action:
         estimated time: {self.estimated_time}'''
 
 
-def ego_stop(ego_trajectory: "trajectory_3d", ego_config: "CameraConfig") -> "Action":
+def ego_stop(ego_trajectory: "List[trajectory_3d]", ego_config: "CameraConfig"):
     current_time = ego_config.timestamp
     ego_loc = ego_config.ego_translation[:2]
     _ego_stop, ego_departure_time, ego_departure_loc = ego_departure(ego_trajectory, current_time)

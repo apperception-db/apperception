@@ -231,7 +231,7 @@ def point_to_nearest_trajectory(point, trajectory):
                key=lambda x: compute_distance(x.coordinates, point))
 
 
-def ego_departure(ego_trajectory, current_time):
+def ego_departure(ego_trajectory: "List[trajectory_3d]", current_time: "datetime.datetime"):
     for i in range(len(ego_trajectory)):
         point = ego_trajectory[i]
         if point.timestamp > current_time:
