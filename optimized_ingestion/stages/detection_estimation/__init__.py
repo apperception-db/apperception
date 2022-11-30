@@ -3,19 +3,28 @@ import time
 from bitarray import bitarray
 from shapely.geometry import Polygon
 from typing import List, Tuple
+import logging
 
-from ..camera_config import CameraConfig
-from ..detection_estimation.detection_estimation import (
+from tqdm import tqdm
+
+from ...camera_config import CameraConfig
+from .detection_estimation import (
     DetectionInfo, construct_all_detection_info, detection_to_img_segment,
     generate_sample_plan, obj_detection, samplePlan)
-from ..detection_estimation.segment_mapping import (CameraSegmentMapping,
+from .segment_mapping import (CameraSegmentMapping,
                                                     map_imgsegment_roadsegment)
-from ..detection_estimation.utils import trajectory_3d
-from ..payload import Payload
-from ..video import Video
-from .detection_2d.detection_2d import Detection2D
-from .detection_2d.yolo_detection import YoloDetection
-from .stage import Stage, StageOutput
+from .utils import trajectory_3d
+from ...payload import Payload
+from ...video import Video
+from ..detection_2d.detection_2d import Detection2D
+from ..detection_2d.yolo_detection import YoloDetection
+from ..stage import Stage, StageOutput
+
+
+logging.basicConfig()
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.WARN)
 
 
 class DetectionEstimation(Stage):
@@ -47,15 +56,15 @@ def generate_sample_plan_once(
     #     all_detection_info = construct_all_detection_info(cam_segment_mapping, ego_trajectory, ego_config, all_detections)
     assert all_detection_info is not None
     if all_detection_info:
-        print(all_detection_info[0].road_type)
+        logger.info(all_detection_info[0].road_type)
     next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
     # next_frame = None
     next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
     if next_sample_frame_info:
         next_sample_frame_name, next_sample_frame_num, _ = next_sample_frame_info
-        print("next frame name", next_sample_frame_name)
-        print("next frame num", next_sample_frame_num)
-        # print(next_sample_plan.action)
+        logger.info(f"next frame name {next_sample_frame_name}")
+        logger.info(f"next frame num {next_sample_frame_num}")
+        logger.info(f"Action {next_sample_plan.action}")
         # TODO: should not read next frame -> get the next frame from frames.pickle
         # next_frame = cv2.imread(test_img_base_dir+next_sample_frame_name)
         # cv2.imshow("next_frame", next_frame)
@@ -84,9 +93,9 @@ def construct_estimated_all_detection_info(
         estimate_3d = detection_to_img_segment(car_loc2d, cam_segment_mapping)
         if estimate_3d and estimate_3d.road_segment_info.segment_type in ['lane', 'laneSection']:
             car_loc3d = tuple(Polygon(estimate_3d.road_segment_info.segment_polygon).centroid.coords)
-            # print(tuple(car_loc3d))
+            # logger.info(tuple(car_loc3d))
             all_detections.append(obj_detection('car_1', car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
-    print("all_detections", all_detections)
+    # logger.info("all_detections", all_detections)
     all_detection_info = construct_all_detection_info(cam_segment_mapping, ego_config, ego_trajectory, all_detections)
     return all_detection_info
 
@@ -99,17 +108,17 @@ def dry_run(
     skipped_frame_num = []
     next_frame_num = start_frame_num
     action_type_counts = {}
-    # start_time = time.time()
+    start_time = time.time()
     total_detection_time = 0
     total_sample_plan_time = 0
-    for i in range(len(payload.video) - 1):
+    for i in tqdm(range(len(payload.video) - 1)):
         current_ego_config = payload.video[i]
         if i != next_frame_num:
             skipped_frame_num.append(i)
             continue
         next_frame_num = i + 1
         cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
-        # print("mapping length", len(cam_segment_mapping))
+        logger.info(f"mapping length {len(cam_segment_mapping)}")
         start_detection_time = time.time()
         dets = YoloDetection.get(payload)
         assert dets is not None
@@ -125,18 +134,18 @@ def dry_run(
         else:
             action_type_counts[next_action_type] += 1
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
-    # print("sorted_ego_config_length", len(payload.video))
-    # print("number of skipped", len(skipped_frame_num))
-    # print(skipped_frame_num)
-    # print(action_type_counts)
-    # total_run_time = time.time()-start_time
-    # num_runs = len(payload.video) - len(skipped_frame_num)
-    # print("total_run_time", total_run_time)
-    # print("avg run time", total_run_time/num_runs)
-    # print("total_detection_time", total_detection_time)
-    # print("avg detection time", total_detection_time/num_runs)
-    # print("total_generate_sample_plan_time", total_sample_plan_time)
-    # print("avg generate_sample_plan time", total_sample_plan_time/num_runs)
+    logger.info(f"sorted_ego_config_length {len(payload.video)}")
+    logger.info(f"number of skipped {len(skipped_frame_num)}")
+    logger.info(skipped_frame_num)
+    logger.info(action_type_counts)
+    total_run_time = time.time()-start_time
+    num_runs = len(payload.video) - len(skipped_frame_num)
+    logger.info(f"total_run_time {total_run_time}")
+    logger.info(f"avg run time {total_run_time/num_runs}")
+    logger.info(f"total_detection_time {total_detection_time}")
+    logger.info(f"avg detection time {total_detection_time/num_runs}")
+    logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+    logger.info(f"avg generate_sample_plan time {total_sample_plan_time/num_runs}")
 
     keep = bitarray(len(payload.video))
     keep[:] = 1

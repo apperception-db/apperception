@@ -5,10 +5,14 @@ import datetime
 import math
 from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
+import logging
 
 if TYPE_CHECKING:
-    from ..camera_config import CameraConfig
+    from ...camera_config import CameraConfig
     from .segment_mapping import CameraSegmentMapping
+
+
+logger = logging.getLogger(__name__)
 
 Float2 = Tuple[float, float]
 Float3 = Tuple[float, float, float]
@@ -268,9 +272,9 @@ def time_to_exit_current_segment(current_segment_info,
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
                   car_loc.y + math.sin(math.radians(segmentheading)))
     car_heading_line = LineString([car_loc, car_vector])
-    # print('car_heading_vector', car_heading_line)
+    # logger.info(f'car_heading_vector {car_heading_line}')
     intersection = line_to_polygon_intersection(segmentpolygon, car_heading_line)
-    # print("mapped polygon", segat intersection
+    # logger.info(f"mapped polygon", segat intersection
     if len(intersection) == 2:
         intersection_1_vector = (intersection[0][0] - car_loc.x,
                                  intersection[0][1] - car_loc.y)
@@ -281,13 +285,13 @@ def time_to_exit_current_segment(current_segment_info,
         distance1 = compute_distance(car_loc, intersection[0])
         distance2 = compute_distance(car_loc, intersection[1])
         if relative_direction_1:
-            print('relative_dierction_1', distance1, current_time, max_car_speed(current_segment_info.segment_type))
+            logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_segment_info.segment_type)}')
             return time_elapse(current_time, distance1 / max_car_speed(current_segment_info.segment_type)), intersection[0]
         elif relative_direction_2:
-            print('relative_direction_2', distance2, current_time)
+            logger.info(f'relative_direction_2 {distance2} {current_time}')
             return time_elapse(current_time, distance2 / max_car_speed(current_segment_info.segment_type)), intersection[1]
         else:
-            print("wrong car moving direction")
+            logger.info(f"wrong car moving direction")
             return time_elapse(current_time, -1), None
     return time_elapse(current_time, -1), None
 
@@ -330,14 +334,14 @@ def meetup(car1_loc,
         intersection = intersection_between_line_and_trajectory(
             car2_heading_line, car1_trajectory_points)
         if len(intersection) == 1:  # i.e. one car drives towards south, the other towards east
-            # print("at intersection 1")
+            # logger.info(f"at intersection 1")
             meetup_point = intersection[0]
             time1 = point_to_nearest_trajectory(meetup_point, car1_trajectory)
             distance2 = compute_distance(car2_loc, meetup_point)
             time2 = time_elapse(current_time, distance2 / car2_speed)
             return (min(time1, time2), meetup_point)
         elif len(intersection) == 0:  # i.e. one car drives towards south, the other towards north
-            # print("at intersection 0")
+            # logger.info(f"at intersection 0")
             meetup_point = Point((car1_loc.x + car2_loc.x) / 2, (car1_loc.y + car2_loc.y) / 2)
             time1 = point_to_nearest_trajectory(meetup_point, car1_trajectory).timestamp
             if time1 < current_time:

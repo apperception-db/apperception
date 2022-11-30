@@ -22,8 +22,9 @@ import time
 from plpygis import Geometry
 from shapely.geometry import Polygon
 from typing import List, NamedTuple, Tuple
+import logging
 
-from ..camera_config import CameraConfig
+from ...camera_config import CameraConfig
 
 # sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
@@ -34,6 +35,9 @@ from apperception.database import database
 
 # from apperception.utils import fetch_camera_config
 from .utils import line_to_polygon_intersection
+
+
+logger = logging.getLogger(__name__)
 
 data_path = '/home/yongming/workspace/research/apperception/v1.0-mini/'
 input_video_dir = os.path.join(data_path, 'sample_videos/')
@@ -389,7 +393,7 @@ def map_imgsegment_roadsegment(
         if current_mapping is not None:
             mapping.append(current_mapping)
 
-    print('total mapping time: ', time.time() - start_time)
+    logger.info(f'total mapping time: {time.time() - start_time}')
     return mapping
 
 # def visualization(test_img_path: str, test_config: Dict[str, Any], mapping: Tuple):

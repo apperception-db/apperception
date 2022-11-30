@@ -26,8 +26,8 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 import numpy as np
 import numpy.typing as npt
 
-from ..camera_config import CameraConfig
-from ..video import Video
+from ...camera_config import CameraConfig
+from ...video import Video
 from .sample_plan_algorithms import Action, get_sample_action_alg
 from .segment_mapping import (CameraSegmentMapping, RoadSegmentInfo,
                               map_imgsegment_roadsegment)
