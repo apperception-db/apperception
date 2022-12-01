@@ -22,7 +22,7 @@ import psycopg2
 import time
 from plpygis import Geometry
 from shapely.geometry import Polygon
-from typing import List, NamedTuple, Tuple
+from typing import List, NamedTuple, Tuple, Union
 
 from ...camera_config import CameraConfig
 
@@ -69,8 +69,8 @@ test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__15353851
 SegmentPolygonWithHeading = Tuple[
     str,
     postgis.polygon.Polygon,
-    List[str] | None,
-    float | None,
+    Union[List[str], None],
+    Union[float, None],
 ]
 SEGMENT_CONTAIN_QUERY = """
 SELECT
@@ -111,8 +111,8 @@ WHERE ST_DWithin(
 Float2 = Tuple[float, float]
 Float3 = Tuple[float, float, float]
 Float22 = Tuple[Float2, Float2]
-Segment = Tuple[str, postgis.polygon.Polygon, str | None, float | None]
-AnnotatedSegment = Tuple[str, postgis.polygon.Polygon, str | None, float | None, bool]
+Segment = Tuple[str, postgis.polygon.Polygon, Union[str, None], Union[float, None]]
+AnnotatedSegment = Tuple[str, postgis.polygon.Polygon, Union[str, None], Union[float, None], bool]
 
 
 class RoadSegmentInfo(NamedTuple):
@@ -306,7 +306,7 @@ def construct_mapping(
     segmentheading: float,
     contains_ego: bool,
     ego_config: "CameraConfig"
-) -> "CameraSegmentMapping | None":
+) -> "Union[CameraSegmentMapping, None]":
     """
     Given current road segment
     determine whether add it to the mapping

@@ -7,7 +7,7 @@ def iterate_video(cap: "cv2.VideoCapture"):
     return VideoIterator(cap)
 
 
-class VideoIterator(collections.abc.Iterator["npt.NDArray"], collections.abc.Sized):
+class VideoIterator(collections.abc.Iterator, collections.abc.Sized):
     def __init__(self, cap: "cv2.VideoCapture"):
         self._n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self._count = 0

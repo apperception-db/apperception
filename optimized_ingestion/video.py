@@ -2,12 +2,12 @@ import collections
 import collections.abc
 import cv2
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Iterable
 
 from .camera_config import CameraConfig, interpolate
 
 
-class Video(collections.abc.Iterable["CameraConfig"]):
+class Video(Iterable["CameraConfig"]):
     videofile: str
 
     def __init__(
@@ -52,7 +52,7 @@ class Video(collections.abc.Iterable["CameraConfig"]):
     def __getitem__(self, index):
         return self.interpolated_frames[index]
 
-    def __iter__(self) -> "collections.abc.Iterator[CameraConfig]":
+    def __iter__(self) -> "collections.abc.Iterator":
         return iter(self.interpolated_frames)
 
     def __len__(self):
