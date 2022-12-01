@@ -19,7 +19,6 @@ from .detection_estimation import (DetectionInfo, construct_all_detection_info,
 from .segment_mapping import CameraSegmentMapping, map_imgsegment_roadsegment
 from .utils import trajectory_3d
 
-
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)

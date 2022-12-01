@@ -1,7 +1,7 @@
-from functools import reduce
 import cv2
 import multiprocessing
 from bitarray import bitarray
+from functools import reduce
 from multiprocessing import Pool
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -38,16 +38,14 @@ class ParallelDecodeFrame(DecodeFrame):
 
         q, mod = divmod(n_frames, n_cpus)
         frames_per_cpu = [q + (i < mod) for i in range(n_cpus)]
-        
 
         def _r(acc: "Tuple[int, List[Tuple[int, int]]]", frames: int):
             start, arr = acc
             end = start + frames
             return (end, arr + [(start, end)])
 
-
         frame_slices = reduce(_r, frames_per_cpu, (0, []))[1]
-        
+
         with Pool(n_cpus) as pool:
             inputs = ((payload.video.videofile, start, end) for start, end in frame_slices)
             out = [*tqdm(pool.imap_unordered(decode, inputs), total=n_cpus)]
