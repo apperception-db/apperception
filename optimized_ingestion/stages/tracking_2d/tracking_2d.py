@@ -87,8 +87,9 @@ class Tracking2DResult:
 
 
 FILE = Path(__file__).resolve()
-APPERCEPTION = FILE.parent.parent.parent
+APPERCEPTION = FILE.parent.parent.parent.parent
 WEIGHTS = APPERCEPTION / "weights"
+torch.hub.set_dir(str(WEIGHTS))
 reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"  # model.pt path
 
 # Load model
