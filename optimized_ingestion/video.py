@@ -2,7 +2,7 @@ import collections
 import collections.abc
 import cv2
 from datetime import datetime, timedelta
-from typing import List, Optional, Iterable
+from typing import Iterable, List, Optional
 
 from .camera_config import CameraConfig, interpolate
 

@@ -1,7 +1,7 @@
 import cv2
-import math
 import multiprocessing
 from bitarray import bitarray
+from functools import reduce
 from multiprocessing import Pool
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -15,17 +15,18 @@ if TYPE_CHECKING:
 
 
 def decode(args: "Tuple[str, int, int]"):
-    videofile, start, frames = args
+    videofile, start, end = args
     cap = cv2.VideoCapture(videofile)
     cap.set(cv2.CAP_PROP_POS_FRAMES, start)
     out: "List[npt.NDArray]" = []
-    for _ in range(frames):
+    for _ in range(start, end):
         ret, frame = cap.read()
         if not ret:
             break
         out.append(frame)
     cap.release()
-    return out, start
+    assert len(out) == end - start
+    return out, start, end
 
 
 class ParallelDecodeFrame(DecodeFrame):
@@ -34,14 +35,24 @@ class ParallelDecodeFrame(DecodeFrame):
 
         n_cpus = multiprocessing.cpu_count()
         n_frames = len(payload.video)
-        frames_per_cpu = math.ceil(n_frames / n_cpus)
+
+        q, mod = divmod(n_frames, n_cpus)
+        frames_per_cpu = [q + (i < mod) for i in range(n_cpus)]
+
+        def _r(acc: "Tuple[int, List[Tuple[int, int]]]", frames: int):
+            start, arr = acc
+            end = start + frames
+            return (end, arr + [(start, end)])
+
+        frame_slices = reduce(_r, frames_per_cpu, (0, []))[1]
+
         with Pool(n_cpus) as pool:
-            inputs = ((payload.video.videofile, i * frames_per_cpu, frames_per_cpu) for i in range(n_cpus))
+            inputs = ((payload.video.videofile, start, end) for start, end in frame_slices)
             out = [*tqdm(pool.imap_unordered(decode, inputs), total=n_cpus)]
-            for o, _ in sorted(out, key=lambda x: x[1]):
+            for o, _, _ in sorted(out, key=lambda x: x[1]):
                 metadata.extend(o)
         cv2.destroyAllWindows()
 
-        assert len(metadata) == len(payload.video), (len(metadata), len(payload.video))
+        assert len(metadata) == len(payload.video), (len(metadata), len(payload.video), [(s, e, len(o)) for o, s, e in sorted(out, key=lambda x: x[1])])
 
         return None, {self.classname(): metadata}
