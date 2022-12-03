@@ -88,6 +88,8 @@ def construct_estimated_all_detection_info(
         # print(car_loc2d)
         car_bbox2d = ((x - w // 2, y - h // 2), (x + w // 2, y + h // 2))
         car_bbox3d = None
+        ### TODO: replace the following estimation of car_loc3d with the depth estimation
+        ###       algorithm that converts 2d loc to 3d loc
         estimate_3d = detection_to_img_segment(car_loc2d, cam_segment_mapping)
         if estimate_3d and estimate_3d.road_segment_info.segment_type in ['lane', 'laneSection']:
             car_loc3d = tuple(Polygon(estimate_3d.road_segment_info.segment_polygon).centroid.coords)
