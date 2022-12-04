@@ -21,12 +21,10 @@ import postgis
 import psycopg2
 import time
 from plpygis import Geometry
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
 from typing import List, NamedTuple, Tuple, Union
 
 from ...camera_config import CameraConfig
-
-# sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 # from pyquaternion import Quaternion
 pd.get_option("display.max_columns")
@@ -42,7 +40,7 @@ data_path = '/home/yongming/workspace/research/apperception/v1.0-mini/'
 input_video_dir = os.path.join(data_path, 'sample_videos/')
 input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
-test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__1535385108412412.jpg'
+test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
 # CAMERA_COLUMNS = [
 #     "cameraId",
@@ -69,6 +67,7 @@ test_img = 'samples/CAM_FRONT/n008-2018-08-27-11-48-51-0400__CAM_FRONT__15353851
 SegmentPolygonWithHeading = Tuple[
     str,
     postgis.polygon.Polygon,
+    postgis.linestring.LineString,
     Union[List[str], None],
     Union[float, None],
 ]
@@ -76,6 +75,7 @@ SEGMENT_CONTAIN_QUERY = """
 SELECT
     segmentpolygon.elementid,
     segmentpolygon.elementpolygon,
+    segment.segmentline,
     segmentpolygon.segmenttypes,
     segment.heading
 FROM segmentpolygon
@@ -91,6 +91,7 @@ SEGMENT_DWITHIN_QUERY = """
 SELECT
     segmentpolygon.elementid,
     segmentpolygon.elementpolygon,
+    segment.segmentline,
     segmentpolygon.segmenttypes,
     segment.heading
 FROM segmentpolygon
@@ -111,7 +112,8 @@ WHERE ST_DWithin(
 Float2 = Tuple[float, float]
 Float3 = Tuple[float, float, float]
 Float22 = Tuple[Float2, Float2]
-Segment = Tuple[str, postgis.polygon.Polygon, Union[str, None], Union[float, None]]
+Segment = Tuple[str, postgis.polygon.Polygon, postgis.linestring.LineString,
+                Union[str, None], Union[float, None]]
 AnnotatedSegment = Tuple[str, postgis.polygon.Polygon, Union[str, None], Union[float, None], bool]
 
 
@@ -119,6 +121,7 @@ class RoadSegmentInfo(NamedTuple):
     """
     segment_id: unique segment id
     segment_polygon: tuple of (x, y) coordinates
+    segment_line: tuple of (x, y) coordinates
     segment_type: road segment type
     contains_ego: whether the segment contains ego camera
     ego_config: ego camfig for the frame we asks info for
@@ -127,6 +130,7 @@ class RoadSegmentInfo(NamedTuple):
     """
     segment_id: int
     segment_polygon: Polygon
+    segment_line: LineString
     segment_type: str
     segment_heading: float
     contains_ego: bool
@@ -151,7 +155,7 @@ def road_segment_contains(ego_config: "CameraConfig")\
 
 def find_segment_dwithin(start_segment: "AnnotatedSegment",
                          view_distance=50) -> "List[SegmentPolygonWithHeading]":
-    _, start_segment_polygon, _, _, _ = start_segment
+    _, start_segment_polygon, _, _, _, _ = start_segment
     query = psycopg2.sql.SQL(SEGMENT_DWITHIN_QUERY).format(
         start_segment=psycopg2.sql.Literal(start_segment_polygon),
         view_distance=psycopg2.sql.Literal(view_distance)
@@ -162,10 +166,11 @@ def find_segment_dwithin(start_segment: "AnnotatedSegment",
 
 def reformat_return_segment(segments: "List[SegmentPolygonWithHeading]") -> "List[Segment]":
     def _(x: "SegmentPolygonWithHeading") -> Segment:
-        i, polygon, types, heading = x
+        i, polygon, line, types, heading = x
         return (
             i,
             polygon,
+            line,
             types[0] if types is not None else None,
             math.degrees(heading) if heading is not None else None,
         )
@@ -188,8 +193,9 @@ class HashableAnnotatedSegment:
     def __hash__(self):
         h1 = hash(self.val[0])
         h2 = hash(self.val[1].wkt_coords)
-        h3 = hash(self.val[2:])
-        return hash((h1, h2, h3))
+        h3 = hash(self.val[2].wkt_coords) if self.val[2] else ''
+        h4 = hash(self.val[3:])
+        return hash((h1, h2, h3, h4))
 
     def __eq__(self, __o: object) -> bool:
         if not isinstance(__o, HashableAnnotatedSegment):
@@ -276,7 +282,7 @@ def in_view(
         (right_fov_line_x - Ax) * (My - Ay) - (right_fov_line_y - Ay) * (Mx - Ax) >= 0
 
 
-def worl2pixel_factory(config: "CameraConfig"):
+def world2pixel_factory(config: "CameraConfig"):
     def world2pixel(point3d: "Float2") -> "npt.NDArray[np.floating]":
         point = np.copy((*point3d, 0))
 
@@ -302,6 +308,7 @@ def construct_mapping(
     frame_size: Tuple[int, int],
     fov_lines: Tuple[Float22, Float22],
     segmentid: str,
+    segmentline: LineString,
     segmenttype: str,
     segmentheading: float,
     contains_ego: bool,
@@ -315,7 +322,7 @@ def construct_mapping(
     """
     ego_translation = ego_config.ego_translation[:2]
 
-    deduced_cam_segment = list(map(worl2pixel_factory(ego_config), decoded_road_segment))
+    deduced_cam_segment = list(map(world2pixel_factory(ego_config), decoded_road_segment))
     assert len(deduced_cam_segment) == len(decoded_road_segment)
     if contains_ego:
         keep_cam_segment_point = deduced_cam_segment
@@ -335,6 +342,7 @@ def construct_mapping(
             RoadSegmentInfo(
                 segmentid,
                 Polygon(keep_road_segment_point),
+                segmentline,
                 segmenttype,
                 segmentheading,
                 contains_ego,
@@ -368,7 +376,8 @@ def map_imgsegment_roadsegment(
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
     for road_segment in search_space:
-        segmentid, segmentpolygon, segmenttype, segmentheading, contains_ego = road_segment
+        segmentid, segmentpolygon, segmentline, segmenttype, segmentheading, contains_ego = road_segment
+        segmentline = Geometry(segmentline.to_ewkb()).shapely if segmentline else None
         XYs: "Tuple[array.array[float], array.array[float]]" = Geometry(segmentpolygon.to_ewkb()).exterior.shapely.xy
         assert isinstance(XYs, tuple)
         assert isinstance(XYs[0], array.array), type(XYs[0])
@@ -388,7 +397,7 @@ def map_imgsegment_roadsegment(
 
         current_mapping = construct_mapping(
             decoded_road_segment, frame_size, fov_lines, segmentid,
-            segmenttype, segmentheading, contains_ego, ego_config)
+            segmentline, segmenttype, segmentheading, contains_ego, ego_config)
         if current_mapping is not None:
             mapping.append(current_mapping)
 
@@ -438,5 +447,6 @@ def map_imgsegment_roadsegment(
 #     test_config = fetch_camera_config(
 #         test_img,
 #         database)
+#     test_config = camera_config(**test_config)
 #     mapping = map_imgsegment_roadsegment(test_config)
 #     visualization(test_img_path, test_config, mapping)
