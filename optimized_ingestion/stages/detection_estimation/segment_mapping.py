@@ -21,7 +21,7 @@ import postgis
 import psycopg2
 import time
 from plpygis import Geometry
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import LineString, Polygon
 from typing import List, NamedTuple, Tuple, Union
 
 from ...camera_config import CameraConfig
