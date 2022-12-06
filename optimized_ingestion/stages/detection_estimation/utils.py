@@ -4,10 +4,13 @@ from apperception.utils import fetch_camera_trajectory
 import datetime
 import logging
 import math
+
+import numpy as np
+from plpygis import Geometry
 from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
-if TYPE_CHECKING:
+if TYPE_CHECKING: 
     from ...camera_config import CameraConfig
     from .segment_mapping import CameraSegmentMapping
 
@@ -65,6 +68,21 @@ def relative_direction(vec1, vec2):
     return (vec1[0] * vec2[0] + vec1[1] * vec2[1]) / math.sqrt(vec1[0]**2 + vec1[1]**2) / math.sqrt(vec2[0]**2 + vec2[1]**2) > 0
 
 
+def project_point_onto_linestring(
+    point: "Point",
+    line: "LineString") -> "Point":
+    x = np.array(point.coords[0])
+
+    u = np.array(line.coords[0])
+    v = np.array(line.coords[len(line.coords)-1])
+
+    n = v - u
+    n /= np.linalg.norm(n, 2)
+
+    P = u + n*np.dot(x - u, n)
+    return Point(P)
+
+
 def _construct_extended_line(polygon: "Polygon", line: "Float22"):
     """
     line: represented by 2 points
@@ -96,6 +114,7 @@ def _construct_extended_line(polygon: "Polygon", line: "Float22"):
 
 
 def intersection_between_line_and_trajectory(line, trajectory):
+    """Find the intersection between a line and a trajectory."""
     # trajectory_to_polygon = Polygon(trajectory)
     extended_line = _construct_extended_line(trajectory, line)
     intersection = extended_line.intersection(LineString(trajectory))
@@ -106,6 +125,7 @@ def intersection_between_line_and_trajectory(line, trajectory):
 
 
 def line_to_polygon_intersection(polygon: "Polygon", line: "Float22") -> "List[Float2]":
+    """Find the intersection between a line and a polygon."""
     try:
         extended_line = _construct_extended_line(polygon, line)
         intersection = extended_line.intersection(polygon)
@@ -140,6 +160,7 @@ def min_car_speed(road_type):
 
 ### HELPER FUNCTIONS ###
 def get_ego_trajectory(video: str, sorted_ego_config: "List[CameraConfig]"):
+    """Get the ego trajectory from the database."""
     if sorted_ego_config is None:
         raise Exception()
         camera_trajectory_config = fetch_camera_trajectory(video, database)
@@ -149,6 +170,7 @@ def get_ego_trajectory(video: str, sorted_ego_config: "List[CameraConfig]"):
 
 
 def get_ego_speed(ego_trajectory):
+    """Get the ego speed based on the ego trajectory."""
     point_wise_temporal_speed = []
     for i in range(len(ego_trajectory) - 1):
         x, y, z = ego_trajectory[i].coordinates
@@ -163,6 +185,7 @@ def get_ego_speed(ego_trajectory):
 
 
 def get_ego_avg_speed(ego_trajectory):
+    """Get the ego average speed based on the ego trajectory."""
     point_wise_ego_speed = get_ego_speed(ego_trajectory)
     return sum([speed.speed for speed in point_wise_ego_speed]) / len(point_wise_ego_speed)
 
@@ -171,6 +194,7 @@ def detection_to_img_segment(
     car_loc2d: "Float2",
     cam_segment_mapping: "List[CameraSegmentMapping]",
 ):
+    """Get the image segment that contains the detected car."""
     maximum_mapping: "CameraSegmentMapping | None" = None
     maximum_mapping_area: float = 0.0
     point = Point(car_loc2d)
@@ -185,6 +209,21 @@ def detection_to_img_segment(
                 maximum_mapping_area = area
 
     return maximum_mapping
+
+
+def location_calibration(
+    car_loc3d: "Float3",
+    road_segment_info: "RoadSegmentInfo") -> "Float3":
+    """Calibrate the 3d location of the car with the road segment
+       the car lies in.
+    """
+    segment_polygon = road_segment_info.segment_polygon
+    assert road_segment_polygon is not None
+    segment_line = road_segment_info.segment_line
+    if segment_line is None:
+        return car_loc3d
+    projection = project_point_to_line(Point(car_loc3d[:2]), segment_line).coords
+    return projection[0], projection[1], car_loc3d[2]
 
 
 def get_largest_segment(cam_segment_mapping: "List[CameraSegmentMapping]"):
