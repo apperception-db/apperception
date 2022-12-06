@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig
-    from .segment_mapping import CameraSegmentMapping
+    from .segment_mapping import CameraSegmentMapping, RoadSegmentInfo
 
 
 logger = logging.getLogger(__name__)
@@ -216,11 +216,11 @@ def location_calibration(
        the car lies in.
     """
     segment_polygon = road_segment_info.segment_polygon
-    assert road_segment_polygon is not None
+    assert segment_polygon is not None
     segment_line = road_segment_info.segment_line
     if segment_line is None:
         return car_loc3d
-    projection = project_point_to_line(Point(car_loc3d[:2]), segment_line).coords
+    projection = project_point_onto_linestring(Point(car_loc3d[:2]), segment_line).coords
     return projection[0], projection[1], car_loc3d[2]
 
 
@@ -328,7 +328,7 @@ def time_to_exit_current_segment(current_segment_info,
             logger.info(f'relative_direction_2 {distance2} {current_time}')
             return time_elapse(current_time, distance2 / max_car_speed(current_segment_info.segment_type)), intersection[1]
         else:
-            logger.info(f"wrong car moving direction")
+            logger.info("wrong car moving direction")
             return time_elapse(current_time, -1), None
     return time_elapse(current_time, -1), None
 
