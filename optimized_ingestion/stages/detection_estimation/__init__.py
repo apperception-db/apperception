@@ -79,7 +79,7 @@ def construct_estimated_all_detection_info(
     all_detections = []
     for det in detections:
         bbox = det[:4]
-        obj_cls = det[5]
+        # obj_cls = det[5]
         x, y, x2, y2 = list(map(int, bbox))
         w = x2 - x
         h = y2 - y
