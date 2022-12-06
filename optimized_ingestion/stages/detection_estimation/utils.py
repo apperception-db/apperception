@@ -4,13 +4,11 @@ from apperception.utils import fetch_camera_trajectory
 import datetime
 import logging
 import math
-
 import numpy as np
-from plpygis import Geometry
 from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
-if TYPE_CHECKING: 
+if TYPE_CHECKING:
     from ...camera_config import CameraConfig
     from .segment_mapping import CameraSegmentMapping
 
@@ -69,17 +67,17 @@ def relative_direction(vec1, vec2):
 
 
 def project_point_onto_linestring(
-    point: "Point",
-    line: "LineString") -> "Point":
+        point: "Point",
+        line: "LineString") -> "Point":
     x = np.array(point.coords[0])
 
     u = np.array(line.coords[0])
-    v = np.array(line.coords[len(line.coords)-1])
+    v = np.array(line.coords[len(line.coords) - 1])
 
     n = v - u
     n /= np.linalg.norm(n, 2)
 
-    P = u + n*np.dot(x - u, n)
+    P = u + n * np.dot(x - u, n)
     return Point(P)
 
 
@@ -212,8 +210,8 @@ def detection_to_img_segment(
 
 
 def location_calibration(
-    car_loc3d: "Float3",
-    road_segment_info: "RoadSegmentInfo") -> "Float3":
+        car_loc3d: "Float3",
+        road_segment_info: "RoadSegmentInfo") -> "Float3":
     """Calibrate the 3d location of the car with the road segment
        the car lies in.
     """
