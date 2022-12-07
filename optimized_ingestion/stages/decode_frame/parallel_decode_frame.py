@@ -1,10 +1,11 @@
 import cv2
 import multiprocessing
-from bitarray import bitarray
 from functools import reduce
 from multiprocessing import Pool
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Tuple
+
+from ...cache import cache
 
 from .decode_frame import DecodeFrame
 
@@ -30,11 +31,13 @@ def decode(args: "Tuple[str, int, int]"):
 
 
 class ParallelDecodeFrame(DecodeFrame):
-    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+    @cache
+    def _run(self, payload: "Payload"):
         metadata: "List[npt.NDArray]" = []
 
         n_cpus = multiprocessing.cpu_count()
         n_frames = len(payload.video)
+        assert n_frames == len(payload.keep), (n_frames, len(payload.keep))
 
         q, mod = divmod(n_frames, n_cpus)
         frames_per_cpu = [q + (i < mod) for i in range(n_cpus)]

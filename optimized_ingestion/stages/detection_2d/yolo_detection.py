@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple
+from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple, Tuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -20,6 +20,7 @@ from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
+from ...cache import cache
 from ...stages.decode_frame.decode_frame import DecodeFrame
 from .detection_2d import Detection2D
 
@@ -27,7 +28,6 @@ if TYPE_CHECKING:
     from yolo_tracker.yolov5.models.common import DetectMultiBackend
 
     from ...payload import Payload
-    from ...stages.stage import StageOutput
 
 
 FILE = Path(__file__).resolve()
@@ -59,16 +59,17 @@ class YoloDetection(Detection2D):
         self.agnostic_nms = agnostic_nms
         self.augment = augment
 
-    def _run(self, payload: "Payload") -> "StageOutput":
+    @cache
+    def _run(self, payload: "Payload"):
         with torch.no_grad():
             names: "List[str]" = self.model.names
             dataset = LoadImages(payload, img_size=self.imgsz, auto=self.pt)
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
-            metadata: "List[npt.NDArray]" = []
+            metadata: "List[Tuple[torch.Tensor, List[str]]]" = []
             for frame_idx, im, im0s in tqdm(dataset):
                 if not payload.keep[frame_idx]:
-                    metadata.append(np.ndarray([]))
+                    metadata.append((torch.Tensor([]), names))
                     continue
                 # t1 = time_sync()
                 im = torch.from_numpy(im).to(self.device)

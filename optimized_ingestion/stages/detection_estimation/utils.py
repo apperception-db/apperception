@@ -81,16 +81,34 @@ def project_point_onto_linestring(
     return Point(P)
 
 
-def _construct_extended_line(polygon: "Polygon", line: "Float22"):
+def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", line: "Float22"):
     """
     line: represented by 2 points
     Find the line segment that can possibly intersect with the polygon
     """
-    polygon = Polygon(polygon)
+    try:
+        polygon = Polygon(polygon)
+        minx, miny, maxx, maxy = polygon.bounds
+    except:
+        assert isinstance(polygon, tuple) or isinstance(polygon, list)
+        assert len(polygon) == 2
+        try:
+            l = LineString(polygon)
+            a, b = l.boundary.geoms
+            minx = min(a.x, b.x)
+            maxx = max(a.x, b.x)
+            miny = min(a.y, b.y)
+            maxy = max(a.y, b.y)
+        except:
+            assert polygon[0] == polygon[1]
+            minx = polygon[0][0]
+            maxx = polygon[0][0]
+            miny = polygon[0][1]
+            maxy = polygon[0][1]
+
     line = LineString(line)
-    minx, miny, maxx, maxy = polygon.bounds
     bounding_box = box(minx, miny, maxx, maxy)
-    a, b = line.boundary
+    a, b = line.boundary.geoms
     if a.x == b.x:  # vertical line
         extended_line = LineString([(a.x, miny), (a.x, maxy)])
     elif a.y == b.y:  # horizonthal line
@@ -111,9 +129,10 @@ def _construct_extended_line(polygon: "Polygon", line: "Float22"):
     return extended_line
 
 
-def intersection_between_line_and_trajectory(line, trajectory):
+def intersection_between_line_and_trajectory(line, trajectory: "List[Float3]"):
     """Find the intersection between a line and a trajectory."""
     # trajectory_to_polygon = Polygon(trajectory)
+    # TODO: should use a different function than _construct_extended_line
     extended_line = _construct_extended_line(trajectory, line)
     intersection = extended_line.intersection(LineString(trajectory))
     if not isinstance(intersection, LineString) or intersection.is_empty:
@@ -339,8 +358,8 @@ def meetup(car1_loc,
            car2_heading,
            road_type,
            current_time,
-           car1_trajectory=None,
-           car2_trajectory=None,
+           car1_trajectory: "List[trajectory_3d] | None" = None,
+           car2_trajectory: "List[trajectory_3d] | None" = None,
            car1_speed=None,
            car2_speed=None):
     """estimate the meetup point as the middle point between car1's loc and car2's loc

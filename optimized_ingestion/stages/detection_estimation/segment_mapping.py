@@ -11,6 +11,7 @@ Usage example:
 """
 
 import array
+import time
 import logging
 import math
 import numpy as np
@@ -259,7 +260,7 @@ def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: Polygon):
     return left_intersection + right_intersection
 
 
-def in_frame(transformed_point: np.array, frame_size: Tuple[int, int]):
+def in_frame(transformed_point: "npt.NDArray", frame_size: Tuple[int, int]):
     return transformed_point[0] > 0 and transformed_point[0] < frame_size[0] and \
         transformed_point[1] < frame_size[1] and transformed_point[1] > 0
 
@@ -303,6 +304,25 @@ def world2pixel_factory(config: "CameraConfig"):
     return world2pixel
 
 
+def world2pixel_all(points3d: "List[Float2]", config: "CameraConfig"):
+    n = len(points3d)
+    points = np.concatenate([np.array(points3d), np.zeros((n, 1))], axis=1)
+    assert points.shape == (n, 3)
+    points -= config.camera_translation
+    assert points.shape == (n, 3)
+    points = config.camera_rotation.inverse.rotation_matrix @ points.T
+    assert points.shape == (3, n)
+
+    intrinsic = np.array(config.camera_intrinsic)
+    assert intrinsic.shape == (3, 3), intrinsic.shape
+
+    points = intrinsic @ points
+    assert points.shape == (3, n)
+
+    points = points / points[2:3, :]
+    return points.T[:, :2]
+
+
 def construct_mapping(
     decoded_road_segment: "List[Float2]",
     frame_size: Tuple[int, int],
@@ -322,7 +342,9 @@ def construct_mapping(
     """
     ego_translation = ego_config.ego_translation[:2]
 
-    deduced_cam_segment = list(map(world2pixel_factory(ego_config), decoded_road_segment))
+    # deduced_cam_segment = list(map(worl2pixel_factory(ego_config), decoded_road_segment))
+    deduced_cam_segment = world2pixel_all(decoded_road_segment, ego_config)
+    # assert np.allclose(np.array(deduced_cam_segment).reshape((len(decoded_road_segment), 2)), deduced_cam_segment2)
     assert len(deduced_cam_segment) == len(decoded_road_segment)
     if contains_ego:
         keep_cam_segment_point = deduced_cam_segment
@@ -335,9 +357,10 @@ def construct_mapping(
                     in_view(current_road_point, ego_translation, fov_lines):
                 keep_cam_segment_point.append(current_cam_point)
                 keep_road_segment_point.append(current_road_point)
+    ret = None
     if contains_ego or (len(keep_cam_segment_point) > 2
                         and Polygon(tuple(keep_cam_segment_point)).area > 100):
-        return CameraSegmentMapping(
+        ret = CameraSegmentMapping(
             keep_cam_segment_point,
             RoadSegmentInfo(
                 segmentid,
@@ -350,6 +373,7 @@ def construct_mapping(
                 fov_lines
             )
         )
+    return ret
 
 
 def map_imgsegment_roadsegment(
@@ -367,6 +391,7 @@ def map_imgsegment_roadsegment(
     (polygon in frame that represents a portion of lane/road/intersection,
      roadSegmentInfo)
     """
+    # t = []
     fov_lines = get_fov_lines(ego_config)
     start_time = time.time()
     search_space = construct_search_space(ego_config, view_distance=100)
@@ -375,6 +400,23 @@ def map_imgsegment_roadsegment(
     def not_in_view(point: "Float2"):
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
+    # # TODO: segmentpolygon_points
+    # lens = []
+    # points = []
+    # for _, segmentpolygon, *_ in search_space:
+    #     XYs: "Tuple[array.array[float], array.array[float]]" = Geometry(segmentpolygon.to_ewkb()).exterior.shapely.xy
+    #     assert isinstance(XYs, tuple)
+    #     assert isinstance(XYs[0], array.array), type(XYs[0])
+    #     assert isinstance(XYs[1], array.array), type(XYs[1])
+    #     assert isinstance(XYs[0][0], float), type(XYs[0][0])
+    #     assert isinstance(XYs[1][0], float), type(XYs[1][0])
+    #     assert len(XYs[0]) == len(XYs[1])
+
+    #     lens.append(len(XYs[0]))
+    #     points.append(np.array(XYs))
+    #     pass
+
+    # start = 0
     for road_segment in search_space:
         segmentid, segmentpolygon, segmentline, segmenttype, segmentheading, contains_ego = road_segment
         segmentline = Geometry(segmentline.to_ewkb()).shapely if segmentline else None
@@ -400,6 +442,10 @@ def map_imgsegment_roadsegment(
             segmentline, segmenttype, segmentheading, contains_ego, ego_config)
         if current_mapping is not None:
             mapping.append(current_mapping)
+        # print(" ".join([f"{(t2 - t1):.10f}" for t1, t2 in zip(t_[:-1], t_[1:])]))
+        # t.append([t2 - t1 for t1, t2 in zip(t_[:-1], t_[1:])])
+    
+    # print(" ".join(f"{(tt * 1000000):.5f}" for tt in np.array(t).sum(axis=0)))
 
     logger.info(f'total mapping time: {time.time() - start_time}')
     return mapping

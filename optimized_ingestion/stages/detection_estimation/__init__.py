@@ -1,5 +1,6 @@
 import logging
-import numpy.typing as npt
+import numpy as np
+import torch
 import time
 from bitarray import bitarray
 from shapely.geometry import Polygon
@@ -11,7 +12,7 @@ from ...payload import Payload
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
-from ..stage import Stage, StageOutput
+from ..stage import Stage
 from .detection_estimation import (DetectionInfo, construct_all_detection_info,
                                    detection_to_img_segment,
                                    generate_sample_plan, obj_detection,
@@ -25,7 +26,7 @@ logger.setLevel(logging.WARN)
 
 
 class DetectionEstimation(Stage):
-    def _run(self, payload: "Payload") -> "StageOutput":
+    def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
 
@@ -71,7 +72,7 @@ def generate_sample_plan_once(
 
 
 def construct_estimated_all_detection_info(
-    detections: "npt.NDArray",
+    detections: "torch.Tensor",
     cam_segment_mapping: "List[CameraSegmentMapping]",
     ego_config: "CameraConfig",
     ego_trajectory: "List[trajectory_3d]"
@@ -110,6 +111,7 @@ def dry_run(
     start_time = time.time()
     total_detection_time = 0
     total_sample_plan_time = 0
+    # times = []
     for i in tqdm(range(len(payload.video) - 1)):
         current_ego_config = payload.video[i]
         if i != next_frame_num:
@@ -121,8 +123,8 @@ def dry_run(
         start_detection_time = time.time()
         dets = YoloDetection.get(payload)
         assert dets is not None
-        det = dets[i]
-        all_detection_info = construct_estimated_all_detection_info(det[0], cam_segment_mapping, current_ego_config, ego_trajectory)
+        det, _ = dets[i]
+        all_detection_info = construct_estimated_all_detection_info(det, cam_segment_mapping, current_ego_config, ego_trajectory)
         total_detection_time += time.time() - start_detection_time
         start_generate_sample_plan = time.time()
         next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)
@@ -133,6 +135,8 @@ def dry_run(
         else:
             action_type_counts[next_action_type] += 1
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+    #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
+    # print(np.array(times).sum(axis=0))
     logger.info(f"sorted_ego_config_length {len(payload.video)}")
     logger.info(f"number of skipped {len(skipped_frame_num)}")
     logger.info(skipped_frame_num)

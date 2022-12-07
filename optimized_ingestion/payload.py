@@ -12,7 +12,7 @@ from .utils.iterate_video import iterate_video
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
-    from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
+    from .stages.tracking_2d.tracking_2d import Tracking2DResult
     from .video import Video
 
 
@@ -43,6 +43,8 @@ class Payload:
     def filter(self, filter: "Stage"):
         print("Stage: ", filter.classname())
         keep, metadata = filter.run(self)
+        print(keep and len(keep))
+        print(metadata and len(filter.get(metadata)))
 
         if keep is None:
             keep = self.keep
@@ -51,7 +53,11 @@ class Payload:
 
         if metadata is None or len(metadata) == 0:
             metadata = self.metadata
-        assert len(metadata) == 0 or metadata_len(metadata) == len(keep), f"metadata: {metadata_len(metadata)}, keep: {len(keep)}"
+        
+        if len(metadata) != 0:
+            metadata_l = metadata_len(metadata)
+            assert metadata_l == len(keep), f"metadata: {metadata_l}, keep: {len(keep)}"
+
         metadata = {**self.metadata, **metadata}
 
         print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
@@ -65,7 +71,7 @@ class Payload:
         idx = 0
 
         print("Annotating Video")
-        trackings: "List[Dict[float, TrackingResult] | None]" = Tracking2D.get(self.metadata)
+        trackings: "List[Dict[float, Tracking2DResult] | None]" = Tracking2D.get(self.metadata)
         trackings3d: "List[Dict[float, Tracking3DResult]]" = Tracking3D.get(self.metadata)
         filtered_objs: "List[Set[float] | None]" = FilterCarFacingSideway.get(self.metadata)
         frames = iterate_video(video)

@@ -5,14 +5,13 @@ import pickle
 from .camera_config import camera_config
 from .payload import Payload
 from .pipeline import Pipeline
-from .stages.decode_frame import DecodeFrame
+from .stages.decode_frame.decode_frame import DecodeFrame
 from .stages.detection_2d.yolo_detection import YoloDetection
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
-from .stages.tracking_2d.from_detection import FromDetection
-from .stages.tracking_2d.tracking_2d import Tracking2D
+from .stages.tracking_2d.strongsort import StrongSORT
+from .stages.tracking_2d.tracking_2d import Tracking2D, Tracking2DResult
 from .stages.tracking_3d.from_2d_and_road import From2DAndRoad
 from .stages.tracking_3d.tracking_3d import Tracking3DResult
-from .trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 from .video import Video
 
 """
@@ -36,19 +35,20 @@ class DataclassJSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Tracking3DResult):
             return {
+                "detection_id": o.detection_id,
                 "object_id": o.object_id,
                 "point_from_camera": o.point_from_camera,
                 "point": o.point.tolist()
             }
-        if isinstance(o, TrackingResult):
+        if isinstance(o, Tracking2DResult):
             return {
                 "frame_idx": o.frame_idx,
+                "detection_id": o.detection_id,
                 "object_id": o.object_id,
                 "bbox_left": o.bbox_left,
                 "bbox_top": o.bbox_top,
                 "bbox_w": o.bbox_w,
                 "bbox_h": o.bbox_h,
-                "pred_idx": o.pred_idx,
                 "object_type": o.object_type,
                 "confidence": o.confidence
             }
@@ -62,7 +62,7 @@ if __name__ == "__main__":
     pipeline.add_filter(filter=DecodeFrame())
     # pipeline.add_filter(filter=Tracking2D())
     pipeline.add_filter(filter=YoloDetection())
-    pipeline.add_filter(filter=FromDetection())
+    pipeline.add_filter(filter=StrongSORT())
     pipeline.add_filter(filter=From2DAndRoad())
     # pipeline.add_filter(filter=DepthEstimation())
     # pipeline.add_filter(filter=From2DAndDepth())
