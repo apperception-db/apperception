@@ -391,7 +391,6 @@ def map_imgsegment_roadsegment(
     (polygon in frame that represents a portion of lane/road/intersection,
      roadSegmentInfo)
     """
-    # t = []
     fov_lines = get_fov_lines(ego_config)
     start_time = time.time()
     search_space = construct_search_space(ego_config, view_distance=100)
@@ -400,23 +399,6 @@ def map_imgsegment_roadsegment(
     def not_in_view(point: "Float2"):
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
-    # # TODO: segmentpolygon_points
-    # lens = []
-    # points = []
-    # for _, segmentpolygon, *_ in search_space:
-    #     XYs: "Tuple[array.array[float], array.array[float]]" = Geometry(segmentpolygon.to_ewkb()).exterior.shapely.xy
-    #     assert isinstance(XYs, tuple)
-    #     assert isinstance(XYs[0], array.array), type(XYs[0])
-    #     assert isinstance(XYs[1], array.array), type(XYs[1])
-    #     assert isinstance(XYs[0][0], float), type(XYs[0][0])
-    #     assert isinstance(XYs[1][0], float), type(XYs[1][0])
-    #     assert len(XYs[0]) == len(XYs[1])
-
-    #     lens.append(len(XYs[0]))
-    #     points.append(np.array(XYs))
-    #     pass
-
-    # start = 0
     for road_segment in search_space:
         segmentid, segmentpolygon, segmentline, segmenttype, segmentheading, contains_ego = road_segment
         segmentline = Geometry(segmentline.to_ewkb()).shapely if segmentline else None
@@ -442,10 +424,6 @@ def map_imgsegment_roadsegment(
             segmentline, segmenttype, segmentheading, contains_ego, ego_config)
         if current_mapping is not None:
             mapping.append(current_mapping)
-        # print(" ".join([f"{(t2 - t1):.10f}" for t1, t2 in zip(t_[:-1], t_[1:])]))
-        # t.append([t2 - t1 for t1, t2 in zip(t_[:-1], t_[1:])])
-    
-    # print(" ".join(f"{(tt * 1000000):.5f}" for tt in np.array(t).sum(axis=0)))
 
     logger.info(f'total mapping time: {time.time() - start_time}')
     return mapping

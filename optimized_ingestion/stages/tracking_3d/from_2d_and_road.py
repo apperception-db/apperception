@@ -2,10 +2,10 @@ import numpy as np
 import numpy.typing as npt
 from pyquaternion import Quaternion
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Dict, List
+from typing import Dict, List
 
 from ...payload import Payload
-from ..tracking_2d.tracking_2d import Tracking2D
+from ..tracking_2d.tracking_2d import Tracking2D, Tracking2DResult
 from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
@@ -33,17 +33,18 @@ class From2DAndRoad(Tracking3D):
             trackings3d: "Dict[float, Tracking3DResult]" = {}
             [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
             rotation = frame.camera_rotation
+            timestamp = frame.timestamp
             translation = np.array(frame.camera_translation)
 
             oids: "List[float]" = []
-            dids: "List[str]" = []
+            _ts: "List[Tracking2DResult]" = []
             dirx = []
             diry = []
             N = len(tracking)
             for oid, t in tracking.items():
                 assert oid == t.object_id
                 oids.append(oid)
-                dids.append(t.detection_id)
+                _ts.append(t)
                 dirx.append(t.bbox_left + t.bbox_w / 2)
                 diry.append(t.bbox_top + t.bbox_h)
 
@@ -62,10 +63,10 @@ class From2DAndRoad(Tracking3D):
             points = rotated_directions * ts + translation[:, np.newaxis]
             points_from_camera = rotate(points - translation[:, np.newaxis], rotation.inverse)
 
-            for did, oid, point, point_from_camera in zip(dids, oids, points.T, points_from_camera.T):
+            for t, oid, point, point_from_camera in zip(_ts, oids, points.T, points_from_camera.T):
                 assert point_from_camera.shape == (3,)
                 point_from_camera = (point_from_camera[0], point_from_camera[1], point_from_camera[2])
-                trackings3d[oid] = Tracking3DResult(did, oid, point_from_camera, point)
+                trackings3d[oid] = Tracking3DResult(t.frame_idx, t.detection_id, oid, point_from_camera, point, t.bbox_left, t.bbox_top, t.bbox_w, t.bbox_h, t.object_type, timestamp)
                 if oid not in trajectories:
                     trajectories[oid] = []
                 trajectories[oid].append(trackings3d[oid])
