@@ -1,5 +1,5 @@
-from typing import List, Tuple
 from functools import reduce
+from typing import List, Tuple
 
 
 def partition_by_cpus(num_cpus: int, num_elements: int):

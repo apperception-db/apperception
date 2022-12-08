@@ -89,7 +89,7 @@ def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", l
     try:
         polygon = Polygon(polygon)
         minx, miny, maxx, maxy = polygon.bounds
-    except:
+    except BaseException:
         assert isinstance(polygon, tuple) or isinstance(polygon, list)
         assert len(polygon) <= 2
         if len(polygon) == 2:
@@ -100,7 +100,7 @@ def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", l
                 maxx = max(a.x, b.x)
                 miny = min(a.y, b.y)
                 maxy = max(a.y, b.y)
-            except:
+            except BaseException:
                 assert polygon[0] == polygon[1]
                 minx = polygon[0][0]
                 maxx = polygon[0][0]
@@ -111,7 +111,6 @@ def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", l
             maxx = polygon[0][0]
             miny = polygon[0][1]
             maxy = polygon[0][1]
-
 
     line = LineString(line)
     bounding_box = box(minx, miny, maxx, maxy)

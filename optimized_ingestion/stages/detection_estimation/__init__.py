@@ -1,19 +1,17 @@
+import itertools
 import logging
 import multiprocessing
-import torch
 import time
-import itertools
+import torch
 from bitarray import bitarray
 from shapely.geometry import Polygon
 from tqdm import tqdm
 from typing import List, Tuple
 
 from ...cache import cache
-
-from ...utils.partition_by_cpus import partition_by_cpus
-
 from ...camera_config import CameraConfig
 from ...payload import Payload
+from ...utils.partition_by_cpus import partition_by_cpus
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
@@ -198,7 +196,7 @@ def _estimation(
         )
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
         out.append(next_frame_num)
-        
+
     return out
 
 
@@ -219,7 +217,7 @@ def parallel_estimation(
             for start, end in frame_slices
         ]
         out = [*tqdm(pool.imap(_estimation, inputs), total=len(inputs))]
-    
+
     skipped_frame_num = []
     next_frame_num: "int" = start_frame_num
     for i, _next_frame_num in enumerate(itertools.chain(*out)):

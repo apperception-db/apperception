@@ -1,12 +1,14 @@
 import time
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Tuple, Generic, Type, TypeVar
+from typing import TYPE_CHECKING, Dict, Generic, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from ..payload import Payload
 
 
 T = TypeVar('T')
+
+
 class Stage(Generic[T]):
     runtimes: "List[dict]"
 
@@ -35,6 +37,7 @@ class Stage(Generic[T]):
         return ".".join(_get_classnames(cls))
 
     _T = TypeVar('_T')
+
     @classmethod
     def get(cls: "Type[Stage[_T]]", d: "Dict[str, list] | Payload") -> "List[_T] | None":
         if not isinstance(d, dict):

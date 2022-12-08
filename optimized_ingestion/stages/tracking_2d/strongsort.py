@@ -2,8 +2,8 @@ import torch
 from pathlib import Path
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List
-from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
+from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ..decode_frame.decode_frame import DecodeFrame

@@ -11,7 +11,6 @@ Usage example:
 """
 
 import array
-import time
 import logging
 import math
 import numpy as np

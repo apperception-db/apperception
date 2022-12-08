@@ -1,8 +1,7 @@
 import cv2
+import numpy as np
 from tqdm import tqdm
 from typing import TYPE_CHECKING, List
-
-import numpy as np
 
 from ...cache import cache
 from ..stage import Stage

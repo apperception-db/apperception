@@ -6,7 +6,6 @@ from tqdm import tqdm
 from typing import TYPE_CHECKING, List, Tuple
 
 from ...cache import cache
-
 from .decode_frame import DecodeFrame
 
 if TYPE_CHECKING:

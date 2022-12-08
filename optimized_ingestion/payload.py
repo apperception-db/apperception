@@ -53,7 +53,7 @@ class Payload:
 
         if metadata is None or len(metadata) == 0:
             metadata = self.metadata
-        
+
         if len(metadata) != 0:
             metadata_l = metadata_len(metadata)
             assert metadata_l == len(keep), f"metadata: {metadata_l}, keep: {len(keep)}"

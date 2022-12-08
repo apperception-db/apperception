@@ -20,6 +20,8 @@ def get_cache_filename(videofile: str, stage_name: str):
 
 S = TypeVar('S')
 T = TypeVar('T')
+
+
 def cache(fn: "Callable[[S, Payload], T]") -> "Callable[[S, Payload], T]":
     def _fn(stage: "S", payload: "Payload"):
         if _CACHE_STATUS['disable']:
@@ -37,7 +39,7 @@ def cache(fn: "Callable[[S, Payload], T]") -> "Callable[[S, Payload], T]":
             with open(cache_filename, "wb") as f:
                 pickle.dump(result, f)
             return result
-    
+
     return _fn
 
 

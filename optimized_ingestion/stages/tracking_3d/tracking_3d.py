@@ -23,6 +23,7 @@ class Tracking3DResult:
     prev: "Tracking3DResult | None" = None
     next: "Tracking3DResult | None" = None
 
+
 Metadatum = Dict[float, Tracking3DResult]
 
 
