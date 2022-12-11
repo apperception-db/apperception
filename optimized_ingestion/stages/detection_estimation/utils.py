@@ -115,7 +115,10 @@ def intersection_between_line_and_trajectory(line, trajectory):
     """Find the intersection between a line and a trajectory."""
     # trajectory_to_polygon = Polygon(trajectory)
     extended_line = _construct_extended_line(trajectory, line)
-    intersection = extended_line.intersection(LineString(trajectory))
+    if len(trajectory) == 1:
+        intersection = extended_line.intersection(Point(trajectory[0]))
+    else:
+        intersection = extended_line.intersection(LineString(trajectory))
     if not isinstance(intersection, LineString) or intersection.is_empty:
         return tuple()
     elif isinstance(intersection, LineString):
