@@ -75,13 +75,19 @@ class DetectionInfo:
         self.compute_priority()
 
     def compute_geo_info(self):
-        self.distance = compute_distance(self.car_loc3d, self.ego_config.ego_translation)
-        self.segment_area_2d = compute_area([*self.car_bbox2d[0], *self.car_bbox2d[1]])
+        self.distance = compute_distance(self.car_loc3d,
+                                         self.ego_config.ego_translation)
+        self.segment_area_2d = compute_area([*self.car_bbox2d[0],
+                                             *self.car_bbox2d[1]])
 
         ego_heading = self.ego_config.ego_heading
         assert isinstance(ego_heading, float)
         self.get_segment_line()
-        self.relative_direction = relative_direction_to_ego(self.segment_heading, ego_heading)
+        if self.segment_heading is None:
+            self.relative_direction = None
+        else:
+            self.relative_direction = relative_direction_to_ego(
+                self.segment_heading, ego_heading)
         
     def get_segment_line(self):
         """Get the segment line the location is in."""
@@ -103,7 +109,8 @@ class DetectionInfo:
                     closest_segment_line = segment_line
                     closest_segment_heading = segment_heading
                 else:
-                    if projection.distance(closest_segment_line) > projection.distance(segment_line):
+                    if (projection.distance(closest_segment_line) >
+                        projection.distance(segment_line)):
                         closest_segment_line = segment_line
                         closest_segment_heading = segment_heading
         self.segment_line = closest_segment_line
@@ -125,8 +132,9 @@ class DetectionInfo:
         Return: a list of actions
         """
         sample_action_alg = get_sample_action_alg(self.relative_direction)
-        assert sample_action_alg is not None
-        return self.priority, sample_action_alg(self, view_distance)
+        if sample_action_alg is not None:
+            return self.priority, sample_action_alg(self, view_distance)
+        return self.priority, None
 
 
 # TODO

@@ -108,6 +108,8 @@ def car_meet_up_with_ego(
     car2_loc = detection_info.car_loc3d
     car1_heading = ego_config.ego_heading
     car2_heading = detection_info.segment_heading
+    if car2_heading is None:
+        return None
     road_type = detection_info.road_type
     car1_trajectory = ego_trajectory
     ego_loc = tuple(ego_config.ego_translation)
@@ -132,6 +134,8 @@ def car_exit_view(
     ego_loc = ego_config.ego_translation
     car_loc = detection_info.car_loc3d
     car_heading = detection_info.segment_heading
+    if car_heading is None:
+        return None
     exit_view_point, exit_view_time = time_to_exit_view(
         ego_loc, car_loc, car_heading, ego_trajectory, current_time, road_type, view_distance)
     exit_view_action = Action(current_time, exit_view_time, start_loc=car_loc,
@@ -187,7 +191,7 @@ def opposite_direction_sample_action(detection_info: "DetectionInfo", view_dista
     return combine_sample_actions(actions)
 
 
-def get_sample_action_alg(relative_direction: "Literal['same_direction', 'opposite_direction']"):
+def get_sample_action_alg(relative_direction: "Union[None, Literal['same_direction', 'opposite_direction']]"):
     if relative_direction == SAME_DIRECTION:
         return same_direction_sample_action
     elif relative_direction == OPPOSITE_DIRECTION:

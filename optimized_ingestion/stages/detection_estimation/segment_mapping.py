@@ -338,6 +338,8 @@ def construct_mapping(
      - segment that contains the ego
      - segment that is larger than 100 pixel x pixel
     """
+    if segmenttype is None or segmenttype == 'None':
+        return
     ego_translation = ego_config.ego_translation[:2]
 
     # deduced_cam_segment = list(map(worl2pixel_factory(ego_config), decoded_road_segment))

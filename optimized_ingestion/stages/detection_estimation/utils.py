@@ -41,7 +41,7 @@ def mph_to_mps(mph):
 MAX_CAR_SPEED = {
     'lane': 35,
     'road': 35,
-    'laneSection': 35,
+    'lanesection': 35,
     'roadSection': 35,
     'intersection': 25,
     'highway': 55,
@@ -225,7 +225,8 @@ def detection_to_img_segment(
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
         p_cam_segment = Polygon(cam_segment)
-        if p_cam_segment.contains(point) and road_segment_info.segment_type in ['lane', 'laneSection']:
+        if (p_cam_segment.contains(point)
+            and road_segment_info.segment_type in ['lane', 'lanesection', 'intersection']):
             area = p_cam_segment.area
             if area > maximum_mapping_area:
                 maximum_mapping = mapping
@@ -324,6 +325,8 @@ def time_to_exit_current_segment(detection_info,
     """
     current_segment_info = detection_info.road_segment_info
     segmentpolygon = current_segment_info.segment_polygon
+    if detection_info.segment_heading is None:
+        return time_elapse(current_time, -1), None
     segmentheading = detection_info.segment_heading + 90
     if car_trajectory:
         for point in car_trajectory:
