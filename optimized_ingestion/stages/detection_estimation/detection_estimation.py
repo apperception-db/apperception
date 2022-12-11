@@ -34,8 +34,8 @@ from .segment_mapping import (CameraSegmentMapping, RoadSegmentInfo,
                               map_imgsegment_roadsegment)
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     detection_to_img_segment, get_ego_trajectory,
-                    get_largest_segment, relative_direction_to_ego,
-                    trajectory_3d, project_point_onto_linestring)
+                    get_largest_segment, project_point_onto_linestring,
+                    relative_direction_to_ego, trajectory_3d)
 
 
 class obj_detection(NamedTuple):
@@ -115,7 +115,6 @@ class DetectionInfo:
                         closest_segment_heading = segment_heading
         self.segment_line = closest_segment_line
         self.segment_heading = closest_segment_heading
-
 
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance
