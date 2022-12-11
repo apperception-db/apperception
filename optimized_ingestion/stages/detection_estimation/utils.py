@@ -314,7 +314,7 @@ def ego_departure(ego_trajectory: "List[trajectory_3d]", current_time: "datetime
     return False, ego_trajectory[-1].timestamp, ego_trajectory[-1].coordinates
 
 
-def time_to_exit_current_segment(current_segment_info,
+def time_to_exit_current_segment(detection_info,
                                  current_time, car_loc, car_trajectory=None):
     """Return the time that the car exit the current segment
 
@@ -322,14 +322,15 @@ def time_to_exit_current_segment(current_segment_info,
     car heading is the same as road heading
     car drives at max speed if no trajectory is given
     """
+    current_segment_info = detection_info.road_segment_info
     segmentpolygon = current_segment_info.segment_polygon
+    segmentheading = detection_info.segment_heading + 90
     if car_trajectory:
         for point in car_trajectory:
             if (point.timestamp > current_time
                and not Polygon(segmentpolygon).contains(Point(point.coordinates))):
                 return point.timestamp, point.coordinates
         return time_elapse(current_time, -1), None
-    segmentheading = current_segment_info.segment_heading + 90
     car_loc = Point(car_loc)
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
                   car_loc.y + math.sin(math.radians(segmentheading)))

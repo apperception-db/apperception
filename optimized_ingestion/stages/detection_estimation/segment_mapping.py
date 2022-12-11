@@ -121,18 +121,18 @@ class RoadSegmentInfo(NamedTuple):
     """
     segment_id: unique segment id
     segment_polygon: tuple of (x, y) coordinates
-    segment_line: tuple of (x, y) coordinates
+    segment_line: list of tuple of (x, y) coordinates
     segment_type: road segment type
+    segment_headings: list of floats
     contains_ego: whether the segment contains ego camera
     ego_config: ego camfig for the frame we asks info for
-    facing_relative: float
     fov_lines: field of view lines
     """
     segment_id: int
     segment_polygon: Polygon
-    segment_line: LineString
+    segment_lines: List[Union[LineString, None]]
     segment_type: str
-    segment_heading: float
+    segment_headings: List[float]
     contains_ego: bool
     ego_config: "CameraConfig"
     fov_lines: "Tuple[Float22, Float22]"
@@ -194,8 +194,7 @@ class HashableAnnotatedSegment:
         h1 = hash(self.val[0])
         h2 = hash(self.val[1].wkt_coords)
         h3 = hash(self.val[2].wkt_coords) if self.val[2] else ''
-        h4 = hash(self.val[3:])
-        return hash((h1, h2, h3, h4))
+        return hash((h1, h2, h3))
 
     def __eq__(self, __o: object) -> bool:
         if not isinstance(__o, HashableAnnotatedSegment):
@@ -364,9 +363,9 @@ def construct_mapping(
             RoadSegmentInfo(
                 segmentid,
                 Polygon(keep_road_segment_point),
-                segmentline,
+                [segmentline],
                 segmenttype,
-                segmentheading,
+                [segmentheading],
                 contains_ego,
                 ego_config,
                 fov_lines
@@ -393,7 +392,7 @@ def map_imgsegment_roadsegment(
     fov_lines = get_fov_lines(ego_config)
     start_time = time.time()
     search_space = construct_search_space(ego_config, view_distance=100)
-    mapping = []
+    mapping = dict()
 
     def not_in_view(point: "Float2"):
         return not in_view(point, ego_config.ego_translation, fov_lines)
@@ -401,6 +400,10 @@ def map_imgsegment_roadsegment(
     for road_segment in search_space:
         segmentid, segmentpolygon, segmentline, segmenttype, segmentheading, contains_ego = road_segment
         segmentline = Geometry(segmentline.to_ewkb()).shapely if segmentline else None
+        if segmentid in mapping:
+            mapping[segmentid].road_segment_info.segment_lines.append(segmentline)
+            mapping[segmentid].road_segment_info.segment_headings.append(segmentheading)
+            continue
         XYs: "Tuple[array.array[float], array.array[float]]" = Geometry(segmentpolygon.to_ewkb()).exterior.shapely.xy
         assert isinstance(XYs, tuple)
         assert isinstance(XYs[0], array.array), type(XYs[0])
@@ -422,10 +425,10 @@ def map_imgsegment_roadsegment(
             decoded_road_segment, frame_size, fov_lines, segmentid,
             segmentline, segmenttype, segmentheading, contains_ego, ego_config)
         if current_mapping is not None:
-            mapping.append(current_mapping)
+            mapping[segmentid] = current_mapping
 
     logger.info(f'total mapping time: {time.time() - start_time}')
-    return mapping
+    return mapping.values()
 
 # def visualization(test_img_path: str, test_config: Dict[str, Any], mapping: Tuple):
 #     """
