@@ -88,7 +88,7 @@ class DetectionInfo:
         else:
             self.relative_direction = relative_direction_to_ego(
                 self.segment_heading, ego_heading)
-        
+
     def get_segment_line(self):
         """Get the segment line the location is in."""
         segment_lines = self.road_segment_info.segment_lines
@@ -109,8 +109,8 @@ class DetectionInfo:
                     closest_segment_line = segment_line
                     closest_segment_heading = segment_heading
                 else:
-                    if (projection.distance(closest_segment_line) >
-                        projection.distance(segment_line)):
+                    if (projection.distance(closest_segment_line)
+                            > projection.distance(segment_line)):
                         closest_segment_line = segment_line
                         closest_segment_heading = segment_heading
         self.segment_line = closest_segment_line

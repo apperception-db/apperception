@@ -226,7 +226,7 @@ def detection_to_img_segment(
         cam_segment, road_segment_info = mapping
         p_cam_segment = Polygon(cam_segment)
         if (p_cam_segment.contains(point)
-            and road_segment_info.segment_type in ['lane', 'lanesection', 'intersection']):
+                and road_segment_info.segment_type in ['lane', 'lanesection', 'intersection']):
             area = p_cam_segment.area
             if area > maximum_mapping_area:
                 maximum_mapping = mapping
