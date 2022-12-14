@@ -42,27 +42,6 @@ input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
-# CAMERA_COLUMNS = [
-#     "cameraId",
-#     "frameId",
-#     "frameNum",
-#     "filename",
-#     "cameraTranslation",
-#     "cameraRotation",
-#     "cameraIntrinsic",
-#     "egoTranslation",
-#     "egoRotation",
-#     "timestamp",
-#     "cameraHeading",
-#     "egoHeading",]
-#     # "roadDirection"]
-# CAM_CONFIG_QUERY = """SELECT * FROM Cameras
-#                     WHERE filename like 'samples/CAM_FRONT/%{date}%'
-#                     ORDER BY frameNum"""
-
-# _camera_config = database.execute(CAM_CONFIG_QUERY.format(date=input_date))
-# camera_config_df = pd.DataFrame(_camera_config, columns=CAMERA_COLUMNS)
-# camera_config_df
 
 SegmentPolygonWithHeading = Tuple[
     str,
