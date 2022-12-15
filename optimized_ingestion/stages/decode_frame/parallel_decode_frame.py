@@ -25,7 +25,7 @@ def decode(args: "Tuple[str, int, int]"):
             break
         out.append(frame)
     cap.release()
-    assert len(out) == end - start
+    assert len(out) == end - start, (len(out), start, end)
     return out, start, end
 
 
