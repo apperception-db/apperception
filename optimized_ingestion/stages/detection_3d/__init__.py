@@ -3,7 +3,6 @@ from typing import List, Tuple
 
 from ..stage import Stage
 
-
 # tensor dimension n x 18:
 #   - bbox_left
 #   - bbox_top
