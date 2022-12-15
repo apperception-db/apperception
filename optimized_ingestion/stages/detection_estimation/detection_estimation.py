@@ -25,6 +25,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 
 import numpy as np
 import numpy.typing as npt
+from shapely.geometry import Point
 
 from ...camera_config import CameraConfig
 from ...video import Video
@@ -33,8 +34,8 @@ from .segment_mapping import (CameraSegmentMapping, RoadSegmentInfo,
                               map_imgsegment_roadsegment)
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     detection_to_img_segment, get_ego_trajectory,
-                    get_largest_segment, relative_direction_to_ego,
-                    trajectory_3d)
+                    get_largest_segment, project_point_onto_linestring,
+                    relative_direction_to_ego, trajectory_3d)
 
 
 class obj_detection(NamedTuple):
@@ -74,12 +75,46 @@ class DetectionInfo:
         self.compute_priority()
 
     def compute_geo_info(self):
-        self.distance = compute_distance(self.car_loc3d, self.ego_config.ego_translation)
-        self.segment_area_2d = compute_area([*self.car_bbox2d[0], *self.car_bbox2d[1]])
+        self.distance = compute_distance(self.car_loc3d,
+                                         self.ego_config.ego_translation)
+        self.segment_area_2d = compute_area([*self.car_bbox2d[0],
+                                             *self.car_bbox2d[1]])
 
         ego_heading = self.ego_config.ego_heading
         assert isinstance(ego_heading, float)
-        self.relative_direction = relative_direction_to_ego(self.road_segment_info.segment_heading, ego_heading)
+        self.get_segment_line()
+        if self.segment_heading is None:
+            self.relative_direction = None
+        else:
+            self.relative_direction = relative_direction_to_ego(
+                self.segment_heading, ego_heading)
+
+    def get_segment_line(self):
+        """Get the segment line the location is in."""
+        segment_lines = self.road_segment_info.segment_lines
+        segment_headings = self.road_segment_info.segment_headings
+        closest_segment_line = None
+        closest_segment_heading = None
+        for i in range(len(segment_lines)):
+            segment_line = segment_lines[i]
+            segment_heading = segment_headings[i]
+            if segment_line is not None:
+                projection = project_point_onto_linestring(
+                    Point(self.car_loc3d[:2]), segment_line)
+                if projection.intersects(segment_line):
+                    self.segment_line = segment_line
+                    self.segment_heading = segment_heading
+                    return
+                if closest_segment_line is None:
+                    closest_segment_line = segment_line
+                    closest_segment_heading = segment_heading
+                else:
+                    if (projection.distance(closest_segment_line)
+                            > projection.distance(segment_line)):
+                        closest_segment_line = segment_line
+                        closest_segment_heading = segment_heading
+        self.segment_line = closest_segment_line
+        self.segment_heading = closest_segment_heading
 
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance
@@ -96,8 +131,9 @@ class DetectionInfo:
         Return: a list of actions
         """
         sample_action_alg = get_sample_action_alg(self.relative_direction)
-        assert sample_action_alg is not None
-        return self.priority, sample_action_alg(self, view_distance)
+        if sample_action_alg is not None:
+            return self.priority, sample_action_alg(self, view_distance)
+        return self.priority, None
 
 
 # TODO
