@@ -36,7 +36,7 @@ class From2DAndRoad(Detection3D):
             for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
                 if not k:
                     metadata.append((torch.tensor([], device=d2d.device), clss))
-                
+
                 device = d2d.device
 
                 [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
@@ -57,7 +57,7 @@ class From2DAndRoad(Detection3D):
                     TO_BOTTOM_RIGHT @ d2dt,
                 ], axis=1)
                 assert ((2, N * 2) == bottoms.shape), ((2, N * 2), bottoms.shape)
-            
+
                 directions = np.stack((
                     (s * bottoms[0] - x0) / fx,
                     (s * bottoms[1] - y0) / fy,
