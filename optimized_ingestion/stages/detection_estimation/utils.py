@@ -94,8 +94,7 @@ def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", l
         assert len(polygon) <= 2
         if len(polygon) == 2:
             try:
-                l = LineString(polygon)
-                a, b = l.boundary.geoms
+                a, b = LineString(polygon).boundary.geoms
                 minx = min(a.x, b.x)
                 maxx = max(a.x, b.x)
                 miny = min(a.y, b.y)
