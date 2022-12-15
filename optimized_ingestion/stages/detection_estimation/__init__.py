@@ -13,6 +13,7 @@ from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...utils.partition_by_cpus import partition_by_cpus
 from ...video import Video
+from ..detection_3d import Detection3D
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
 from ..stage import Stage
@@ -28,7 +29,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN)
 
 
-class DetectionEstimation(Stage):
+DetectionEstimationMetadatum = List[DetectionInfo]
+
+
+class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
     @cache
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
@@ -84,14 +88,19 @@ def construct_estimated_all_detection_info(
     all_detections = []
     for det in detections:
         bbox = det[:4]
+        # conf = det[4]
         # obj_cls = det[5]
+        bbox3d = det[6:12]
+        # bbox3d_from_camera = det[12:18]
         x, y, x2, y2 = list(map(int, bbox))
         w = x2 - x
         h = y2 - y
         car_loc2d = (x + w // 2, y + h // 2)
         # print(car_loc2d)
         car_bbox2d = ((x - w // 2, y - h // 2), (x + w // 2, y + h // 2))
-        car_bbox3d = None
+        left3d, right3d = bbox3d[:3], bbox3d[3:]
+        car_loc3d = list(map(float, (left3d + right3d) / 2))
+        car_bbox3d = (tuple(map(float, left3d)), tuple(map(float, right3d)))
         ### TODO: replace the following estimation of car_loc3d with the depth estimation
         ###       algorithm that converts 2d loc to 3d loc
         estimate_3d = detection_to_img_segment(car_loc2d, cam_segment_mapping)
@@ -108,7 +117,7 @@ def dry_run(
     payload: "Payload",
     start_frame_num: "int",
     ego_trajectory: "List[trajectory_3d]",
-) -> "Tuple[bitarray, None]":
+) -> "Tuple[bitarray, dict[str, list[DetectionEstimationMetadatum]]]":
     skipped_frame_num = []
     next_frame_num = start_frame_num
     action_type_counts = {}
@@ -116,16 +125,18 @@ def dry_run(
     total_detection_time = 0
     total_sample_plan_time = 0
     # times = []
+    dets = Detection3D.get(payload)
+    metadata: "list[DetectionEstimationMetadatum]" = []
     for i in tqdm(range(len(payload.video) - 1)):
         current_ego_config = payload.video[i]
         if i != next_frame_num:
             skipped_frame_num.append(i)
+            metadata.append([])
             continue
         next_frame_num = i + 1
         cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
         logger.info(f"mapping length {len(cam_segment_mapping)}")
         start_detection_time = time.time()
-        dets = YoloDetection.get(payload)
         assert dets is not None
         det, _ = dets[i]
         all_detection_info = construct_estimated_all_detection_info(det, cam_segment_mapping, current_ego_config, ego_trajectory)
@@ -139,6 +150,7 @@ def dry_run(
         else:
             action_type_counts[next_action_type] += 1
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+        metadata.append(all_detection_info)
     #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
     # print(np.array(times).sum(axis=0))
     logger.info(f"sorted_ego_config_length {len(payload.video)}")
@@ -159,7 +171,7 @@ def dry_run(
     for f in skipped_frame_num:
         keep[f] = 0
 
-    return keep, None
+    return keep, {DetectionEstimation.classname(): metadata}
 
 
 def _estimation(
