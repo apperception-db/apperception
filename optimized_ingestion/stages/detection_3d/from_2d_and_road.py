@@ -1,10 +1,9 @@
-from typing import TYPE_CHECKING, Tuple
-
-import torch
 import numpy as np
 import numpy.typing as npt
-from tqdm import tqdm
+import torch
 from pyquaternion import Quaternion
+from tqdm import tqdm
+from typing import TYPE_CHECKING, Tuple
 
 from ..detection_2d.detection_2d import Detection2D
 from . import Detection3D
@@ -37,13 +36,13 @@ class From2DAndRoad(Detection3D):
             for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
                 if not k:
                     metadata.append((torch.Tensor([], device=d2d.device), clss))
-                
+
                 device = d2d.device
 
                 [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
                 rotation = frame.camera_rotation
                 translation = np.array(frame.camera_translation)
-                
+
                 _, d = d2d.shape
 
                 d2dt = d2d.T[:4, :].numpy()
@@ -57,7 +56,7 @@ class From2DAndRoad(Detection3D):
                     TO_BOTTOM_LEFT @ d2dt,
                     TO_BOTTOM_RIGHT @ d2dt,
                 ])
-            
+
                 directions = np.stack([
                     (s * bottoms[0] - x0) / fx,
                     (s * bottoms[1] - y0) / fy,
@@ -92,7 +91,7 @@ class From2DAndRoad(Detection3D):
                 assert ((N, (d + 12)) == d3d.shape), d3d.shape
 
                 metadata.append((d3d, clss))
-            
+
             return None, {self.classname(): metadata}
 
 

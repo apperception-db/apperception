@@ -13,9 +13,9 @@ from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...utils.partition_by_cpus import partition_by_cpus
 from ...video import Video
-from ..detection_3d import Detection3D
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_2d.yolo_detection import YoloDetection
+from ..detection_3d import Detection3D
 from ..stage import Stage
 from .detection_estimation import (DetectionInfo, construct_all_detection_info,
                                    detection_to_img_segment,
