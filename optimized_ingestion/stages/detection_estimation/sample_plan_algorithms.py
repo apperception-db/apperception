@@ -1,7 +1,7 @@
 import datetime
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Literal
+from typing import TYPE_CHECKING, List, Literal, Union
 
 from .utils import (OPPOSITE_DIRECTION, SAME_DIRECTION, Float2, Float3,
                     ego_departure, meetup, time_to_exit_current_segment,
