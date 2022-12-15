@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     p1 = Pipeline()
     p1.add_filter(filter=YoloDetection())
-    p1.add_filter(filter=FromDetection())
+    p1.add_filter(filter=StrongSORT())
 
     p2 = Pipeline()
     p2.add_filter(filter=Tracking2D())
