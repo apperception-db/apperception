@@ -35,8 +35,8 @@ class From2DAndRoad(Detection3D):
             metadata: "list[Tuple[torch.Tensor, list[str]]]" = []
             for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
                 if not k:
-                    metadata.append((torch.Tensor([], device=d2d.device), clss))
-
+                    metadata.append((torch.tensor([], device=d2d.device), clss))
+                
                 device = d2d.device
 
                 [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
@@ -45,7 +45,7 @@ class From2DAndRoad(Detection3D):
 
                 _, d = d2d.shape
 
-                d2dt = d2d.T[:4, :].numpy()
+                d2dt = d2d.T[:4, :].cpu().numpy()
                 assert isinstance(d2dt, np.ndarray)
 
                 _d, N = d2dt.shape
@@ -55,13 +55,15 @@ class From2DAndRoad(Detection3D):
                 bottoms = np.concatenate([
                     TO_BOTTOM_LEFT @ d2dt,
                     TO_BOTTOM_RIGHT @ d2dt,
-                ])
-
-                directions = np.stack([
+                ], axis=1)
+                assert ((2, N * 2) == bottoms.shape), ((2, N * 2), bottoms.shape)
+            
+                directions = np.stack((
                     (s * bottoms[0] - x0) / fx,
                     (s * bottoms[1] - y0) / fy,
-                    torch.ones(N * 2),
-                ])
+                    np.ones(N * 2),
+                ))
+                assert ((3, N * 2) == directions.shape), ((3, N * 2), directions.shape)
 
                 rotated_directions = rotate(directions, rotation)
 
@@ -71,23 +73,23 @@ class From2DAndRoad(Detection3D):
                 points = rotated_directions * ts + translation[:, np.newaxis]
                 points_from_camera = rotate(points - translation[:, np.newaxis], rotation.inverse)
 
-                bbox3d = np.stack((
+                bbox3d = np.concatenate((
                     points[:, :N],
                     points[:, N:],
-                )).T
+                ), axis=0).T
                 assert ((N, 6) == bbox3d.shape), bbox3d.shape
 
-                bbox3d_from_camera = np.stack((
+                bbox3d_from_camera = np.concatenate((
                     points_from_camera[:, :N],
                     points_from_camera[:, N:],
-                )).T
+                ), axis=0).T
                 assert ((N, 6) == bbox3d_from_camera.shape), bbox3d_from_camera.shape
 
                 d3d = torch.concatenate((
                     d2d,
-                    torch.Tensor(bbox3d, device=device),
-                    torch.Tensor(bbox3d_from_camera, device=device),
-                ))
+                    torch.tensor(bbox3d, device=device),
+                    torch.tensor(bbox3d_from_camera, device=device),
+                ), dim=1)
                 assert ((N, (d + 12)) == d3d.shape), d3d.shape
 
                 metadata.append((d3d, clss))
@@ -105,7 +107,7 @@ def rotate(vectors: "npt.NDArray", rotation: "Quaternion") -> "npt.NDArray":
     Returns:
         The rotated vectors (3 x N).
     """
-    return npt.NDArray(rotation.unit.rotation_matrix) @ vectors
+    return rotation.unit.rotation_matrix @ vectors
 
 
 def conj(q: "npt.NDArray") -> "npt.NDArray":
