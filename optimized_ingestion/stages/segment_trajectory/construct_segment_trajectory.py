@@ -138,7 +138,12 @@ def get_test_detection_infos(test_trajectory, test_segments):
 def update_current_road_segment_info(
     current_detection_info: "DetectionInfo",
     result: "List[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
-    """Update the current road segment info based on the query result."""
+    """Update detection info based on query result.
+    
+    This Function updates the detection info for the current trajectory point
+    based on the query result that finds the correct road segment that contains
+    the calibrated version of the current trajectory point.
+    """
     kept_segment = (None, None)
     road_segment_info = None
     for road_segment in result:
@@ -170,7 +175,6 @@ def calibrate(
     Given a trajectory and the corresponding detection infos, map the trajectory
     to the correct road segments. 
     The returned value is a list of SegmentTrajectoryPoint.
-    
     """
     road_segment_trajectory = []
     for i in range(len(trajectory_3d)):
