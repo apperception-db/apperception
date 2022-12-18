@@ -5,7 +5,7 @@ import math
 from typing import Any, List, Literal, NamedTuple
 
 from apperception.database import database
-from detection_estimation.utils import project_point_onto_linestring, get_segment_line
+from detection_estimation.utils import project_point_onto_linestring, get_segment_line. trajectory3d
 from detection_estimation.segment_mapping import RoadSegmentInfo
 from detection_estimation.detection_estimation import DetectionInfo
 from optimized_ingestion.camera_config_copy import CameraConfig, camera_config
@@ -85,12 +85,13 @@ WHERE ST_Area(segmentpolygon.elementpolygon) = min_contain.min_segment_area;
 """
 
 
-segment_trajectory_point = namedtuple(
+SegmentTrajectoryPoint = namedtuple(
     "segment_trajectory_point", ['car_loc3d', 'timestamp', 'segment_line',
                                  'segment_heading', 'road_segment_info'])
 
 
 def get_test_trajectory(test_trajectory_points):
+    """This function is for testing only."""
     start_time = datetime.datetime.now()
     trajectory = []
     for i in range(len(test_trajectory_points)):
@@ -100,6 +101,7 @@ def get_test_trajectory(test_trajectory_points):
 
 
 def get_test_detection_infos(test_trajectory, test_segments):
+    """This function is for testing only."""
     assert len(test_trajectory) == len(test_segments)
     detection_infos = []
     for i in range(len(test_trajectory)):
@@ -133,7 +135,10 @@ def get_test_detection_infos(test_trajectory, test_segments):
     return detection_infos
 
 
-def update_current_road_segment_info(current_detection_info, result):
+def update_current_road_segment_info(
+    current_detection_info: "DetectionInfo",
+    result: "List[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
+    """Update the current road segment info based on the query result."""
     kept_segment = (None, None)
     road_segment_info = None
     for road_segment in result:
@@ -157,8 +162,16 @@ def update_current_road_segment_info(current_detection_info, result):
     return road_segment_info
 
 
-def calibrate(trajectory_3d, detection_infos):
-    """Calibrate the trajectory to the road segments."""
+def calibrate(
+    trajectory_3d: "List[trajectory_3d]",
+    detection_infos: "List[DetectionInfo]") -> "List[SegmentTrajectoryPoint]":
+    """Calibrate the trajectory to the road segments.
+    
+    Given a trajectory and the corresponding detection infos, map the trajectory
+    to the correct road segments. 
+    The returned value is a list of SegmentTrajectoryPoint.
+    
+    """
     road_segment_trajectory = []
     for i in range(len(trajectory_3d)):
         current_point3d, timestamp = trajectory_3d[i]
@@ -217,6 +230,8 @@ def calibrate(trajectory_3d, detection_infos):
                                          current_road_segment_info))
     return road_segment_trajectory
 
+
+#### The Remaining tests ####
 
 def test_same_segment():
     print("test same segment")
