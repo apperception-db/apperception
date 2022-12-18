@@ -1,20 +1,16 @@
-from collections import namedtuple
-from dataclasses import dataclass, field
+from apperception.database import database
+
 import datetime
 import math
-from typing import Any, List, Literal, NamedTuple
-
-from apperception.database import database
-from detection_estimation.utils import project_point_onto_linestring, get_segment_line. trajectory3d
-from detection_estimation.segment_mapping import RoadSegmentInfo
-from detection_estimation.detection_estimation import DetectionInfo
-from optimized_ingestion.camera_config_copy import CameraConfig, camera_config
-
 import postgis
 import psycopg2
+from collections import namedtuple
+from detection_estimation.detection_estimation import DetectionInfo
+from detection_estimation.segment_mapping import RoadSegmentInfo
+from detection_estimation.utils import (get_segment_line,
+                                        project_point_onto_linestring)
 from plpygis import Geometry
 from shapely.geometry import Point
-
 
 test_segment_query = """
 SELECT
@@ -190,18 +186,18 @@ def calibrate(
                 current_point_heading = math.atan2(next_point[1] - current_point[1],
                                                    next_point[0] - current_point[0])
                 current_point_heading = math.degrees(current_point_heading)
-                
+
                 relative_heading = (abs(current_road_segment_heading + 90
                                         - current_point_heading) % 360)
 
-            if (current_road_segment_heading is None 
-                or math.cos(math.radians(relative_heading)) > 0):
+            if (current_road_segment_heading is None
+                    or math.cos(math.radians(relative_heading)) > 0):
                 road_segment_trajectory.append(
                     segment_trajectory_point(current_point3d,
-                                            timestamp,
-                                            current_segment_line,
-                                            current_road_segment_heading,
-                                            current_road_segment_info))
+                                             timestamp,
+                                             current_segment_line,
+                                             current_road_segment_heading,
+                                             current_road_segment_info))
                 continue
 
         ### project current_point to the segment line of the previous point
@@ -210,7 +206,7 @@ def calibrate(
         if len(road_segment_trajectory) == 0:
             query = psycopg2.sql.SQL(segment_closest_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point(current_point)),
-                point_heading=psycopg2.sql.Literal(current_point_heading-90)
+                point_heading=psycopg2.sql.Literal(current_point_heading - 90)
             )
         else:
             prev_calibrated_point = road_segment_trajectory[-1]
@@ -220,18 +216,18 @@ def calibrate(
             current_point3d = (projection.x, projection.y, 0.0)
             query = psycopg2.sql.SQL(segment_contain_vector_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point((projection.x, projection.y))),
-                point_heading=psycopg2.sql.Literal(prev_segment_heading-90)
+                point_heading=psycopg2.sql.Literal(prev_segment_heading - 90)
             )
         result = database.execute(query)
         current_road_segment_info = update_current_road_segment_info(
             detection_info, result)
         current_segment_line, current_heading = get_segment_line(current_road_segment_info, current_point3d)
         road_segment_trajectory.append(
-                segment_trajectory_point(current_point3d,
-                                         timestamp,
-                                         current_segment_line,
-                                         current_road_segment_heading,
-                                         current_road_segment_info))
+            segment_trajectory_point(current_point3d,
+                                     timestamp,
+                                     current_segment_line,
+                                     current_road_segment_heading,
+                                     current_road_segment_info))
     return road_segment_trajectory
 
 
@@ -254,7 +250,7 @@ def test_same_segment():
                       '99c90907-e7a2-4b19-becc-afe2b7f013c7',
                       '99c90907-e7a2-4b19-becc-afe2b7f013c7']
     print([segment_trajectory_point.road_segment_info.segment_id
-               for segment_trajectory_point in segment_trajectory])
+           for segment_trajectory_point in segment_trajectory])
     print("correct result", correct_result)
 
 
@@ -291,8 +287,8 @@ def test_connected_segments():
                         '99c90907-e7a2-4b19-becc-afe2b7f013c7',
                         'c67e592f-2e73-4165-b8cf-64165bb300a8',]
     test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                      for segment_id in test_segment_ids]
-    test_trajectory_points = [(1910, 869), (1915, 873), (1920, 871), (1940, 870), 
+                     for segment_id in test_segment_ids]
+    test_trajectory_points = [(1910, 869), (1915, 873), (1920, 871), (1940, 870),
                               (1955, 870), (1960, 874), (1980, 872), (1990, 875),]
     test_trajectory = get_test_trajectory(test_trajectory_points)
     test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
@@ -312,7 +308,7 @@ def test_connected_segments():
 
 def test_complete_story1():
     """Simplest complete story case.
-    
+
     The trajectories are all in the correct segments.
     """
     print("test complete story 1")
@@ -323,7 +319,7 @@ def test_complete_story1():
                         '99c90907-e7a2-4b19-becc-afe2b7f013c7',
                         '99c90907-e7a2-4b19-becc-afe2b7f013c7',]
     test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                      for segment_id in test_segment_ids]
+                     for segment_id in test_segment_ids]
     test_trajectory_points = [(1910, 869), (1920, 871), (1955, 870), (1960, 871),
                               (1980, 871), (1990, 871),]
     test_trajectory = get_test_trajectory(test_trajectory_points)
@@ -345,13 +341,13 @@ def test_complete_story2():
     """Some trajectory points are in the wrong segments."""
     print("test complete story 2")
     test_segment_ids = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                       'e39e4059-3a55-42f9-896f-475d89a70e86',
-                       '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                       'c67e592f-2e73-4165-b8cf-64165bb300a8',
-                       '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                       'c67e592f-2e73-4165-b8cf-64165bb300a8',]
+                        'e39e4059-3a55-42f9-896f-475d89a70e86',
+                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
+                        'c67e592f-2e73-4165-b8cf-64165bb300a8',
+                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
+                        'c67e592f-2e73-4165-b8cf-64165bb300a8',]
     test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                      for segment_id in test_segment_ids]
+                     for segment_id in test_segment_ids]
     test_trajectory_points = [(1910, 869), (1920, 874), (1955, 870),
                               (1960, 874), (1980, 872), (1990, 875),]
     test_trajectory = get_test_trajectory(test_trajectory_points)
@@ -380,7 +376,7 @@ def test_complete_story3():
                         '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
                         '53c5901a-dad9-4f0d-bcb6-c127dda2be09',]
     test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                      for segment_id in test_segment_ids]
+                     for segment_id in test_segment_ids]
     test_trajectory_points = [(1910, 869), (1915, 873), (1920, 871),
                               (1937, 882), (1932, 885), (1937, 887), (1932, 892),]
     test_trajectory = get_test_trajectory(test_trajectory_points)
@@ -408,7 +404,7 @@ def test_complete_story4():
                         '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
                         '53c5901a-dad9-4f0d-bcb6-c127dda2be09',]
     test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                      for segment_id in test_segment_ids]
+                     for segment_id in test_segment_ids]
     test_trajectory_points = [(1910, 868), (1920, 873), (1932, 885), (1937, 887), (1932, 892),]
     test_trajectory = get_test_trajectory(test_trajectory_points)
     test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)

@@ -255,8 +255,8 @@ def get_segment_line(road_segment_info, car_loc3d):
                 closest_segment_line = segment_line
                 closest_segment_heading = segment_heading
             else:
-                if (projection.distance(closest_segment_line) >
-                    projection.distance(segment_line)):
+                if (projection.distance(closest_segment_line)
+                        > projection.distance(segment_line)):
                     closest_segment_line = segment_line
                     closest_segment_heading = segment_heading
     return closest_segment_line, closest_segment_heading
