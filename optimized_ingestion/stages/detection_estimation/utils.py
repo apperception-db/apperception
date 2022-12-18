@@ -212,6 +212,31 @@ def detection_to_img_segment(
     return maximum_mapping
 
 
+def get_segment_line(road_segment_info, car_loc3d):
+    """Get the segment line the location is in."""
+    segment_lines = road_segment_info.segment_lines
+    segment_headings = road_segment_info.segment_headings
+    closest_segment_line = None
+    closest_segment_heading = None
+    for i in range(len(segment_lines)):
+        segment_line = segment_lines[i]
+        segment_heading = segment_headings[i]
+        if segment_line is not None:
+            projection = project_point_onto_linestring(
+                Point(car_loc3d[:2]), segment_line)
+            if projection.intersects(segment_line):
+                return segment_line, segment_heading
+            if closest_segment_line is None:
+                closest_segment_line = segment_line
+                closest_segment_heading = segment_heading
+            else:
+                if (projection.distance(closest_segment_line) >
+                    projection.distance(segment_line)):
+                    closest_segment_line = segment_line
+                    closest_segment_heading = segment_heading
+    return closest_segment_line, closest_segment_heading
+
+
 def location_calibration(
         car_loc3d: "Float3",
         road_segment_info: "RoadSegmentInfo") -> "Float3":
