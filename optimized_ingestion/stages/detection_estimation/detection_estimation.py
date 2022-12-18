@@ -25,7 +25,6 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 
 import numpy as np
 import numpy.typing as npt
-from shapely.geometry import Point
 
 from ...camera_config import CameraConfig
 from ...video import Video
@@ -33,8 +32,8 @@ from .sample_plan_algorithms import Action, get_sample_action_alg
 from .segment_mapping import (CameraSegmentMapping, RoadSegmentInfo,
                               map_imgsegment_roadsegment)
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
-                    detection_to_img_segment, get_segment_line, get_ego_trajectory,
-                    get_largest_segment, project_point_onto_linestring,
+                    detection_to_img_segment, get_ego_trajectory,
+                    get_largest_segment, get_segment_line,
                     relative_direction_to_ego, trajectory_3d)
 
 
@@ -76,7 +75,7 @@ class DetectionInfo:
 
     def compute_geo_info(self):
         self.distance = (compute_distance(self.car_loc3d,
-                                         self.ego_config.ego_translation)
+                                          self.ego_config.ego_translation)
                          if self.ego_config is not None else 0)
         self.segment_area_2d = (compute_area([*self.car_bbox2d[0],
                                              *self.car_bbox2d[1]])
