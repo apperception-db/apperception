@@ -1,20 +1,16 @@
-import numpy.typing as npt
 import torch
-from bitarray import bitarray
 from pathlib import Path
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List
+from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
-from ..detection_2d.yolo_detection import YoloDetection
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
-    from yolo_tracker.trackers.multi_tracker_zoo import \
-        StrongSORT as StrongSORTTracker
 
     from ...payload import Payload
 
@@ -26,16 +22,17 @@ reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 
 
 class StrongSORT(Tracking2D):
-    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        if Detection2D.get(payload) is None:
-            raise Exception()
+    def _run(self, payload: "Payload"):
+        detections = Detection2D.get(payload)
+        assert detections is not None
 
-        detections: "List[Tuple[npt.NDArray, List[str]]]" = YoloDetection.get(payload)
-        images: "List[npt.NDArray]" = DecodeFrame.get(payload)
+        images = DecodeFrame.get(payload)
+        assert images is not None
         metadata: "List[Dict[int, Tracking2DResult]]" = []
         trajectories: "Dict[int, List[Tracking2DResult]]" = {}
         device = select_device("")
-        strongsort: "StrongSORTTracker" = create_tracker('strongsort', reid_weights, device, False)
+        strongsort = create_tracker('strongsort', reid_weights, device, False)
+        assert isinstance(strongsort, _StrongSORT)
         curr_frame, prev_frame = None, None
         with torch.no_grad():
             if hasattr(strongsort, 'model'):
@@ -61,7 +58,7 @@ class StrongSORT(Tracking2D):
 
                 if len(output_) > 0:
                     labels: "Dict[int, Tracking2DResult]" = {}
-                    for output, conf in zip(output_, confs):
+                    for i, (output, conf) in enumerate(zip(output_, confs)):
                         obj_id = int(output[4])
                         cls = int(output[5])
 
@@ -71,6 +68,7 @@ class StrongSORT(Tracking2D):
                         bbox_h = output[3] - output[1]
                         labels[obj_id] = Tracking2DResult(
                             idx,
+                            f"{idx}-{i}",
                             obj_id,
                             bbox_left,
                             bbox_top,

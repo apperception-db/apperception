@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig
-    from .segment_mapping import CameraSegmentMapping
+    from .segment_mapping import CameraSegmentMapping, RoadSegmentInfo
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ def mph_to_mps(mph):
 MAX_CAR_SPEED = {
     'lane': 35,
     'road': 35,
-    'laneSection': 35,
+    'lanesection': 35,
     'roadSection': 35,
     'intersection': 25,
     'highway': 55,
@@ -81,16 +81,39 @@ def project_point_onto_linestring(
     return Point(P)
 
 
-def _construct_extended_line(polygon: "Polygon", line: "Float22"):
+def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", line: "Float22"):
     """
     line: represented by 2 points
     Find the line segment that can possibly intersect with the polygon
     """
-    polygon = Polygon(polygon)
+    try:
+        polygon = Polygon(polygon)
+        minx, miny, maxx, maxy = polygon.bounds
+    except BaseException:
+        assert isinstance(polygon, tuple) or isinstance(polygon, list)
+        assert len(polygon) <= 2
+        if len(polygon) == 2:
+            try:
+                a, b = LineString(polygon).boundary.geoms
+                minx = min(a.x, b.x)
+                maxx = max(a.x, b.x)
+                miny = min(a.y, b.y)
+                maxy = max(a.y, b.y)
+            except BaseException:
+                assert polygon[0] == polygon[1]
+                minx = polygon[0][0]
+                maxx = polygon[0][0]
+                miny = polygon[0][1]
+                maxy = polygon[0][1]
+        else:
+            minx = polygon[0][0]
+            maxx = polygon[0][0]
+            miny = polygon[0][1]
+            maxy = polygon[0][1]
+
     line = LineString(line)
-    minx, miny, maxx, maxy = polygon.bounds
     bounding_box = box(minx, miny, maxx, maxy)
-    a, b = line.boundary
+    a, b = line.boundary.geoms
     if a.x == b.x:  # vertical line
         extended_line = LineString([(a.x, miny), (a.x, maxy)])
     elif a.y == b.y:  # horizonthal line
@@ -111,9 +134,10 @@ def _construct_extended_line(polygon: "Polygon", line: "Float22"):
     return extended_line
 
 
-def intersection_between_line_and_trajectory(line, trajectory):
+def intersection_between_line_and_trajectory(line, trajectory: "List[Float3]"):
     """Find the intersection between a line and a trajectory."""
     # trajectory_to_polygon = Polygon(trajectory)
+    # TODO: should use a different function than _construct_extended_line
     extended_line = _construct_extended_line(trajectory, line)
     if len(trajectory) == 1:
         intersection = extended_line.intersection(Point(trajectory[0]))
@@ -203,7 +227,8 @@ def detection_to_img_segment(
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
         p_cam_segment = Polygon(cam_segment)
-        if p_cam_segment.contains(point) and road_segment_info.segment_type in ['lane', 'laneSection']:
+        if (p_cam_segment.contains(point)
+                and road_segment_info.segment_type in ['lane', 'lanesection', 'intersection']):
             area = p_cam_segment.area
             if area > maximum_mapping_area:
                 maximum_mapping = mapping
@@ -244,11 +269,11 @@ def location_calibration(
        the car lies in.
     """
     segment_polygon = road_segment_info.segment_polygon
-    assert road_segment_polygon is not None
+    assert segment_polygon is not None
     segment_line = road_segment_info.segment_line
     if segment_line is None:
         return car_loc3d
-    projection = project_point_to_line(Point(car_loc3d[:2]), segment_line).coords
+    projection = project_point_onto_linestring(Point(car_loc3d[:2]), segment_line).coords
     return projection[0], projection[1], car_loc3d[2]
 
 
@@ -317,7 +342,7 @@ def ego_departure(ego_trajectory: "List[trajectory_3d]", current_time: "datetime
     return False, ego_trajectory[-1].timestamp, ego_trajectory[-1].coordinates
 
 
-def time_to_exit_current_segment(current_segment_info,
+def time_to_exit_current_segment(detection_info,
                                  current_time, car_loc, car_trajectory=None):
     """Return the time that the car exit the current segment
 
@@ -325,14 +350,17 @@ def time_to_exit_current_segment(current_segment_info,
     car heading is the same as road heading
     car drives at max speed if no trajectory is given
     """
+    current_segment_info = detection_info.road_segment_info
     segmentpolygon = current_segment_info.segment_polygon
+    if detection_info.segment_heading is None:
+        return time_elapse(current_time, -1), None
+    segmentheading = detection_info.segment_heading + 90
     if car_trajectory:
         for point in car_trajectory:
             if (point.timestamp > current_time
                and not Polygon(segmentpolygon).contains(Point(point.coordinates))):
                 return point.timestamp, point.coordinates
         return time_elapse(current_time, -1), None
-    segmentheading = current_segment_info.segment_heading + 90
     car_loc = Point(car_loc)
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
                   car_loc.y + math.sin(math.radians(segmentheading)))
@@ -356,7 +384,7 @@ def time_to_exit_current_segment(current_segment_info,
             logger.info(f'relative_direction_2 {distance2} {current_time}')
             return time_elapse(current_time, distance2 / max_car_speed(current_segment_info.segment_type)), intersection[1]
         else:
-            logger.info(f"wrong car moving direction")
+            logger.info("wrong car moving direction")
             return time_elapse(current_time, -1), None
     return time_elapse(current_time, -1), None
 
@@ -367,8 +395,8 @@ def meetup(car1_loc,
            car2_heading,
            road_type,
            current_time,
-           car1_trajectory=None,
-           car2_trajectory=None,
+           car1_trajectory: "List[trajectory_3d] | None" = None,
+           car2_trajectory: "List[trajectory_3d] | None" = None,
            car1_speed=None,
            car2_speed=None):
     """estimate the meetup point as the middle point between car1's loc and car2's loc

@@ -19,7 +19,7 @@ import datetime
 import os
 import sys
 from dataclasses import dataclass, field
-from typing import Any, List, Literal, NamedTuple
+from typing import Any, List, Literal, NamedTuple, Tuple
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -42,7 +42,7 @@ class obj_detection(NamedTuple):
     id: str
     car_loc3d: "Float3"
     car_loc2d: "Float2"
-    car_bbox3d: Any
+    car_bbox3d: "Tuple[Float3, Float3]"
     car_bbox2d: "Float22"
 
 
@@ -53,7 +53,7 @@ class DetectionInfo:
     road_segment_info: "RoadSegmentInfo"
     car_loc3d: "Float3"
     car_loc2d: "Float2"
-    car_bbox3d: Any
+    car_bbox3d: "Tuple[Float3, Float3]"
     car_bbox2d: "Float22"
     ego_trajectory: "List[trajectory_3d]"
     ego_config: "CameraConfig"

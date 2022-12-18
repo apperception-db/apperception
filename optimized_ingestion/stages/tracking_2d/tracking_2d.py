@@ -3,12 +3,11 @@ import numpy as np
 import numpy.typing as npt
 import os
 import torch
-from bitarray import bitarray
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -33,22 +32,37 @@ if TYPE_CHECKING:
     from ...payload import Payload
 
 
-class Tracking2D(Stage):
-    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
+@dataclass
+class Tracking2DResult:
+    frame_idx: int
+    detection_id: str
+    object_id: int
+    bbox_left: float
+    bbox_top: float
+    bbox_w: float
+    bbox_h: float
+    object_type: str
+    confidence: float
+    next: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
+    prev: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
+
+
+Metadatum = Dict[float, Tracking2DResult]
+
+
+class Tracking2D(Stage[Metadatum]):
+    def _run(self, payload: "Payload"):
         # if os.path.exists("./_Tracking2D.pickle"):
         #     with open("./_Tracking2D.pickle", "rb") as f:
         #         return None, {self.classname(): pickle.load(f)}
 
         results = track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
-        metadata: "List[Dict[float, Tracking2DResult] | None]" = []
+        metadata: "List[Metadatum]" = []
         trajectories: "Dict[float, List[Tracking2DResult]]" = {}
 
         for k in payload.keep:
-            if k:
-                metadata.append({})
-            else:
-                metadata.append(None)
+            metadata.append({})
 
         for row in results:
             idx = row.frame_idx
@@ -70,20 +84,6 @@ class Tracking2D(Stage):
         #     pickle.dump(metadata, f)
 
         return None, {self.classname(): metadata}
-
-
-@dataclass
-class Tracking2DResult:
-    frame_idx: int
-    object_id: int
-    bbox_left: float
-    bbox_top: float
-    bbox_w: float
-    bbox_h: float
-    object_type: str
-    confidence: float
-    next: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
-    prev: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
 
 
 FILE = Path(__file__).resolve()
@@ -186,7 +186,7 @@ def track(
 
             # draw boxes for visualization
             if len(output_) > 0:
-                for output, conf in zip(output_, confs):
+                for i, (output, conf) in enumerate(zip(output_, confs)):
 
                     id = output[4]
                     cls = output[5]
@@ -200,6 +200,7 @@ def track(
                     labels.append(
                         Tracking2DResult(
                             frame_idx,
+                            f"{frame_idx}-{i}",
                             int(id),
                             bbox_left,
                             bbox_top,

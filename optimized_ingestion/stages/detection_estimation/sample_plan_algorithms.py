@@ -1,7 +1,7 @@
 import datetime
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Literal
+from typing import TYPE_CHECKING, List, Literal, Union
 
 from .utils import (OPPOSITE_DIRECTION, SAME_DIRECTION, Float2, Float3,
                     ego_departure, meetup, time_to_exit_current_segment,
@@ -72,12 +72,15 @@ def ego_stop(ego_trajectory: "List[trajectory_3d]", ego_config: "CameraConfig"):
     return _ego_stop, action
 
 
-def ego_exit_current_segment(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "CameraConfig"):
-    current_segment_info = detection_info.ego_road_segment_info
+def ego_exit_current_segment(
+    detection_info: "DetectionInfo",
+    ego_trajectory: "List[trajectory_3d]",
+    ego_config: "CameraConfig"
+):
     current_time = detection_info.timestamp
     ego_loc = ego_config.ego_translation[:2]
     exit_time, exit_point = time_to_exit_current_segment(
-        current_segment_info, current_time, ego_loc, ego_trajectory)
+        detection_info, current_time, ego_loc, ego_trajectory)
     exit_action = Action(current_time, exit_time, ego_loc, exit_point,
                          action_type=EGO_EXIT_SEGMENT)
     return exit_action
@@ -87,21 +90,26 @@ def car_exit_current_segment(detection_info: "DetectionInfo"):
     """
         Assumption: detected car drives at max speed
     """
-    current_segment_info = detection_info.road_segment_info
     current_time = detection_info.timestamp
     car_loc = detection_info.car_loc3d
-    exit_time, exit_point = time_to_exit_current_segment(current_segment_info, current_time, car_loc)
+    exit_time, exit_point = time_to_exit_current_segment(detection_info, current_time, car_loc)
     exit_action = Action(current_time, exit_time, start_loc=car_loc,
                          end_loc=exit_point, action_type=CAR_EXIT_SEGMENT,
                          target_obj_id=detection_info.obj_id)
     return exit_action
 
 
-def car_meet_up_with_ego(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "CameraConfig"):
+def car_meet_up_with_ego(
+    detection_info: "DetectionInfo",
+    ego_trajectory: "List[trajectory_3d]",
+    ego_config: "CameraConfig"
+):
     current_time = detection_info.timestamp
     car2_loc = detection_info.car_loc3d
     car1_heading = ego_config.ego_heading
-    car2_heading = detection_info.road_segment_info.segment_heading
+    car2_heading = detection_info.segment_heading
+    if car2_heading is None:
+        return None
     road_type = detection_info.road_type
     car1_trajectory = ego_trajectory
     ego_loc = tuple(ego_config.ego_translation)
@@ -115,12 +123,19 @@ def car_meet_up_with_ego(detection_info: "DetectionInfo", ego_trajectory: "traje
     return meet_up_action
 
 
-def car_exit_view(detection_info: "DetectionInfo", ego_trajectory: "trajectory_3d", ego_config: "CameraConfig", view_distance: float):
+def car_exit_view(
+    detection_info: "DetectionInfo",
+    ego_trajectory: "List[trajectory_3d]",
+    ego_config: "CameraConfig",
+    view_distance: float
+):
     current_time = detection_info.timestamp
     road_type = detection_info.road_type
     ego_loc = ego_config.ego_translation
     car_loc = detection_info.car_loc3d
-    car_heading = detection_info.road_segment_info.segment_heading
+    car_heading = detection_info.segment_heading
+    if car_heading is None:
+        return None
     exit_view_point, exit_view_time = time_to_exit_view(
         ego_loc, car_loc, car_heading, ego_trajectory, current_time, road_type, view_distance)
     exit_view_action = Action(current_time, exit_view_time, start_loc=car_loc,
@@ -170,12 +185,13 @@ def opposite_direction_sample_action(detection_info: "DetectionInfo", view_dista
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
     # logger.info(f'meet_ego_action {meet_ego_action}')
     # return car_exit_segment_action
-    return combine_sample_actions([ego_exit_segment_action,
-                                   car_exit_segment_action,
-                                   meet_ego_action])
+    actions = [ego_exit_segment_action, car_exit_segment_action]
+    if meet_ego_action is not None:
+        actions.append(meet_ego_action)
+    return combine_sample_actions(actions)
 
 
-def get_sample_action_alg(relative_direction: "Literal['same_direction', 'opposite_direction']"):
+def get_sample_action_alg(relative_direction: "Union[None, Literal['same_direction', 'opposite_direction']]"):
     if relative_direction == SAME_DIRECTION:
         return same_direction_sample_action
     elif relative_direction == OPPOSITE_DIRECTION:
