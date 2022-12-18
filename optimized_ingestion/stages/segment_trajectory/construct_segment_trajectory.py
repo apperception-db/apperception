@@ -163,12 +163,12 @@ def construct_new_road_segment_info(
 
 
 def calibrate(
-    trajectory_3d: "List[trajectory_3d]",
-    detection_infos: "List[DetectionInfo]") -> "List[SegmentTrajectoryPoint]":
+        trajectory_3d: "List[trajectory_3d]",
+        detection_infos: "List[DetectionInfo]") -> "List[SegmentTrajectoryPoint]":
     """Calibrate the trajectory to the road segments.
-    
+
     Given a trajectory and the corresponding detection infos, map the trajectory
-    to the correct road segments. 
+    to the correct road segments.
     The returned value is a list of SegmentTrajectoryPoint.
     """
     road_segment_trajectory = []
