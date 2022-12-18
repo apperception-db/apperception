@@ -132,9 +132,9 @@ def get_test_detection_infos(test_trajectory, test_segments):
 
 
 def construct_new_road_segment_info(
-    result: "List[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
+        result: "List[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
     """Construct new road segment info based on query result.
-    
+
     This Function constructs the new the road segment info
     based on the query result that finds the correct road segment that contains
     the calibrated trajectory point.
