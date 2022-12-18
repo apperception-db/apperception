@@ -131,14 +131,13 @@ def get_test_detection_infos(test_trajectory, test_segments):
     return detection_infos
 
 
-def update_current_road_segment_info(
-    current_detection_info: "DetectionInfo",
+def construct_new_road_segment_info(
     result: "List[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
-    """Update detection info based on query result.
+    """Construct new road segment info based on query result.
     
-    This Function updates the detection info for the current trajectory point
+    This Function constructs the new the road segment info
     based on the query result that finds the correct road segment that contains
-    the calibrated version of the current trajectory point.
+    the calibrated trajectory point.
     """
     kept_segment = (None, None)
     road_segment_info = None
@@ -219,15 +218,14 @@ def calibrate(
                 point_heading=psycopg2.sql.Literal(prev_segment_heading - 90)
             )
         result = database.execute(query)
-        current_road_segment_info = update_current_road_segment_info(
-            detection_info, result)
-        current_segment_line, current_heading = get_segment_line(current_road_segment_info, current_point3d)
+        new_road_segment_info = construct_new_road_segment_info(result)
+        new_segment_line, new_heading = get_segment_line(current_road_segment_info, current_point3d)
         road_segment_trajectory.append(
             segment_trajectory_point(current_point3d,
                                      timestamp,
-                                     current_segment_line,
-                                     current_road_segment_heading,
-                                     current_road_segment_info))
+                                     new_segment_line,
+                                     new_heading,
+                                     new_road_segment_info))
     return road_segment_trajectory
 
 
