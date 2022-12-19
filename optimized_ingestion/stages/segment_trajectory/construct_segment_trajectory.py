@@ -5,12 +5,13 @@ import math
 import postgis
 import psycopg2
 from collections import namedtuple
+from plpygis import Geometry
+from shapely.geometry import Point
+
 from ..detection_estimation.detection_estimation import DetectionInfo
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
 from ..detection_estimation.utils import (get_segment_line,
-                                        project_point_onto_linestring)
-from plpygis import Geometry
-from shapely.geometry import Point
+                                          project_point_onto_linestring)
 
 test_segment_query = """
 SELECT
