@@ -9,10 +9,11 @@ from plpygis import Geometry
 from shapely.geometry import Point
 from typing import NamedTuple, Tuple
 
-from ..detection_estimation.detection_estimation import DetectionInfo, trajectory_3d
+from ..detection_estimation.detection_estimation import (DetectionInfo,
+                                                         trajectory_3d)
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
 from ..detection_estimation.utils import (get_segment_line,
-                                          project_point_onto_linestring, Float3)
+                                          project_point_onto_linestring)
 
 test_segment_query = """
 SELECT
@@ -201,10 +202,10 @@ def calibrate(
                     or math.cos(math.radians(relative_heading)) > 0):
                 road_segment_trajectory.append(
                     SegmentTrajectoryPoint(current_point3d,
-                                             timestamp,
-                                             current_segment_line,
-                                             current_road_segment_heading,
-                                             current_road_segment_info))
+                                           timestamp,
+                                           current_segment_line,
+                                           current_road_segment_heading,
+                                           current_road_segment_info))
                 continue
 
         ### project current_point to the segment line of the previous point
@@ -230,10 +231,10 @@ def calibrate(
         new_segment_line, new_heading = get_segment_line(current_road_segment_info, current_point3d)
         road_segment_trajectory.append(
             SegmentTrajectoryPoint(current_point3d,
-                                     timestamp,
-                                     new_segment_line,
-                                     new_heading,
-                                     new_road_segment_info))
+                                   timestamp,
+                                   new_segment_line,
+                                   new_heading,
+                                   new_road_segment_info))
     return road_segment_trajectory
 
 
