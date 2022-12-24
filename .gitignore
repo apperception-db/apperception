@@ -28,3 +28,5 @@ models
 weights
 
 outputs
+
+yolov5s.pt
