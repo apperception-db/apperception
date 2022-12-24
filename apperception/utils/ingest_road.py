@@ -473,12 +473,12 @@ def create_roadsection_table(database: "Database", roadSections, drop=True):
         if len(roadsec["forwardLanes"]) == 0:
             fl = "[]::text[]"
         else:
-            fl = [*map(_remove_suffix, roadsec["forwardLanes"])]
+            fl = str([*map(_remove_suffix, roadsec["forwardLanes"])])
 
         if len(roadsec["backwardLanes"]) == 0:
             bl = "[]::text[]"
         else:
-            bl = [*map(_remove_suffix, roadsec["backwardLanes"])]
+            bl = str([*map(_remove_suffix, roadsec["backwardLanes"])])
 
         values.append(
             f"""(
