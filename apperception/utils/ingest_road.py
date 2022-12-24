@@ -139,7 +139,10 @@ CREATE TABLE IF NOT EXISTS Intersection(
 """
 
 
-def _remove_suffix(uid: str) -> str:
+def _remove_suffix(uid: str) -> "str | None":
+    if uid is None:
+        return None
+
     split = uid.split("_")
     assert len(split) == 2, f"cannot remove suffix: {uid}"
     return split[0]
