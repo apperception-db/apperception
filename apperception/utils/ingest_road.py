@@ -1,6 +1,5 @@
 import json
 import os
-import psycopg2.sql as sql
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -141,8 +140,8 @@ CREATE TABLE IF NOT EXISTS Intersection(
 
 
 def _remove_suffix(uid: str) -> str:
-    split = uid.split('_')
-    assert len(split) == 2, f'cannot remove suffix: {uid}'
+    split = uid.split("_")
+    assert len(split) == 2, f"cannot remove suffix: {uid}"
     return split[0]
 
 
@@ -157,8 +156,8 @@ def create_polygon_table(database: "Database", polygons, drop=True):
 
     values = []
     for poly in polygons:
-        i = poly['id']
-        if len(i.split('_')) != 1:
+        i = poly["id"]
+        if len(i.split("_")) != 1:
             continue
         values.append(
             f"""(
@@ -186,8 +185,8 @@ def create_segment_table(database: "Database", segments, drop=True):
 
     values = []
     for seg in segments:
-        i = seg['polygonId']
-        if len(i.split('_')) != 1:
+        i = seg["polygonId"]
+        if len(i.split("_")) != 1:
             continue
         values.append(
             f"""(
@@ -471,12 +470,12 @@ def create_roadsection_table(database: "Database", roadSections, drop=True):
         if len(roadsec["forwardLanes"]) == 0:
             fl = "[]::text[]"
         else:
-            fl = [*map(_remove_suffix, roadsec['forwardLanes'])]
+            fl = [*map(_remove_suffix, roadsec["forwardLanes"])]
 
         if len(roadsec["backwardLanes"]) == 0:
             bl = "[]::text[]"
         else:
-            bl = [*map(_remove_suffix, roadsec['backwardLanes'])]
+            bl = [*map(_remove_suffix, roadsec["backwardLanes"])]
 
         values.append(
             f"""(
