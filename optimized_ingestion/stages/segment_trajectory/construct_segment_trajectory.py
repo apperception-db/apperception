@@ -95,6 +95,7 @@ AND cos(radians(
 #     "SegmentTrajectoryPoint", ['car_loc3d', 'timestamp', 'segment_line',
 #                                  'segment_heading', 'road_segment_info'])
 class SegmentTrajectoryPoint(NamedTuple):
+    obj_id: "str"
     car_loc3d: "Foat3"
     timestamp: "datetime.datetime"
     segment_line: "Any"
@@ -272,7 +273,8 @@ def calibrate(
             if (current_road_segment_heading is None
                     or math.cos(math.radians(relative_heading)) > 0):
                 road_segment_trajectory.append(
-                    SegmentTrajectoryPoint(current_point3d,
+                    SegmentTrajectoryPoint(detection_info.obj_id,
+                                           current_point3d,
                                            timestamp,
                                            current_segment_line,
                                            current_road_segment_heading,
@@ -312,7 +314,8 @@ def calibrate(
         new_road_segment_info = construct_new_road_segment_info(result)
         new_segment_line, new_heading = get_segment_line(current_road_segment_info, current_point3d)
         road_segment_trajectory.append(
-            SegmentTrajectoryPoint(current_point3d,
+            SegmentTrajectoryPoint(detection_info.obj_id,
+                                   current_point3d,
                                    timestamp,
                                    new_segment_line,
                                    new_heading,
