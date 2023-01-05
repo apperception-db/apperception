@@ -1,10 +1,8 @@
 from ...cache import cache
 from ..detection_2d.detection_2d import Detection2D
 from ..stage import Stage
-
 from .construct_segment_trajectory import calibrate
 from .utils import trajectory_3d
-
 
 SegmentTrajectoryMetadatum = List[SegmentTrajectoryPoint]
 
