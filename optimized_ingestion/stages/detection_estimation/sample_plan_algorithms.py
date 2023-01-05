@@ -95,7 +95,7 @@ def car_exit_current_segment(detection_info: "DetectionInfo"):
     exit_time, exit_point = time_to_exit_current_segment(detection_info, current_time, car_loc)
     exit_action = Action(current_time, exit_time, start_loc=car_loc,
                          end_loc=exit_point, action_type=CAR_EXIT_SEGMENT,
-                         target_obj_id=detection_info.obj_id)
+                         target_obj_id=detection_info.detection_id)
     return exit_action
 
 
@@ -119,7 +119,7 @@ def car_meet_up_with_ego(
         return None
     meet_up_action = Action(current_time, meet_up_time, start_loc=car2_loc,
                             end_loc=meetup_point, action_type=MEET_UP,
-                            target_obj_id=detection_info.obj_id)
+                            target_obj_id=detection_info.detection_id)
     return meet_up_action
 
 
@@ -140,7 +140,7 @@ def car_exit_view(
         ego_loc, car_loc, car_heading, ego_trajectory, current_time, road_type, view_distance)
     exit_view_action = Action(current_time, exit_view_time, start_loc=car_loc,
                               end_loc=exit_view_point, action_type=EXIT_VIEW,
-                              target_obj_id=detection_info.obj_id)
+                              target_obj_id=detection_info.detection_id)
     return exit_view_action
 
 

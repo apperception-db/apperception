@@ -24,7 +24,7 @@ class Tracking3DResult:
     next: "Tracking3DResult | None" = None
 
 
-Metadatum = Dict[float, Tracking3DResult]
+Metadatum = Dict[int, Tracking3DResult]
 
 
 class Tracking3D(Stage[Metadatum]):

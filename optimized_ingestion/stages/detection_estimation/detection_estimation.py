@@ -38,7 +38,7 @@ from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
 
 
 class obj_detection(NamedTuple):
-    id: str
+    detection_id: str
     car_loc3d: "Float3"
     car_loc2d: "Float2"
     car_bbox3d: "Tuple[Float3, Float3]"
@@ -47,7 +47,7 @@ class obj_detection(NamedTuple):
 
 @dataclass
 class DetectionInfo:
-    obj_id: str
+    detection_id: str
     frame_segment: "List[npt.NDArray[np.floating]]"
     road_segment_info: "RoadSegmentInfo"
     car_loc3d: "Float3"
@@ -204,13 +204,13 @@ def construct_all_detection_info(
     _, ego_road_segment_info = ego_mapping
 
     for detection in all_detections:
-        obj_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
+        detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
         related_mapping = detection_to_img_segment(car_loc2d, cam_segment_mapping)
         if related_mapping is None:
             continue
         cam_segment, road_segment_info = related_mapping
 
-        detection_info = DetectionInfo(obj_id,
+        detection_info = DetectionInfo(detection_id,
                                        cam_segment,
                                        road_segment_info,
                                        car_loc3d,

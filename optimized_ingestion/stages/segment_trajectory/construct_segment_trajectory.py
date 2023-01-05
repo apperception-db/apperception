@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from apperception.database import database
 
 import datetime
@@ -8,13 +9,17 @@ import psycopg2.sql
 from plpygis import Geometry
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from typing import NamedTuple, Tuple
+from typing import Any, NamedTuple, Tuple
 
 from ..detection_estimation.detection_estimation import (DetectionInfo,
                                                          trajectory_3d)
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
 from ..detection_estimation.utils import (get_segment_line,
                                           project_point_onto_linestring)
+
+
+Float3 = Tuple[float, float, float]
+
 
 test_segment_query = """
 SELECT
@@ -87,16 +92,17 @@ AND cos(radians(
 """
 
 
-# SegmentTrajectoryPoint = namedtuple(
-#     "SegmentTrajectoryPoint", ['car_loc3d', 'timestamp', 'segment_line',
-#                                  'segment_heading', 'road_segment_info'])
-class SegmentTrajectoryPoint(NamedTuple):
-    obj_id: "str"
-    car_loc3d: "Foat3"
+@dataclass
+class SegmentTrajectoryPoint:
+    detection_id: "str"
+    car_loc3d: "Float3"
     timestamp: "datetime.datetime"
     segment_line: "Any"
     segment_heading: "Any"
     road_segment_info: "Any"
+    obj_id: "int | None" = None
+    next: "SegmentTrajectoryPoint | None" = None
+    prev: "SegmentTrajectoryPoint | None" = None
 
 
 def get_test_trajectory(test_trajectory_points):
@@ -129,7 +135,7 @@ def get_test_detection_infos(test_trajectory, test_segments):
             road_segment_info = RoadSegmentInfo(
                 segmentid, segmentpolygon, [segmentline], segmenttype,
                 [segmentheading], None, False, None)
-        detection_info = DetectionInfo(obj_id=segmentid,
+        detection_info = DetectionInfo(detection_id=segmentid,
                                        frame_segment=None,
                                        road_segment_info=road_segment_info,
                                        car_loc3d=point,
@@ -240,19 +246,22 @@ def complete_segment_trajectory(road_segment_trajectory: List[segment_trajectory
 
 
 def calibrate(
-        trajectory_3d: "list[trajectory_3d]",
-        detection_infos: "list[DetectionInfo]") -> "list[SegmentTrajectoryPoint]":
+    trajectory_3d: "list[trajectory_3d]",
+    detection_infos: "list[DetectionInfo]",
+    frame_indices: "list[int]",
+) -> "list[SegmentTrajectoryPoint]":
     """Calibrate the trajectory to the road segments.
 
     Given a trajectory and the corresponding detection infos, map the trajectory
     to the correct road segments.
     The returned value is a list of SegmentTrajectoryPoint.
     """
-    road_segment_trajectory = []
+    road_segment_trajectory: "list[SegmentTrajectoryPoint]" = []
     for i in range(len(trajectory_3d)):
         current_point3d, timestamp = trajectory_3d[i]
         current_point = current_point3d[:2]
         detection_info = detection_infos[i]
+        frame_idx = frame_indices[i]
         current_road_segment_heading = detection_info.segment_heading
         current_segment_line = detection_info.segment_line
         current_road_segment_info = detection_info.road_segment_info
@@ -269,12 +278,15 @@ def calibrate(
             if (current_road_segment_heading is None
                     or math.cos(math.radians(relative_heading)) > 0):
                 road_segment_trajectory.append(
-                    SegmentTrajectoryPoint(detection_info.obj_id,
-                                           current_point3d,
-                                           timestamp,
-                                           current_segment_line,
-                                           current_road_segment_heading,
-                                           current_road_segment_info))
+                    SegmentTrajectoryPoint(
+                        detection_info.detection_id,
+                        current_point3d,
+                        timestamp,
+                        current_segment_line,
+                        current_road_segment_heading,
+                        current_road_segment_info,
+                        frame_idx,
+                    ))
                 continue
 
         ### project current_point to the segment line of the previous point
@@ -310,12 +322,15 @@ def calibrate(
         new_road_segment_info = construct_new_road_segment_info(result)
         new_segment_line, new_heading = get_segment_line(current_road_segment_info, current_point3d)
         road_segment_trajectory.append(
-            SegmentTrajectoryPoint(detection_info.obj_id,
-                                   current_point3d,
-                                   timestamp,
-                                   new_segment_line,
-                                   new_heading,
-                                   new_road_segment_info))
+            SegmentTrajectoryPoint(
+                detection_info.detection_id,
+                current_point3d,
+                timestamp,
+                new_segment_line,
+                new_heading,
+                new_road_segment_info,
+                frame_idx,
+            ))
     complete_segment_trajectory(road_segment_trajectory)
     return road_segment_trajectory
 

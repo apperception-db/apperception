@@ -83,10 +83,11 @@ def construct_estimated_all_detection_info(
     detections: "torch.Tensor",
     cam_segment_mapping: "List[CameraSegmentMapping]",
     ego_config: "CameraConfig",
-    ego_trajectory: "List[trajectory_3d]"
+    ego_trajectory: "List[trajectory_3d]",
+    frame_idx: int,
 ) -> "List[DetectionInfo]":
     all_detections = []
-    for det in detections:
+    for i, det in enumerate(detections):
         bbox = det[:4]
         # conf = det[4]
         # obj_cls = det[5]
@@ -107,7 +108,7 @@ def construct_estimated_all_detection_info(
         if estimate_3d:
             car_loc3d = tuple(Polygon(estimate_3d.road_segment_info.segment_polygon).centroid.coords)
             # logger.info(tuple(car_loc3d))
-            all_detections.append(obj_detection('car_1', car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
+            all_detections.append(obj_detection(f'{frame_idx}-{i}', car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
     # logger.info("all_detections", all_detections)
     all_detection_info = construct_all_detection_info(cam_segment_mapping, ego_config, ego_trajectory, all_detections)
     return all_detection_info
@@ -139,7 +140,7 @@ def dry_run(
         start_detection_time = time.time()
         assert dets is not None
         det, _ = dets[i]
-        all_detection_info = construct_estimated_all_detection_info(det, cam_segment_mapping, current_ego_config, ego_trajectory)
+        all_detection_info = construct_estimated_all_detection_info(det, cam_segment_mapping, current_ego_config, ego_trajectory, i)
         total_detection_time += time.time() - start_detection_time
         start_generate_sample_plan = time.time()
         next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_segment_mapping, next_frame_num, all_detection_info=all_detection_info)

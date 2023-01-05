@@ -47,7 +47,7 @@ class Tracking2DResult:
     prev: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
 
 
-Metadatum = Dict[float, Tracking2DResult]
+Metadatum = Dict[int, Tracking2DResult]
 
 
 class Tracking2D(Stage[Metadatum]):
@@ -59,7 +59,7 @@ class Tracking2D(Stage[Metadatum]):
         results = track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
         metadata: "List[Metadatum]" = []
-        trajectories: "Dict[float, List[Tracking2DResult]]" = {}
+        trajectories: "Dict[int, List[Tracking2DResult]]" = {}
 
         for k in payload.keep:
             metadata.append({})
