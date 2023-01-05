@@ -9,6 +9,7 @@ from .stages.filter_car_facing_sideway import FilterCarFacingSideway
 from .stages.tracking_2d.tracking_2d import Tracking2D
 from .stages.tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
 from .utils.iterate_video import iterate_video
+from .video_skipped import VideoSkipped
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -166,8 +167,11 @@ def _merge(meta1, meta2):
 
 def _default_keep(video: "Video", keep: "Optional[bitarray]" = None):
     if keep is None:
-        keep = bitarray(len(video))
-        keep.setall(1)
+        if isinstance(video, VideoSkipped):
+            keep = bitarray([c is not None for c in video.interpolated_frames])
+        else:
+            keep = bitarray(len(video))
+            keep.setall(1)
     elif len(keep) != len(video):
         raise Exception()
     return keep
