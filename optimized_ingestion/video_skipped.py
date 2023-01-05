@@ -3,8 +3,8 @@ import collections.abc
 import cv2
 from datetime import datetime, timedelta
 
-from .video import Video
 from .camera_config import CameraConfig, interpolate
+from .video import Video
 
 
 class VideoSkipped(Video):
@@ -49,7 +49,7 @@ class VideoSkipped(Video):
                         assert prev_idx is not None
                         if next_idx is None:
                             next_idx = _find_next_config(self._camera_configs, i)
-                        
+
                         prev_frame = self._camera_configs[prev_idx]
                         next_frame = self._camera_configs[next_idx]
 

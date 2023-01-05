@@ -557,7 +557,7 @@ def create_intersection_table(database: "Database", intersections, drop=True):
     )
 
 
-ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", 'lanegroup'}
+ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"}
 
 
 def add_segment_type(database: "Database"):
