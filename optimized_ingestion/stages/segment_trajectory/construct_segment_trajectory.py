@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from apperception.database import database
 
 import datetime
@@ -6,17 +5,17 @@ import math
 import postgis
 import psycopg2
 import psycopg2.sql
+from dataclasses import dataclass
 from plpygis import Geometry
 from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
-from typing import Any, NamedTuple, Tuple
+from typing import Any, Tuple
 
 from ..detection_estimation.detection_estimation import (DetectionInfo,
                                                          trajectory_3d)
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
 from ..detection_estimation.utils import (get_segment_line,
                                           project_point_onto_linestring)
-
 
 Float3 = Tuple[float, float, float]
 

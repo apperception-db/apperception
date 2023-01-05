@@ -1,17 +1,14 @@
 from typing import List, Tuple
 
-
-
 from ...cache import cache
+from ...payload import Payload
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_estimation import DetectionEstimation
 from ..detection_estimation.detection_estimation import DetectionInfo
 from ..detection_estimation.utils import trajectory_3d
-from ..tracking_2d.strongsort import StrongSORT
 from ..stage import Stage
-from ...payload import Payload
-from .construct_segment_trajectory import calibrate, SegmentTrajectoryPoint
-
+from ..tracking_2d.strongsort import StrongSORT
+from .construct_segment_trajectory import SegmentTrajectoryPoint, calibrate
 
 SegmentTrajectoryMetadatum = List[SegmentTrajectoryPoint]
 
