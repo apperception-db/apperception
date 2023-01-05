@@ -210,7 +210,7 @@ class Database:
             self.connection.rollback()
             raise error
 
-    def update(self, query: str, commit: bool = True) -> None:
+    def update(self, query: "str | psycopg2.sql.SQL", commit: bool = True) -> None:
         try:
             self.cursor.execute(query)
             self._commit(commit)

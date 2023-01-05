@@ -6,19 +6,15 @@ import postgis
 import psycopg2
 import psycopg2.sql
 from plpygis import Geometry
-from shapely.geometry import Point, LineString, Polygon
+from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 from typing import NamedTuple, Tuple
 
 from ..detection_estimation.detection_estimation import (DetectionInfo,
                                                          trajectory_3d)
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
-from ..detection_estimation.utils import (
-    project_point_onto_linestring,
-    get_segment_line,
-    project_point_onto_linestring
-)
-
+from ..detection_estimation.utils import (get_segment_line,
+                                          project_point_onto_linestring)
 
 test_segment_query = """
 SELECT
@@ -195,14 +191,14 @@ def find_middle_segment(current_segment, next_segment):
     intersection_center = LineString([p1, p2]).centroid.coords[0]
     assert not current_segment_polygon.contains(Point(intersection_center))
     contain_query = psycopg2.sql.SQL(segment_contain_vector_query).format(
-            point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
-            heading_filter=psycopg2.sql.SQL('AND True')
+        point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
+        heading_filter=psycopg2.sql.SQL('AND True')
     )
     result = database.execute(contain_query)
     if not result:
         closest_query = psycopg2.sql.SQL(segment_closest_query).format(
-                point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
-                heading_filter=psycopg2.sql.SQL('AND True')
+            point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
+            heading_filter=psycopg2.sql.SQL('AND True')
         )
         result = database.execute(closest_query)
     new_road_segment_info = update_current_road_segment_info(result)
@@ -220,9 +216,9 @@ def find_middle_segment(current_segment, next_segment):
 def binary_search_segment(current_segment, next_segment):
     current_segment_polygon = current_segment.road_segment_info.segment_polygon
     next_segment_polygon = next_segment.road_segment_info.segment_polygon
-    if (current_segment.road_segment_info.segment_id == 
-        next_segment.road_segment_info.segment_id
-        or not current_segment_polygon.disjoint(next_segment_polygon)):
+    if (current_segment.road_segment_info.segment_id
+        == next_segment.road_segment_info.segment_id
+            or not current_segment_polygon.disjoint(next_segment_polygon)):
         return [current_segment]
     else:
         middle_segment = find_middle_segment(current_segment, next_segment)
@@ -233,9 +229,9 @@ def binary_search_segment(current_segment, next_segment):
 
 def complete_segment_trajectory(road_segment_trajectory: List[segment_trajectory_point]):
     complete_segment_trajectory = []
-    for i in range(len(road_segment_trajectory)-1):
+    for i in range(len(road_segment_trajectory) - 1):
         current_segment = road_segment_trajectory[i]
-        next_segment = road_segment_trajectory[i+1]
+        next_segment = road_segment_trajectory[i + 1]
         complete_segment_trajectory.extend(binary_search_segment(current_segment, next_segment))
 
     complete_segment_trajectory.append(road_segment_trajectory[-1])
@@ -286,7 +282,7 @@ def calibrate(
         ### however this requires querying for road segment once for each point to be calibrated
         if len(road_segment_trajectory) == 0:
             heading_filter = psycopg2.sql.SQL(HEADING_FILTER).format(
-                point_heading=psycopg2.sql.Literal(current_point_heading-90))
+                point_heading=psycopg2.sql.Literal(current_point_heading - 90))
             query = psycopg2.sql.SQL(segment_closest_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point(current_point)),
                 heading_filter=heading_filter
@@ -298,7 +294,7 @@ def calibrate(
             projection = project_point_onto_linestring(Point(current_point), prev_segment_line)
             current_point3d = (projection.x, projection.y, 0.0)
             heading_filter = psycopg2.sql.SQL(HEADING_FILTER).format(
-                point_heading=psycopg2.sql.Literal(prev_segment_heading-90))
+                point_heading=psycopg2.sql.Literal(prev_segment_heading - 90))
             query = psycopg2.sql.SQL(segment_contain_vector_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point((projection.x, projection.y))),
                 heading_filter=heading_filter
