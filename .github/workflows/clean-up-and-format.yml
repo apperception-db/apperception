@@ -24,7 +24,7 @@ jobs:
           pip install --upgrade pip
           pip install nbconvert
           python -m jupyter nbconvert --clear-output --inplace benchmarks/**/*.ipynb benchmarks/*.ipynb
-          python -m jupyter nbconvert --clear-output --inplace nb-scripts/**/*.ipynb nb-scripts/*.ipynb
+          python -m jupyter nbconvert --clear-output --inplace scripts/**/*.ipynb scripts/*.ipynb
       
       - name: Commit clean up changes
         run: ./scripts/commit-and-push.sh "[CI] cleanup python notebooks"
