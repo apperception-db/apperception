@@ -1,19 +1,17 @@
 import itertools
 import multiprocessing
+import torch
+from bitarray import bitarray
+from tqdm import tqdm
 from typing import List, Tuple
 
-from bitarray import bitarray
-import torch
-from tqdm import tqdm
-
 from ...payload import Payload
+from ...utils.partition_by_cpus import partition_by_cpus
+from ...video import Video
 from ..detection_2d.yolo_detection import YoloDetection
 from . import construct_estimated_all_detection_info, generate_sample_plan_once
 from .segment_mapping import map_imgsegment_roadsegment
-
 from .utils import trajectory_3d
-from ...utils.partition_by_cpus import partition_by_cpus
-from ...video import Video
 
 
 def _estimation(

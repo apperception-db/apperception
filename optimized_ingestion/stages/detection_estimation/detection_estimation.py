@@ -21,13 +21,13 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, NamedTuple, Tuple
 
-
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
 import numpy as np
 import numpy.typing as npt
 
 from ...camera_config import CameraConfig
+from ...types import DetectionId
 from ...video import Video
 from .sample_plan_algorithms import Action, get_sample_action_alg
 from .segment_mapping import (CameraSegmentMapping, RoadSegmentInfo,
@@ -36,7 +36,6 @@ from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     detection_to_img_segment, get_ego_trajectory,
                     get_largest_segment, get_segment_line,
                     relative_direction_to_ego, trajectory_3d)
-from ...types import DetectionId
 
 
 class obj_detection(NamedTuple):

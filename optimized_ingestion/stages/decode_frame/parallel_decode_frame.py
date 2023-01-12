@@ -59,6 +59,6 @@ class ParallelDecodeFrame(DecodeFrame):
             assert len(metadata) == len(payload.video), (len(metadata), len(payload.video), [(s, e, len(o)) for o, s, e in sorted(out, key=lambda x: x[1])])
 
             return None, {self.classname(): metadata}
-        except:
+        except BaseException:
             _, output = DecodeFrame()._run(payload)
             return None, {self.classname(): DecodeFrame.get(output)}

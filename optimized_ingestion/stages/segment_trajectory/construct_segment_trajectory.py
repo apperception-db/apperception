@@ -11,14 +11,13 @@ from shapely.geometry import LineString, Point
 from shapely.ops import nearest_points
 from typing import Any, Tuple
 
+from ...payload import Payload
+from ...types import DetectionId, Float3
 from ..detection_estimation.detection_estimation import (DetectionInfo,
                                                          trajectory_3d)
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
 from ..detection_estimation.utils import (get_segment_line,
                                           project_point_onto_linestring)
-from ...payload import Payload
-from ...types import DetectionId, Float3
-
 
 test_segment_query = """
 SELECT
@@ -227,10 +226,10 @@ def find_middle_segment(current_segment: "SegmentTrajectoryPoint", next_segment:
     new_segment_line, new_heading = get_segment_line(new_road_segment_info, intersection_center)
     timestamp = current_time + (next_time - current_time) / 2
     middle_segment = SegmentTrajectoryPoint(intersection_center,
-                                              timestamp,
-                                              new_segment_line,
-                                              new_heading,
-                                              new_road_segment_info)
+                                            timestamp,
+                                            new_segment_line,
+                                            new_heading,
+                                            new_road_segment_info)
     return middle_segment
 
 

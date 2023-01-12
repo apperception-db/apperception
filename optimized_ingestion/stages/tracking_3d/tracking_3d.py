@@ -4,8 +4,8 @@ import numpy.typing as npt
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
-from ..stage import Stage
 from ...types import DetectionId
+from ..stage import Stage
 
 
 @dataclass

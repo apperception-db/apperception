@@ -8,10 +8,10 @@ from shapely.geometry import Polygon
 from tqdm import tqdm
 from typing import List, Tuple
 
-
 from ...cache import cache
 from ...camera_config import CameraConfig
 from ...payload import Payload
+from ...types import DetectionId
 from ...utils.partition_by_cpus import partition_by_cpus
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
@@ -24,7 +24,6 @@ from .detection_estimation import (DetectionInfo, construct_all_detection_info,
                                    samplePlan)
 from .segment_mapping import CameraSegmentMapping, map_imgsegment_roadsegment
 from .utils import trajectory_3d
-from ...types import DetectionId
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -154,7 +153,7 @@ def dry_run(
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
         metadata.append(all_detection_info)
 
-    # TODO: ignore the last frame -> 
+    # TODO: ignore the last frame ->
     metadata.append([])
     skipped_frame_num.append(len(payload.video) - 1)
 
