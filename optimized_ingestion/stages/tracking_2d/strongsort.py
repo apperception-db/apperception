@@ -9,6 +9,7 @@ from yolo_tracker.yolov5.utils.torch_utils import select_device
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
+from ...types import DetectionId
 
 if TYPE_CHECKING:
 
@@ -68,7 +69,7 @@ class StrongSORT(Tracking2D):
                         bbox_h = output[3] - output[1]
                         labels[obj_id] = Tracking2DResult(
                             idx,
-                            f"{idx}-{i}",
+                            DetectionId(idx, i),
                             obj_id,
                             bbox_left,
                             bbox_top,

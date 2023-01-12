@@ -16,8 +16,8 @@ class From2DAndRoad(Tracking3D):
             # payload = payload.filter(Tracking2D())
             raise Exception()
 
-        metadata: "List[Dict[float, Tracking3DResult]]" = []
-        trajectories: "Dict[float, List[Tracking3DResult]]" = {}
+        metadata: "list[dict[int, Tracking3DResult]]" = []
+        trajectories: "dict[int, list[Tracking3DResult]]" = {}
         video = payload.video
         trackings = Tracking2D.get(payload.metadata)
         assert trackings is not None

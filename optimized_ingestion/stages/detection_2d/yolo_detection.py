@@ -48,7 +48,10 @@ class YoloDetection(Detection2D):
         augment=False,  # augmented inference
     ):
         self.device = select_device("")
-        self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(self.device)
+        try:
+            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(self.device)
+        except:
+            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', force_reload=True).model.to(self.device)
         stride, self.pt = self.model.stride, self.model.pt
         self.imgsz = check_img_size((640, 640), s=stride)
         self.half = half

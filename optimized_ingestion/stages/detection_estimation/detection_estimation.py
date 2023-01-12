@@ -21,6 +21,7 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, NamedTuple, Tuple
 
+
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
 import numpy as np
@@ -35,10 +36,11 @@ from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     detection_to_img_segment, get_ego_trajectory,
                     get_largest_segment, get_segment_line,
                     relative_direction_to_ego, trajectory_3d)
+from ...types import DetectionId
 
 
 class obj_detection(NamedTuple):
-    detection_id: str
+    detection_id: DetectionId
     car_loc3d: "Float3"
     car_loc2d: "Float2"
     car_bbox3d: "Tuple[Float3, Float3]"
@@ -47,7 +49,7 @@ class obj_detection(NamedTuple):
 
 @dataclass
 class DetectionInfo:
-    detection_id: str
+    detection_id: DetectionId
     frame_segment: "List[npt.NDArray[np.floating]]"
     road_segment_info: "RoadSegmentInfo"
     car_loc3d: "Float3"

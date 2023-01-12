@@ -24,8 +24,8 @@ class Video(Iterable["CameraConfig"]):
 
     @property
     def interpolated_frames(self):
-        if hasattr(self, "_interpolated_frames"):
-            num_frames, fps = self.__get_fps_and_length()
+        if not hasattr(self, "_interpolated_frames"):
+            num_frames, fps = self._get_fps_and_length()
 
             if len(self._camera_configs) == 1:
                 self._start = self._camera_configs[0].timestamp
@@ -49,7 +49,7 @@ class Video(Iterable["CameraConfig"]):
 
     @property
     def fps(self):
-        return self.__get_fps_and_length()[1]
+        return self._get_fps_and_length()[1]
 
     def __getitem__(self, index):
         return self.interpolated_frames[index]
@@ -58,9 +58,9 @@ class Video(Iterable["CameraConfig"]):
         return iter(self.interpolated_frames)
 
     def __len__(self):
-        return self.__get_fps_and_length()[0]
+        return self._get_fps_and_length()[0]
 
-    def __get_fps_and_length(self):
+    def _get_fps_and_length(self):
         if self._length is None or self._fps is None:
             cap = cv2.VideoCapture(self.videofile)
             assert cap.isOpened(), self.videofile

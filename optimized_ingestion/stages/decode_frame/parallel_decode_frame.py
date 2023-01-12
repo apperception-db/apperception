@@ -32,29 +32,33 @@ def decode(args: "Tuple[str, int, int]"):
 class ParallelDecodeFrame(DecodeFrame):
     @cache
     def _run(self, payload: "Payload"):
-        metadata: "List[npt.NDArray]" = []
+        try:
+            metadata: "List[npt.NDArray]" = []
 
-        n_cpus = multiprocessing.cpu_count()
-        n_frames = len(payload.video)
-        assert n_frames == len(payload.keep), (n_frames, len(payload.keep))
+            n_cpus = multiprocessing.cpu_count()
+            n_frames = len(payload.video)
+            assert n_frames == len(payload.keep), (n_frames, len(payload.keep))
 
-        q, mod = divmod(n_frames, n_cpus)
-        frames_per_cpu = [q + (i < mod) for i in range(n_cpus)]
+            q, mod = divmod(n_frames, n_cpus)
+            frames_per_cpu = [q + (i < mod) for i in range(n_cpus)]
 
-        def _r(acc: "Tuple[int, List[Tuple[int, int]]]", frames: int):
-            start, arr = acc
-            end = start + frames
-            return (end, arr + [(start, end)])
+            def _r(acc: "Tuple[int, List[Tuple[int, int]]]", frames: int):
+                start, arr = acc
+                end = start + frames
+                return (end, arr + [(start, end)])
 
-        frame_slices = reduce(_r, frames_per_cpu, (0, []))[1]
+            frame_slices = reduce(_r, frames_per_cpu, (0, []))[1]
 
-        with Pool(n_cpus) as pool:
-            inputs = ((payload.video.videofile, start, end) for start, end in frame_slices)
-            out = [*tqdm(pool.imap_unordered(decode, inputs), total=n_cpus)]
-            for o, _, _ in sorted(out, key=lambda x: x[1]):
-                metadata.extend(o)
-        cv2.destroyAllWindows()
+            with Pool(n_cpus) as pool:
+                inputs = ((payload.video.videofile, start, end) for start, end in frame_slices)
+                out = [*tqdm(pool.imap_unordered(decode, inputs), total=n_cpus)]
+                for o, _, _ in sorted(out, key=lambda x: x[1]):
+                    metadata.extend(o)
+            cv2.destroyAllWindows()
 
-        assert len(metadata) == len(payload.video), (len(metadata), len(payload.video), [(s, e, len(o)) for o, s, e in sorted(out, key=lambda x: x[1])])
+            assert len(metadata) == len(payload.video), (len(metadata), len(payload.video), [(s, e, len(o)) for o, s, e in sorted(out, key=lambda x: x[1])])
 
-        return None, {self.classname(): metadata}
+            return None, {self.classname(): metadata}
+        except:
+            _, output = DecodeFrame()._run(payload)
+            return None, {self.classname(): DecodeFrame.get(output)}

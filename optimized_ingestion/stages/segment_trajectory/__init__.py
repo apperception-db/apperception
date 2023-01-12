@@ -9,12 +9,12 @@ from ..detection_estimation.utils import trajectory_3d
 from ..stage import Stage
 from ..tracking_2d.strongsort import StrongSORT
 from .construct_segment_trajectory import SegmentTrajectoryPoint, calibrate
+from ...types import DetectionId
 
 SegmentTrajectoryMetadatum = List[SegmentTrajectoryPoint]
 
 
 class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
-    @cache
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
@@ -27,7 +27,7 @@ class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
             detection_infos = [tt[1] for tt in t]
             frame_indices = [tt[2] for tt in t]
 
-            calibrated_trajectory = calibrate(trajectory_3d, detection_infos, frame_indices)
+            calibrated_trajectory = calibrate(trajectory_3d, detection_infos, frame_indices, payload)
             for t in calibrated_trajectory:
                 t.obj_id = oid
             calibrated_trajectories[oid] = calibrated_trajectory
@@ -43,7 +43,7 @@ def construct_trajectory(source: "Payload"):
     detection_infos = DetectionEstimation.get(source)
     assert detection_infos is not None
 
-    detection_info_map: "dict[str, DetectionInfo]" = {}
+    detection_info_map: "dict[DetectionId, DetectionInfo]" = {}
     for d in detection_infos:
         for dd in d:
             detection_id = dd.detection_id

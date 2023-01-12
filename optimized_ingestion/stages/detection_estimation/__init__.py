@@ -8,6 +8,7 @@ from shapely.geometry import Polygon
 from tqdm import tqdm
 from typing import List, Tuple
 
+
 from ...cache import cache
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -23,6 +24,7 @@ from .detection_estimation import (DetectionInfo, construct_all_detection_info,
                                    samplePlan)
 from .segment_mapping import CameraSegmentMapping, map_imgsegment_roadsegment
 from .utils import trajectory_3d
+from ...types import DetectionId
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -33,7 +35,6 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 
 
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
-    @cache
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
@@ -108,7 +109,7 @@ def construct_estimated_all_detection_info(
         if estimate_3d:
             car_loc3d = tuple(Polygon(estimate_3d.road_segment_info.segment_polygon).centroid.coords)
             # logger.info(tuple(car_loc3d))
-            all_detections.append(obj_detection(f'{frame_idx}-{i}', car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
+            all_detections.append(obj_detection(DetectionId(frame_idx, i), car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
     # logger.info("all_detections", all_detections)
     all_detection_info = construct_all_detection_info(cam_segment_mapping, ego_config, ego_trajectory, all_detections)
     return all_detection_info
@@ -152,6 +153,11 @@ def dry_run(
             action_type_counts[next_action_type] += 1
         next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
         metadata.append(all_detection_info)
+
+    # TODO: ignore the last frame -> 
+    metadata.append([])
+    skipped_frame_num.append(len(payload.video) - 1)
+
     #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
     # print(np.array(times).sum(axis=0))
     logger.info(f"sorted_ego_config_length {len(payload.video)}")
@@ -173,75 +179,3 @@ def dry_run(
         keep[f] = 0
 
     return keep, {DetectionEstimation.classname(): metadata}
-
-
-def _estimation(
-    args: "Tuple[Video, int, List[trajectory_3d], List[torch.Tensor], int, int]"
-) -> "list[int]":
-    video, start_frame_num, ego_trajectory, dets, start, end = args
-
-    if start_frame_num >= end:
-        return [start_frame_num for _ in range(start, end)]
-
-    out: "list[int]" = []
-    if start_frame_num > start:
-        out = [start_frame_num for _ in range(start, start_frame_num)]
-        start = start_frame_num
-
-    next_frame_num = start
-    for i in range(start, end):
-        current_ego_config = video[i]
-        next_frame_num = i + 1
-        cam_segment_mapping = map_imgsegment_roadsegment(current_ego_config)
-        det = dets[i]
-        all_detection_info = construct_estimated_all_detection_info(
-            det,
-            cam_segment_mapping,
-            current_ego_config,
-            ego_trajectory
-        )
-        next_sample_plan, _ = generate_sample_plan_once(
-            video,
-            current_ego_config,
-            cam_segment_mapping,
-            next_frame_num,
-            all_detection_info=all_detection_info
-        )
-        next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
-        out.append(next_frame_num)
-
-    return out
-
-
-def parallel_estimation(
-    payload: "Payload",
-    start_frame_num: "int",
-    ego_trajectory: "List[trajectory_3d]",
-) -> "Tuple[bitarray, None]":
-    n_cpus = multiprocessing.cpu_count()
-    frame_slices = partition_by_cpus(n_cpus, len(payload.video))
-
-    dets = YoloDetection.get(payload)
-    assert dets is not None
-
-    with multiprocessing.Pool(n_cpus) as pool:
-        inputs = [
-            (payload.video, start_frame_num, ego_trajectory, [d.cpu() for d, _ in dets[start:end]], start, end)
-            for start, end in frame_slices
-        ]
-        out = [*tqdm(pool.imap(_estimation, inputs), total=len(inputs))]
-
-    skipped_frame_num = []
-    next_frame_num: "int" = start_frame_num
-    for i, _next_frame_num in enumerate(itertools.chain(*out)):
-        if i < next_frame_num:
-            skipped_frame_num.append(i)
-            continue
-        next_frame_num = _next_frame_num
-
-    keep = bitarray(len(payload.video))
-    keep[:] = 1
-    for f in skipped_frame_num:
-        keep[f] = 0
-
-    return keep, None

@@ -25,6 +25,7 @@ from yolo_tracker.yolov5.utils.torch_utils import select_device  # , time_sync
 
 from ..decode_frame.decode_frame import DecodeFrame
 from ..stage import Stage
+from ...types import DetectionId
 
 if TYPE_CHECKING:
     from yolo_tracker.trackers.strong_sort.strong_sort import StrongSORT
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 @dataclass
 class Tracking2DResult:
     frame_idx: int
-    detection_id: str
+    detection_id: DetectionId
     object_id: int
     bbox_left: float
     bbox_top: float
@@ -200,7 +201,7 @@ def track(
                     labels.append(
                         Tracking2DResult(
                             frame_idx,
-                            f"{frame_idx}-{i}",
+                            DetectionId(frame_idx, i),
                             int(id),
                             bbox_left,
                             bbox_top,

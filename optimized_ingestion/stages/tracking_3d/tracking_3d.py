@@ -5,12 +5,13 @@ from dataclasses import dataclass
 from typing import Dict, Tuple
 
 from ..stage import Stage
+from ...types import DetectionId
 
 
 @dataclass
 class Tracking3DResult:
     frame_idx: int
-    detection_id: str
+    detection_id: DetectionId
     object_id: float
     point_from_camera: Tuple[float, float, float]
     point: "npt.NDArray[np.floating]"

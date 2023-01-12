@@ -16,8 +16,8 @@ from ..detection_estimation.detection_estimation import (DetectionInfo,
 from ..detection_estimation.segment_mapping import RoadSegmentInfo
 from ..detection_estimation.utils import (get_segment_line,
                                           project_point_onto_linestring)
-
-Float3 = Tuple[float, float, float]
+from ...payload import Payload
+from ...types import DetectionId, Float3
 
 
 test_segment_query = """
@@ -93,7 +93,7 @@ AND cos(radians(
 
 @dataclass
 class SegmentTrajectoryPoint:
-    detection_id: "str"
+    detection_id: "DetectionId"
     car_loc3d: "Float3"
     timestamp: "datetime.datetime"
     segment_line: "Any"
@@ -150,7 +150,7 @@ def get_test_detection_infos(test_trajectory, test_segments):
 
 
 def construct_new_road_segment_info(
-        result: "List[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
+        result: "list[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
     """Construct new road segment info based on query result.
 
     This Function constructs the new the road segment info
@@ -180,11 +180,13 @@ def construct_new_road_segment_info(
     return road_segment_info
 
 
-def find_middle_segment(current_segment, next_segment):
+def find_middle_segment(current_segment: "SegmentTrajectoryPoint", next_segment: "SegmentTrajectoryPoint", payload: "Payload"):
     current_time = current_segment.timestamp
     next_time = next_segment.timestamp
+
     current_segment_polygon = current_segment.road_segment_info.segment_polygon
     next_segment_polygon = next_segment.road_segment_info.segment_polygon
+
     assert not current_segment_polygon.intersects(next_segment_polygon)
 
     # current_center_point = current_segment.road_segment_info.segment_polygon.centroid
@@ -193,7 +195,21 @@ def find_middle_segment(current_segment, next_segment):
     # current_intersection = connected_center.intersection(current_segment_polygon).coords[0]
     # next_intersection = connected_center.intersection(next_segment_polygon).coords[0]
     p1, p2 = nearest_points(current_segment_polygon, next_segment_polygon)
+
+    middle_idx = (current_segment.detection_id.frame_idx + next_segment.detection_id.frame_idx) // 2
+    assert middle_idx != current_segment.detection_id.frame_idx
+    assert middle_idx != next_segment.detection_id.frame_idx
+
+    middle_camera_config = payload.video._camera_configs[middle_idx]
+    if middle_camera_config is None:
+        middle_timestamp = None
+    else:
+        middle_timestamp = middle_camera_config.timestamp
+
+    # TODO: intersection_center should consider timestamp that align with camera config
     intersection_center = LineString([p1, p2]).centroid.coords[0]
+    x1, y1 = p1.x, p1.y
+    x2, y2 = p2.x, p2.y
     assert not current_segment_polygon.contains(Point(intersection_center))
     contain_query = psycopg2.sql.SQL(segment_contain_vector_query).format(
         point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
@@ -210,7 +226,7 @@ def find_middle_segment(current_segment, next_segment):
 
     new_segment_line, new_heading = get_segment_line(new_road_segment_info, intersection_center)
     timestamp = current_time + (next_time - current_time) / 2
-    middle_segment = segment_trajectory_point(intersection_center,
+    middle_segment = SegmentTrajectoryPoint(intersection_center,
                                               timestamp,
                                               new_segment_line,
                                               new_heading,
@@ -218,36 +234,39 @@ def find_middle_segment(current_segment, next_segment):
     return middle_segment
 
 
-def binary_search_segment(current_segment, next_segment):
+def binary_search_segment(current_segment: "SegmentTrajectoryPoint", next_segment: "SegmentTrajectoryPoint", payload: "Payload"):
     current_segment_polygon = current_segment.road_segment_info.segment_polygon
     next_segment_polygon = next_segment.road_segment_info.segment_polygon
-    if (current_segment.road_segment_info.segment_id
-        == next_segment.road_segment_info.segment_id
-            or not current_segment_polygon.disjoint(next_segment_polygon)):
-        return [current_segment]
+
+    if (current_segment.road_segment_info.segment_id == next_segment.road_segment_info.segment_id
+            or not current_segment_polygon.disjoint(next_segment_polygon)
+            or current_segment.detection_id.frame_idx == next_segment.detection_id.frame_idx - 1):
+        return []
     else:
         middle_segment = find_middle_segment(current_segment, next_segment)
         # import code; code.interact(local=vars())
-        return (binary_search_segment(current_segment, middle_segment)
-                + binary_search_segment(middle_segment, next_segment))
+        return (
+            binary_search_segment(current_segment, middle_segment)
+            + [middle_segment]
+            + binary_search_segment(middle_segment, next_segment)
+        )
 
 
-def complete_segment_trajectory(road_segment_trajectory: List[segment_trajectory_point]):
-    complete_segment_trajectory = []
-    for i in range(len(road_segment_trajectory) - 1):
-        current_segment = road_segment_trajectory[i]
-        next_segment = road_segment_trajectory[i + 1]
-        complete_segment_trajectory.extend(binary_search_segment(current_segment, next_segment))
+def complete_segment_trajectory(road_segment_trajectory: "list[SegmentTrajectoryPoint]", payload: "Payload"):
+    completed_segment_trajectory: "list[SegmentTrajectoryPoint]" = [road_segment_trajectory[0]]
 
-    complete_segment_trajectory.append(road_segment_trajectory[-1])
+    for current_segment, next_segment in zip(road_segment_trajectory[:-1], road_segment_trajectory[1:]):
+        completed_segment_trajectory.extend(binary_search_segment(current_segment, next_segment, payload))
+        completed_segment_trajectory.append(next_segment)
 
-    return complete_segment_trajectory
+    return completed_segment_trajectory
 
 
 def calibrate(
     trajectory_3d: "list[trajectory_3d]",
     detection_infos: "list[DetectionInfo]",
     frame_indices: "list[int]",
+    payload: "Payload",
 ) -> "list[SegmentTrajectoryPoint]":
     """Calibrate the trajectory to the road segments.
 
@@ -300,8 +319,8 @@ def calibrate(
             )
         else:
             prev_calibrated_point = road_segment_trajectory[-1]
-            prev_segment_line = prev_calibrated_point[2]
-            prev_segment_heading = prev_calibrated_point[3]
+            prev_segment_line = prev_calibrated_point.segment_line
+            prev_segment_heading = prev_calibrated_point.segment_heading
             projection = project_point_onto_linestring(Point(current_point), prev_segment_line)
             current_point3d = (projection.x, projection.y, 0.0)
             heading_filter = psycopg2.sql.SQL(HEADING_FILTER).format(
@@ -330,7 +349,7 @@ def calibrate(
                 new_road_segment_info,
                 frame_idx,
             ))
-    complete_segment_trajectory(road_segment_trajectory)
+    complete_segment_trajectory(road_segment_trajectory, payload)
     return road_segment_trajectory
 
 
