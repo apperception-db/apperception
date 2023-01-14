@@ -23,6 +23,7 @@ from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device  # , time_sync
 
+from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..stage import Stage
 
@@ -35,7 +36,7 @@ if TYPE_CHECKING:
 @dataclass
 class Tracking2DResult:
     frame_idx: int
-    detection_id: str
+    detection_id: DetectionId
     object_id: int
     bbox_left: float
     bbox_top: float
@@ -47,7 +48,7 @@ class Tracking2DResult:
     prev: "Tracking2DResult | None" = field(default=None, compare=False, repr=False)
 
 
-Metadatum = Dict[float, Tracking2DResult]
+Metadatum = Dict[int, Tracking2DResult]
 
 
 class Tracking2D(Stage[Metadatum]):
@@ -59,7 +60,7 @@ class Tracking2D(Stage[Metadatum]):
         results = track(payload)
         results = sorted(results, key=lambda r: r.frame_idx)
         metadata: "List[Metadatum]" = []
-        trajectories: "Dict[float, List[Tracking2DResult]]" = {}
+        trajectories: "Dict[int, List[Tracking2DResult]]" = {}
 
         for k in payload.keep:
             metadata.append({})
@@ -200,7 +201,7 @@ def track(
                     labels.append(
                         Tracking2DResult(
                             frame_idx,
-                            f"{frame_idx}-{i}",
+                            DetectionId(frame_idx, i),
                             int(id),
                             bbox_left,
                             bbox_top,

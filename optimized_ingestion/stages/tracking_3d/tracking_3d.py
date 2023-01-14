@@ -4,13 +4,14 @@ import numpy.typing as npt
 from dataclasses import dataclass
 from typing import Dict, Tuple
 
+from ...types import DetectionId
 from ..stage import Stage
 
 
 @dataclass
 class Tracking3DResult:
     frame_idx: int
-    detection_id: str
+    detection_id: DetectionId
     object_id: float
     point_from_camera: Tuple[float, float, float]
     point: "npt.NDArray[np.floating]"
@@ -24,7 +25,7 @@ class Tracking3DResult:
     next: "Tracking3DResult | None" = None
 
 
-Metadatum = Dict[float, Tracking3DResult]
+Metadatum = Dict[int, Tracking3DResult]
 
 
 class Tracking3D(Stage[Metadatum]):

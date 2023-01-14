@@ -2,7 +2,7 @@ import collections
 import collections.abc
 import cv2
 from datetime import datetime, timedelta
-from typing import Iterable, List, Optional
+from typing import Iterable
 
 from .camera_config import CameraConfig, interpolate
 
@@ -11,19 +11,21 @@ class Video(Iterable["CameraConfig"]):
     videofile: str
 
     def __init__(
-        self, videofile: str, camera_configs: "List[CameraConfig]", start: datetime = None
+        self,
+        videofile: str,
+        camera_configs: "list[CameraConfig]",
+        start: "datetime | None" = None,
     ):
         self.videofile = videofile
-        self._camera_configs: "List[CameraConfig]" = camera_configs
-        self._start: "Optional[datetime]" = start
-        self._interpolated_frames: "Optional[List[CameraConfig]]" = None
-        self._num_frames: int | None = None
-        self._fps: float | None = None
+        self._camera_configs: "list[CameraConfig]" = camera_configs
+        self._start: "datetime | None" = start
+        self._length: "int | None" = None
+        self._fps: "float | None" = None
 
     @property
     def interpolated_frames(self):
-        if self._interpolated_frames is None:
-            num_frames, fps = self.__get_fps_and_num_frames()
+        if not hasattr(self, "_interpolated_frames"):
+            num_frames, fps = self._get_fps_and_length()
 
             if len(self._camera_configs) == 1:
                 self._start = self._camera_configs[0].timestamp
@@ -35,7 +37,7 @@ class Video(Iterable["CameraConfig"]):
                 ), f"{self._camera_configs[-1].timestamp} {self._start + timedelta(seconds=(num_frames - 1) / fps)}"
 
                 idx = 0
-                self._interpolated_frames: "List[CameraConfig]" = []
+                self._interpolated_frames: "list[CameraConfig]" = []
                 for i in range(num_frames):
                     t = self._start + timedelta(seconds=i / fps)
                     while self._camera_configs[idx + 1].timestamp < t:
@@ -47,7 +49,7 @@ class Video(Iterable["CameraConfig"]):
 
     @property
     def fps(self):
-        return self.__get_fps_and_num_frames()[1]
+        return self._get_fps_and_length()[1]
 
     def __getitem__(self, index):
         return self.interpolated_frames[index]
@@ -56,17 +58,14 @@ class Video(Iterable["CameraConfig"]):
         return iter(self.interpolated_frames)
 
     def __len__(self):
-        if self._interpolated_frames is not None:
-            return len(self._interpolated_frames)
+        return self._get_fps_and_length()[0]
 
-        return self.__get_fps_and_num_frames()[0]
-
-    def __get_fps_and_num_frames(self):
-        if self._num_frames is None or self._fps is None:
+    def _get_fps_and_length(self):
+        if self._length is None or self._fps is None:
             cap = cv2.VideoCapture(self.videofile)
             assert cap.isOpened(), self.videofile
-            self._num_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            self._length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             self._fps = float(cap.get(cv2.CAP_PROP_FPS))
             cap.release()
             cv2.destroyAllWindows()
-        return self._num_frames, self._fps
+        return self._length, self._fps
