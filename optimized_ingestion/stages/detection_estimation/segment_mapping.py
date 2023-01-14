@@ -10,25 +10,25 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
+from apperception.database import database
+
 import array
 import logging
 import math
 import numpy as np
 import numpy.typing as npt
 import os
+import plpygis
 import postgis
 import psycopg2
 import psycopg2.sql
-import time
-import plpygis
 import shapely
 import shapely.geometry
+import time
 from typing import NamedTuple, Tuple
 
-from apperception.database import database
-
-from .utils import Float2, Float22, Float3, line_to_polygon_intersection
 from ...camera_config import CameraConfig
+from .utils import Float2, Float3, Float22, line_to_polygon_intersection
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +171,7 @@ def reformat_return_segment(segments: "list[RoadSegmentWithHeading]") -> "list[S
             line,
             # TODO: fix this hack: all the useful types are 'lane', 'lanegroup',
             # 'intersection' which are always at the last position
-            types[-1],  
+            types[-1],
             math.degrees(heading),
         )
     return list(map(_, segments))

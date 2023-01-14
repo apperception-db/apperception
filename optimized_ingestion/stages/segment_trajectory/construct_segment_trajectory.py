@@ -2,6 +2,8 @@ from apperception.database import database
 
 import datetime
 import math
+import numpy as np
+import numpy.typing as npt
 import postgis
 import psycopg2
 import psycopg2.sql
@@ -10,9 +12,8 @@ from plpygis import Geometry
 from shapely.geometry import Point
 from shapely.ops import nearest_points
 from typing import Any, List, Tuple
-import numpy as np
-import numpy.typing as npt
 
+from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...types import DetectionId, Float3
 from ..detection_estimation.detection_estimation import (DetectionInfo,
@@ -20,7 +21,6 @@ from ..detection_estimation.detection_estimation import (DetectionInfo,
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
 from ..detection_estimation.utils import (get_segment_line,
                                           project_point_onto_linestring)
-from ...camera_config import CameraConfig
 
 test_segment_query = """
 SELECT
@@ -218,7 +218,7 @@ def binary_search_segment(
     next_segment: "SegmentPoint",
     payload: "Payload",
 ) -> "list[SegmentPoint]":
-    if  0 <= next_segment.detection_id.frame_idx - current_segment.detection_id.frame_idx <= 1:
+    if 0 <= next_segment.detection_id.frame_idx - current_segment.detection_id.frame_idx <= 1:
         # same detection or detections on consecutive frame
         return []
     elif current_segment.road_segment_info.id == next_segment.road_segment_info.id:

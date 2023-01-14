@@ -38,7 +38,7 @@ class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
             for before, after in zip(calibrated_trajectory[:-1], calibrated_trajectory[1:]):
                 before.next = after
                 after.prev = before
-            
+
             for t in calibrated_trajectory:
                 idx, _ = t.detection_id
                 assert oid not in metadata[idx]

@@ -4,9 +4,9 @@ import datetime
 import math
 from plpygis import Geometry
 
-from .construct_segment_trajectory import calibrate, test_segment_query
 from ..detection_estimation.detection_estimation import DetectionInfo
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
+from .construct_segment_trajectory import calibrate, test_segment_query
 
 
 def get_test_trajectory(test_trajectory_points):

@@ -17,10 +17,10 @@ TODO:
 
 import datetime
 import os
+import shapely.geometry
 import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, NamedTuple, Tuple
-import shapely.geometry
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -31,12 +31,10 @@ from ...camera_config import CameraConfig
 from ...types import DetectionId
 from ...video import Video
 from .sample_plan_algorithms import Action, get_sample_action_alg
-from .segment_mapping import (CameraPolygonMapping, RoadPolygonInfo,
-                              map_imgsegment_roadsegment)
+from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
-                    detection_to_img_segment, get_ego_trajectory,
-                    get_largest_segment, get_segment_line,
-                    relative_direction_to_ego, trajectory_3d)
+                    detection_to_img_segment, get_largest_segment,
+                    get_segment_line, relative_direction_to_ego, trajectory_3d)
 
 
 class obj_detection(NamedTuple):
@@ -88,7 +86,7 @@ class DetectionInfo:
                 self.ego_config.ego_translation
             )
         assert isinstance(ego_heading, float)
-        
+
         if self.car_bbox2d is None:
             self.segment_area_2d = 0
         else:
@@ -96,7 +94,6 @@ class DetectionInfo:
                 *self.car_bbox2d[0],
                 *self.car_bbox2d[1],
             ])
-
 
         self.segment_line, self.segment_heading = get_segment_line(
             self.road_polygon_info,

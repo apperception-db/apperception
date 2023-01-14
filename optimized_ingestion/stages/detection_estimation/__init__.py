@@ -12,9 +12,9 @@ from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_3d import Detection3D
 from ..stage import Stage
-from .detection_estimation import (DetectionInfo, construct_all_detection_info,
-                                   generate_sample_plan, obj_detection,
-                                   SamplePlan)
+from .detection_estimation import (DetectionInfo, SamplePlan,
+                                   construct_all_detection_info,
+                                   generate_sample_plan, obj_detection)
 from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
 from .utils import trajectory_3d
 
