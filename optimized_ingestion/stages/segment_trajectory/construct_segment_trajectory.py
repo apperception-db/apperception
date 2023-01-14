@@ -7,17 +7,20 @@ import psycopg2
 import psycopg2.sql
 from dataclasses import dataclass
 from plpygis import Geometry
-from shapely.geometry import LineString, Point
+from shapely.geometry import Point
 from shapely.ops import nearest_points
-from typing import Any, Tuple
+from typing import Any, List, Tuple
+import numpy as np
+import numpy.typing as npt
 
 from ...payload import Payload
 from ...types import DetectionId, Float3
 from ..detection_estimation.detection_estimation import (DetectionInfo,
                                                          trajectory_3d)
-from ..detection_estimation.segment_mapping import RoadSegmentInfo
+from ..detection_estimation.segment_mapping import RoadPolygonInfo
 from ..detection_estimation.utils import (get_segment_line,
                                           project_point_onto_linestring)
+from ...camera_config import CameraConfig
 
 test_segment_query = """
 SELECT
@@ -90,66 +93,29 @@ AND cos(radians(
 """
 
 
+SegmentQueryResult = Tuple[
+    str,
+    postgis.Polygon,
+    postgis.LineString,
+    List[str],
+    float
+]
+
+
 @dataclass
-class SegmentTrajectoryPoint:
+class SegmentPoint:
     detection_id: "DetectionId"
     car_loc3d: "Float3"
     timestamp: "datetime.datetime"
     segment_line: "Any"
     segment_heading: "Any"
-    road_segment_info: "Any"
+    road_segment_info: "RoadPolygonInfo"
     obj_id: "int | None" = None
-    next: "SegmentTrajectoryPoint | None" = None
-    prev: "SegmentTrajectoryPoint | None" = None
+    next: "SegmentPoint | None" = None
+    prev: "SegmentPoint | None" = None
 
 
-def get_test_trajectory(test_trajectory_points):
-    """This function is for testing only."""
-    start_time = datetime.datetime.now()
-    trajectory = []
-    for i in range(len(test_trajectory_points)):
-        start_time += datetime.timedelta(seconds=5)
-        trajectory.append((test_trajectory_points[i], start_time))
-    return trajectory
-
-
-def get_test_detection_infos(test_trajectory, test_segments):
-    """This function is for testing only."""
-    assert len(test_trajectory) == len(test_segments)
-    detection_infos = []
-    for i in range(len(test_trajectory)):
-        point, timestamp = test_trajectory[i]
-        test_segments_for_current_point = test_segments[i]
-        road_segment_info = None
-        for test_segment in test_segments_for_current_point:
-            segmentid, segmentpolygon, segmentline, segmenttype, segmentheading = test_segment
-            segmentheading = math.degrees(segmentheading) if segmentheading is not None else None
-            segmentline = Geometry(segmentline.to_ewkb()).shapely if segmentline else None
-            if road_segment_info is not None:
-                road_segment_info.segment_lines.append(segmentline)
-                road_segment_info.segment_headings.append(segmentheading)
-                continue
-            segmentpolygon = Geometry(segmentpolygon.to_ewkb()).shapely
-            road_segment_info = RoadSegmentInfo(
-                segmentid, segmentpolygon, [segmentline], segmenttype,
-                [segmentheading], None, False, None)
-        detection_info = DetectionInfo(detection_id=segmentid,
-                                       frame_segment=None,
-                                       road_segment_info=road_segment_info,
-                                       car_loc3d=point,
-                                       car_loc2d=None,
-                                       car_bbox3d=None,
-                                       car_bbox2d=None,
-                                       ego_trajectory=None,
-                                       ego_config=None,
-                                       ego_road_segment_info=None,
-                                       timestamp=timestamp)
-        detection_infos.append(detection_info)
-    return detection_infos
-
-
-def construct_new_road_segment_info(
-        result: "list[Tuple[str, postgis.Polygon, postgis.LineString, str, float]]"):
+def construct_new_road_segment_info(result: "list[SegmentQueryResult]"):
     """Construct new road segment info based on query result.
 
     This Function constructs the new the road segment info
@@ -163,8 +129,10 @@ def construct_new_road_segment_info(
         segmenttype = segmenttype[0] if segmenttype is not None else None,
         segmentheading = math.degrees(segmentheading) if segmentheading is not None else None
         segmentid = segmentid.split('_')[0]
-        segmentline = Geometry(segmentline.to_ewkb()).shapely if segmentline else None
+        assert segmentline
+        segmentline = Geometry(segmentline.to_ewkb()).shapely
         if segmentid == kept_segment[0]:
+            assert road_segment_info is not None
             road_segment_info.segment_lines.append(segmentline)
             road_segment_info.segment_headings.append(segmentheading)
         else:
@@ -172,19 +140,20 @@ def construct_new_road_segment_info(
                 if kept_segment[1] is not None:
                     continue
         segmentpolygon = Geometry(segmentpolygon.to_ewkb()).shapely
-        road_segment_info = RoadSegmentInfo(
+        road_segment_info = RoadPolygonInfo(
             segmentid, segmentpolygon, [segmentline], segmenttype,
             [segmentheading], None, False, None)
         kept_segment = (segmentid, segmenttype)
+    assert road_segment_info is not None
     return road_segment_info
 
 
-def find_middle_segment(current_segment: "SegmentTrajectoryPoint", next_segment: "SegmentTrajectoryPoint", payload: "Payload"):
+def find_middle_segment(current_segment: "SegmentPoint", next_segment: "SegmentPoint", payload: "Payload"):
     current_time = current_segment.timestamp
     next_time = next_segment.timestamp
 
-    current_segment_polygon = current_segment.road_segment_info.segment_polygon
-    next_segment_polygon = next_segment.road_segment_info.segment_polygon
+    current_segment_polygon = current_segment.road_segment_info.polygon
+    next_segment_polygon = next_segment.road_segment_info.polygon
 
     assert not current_segment_polygon.intersects(next_segment_polygon)
 
@@ -200,15 +169,21 @@ def find_middle_segment(current_segment: "SegmentTrajectoryPoint", next_segment:
     assert middle_idx != next_segment.detection_id.frame_idx
 
     middle_camera_config = payload.video._camera_configs[middle_idx]
-    if middle_camera_config is None:
-        middle_timestamp = None
-    else:
-        middle_timestamp = middle_camera_config.timestamp
+    assert middle_camera_config is not None
 
-    # TODO: intersection_center should consider timestamp that align with camera config
-    intersection_center = LineString([p1, p2]).centroid.coords[0]
-    x1, y1 = p1.x, p1.y
-    x2, y2 = p2.x, p2.y
+    middle_time = middle_camera_config.timestamp
+
+    loc1: "npt.NDArray[np.float64]" = np.array([p1.x, p1.y])
+    assert loc1.dtype == np.dtype(np.float64)
+    loc2: "npt.NDArray[np.float64]" = np.array([p2.x, p2.y])
+    assert loc2.dtype == np.dtype(np.float64)
+    locdiff = loc2 - loc1
+
+    progress = (middle_time - current_time) / (next_time - current_time)
+    intersection_center: "list[float]" = (loc1 + locdiff * progress).tolist()
+    assert isinstance(intersection_center, list)
+    assert len(intersection_center) == 2
+
     assert not current_segment_polygon.contains(Point(intersection_center))
     contain_query = psycopg2.sql.SQL(segment_contain_vector_query).format(
         point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
@@ -221,38 +196,85 @@ def find_middle_segment(current_segment: "SegmentTrajectoryPoint", next_segment:
             heading_filter=psycopg2.sql.SQL('AND True')
         )
         result = database.execute(closest_query)
-    new_road_segment_info = update_current_road_segment_info(result)
+    # TODO: function update_current_road_segment_info does not exist
+    # new_road_segment_info = update_current_road_segment_info(result)
+    new_road_segment_info = construct_new_road_segment_info(result)
 
     new_segment_line, new_heading = get_segment_line(new_road_segment_info, intersection_center)
     timestamp = current_time + (next_time - current_time) / 2
-    middle_segment = SegmentTrajectoryPoint(intersection_center,
-                                            timestamp,
-                                            new_segment_line,
-                                            new_heading,
-                                            new_road_segment_info)
+    middle_segment = SegmentPoint(
+        DetectionId(middle_idx, None),
+        (*intersection_center, 0.),
+        timestamp,
+        new_segment_line,
+        new_heading,
+        new_road_segment_info
+    )
     return middle_segment
 
 
-def binary_search_segment(current_segment: "SegmentTrajectoryPoint", next_segment: "SegmentTrajectoryPoint", payload: "Payload"):
-    current_segment_polygon = current_segment.road_segment_info.segment_polygon
-    next_segment_polygon = next_segment.road_segment_info.segment_polygon
-
-    if (current_segment.road_segment_info.segment_id == next_segment.road_segment_info.segment_id
-            or not current_segment_polygon.disjoint(next_segment_polygon)
-            or current_segment.detection_id.frame_idx == next_segment.detection_id.frame_idx - 1):
+def binary_search_segment(
+    current_segment: "SegmentPoint",
+    next_segment: "SegmentPoint",
+    payload: "Payload",
+) -> "list[SegmentPoint]":
+    if  0 <= next_segment.detection_id.frame_idx - current_segment.detection_id.frame_idx <= 1:
+        # same detection or detections on consecutive frame
         return []
+    elif current_segment.road_segment_info.id == next_segment.road_segment_info.id:
+        # detections in between are in the same segment
+
+        assert current_segment.segment_line == next_segment.segment_line
+        assert current_segment.segment_heading == next_segment.segment_heading
+        assert current_segment.road_segment_info == current_segment.road_segment_info
+
+        st = current_segment.detection_id.frame_idx + 1
+        ed = next_segment.detection_id.frame_idx
+
+        loc1: "npt.NDArray[np.float64]" = np.array(current_segment.car_loc3d)
+        assert loc1.dtype == np.dtype(np.float64)
+        loc2: "npt.NDArray[np.float64]" = np.array(next_segment.car_loc3d)
+        assert loc2.dtype == np.dtype(np.float64)
+
+        locdiff = loc2 - loc1
+        timediff = next_segment.timestamp - current_segment.timestamp
+
+        def interpolate_segment(args: "Tuple[int, CameraConfig]"):
+            index, frame = args
+
+            progress = (frame.timestamp - current_segment.timestamp) / timediff
+            location = loc1 + locdiff * progress
+            assert location.shape == (3,)
+            assert location.dtype == np.dtype(np.float64)
+
+            return SegmentPoint(
+                DetectionId(index, None),
+                tuple(location),
+                frame.timestamp,
+                current_segment.segment_line,
+                current_segment.segment_heading,
+                current_segment.road_segment_info,
+            )
+
+        configs_with_index = [*enumerate(payload.video._camera_configs)]
+        return [*map(interpolate_segment, configs_with_index[st:ed])]
+    # elif current_segment_polygon.intersects(next_segment_polygon):
+    #     # both polygons are the same one of next to each other
+    #     # TODO: remove because we still need to fill in approximate locations
+    #     # of frames in between
+    #     return []
     else:
-        middle_segment = find_middle_segment(current_segment, next_segment)
+        middle_segment = find_middle_segment(current_segment, next_segment, payload)
         # import code; code.interact(local=vars())
-        return (
-            binary_search_segment(current_segment, middle_segment)
-            + [middle_segment]
-            + binary_search_segment(middle_segment, next_segment)
-        )
+
+        before = binary_search_segment(current_segment, middle_segment, payload)
+        after = binary_search_segment(middle_segment, next_segment, payload)
+
+        return before + [middle_segment] + after
 
 
-def complete_segment_trajectory(road_segment_trajectory: "list[SegmentTrajectoryPoint]", payload: "Payload"):
-    completed_segment_trajectory: "list[SegmentTrajectoryPoint]" = [road_segment_trajectory[0]]
+def complete_segment_trajectory(road_segment_trajectory: "list[SegmentPoint]", payload: "Payload"):
+    completed_segment_trajectory: "list[SegmentPoint]" = [road_segment_trajectory[0]]
 
     for current_segment, next_segment in zip(road_segment_trajectory[:-1], road_segment_trajectory[1:]):
         completed_segment_trajectory.extend(binary_search_segment(current_segment, next_segment, payload))
@@ -266,14 +288,14 @@ def calibrate(
     detection_infos: "list[DetectionInfo]",
     frame_indices: "list[int]",
     payload: "Payload",
-) -> "list[SegmentTrajectoryPoint]":
+) -> "list[SegmentPoint]":
     """Calibrate the trajectory to the road segments.
 
     Given a trajectory and the corresponding detection infos, map the trajectory
     to the correct road segments.
     The returned value is a list of SegmentTrajectoryPoint.
     """
-    road_segment_trajectory: "list[SegmentTrajectoryPoint]" = []
+    road_segment_trajectory: "list[SegmentPoint]" = []
     for i in range(len(trajectory_3d)):
         current_point3d, timestamp = trajectory_3d[i]
         current_point = current_point3d[:2]
@@ -281,7 +303,7 @@ def calibrate(
         frame_idx = frame_indices[i]
         current_road_segment_heading = detection_info.segment_heading
         current_segment_line = detection_info.segment_line
-        current_road_segment_info = detection_info.road_segment_info
+        current_road_segment_info = detection_info.road_polygon_info
         if i != len(trajectory_3d) - 1:
             next_point = trajectory_3d[i + 1][0][:2]
             if current_road_segment_heading is not None:
@@ -295,7 +317,7 @@ def calibrate(
             if (current_road_segment_heading is None
                     or math.cos(math.radians(relative_heading)) > 0):
                 road_segment_trajectory.append(
-                    SegmentTrajectoryPoint(
+                    SegmentPoint(
                         detection_info.detection_id,
                         current_point3d,
                         timestamp,
@@ -339,7 +361,7 @@ def calibrate(
         new_road_segment_info = construct_new_road_segment_info(result)
         new_segment_line, new_heading = get_segment_line(current_road_segment_info, current_point3d)
         road_segment_trajectory.append(
-            SegmentTrajectoryPoint(
+            SegmentPoint(
                 detection_info.detection_id,
                 current_point3d,
                 timestamp,
@@ -350,203 +372,3 @@ def calibrate(
             ))
     complete_segment_trajectory(road_segment_trajectory, payload)
     return road_segment_trajectory
-
-
-#### The Remaining tests ####
-
-def test_same_segment():
-    print("test same segment")
-    test_segment_ids = ['99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1955, 870), (1960, 874), (1980, 872), (1990, 875)]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '53f56897-4795-4d75-a721-3c969bb3206c',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7']
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-def test_wrong_start_same_segment():
-    print("test wrong start same segment")
-    test_segment_ids = ['c67e592f-2e73-4165-b8cf-64165bb300a8',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1955, 874), (1960, 870), (1980, 872), (1990, 875)]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7']
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-def test_connected_segments():
-    print("test connected segment")
-    """Some trajectory points are in the wrong segments."""
-    test_segment_ids = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        'e39e4059-3a55-42f9-896f-475d89a70e86',
-                        '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        'aa22ee59-c9ef-4759-a69c-c295469f3e37_inter',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1910, 869), (1915, 873), (1920, 871), (1940, 870),
-                              (1955, 870), (1960, 874), (1980, 872), (1990, 875),]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      '2e6d0881-bb10-4145-a45f-28382c46e476',
-                      '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      'aa22ee59-c9ef-4759-a69c-c295469f3e37_inter',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '53f56897-4795-4d75-a721-3c969bb3206c',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7']
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-def test_complete_story1():
-    """Simplest complete story case.
-
-    The trajectories are all in the correct segments.
-    """
-    print("test complete story 1")
-    test_segment_ids = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1910, 869), (1920, 871), (1955, 870), (1960, 871),
-                              (1980, 871), (1990, 871),]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      'aa22ee59-c9ef-4759-a69c-c295469f3e37_inter',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',]
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-def test_complete_story2():
-    """Some trajectory points are in the wrong segments."""
-    print("test complete story 2")
-    test_segment_ids = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        'e39e4059-3a55-42f9-896f-475d89a70e86',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',
-                        '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                        'c67e592f-2e73-4165-b8cf-64165bb300a8',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1910, 869), (1920, 874), (1955, 870),
-                              (1960, 874), (1980, 872), (1990, 875),]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      'aa22ee59-c9ef-4759-a69c-c295469f3e37_inter',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',
-                      '99c90907-e7a2-4b19-becc-afe2b7f013c7',]
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-def test_complete_story3():
-    """Some trajectory points are in the wrong segments."""
-    print("test complete story 3")
-    test_segment_ids = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        'e39e4059-3a55-42f9-896f-475d89a70e86',
-                        '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                        '53c5901a-dad9-4f0d-bcb6-c127dda2be09',
-                        '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                        '53c5901a-dad9-4f0d-bcb6-c127dda2be09',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1910, 869), (1915, 873), (1920, 871),
-                              (1937, 882), (1932, 885), (1937, 887), (1932, 892),]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      'aa22ee59-c9ef-4759-a69c-c295469f3e37_inter',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',]
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-def test_complete_story4():
-    """Most trajectory points are in the wrong segments."""
-    print("test complete story 4")
-    test_segment_ids = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                        'e39e4059-3a55-42f9-896f-475d89a70e86',
-                        '53c5901a-dad9-4f0d-bcb6-c127dda2be09',
-                        '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                        '53c5901a-dad9-4f0d-bcb6-c127dda2be09',]
-    test_segments = [database.execute(test_segment_query.format(segment_id=segment_id))
-                     for segment_id in test_segment_ids]
-    test_trajectory_points = [(1910, 868), (1920, 873), (1932, 885), (1937, 887), (1932, 892),]
-    test_trajectory = get_test_trajectory(test_trajectory_points)
-    test_detection_infos = get_test_detection_infos(test_trajectory, test_segments)
-    segment_trajectory = calibrate(test_trajectory, test_detection_infos)
-    correct_result = ['34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      '34c01bd5-f649-42e2-be32-30f9a4d02b25',
-                      'aa22ee59-c9ef-4759-a69c-c295469f3e37_inter',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',
-                      '9eef6c56-c5d9-46ed-a44e-9848676bdddf',]
-    print([segment_trajectory_point.road_segment_info.segment_id
-           for segment_trajectory_point in segment_trajectory])
-    print("correct result", correct_result)
-
-
-if __name__ == '__main__':
-    test_same_segment()
-    test_wrong_start_same_segment()
-    test_connected_segments()
-    test_complete_story1()
-    test_complete_story2()
-    test_complete_story3()
-    test_complete_story4()
-    print('All tests passed!')

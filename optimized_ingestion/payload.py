@@ -160,11 +160,8 @@ def metadata_len(metadata: "Dict[str, list]") -> "int | None":
 
 def _default_keep(video: "Video", keep: "Optional[bitarray]" = None):
     if keep is None:
-        if isinstance(video, VideoSkipped):
-            keep = bitarray(map(has_config, video._camera_configs))
-        else:
-            keep = bitarray(len(video))
-            keep.setall(1)
+        keep = bitarray(len(video))
+        keep.setall(1)
     elif len(keep) != len(video):
         raise Exception()
     return keep

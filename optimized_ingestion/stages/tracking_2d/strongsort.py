@@ -87,11 +87,8 @@ class StrongSORT(Tracking2D):
                 prev_frame = curr_frame
 
         for trajectory in trajectories.values():
-            last = len(trajectory) - 1
-            for i, t in enumerate(trajectory):
-                if i > 0:
-                    t.prev = trajectory[i - 1]
-                if i < last:
-                    t.next = trajectory[i + 1]
+            for before, after in zip(trajectory[:-1], trajectory[1:]):
+                before.next = after
+                after.prev = before
 
         return None, {self.classname(): metadata}
