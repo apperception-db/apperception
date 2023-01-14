@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple, Tuple
+from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -22,7 +22,7 @@ from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...cache import cache
 from ...stages.decode_frame.decode_frame import DecodeFrame
-from .detection_2d import Detection2D
+from .detection_2d import Detection2D, Metadatum
 
 if TYPE_CHECKING:
     from yolo_tracker.yolov5.models.common import DetectMultiBackend
@@ -69,7 +69,7 @@ class YoloDetection(Detection2D):
             dataset = LoadImages(payload, img_size=self.imgsz, auto=self.pt)
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
-            metadata: "List[Tuple[torch.Tensor, List[str]]]" = []
+            metadata: "list[Metadatum]" = []
             for frame_idx, im, im0s in tqdm(dataset):
                 if not payload.keep[frame_idx]:
                     metadata.append((torch.Tensor([]), names))
@@ -100,7 +100,7 @@ class YoloDetection(Detection2D):
                 det = pred[0]
                 assert isinstance(det, torch.Tensor), type(det)
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0s.shape).round()
-                metadata.append((det, names))
+                metadata.append(Metadatum(det, names))
         return None, {self.classname(): metadata}
 
 

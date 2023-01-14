@@ -3,10 +3,10 @@ import numpy.typing as npt
 import torch
 from pyquaternion import Quaternion
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING
 
 from ..detection_2d.detection_2d import Detection2D
-from . import Detection3D
+from . import Detection3D, Metadatum
 
 if TYPE_CHECKING:
     from ...payload import Payload
@@ -32,10 +32,10 @@ class From2DAndRoad(Detection3D):
             detection2ds = Detection2D.get(payload)
             assert detection2ds is not None
 
-            metadata: "list[Tuple[torch.Tensor, list[str]]]" = []
+            metadata: "list[Metadatum]" = []
             for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
                 if not k:
-                    metadata.append((torch.tensor([], device=d2d.device), clss))
+                    metadata.append(Metadatum(torch.tensor([], device=d2d.device), clss))
                     continue
 
                 device = d2d.device
