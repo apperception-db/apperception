@@ -6,31 +6,45 @@ Apperception ingests video data from many perspectives and makes them queryable 
 
 ## Require
 ```
-python >= 3.7
+python >= 3.8
 ```
 
 ## How to Setup Apperception Repo
 ### Install dependencies:
 #### Debian based Linux
 ```sh
-apt-get update && apt-get install -y postgresql python3-opencv
-```
-#### macOS
-```sh
-brew install postgresql
+apt-get update && apt-get install -y python3-opencv
 ```
 ### Clone the Apperception repo
 For ssh:
 ```sh
 git clone git@github.com:apperception-db/apperception.git
 cd apperception
+git checkout optimized_ingestion
 ```
-For HTTPS:
+
+### We use Conda/Mamba to manage our python environment
+Install Mamba: https://mamba.readthedocs.io/en/latest/installation.html
+or install Conda: https://docs.conda.io/en/latest/miniconda.html
+
+### Setup Environment and Dependencies
 ```sh
-git clone https://github.com/apperception-db/apperception.git
-cd apperception
+# clone submodules
+git submodule update --init --recursive
+
+# setup virtual environment
+# with conda
+conda env create -f environment.yml
+conda activate apperception
+# OR with mamba
+mamba env create -f environment.yml
+mamba activate apperception
+
+# install python dependencies
+poetry install
 ```
-### Downloading Official YOLOv4 Pre-trained in the repo
+
+### [Deprecated] Downloading Official YOLOv4 Pre-trained in the repo
 
 Copy and paste yolov4.weights from your downloads folder into this repository. For the Demo, we use yolov4-tiny.weights,
 

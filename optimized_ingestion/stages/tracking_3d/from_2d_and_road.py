@@ -16,8 +16,8 @@ class From2DAndRoad(Tracking3D):
             # payload = payload.filter(Tracking2D())
             raise Exception()
 
-        metadata: "List[Dict[float, Tracking3DResult]]" = []
-        trajectories: "Dict[float, List[Tracking3DResult]]" = {}
+        metadata: "list[dict[int, Tracking3DResult]]" = []
+        trajectories: "dict[int, list[Tracking3DResult]]" = {}
         video = payload.video
         trackings = Tracking2D.get(payload.metadata)
         assert trackings is not None
@@ -30,13 +30,13 @@ class From2DAndRoad(Tracking3D):
                 metadata.append({})
                 continue
 
-            trackings3d: "Dict[float, Tracking3DResult]" = {}
+            trackings3d: "Dict[int, Tracking3DResult]" = {}
             [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
             rotation = frame.camera_rotation
             timestamp = frame.timestamp
             translation = np.array(frame.camera_translation)
 
-            oids: "List[float]" = []
+            oids: "List[int]" = []
             _ts: "List[Tracking2DResult]" = []
             dirx = []
             diry = []
@@ -65,6 +65,8 @@ class From2DAndRoad(Tracking3D):
 
             for t, oid, point, point_from_camera in zip(_ts, oids, points.T, points_from_camera.T):
                 assert point_from_camera.shape == (3,)
+                assert isinstance(oid, int) or oid.is_integer()
+                oid = int(oid)
                 point_from_camera = (point_from_camera[0], point_from_camera[1], point_from_camera[2])
                 trackings3d[oid] = Tracking3DResult(t.frame_idx, t.detection_id, oid, point_from_camera, point, t.bbox_left, t.bbox_top, t.bbox_w, t.bbox_h, t.object_type, timestamp)
                 if oid not in trajectories:

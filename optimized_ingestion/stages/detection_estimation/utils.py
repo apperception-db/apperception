@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig
-    from .segment_mapping import CameraSegmentMapping, RoadSegmentInfo
+    from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 
 
 logger = logging.getLogger(__name__)
@@ -23,6 +23,8 @@ Float22 = Tuple[Float2, Float2]
 SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
 
+SEGMENT_TO_MAP = ('lane', 'lanesection', 'intersection', 'lanegroup')
+
 
 class trajectory_3d(NamedTuple):
     coordinates: "Float3"
@@ -34,20 +36,24 @@ class temporal_speed(NamedTuple):
     timestamp: "datetime.datetime"
 
 
-def mph_to_mps(mph):
+def mph_to_mps(mph: 'float'):
     return mph * 0.44704
 
 
 MAX_CAR_SPEED = {
-    'lane': 35,
-    'road': 35,
-    'lanesection': 35,
-    'roadSection': 35,
-    'intersection': 25,
-    'highway': 55,
-    'residential': 25,
+    'lane': 35.,
+    'road': 35.,
+    'lanesection': 35.,
+    'roadSection': 35.,
+    'intersection': 25.,
+    'highway': 55.,
+    'residential': 25.,
 }
-MAX_CAR_SPEED.update({k: mph_to_mps(v) for k, v in MAX_CAR_SPEED.items()})
+MAX_CAR_SPEED.update({
+    k: mph_to_mps(v)
+    for k, v
+    in MAX_CAR_SPEED.items()
+})
 
 
 def time_elapse(current_time, elapsed_time):
@@ -139,7 +145,10 @@ def intersection_between_line_and_trajectory(line, trajectory: "List[Float3]"):
     # trajectory_to_polygon = Polygon(trajectory)
     # TODO: should use a different function than _construct_extended_line
     extended_line = _construct_extended_line(trajectory, line)
-    intersection = extended_line.intersection(LineString(trajectory))
+    if len(trajectory) == 1:
+        intersection = extended_line.intersection(Point(trajectory[0]))
+    else:
+        intersection = extended_line.intersection(LineString(trajectory))
     if not isinstance(intersection, LineString) or intersection.is_empty:
         return tuple()
     elif isinstance(intersection, LineString):
@@ -214,18 +223,18 @@ def get_ego_avg_speed(ego_trajectory):
 
 def detection_to_img_segment(
     car_loc2d: "Float2",
-    cam_segment_mapping: "List[CameraSegmentMapping]",
+    cam_segment_mapping: "List[CameraPolygonMapping]",
 ):
     """Get the image segment that contains the detected car."""
-    maximum_mapping: "CameraSegmentMapping | None" = None
+    maximum_mapping: "CameraPolygonMapping | None" = None
     maximum_mapping_area: float = 0.0
     point = Point(car_loc2d)
 
     for mapping in cam_segment_mapping:
         cam_segment, road_segment_info = mapping
         p_cam_segment = Polygon(cam_segment)
-        if (p_cam_segment.contains(point)
-                and road_segment_info.segment_type in ['lane', 'lanesection', 'intersection']):
+        segment_type = road_segment_info.road_type
+        if p_cam_segment.contains(point) and segment_type in SEGMENT_TO_MAP:
             area = p_cam_segment.area
             if area > maximum_mapping_area:
                 maximum_mapping = mapping
@@ -234,28 +243,68 @@ def detection_to_img_segment(
     return maximum_mapping
 
 
+def detection_to_nearest_segment(
+    car_loc3d: "Float3",
+    segment: "RoadPolygonInfo",
+):
+    # TODO: find closest segment
+    pass
+
+
+def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
+    """Get the segment line the location is in."""
+    segment_lines = road_segment_info.segment_lines
+    segment_headings = road_segment_info.segment_headings
+
+    closest_segment_line = None
+    closest_segment_heading = None
+
+    for segment_line, segment_heading in zip(segment_lines, segment_headings):
+        if segment_line is None:
+            continue
+
+        projection = project_point_onto_linestring(
+            Point(car_loc3d[:2]), segment_line)
+
+        if projection.intersects(segment_line):
+            return segment_line, segment_heading
+
+        if closest_segment_line is None:
+            closest_segment_line = segment_line
+            closest_segment_heading = segment_heading
+        elif (projection.distance(closest_segment_line) > projection.distance(segment_line)):
+            closest_segment_line = segment_line
+            closest_segment_heading = segment_heading
+
+    assert closest_segment_line is not None
+    assert closest_segment_heading is not None
+
+    return closest_segment_line, closest_segment_heading
+
+
 def location_calibration(
         car_loc3d: "Float3",
-        road_segment_info: "RoadSegmentInfo") -> "Float3":
+        road_segment_info: "RoadPolygonInfo") -> "Float3":
     """Calibrate the 3d location of the car with the road segment
        the car lies in.
     """
-    segment_polygon = road_segment_info.segment_polygon
+    segment_polygon = road_segment_info.polygon
     assert segment_polygon is not None
-    segment_line = road_segment_info.segment_line
+    segment_line = road_segment_info.segment_lines
     if segment_line is None:
         return car_loc3d
+    # TODO: project onto multiple linestrings and find the closest one
     projection = project_point_onto_linestring(Point(car_loc3d[:2]), segment_line).coords
     return projection[0], projection[1], car_loc3d[2]
 
 
-def get_largest_segment(cam_segment_mapping: "List[CameraSegmentMapping]"):
-    maximum_mapping: "CameraSegmentMapping | None" = None
+def get_largest_segment(cam_segment_mapping: "List[CameraPolygonMapping]"):
+    maximum_mapping: "CameraPolygonMapping | None" = None
     maximum_mapping_area: float = 0.0
 
     for mapping in cam_segment_mapping:
         _, road_segment_info = mapping
-        area = Polygon(road_segment_info.segment_polygon).area
+        area = Polygon(road_segment_info.polygon).area
         if road_segment_info.contains_ego and area > maximum_mapping_area:
             maximum_mapping = mapping
             maximum_mapping_area = area

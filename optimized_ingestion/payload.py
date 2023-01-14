@@ -9,7 +9,6 @@ from .stages.filter_car_facing_sideway import FilterCarFacingSideway
 from .stages.tracking_2d.tracking_2d import Tracking2D
 from .stages.tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
 from .utils.iterate_video import iterate_video
-from .video_skipped import VideoSkipped
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
@@ -49,7 +48,7 @@ class Payload:
 
         if keep is None:
             keep = self.keep
-        assert len(keep) == len(self.video), f"keep: {len(keep)}, video: {len(self.video)}"
+        assert len(keep) == len(self.video), f"{filter.classname()} -- keep: {len(keep)}, video: {len(self.video)}"
         keep = keep & self.keep
 
         if metadata is None or len(metadata) == 0:
@@ -57,7 +56,7 @@ class Payload:
 
         if len(metadata) != 0:
             metadata_l = metadata_len(metadata)
-            assert metadata_l == len(keep), f"metadata: {metadata_l}, keep: {len(keep)}"
+            assert metadata_l == len(keep), f"{filter.classname()} -- metadata: {metadata_l}, keep: {len(keep)}"
 
         metadata = {**self.metadata, **metadata}
 
@@ -157,21 +156,10 @@ def metadata_len(metadata: "Dict[str, list]") -> "int | None":
     return length
 
 
-def _merge(meta1, meta2):
-    if not meta1:
-        return meta2
-    if not meta2:
-        return meta1
-    return {**meta1, **meta2}
-
-
 def _default_keep(video: "Video", keep: "Optional[bitarray]" = None):
     if keep is None:
-        if isinstance(video, VideoSkipped):
-            keep = bitarray([c is not None for c in video.interpolated_frames])
-        else:
-            keep = bitarray(len(video))
-            keep.setall(1)
+        keep = bitarray(len(video))
+        keep.setall(1)
     elif len(keep) != len(video):
         raise Exception()
     return keep

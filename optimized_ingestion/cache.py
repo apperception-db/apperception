@@ -13,9 +13,11 @@ _CACHE_STATUS = {
     "disable": False
 }
 
+CACHE_DIR = '.pipeline_cache'
+
 
 def get_cache_filename(videofile: str, stage_name: str):
-    return f'./.pipeline_cache/{stage_name}-{videofile}.pickle'
+    return os.path.join('.', CACHE_DIR, f'{stage_name}-{videofile}.pickle')
 
 
 S = TypeVar('S')
@@ -30,6 +32,9 @@ def cache(fn: "Callable[[S, Payload], T]") -> "Callable[[S, Payload], T]":
         videofile = payload.video.videofile.split("/")[-1]
         assert isinstance(stage, Stage)
         cache_filename = get_cache_filename(videofile, stage.classname())
+
+        if not os.path.exists(CACHE_DIR):
+            os.mkdir(CACHE_DIR)
 
         if os.path.exists(cache_filename):
             with open(cache_filename, "rb") as f:

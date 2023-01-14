@@ -6,6 +6,7 @@ from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
+from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
@@ -68,7 +69,7 @@ class StrongSORT(Tracking2D):
                         bbox_h = output[3] - output[1]
                         labels[obj_id] = Tracking2DResult(
                             idx,
-                            f"{idx}-{i}",
+                            DetectionId(idx, i),
                             obj_id,
                             bbox_left,
                             bbox_top,
@@ -86,11 +87,8 @@ class StrongSORT(Tracking2D):
                 prev_frame = curr_frame
 
         for trajectory in trajectories.values():
-            last = len(trajectory) - 1
-            for i, t in enumerate(trajectory):
-                if i > 0:
-                    t.prev = trajectory[i - 1]
-                if i < last:
-                    t.next = trajectory[i + 1]
+            for before, after in zip(trajectory[:-1], trajectory[1:]):
+                before.next = after
+                after.prev = before
 
         return None, {self.classname(): metadata}

@@ -196,7 +196,7 @@ class Database:
             self.connection.commit()
 
     def execute(
-        self, query: "str | psycopg2.sql.SQL", vars: "tuple | list | None" = None
+        self, query: "str | psycopg2.sql.Composable", vars: "tuple | list | None" = None
     ) -> List[tuple]:
         try:
             self.cursor.execute(query, vars)
@@ -210,7 +210,7 @@ class Database:
             self.connection.rollback()
             raise error
 
-    def update(self, query: "str | psycopg2.sql.SQL", commit: bool = True) -> None:
+    def update(self, query: "str | psycopg2.sql.Composable", commit: bool = True) -> None:
         try:
             self.cursor.execute(query)
             self._commit(commit)

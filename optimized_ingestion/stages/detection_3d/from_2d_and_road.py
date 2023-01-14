@@ -36,6 +36,7 @@ class From2DAndRoad(Detection3D):
             for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
                 if not k:
                     metadata.append((torch.tensor([], device=d2d.device), clss))
+                    continue
 
                 device = d2d.device
 
