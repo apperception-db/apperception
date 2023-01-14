@@ -1,6 +1,5 @@
 from typing import Dict, Tuple
 
-from ...cache import cache
 from ...payload import Payload
 from ...types import DetectionId
 from ..detection_2d.detection_2d import Detection2D
