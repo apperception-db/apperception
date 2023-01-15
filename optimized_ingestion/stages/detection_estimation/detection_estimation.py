@@ -33,8 +33,9 @@ from ...video import Video
 from .sample_plan_algorithms import Action, get_sample_action_alg
 from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
-                    detection_to_img_segment, detection_to_nearest_segment, get_largest_segment,
-                    get_segment_line, relative_direction_to_ego, trajectory_3d)
+                    detection_to_img_segment, detection_to_nearest_segment,
+                    get_largest_segment, get_segment_line,
+                    relative_direction_to_ego, trajectory_3d)
 
 
 class obj_detection(NamedTuple):

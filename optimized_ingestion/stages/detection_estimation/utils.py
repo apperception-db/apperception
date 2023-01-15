@@ -9,11 +9,10 @@ import shapely.geometry
 from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
-
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig
-    from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
     from .detection_estimation import DetectionInfo
+    from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 
 
 logger = logging.getLogger(__name__)
@@ -125,7 +124,7 @@ def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", l
 
     try:
         line = LineString(line)
-    except:
+    except BaseException:
         print(line[0])
         raise Exception(line)
     bounding_box = box(minx, miny, maxx, maxy)
@@ -271,7 +270,7 @@ def detection_to_nearest_segment(
         if distance < min_distance:
             min_distance = distance
             min_mapping = mapping
-    
+
     assert min_mapping is not None
     return min_mapping
 
