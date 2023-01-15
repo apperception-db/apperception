@@ -33,8 +33,9 @@ from ...video import Video
 from .sample_plan_algorithms import Action, get_sample_action_alg
 from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
-                    detection_to_img_segment, get_largest_segment,
-                    get_segment_line, relative_direction_to_ego, trajectory_3d)
+                    detection_to_img_segment, detection_to_nearest_segment,
+                    get_largest_segment, get_segment_line,
+                    relative_direction_to_ego, trajectory_3d)
 
 
 class obj_detection(NamedTuple):
@@ -213,8 +214,7 @@ def construct_all_detection_info(
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
         related_mapping = detection_to_img_segment(car_loc2d, cam_polygon_mapping)
         if related_mapping is None:
-            # TODO: find nearest road_polygon
-            cam_segment, road_segment_info = None, None
+            cam_segment, road_segment_info = detection_to_nearest_segment(car_loc3d, cam_polygon_mapping)
         else:
             cam_segment, road_segment_info = related_mapping
 

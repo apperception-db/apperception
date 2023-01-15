@@ -5,11 +5,13 @@ import datetime
 import logging
 import math
 import numpy as np
+import shapely.geometry
 from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig
+    from .detection_estimation import DetectionInfo
     from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 
 
@@ -42,6 +44,9 @@ def mph_to_mps(mph: 'float'):
 
 MAX_CAR_SPEED = {
     'lane': 35.,
+    # TODO: if we decide to map to smallest polygon,
+    # 'lanegroup' would mean street parking spots.
+    'lanegroup': 35.,
     'road': 35.,
     'lanesection': 35.,
     'roadSection': 35.,
@@ -117,7 +122,11 @@ def _construct_extended_line(polygon: "Polygon | List[Float2] | List[Float3]", l
             miny = polygon[0][1]
             maxy = polygon[0][1]
 
-    line = LineString(line)
+    try:
+        line = LineString(line)
+    except BaseException:
+        print(line[0])
+        raise Exception(line)
     bounding_box = box(minx, miny, maxx, maxy)
     a, b = line.boundary.geoms
     if a.x == b.x:  # vertical line
@@ -168,7 +177,8 @@ def line_to_polygon_intersection(polygon: "Polygon", line: "Float22") -> "List[F
         return list(intersection.coords)
     elif isinstance(intersection, MultiLineString):
         all_intersections = []
-        for intersect in intersection:
+        for intersect in intersection.geoms:
+            assert isinstance(intersect, LineString)
             all_intersections.extend(list(intersect.coords))
         return list(all_intersections)
     else:
@@ -223,14 +233,14 @@ def get_ego_avg_speed(ego_trajectory):
 
 def detection_to_img_segment(
     car_loc2d: "Float2",
-    cam_segment_mapping: "List[CameraPolygonMapping]",
+    cam_polygon_mapping: "list[CameraPolygonMapping]",
 ):
     """Get the image segment that contains the detected car."""
     maximum_mapping: "CameraPolygonMapping | None" = None
     maximum_mapping_area: float = 0.0
     point = Point(car_loc2d)
 
-    for mapping in cam_segment_mapping:
+    for mapping in cam_polygon_mapping:
         cam_segment, road_segment_info = mapping
         p_cam_segment = Polygon(cam_segment)
         segment_type = road_segment_info.road_type
@@ -245,10 +255,24 @@ def detection_to_img_segment(
 
 def detection_to_nearest_segment(
     car_loc3d: "Float3",
-    segment: "RoadPolygonInfo",
+    cam_polygon_mapping: "list[CameraPolygonMapping]",
 ):
-    # TODO: find closest segment
-    pass
+    assert len(cam_polygon_mapping) != 0
+    point = shapely.geometry.Point(car_loc3d[:2])
+
+    min_distance = float('inf')
+    min_mapping = None
+    for mapping in cam_polygon_mapping:
+        _, road_polygon_info = mapping
+        polygon = road_polygon_info.polygon
+
+        distance = polygon.distance(point)
+        if distance < min_distance:
+            min_distance = distance
+            min_mapping = mapping
+
+    assert min_mapping is not None
+    return min_mapping
 
 
 def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
@@ -266,7 +290,8 @@ def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
         projection = project_point_onto_linestring(
             Point(car_loc3d[:2]), segment_line)
 
-        if projection.intersects(segment_line):
+        if not projection.intersects(segment_line):
+            # TODO: if there are multiple ones that intersect -> find the one closer to the point
             return segment_line, segment_heading
 
         if closest_segment_line is None:
@@ -290,11 +315,11 @@ def location_calibration(
     """
     segment_polygon = road_segment_info.polygon
     assert segment_polygon is not None
-    segment_line = road_segment_info.segment_lines
-    if segment_line is None:
+    segment_lines = road_segment_info.segment_lines
+    if segment_lines is None or len(segment_lines) == 0:
         return car_loc3d
     # TODO: project onto multiple linestrings and find the closest one
-    projection = project_point_onto_linestring(Point(car_loc3d[:2]), segment_line).coords
+    projection = project_point_onto_linestring(Point(car_loc3d[:2]), segment_lines).coords
     return projection[0], projection[1], car_loc3d[2]
 
 
@@ -363,31 +388,35 @@ def ego_departure(ego_trajectory: "List[trajectory_3d]", current_time: "datetime
     return False, ego_trajectory[-1].timestamp, ego_trajectory[-1].coordinates
 
 
-def time_to_exit_current_segment(detection_info,
-                                 current_time, car_loc, car_trajectory=None):
+def time_to_exit_current_segment(
+    detection_info: "DetectionInfo",
+    current_time,
+    car_loc,
+    car_trajectory=None
+):
     """Return the time that the car exit the current segment
 
     Assumption:
     car heading is the same as road heading
     car drives at max speed if no trajectory is given
     """
-    current_segment_info = detection_info.road_segment_info
-    segmentpolygon = current_segment_info.segment_polygon
+    current_polygon_info = detection_info.road_polygon_info
+    polygon = current_polygon_info.polygon
     if detection_info.segment_heading is None:
         return time_elapse(current_time, -1), None
     segmentheading = detection_info.segment_heading + 90
     if car_trajectory:
         for point in car_trajectory:
             if (point.timestamp > current_time
-               and not Polygon(segmentpolygon).contains(Point(point.coordinates))):
+               and not Polygon(polygon).contains(Point(point.coordinates))):
                 return point.timestamp, point.coordinates
         return time_elapse(current_time, -1), None
-    car_loc = Point(car_loc)
+    car_loc = Point(car_loc[:2])
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
                   car_loc.y + math.sin(math.radians(segmentheading)))
     car_heading_line = LineString([car_loc, car_vector])
     # logger.info(f'car_heading_vector {car_heading_line}')
-    intersection = line_to_polygon_intersection(segmentpolygon, car_heading_line)
+    intersection = line_to_polygon_intersection(polygon, car_heading_line)
     # logger.info(f"mapped polygon", segat intersection
     if len(intersection) == 2:
         intersection_1_vector = (intersection[0][0] - car_loc.x,
@@ -399,19 +428,19 @@ def time_to_exit_current_segment(detection_info,
         distance1 = compute_distance(car_loc, intersection[0])
         distance2 = compute_distance(car_loc, intersection[1])
         if relative_direction_1:
-            logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_segment_info.segment_type)}')
-            return time_elapse(current_time, distance1 / max_car_speed(current_segment_info.segment_type)), intersection[0]
+            logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_polygon_info.road_type)}')
+            return time_elapse(current_time, distance1 / max_car_speed(current_polygon_info.road_type)), intersection[0]
         elif relative_direction_2:
             logger.info(f'relative_direction_2 {distance2} {current_time}')
-            return time_elapse(current_time, distance2 / max_car_speed(current_segment_info.segment_type)), intersection[1]
+            return time_elapse(current_time, distance2 / max_car_speed(current_polygon_info.road_type)), intersection[1]
         else:
             logger.info("wrong car moving direction")
             return time_elapse(current_time, -1), None
     return time_elapse(current_time, -1), None
 
 
-def meetup(car1_loc,
-           car2_loc,
+def meetup(car1_loc: "Float3 | Point",
+           car2_loc: "Float3 | Point",
            car1_heading,
            car2_heading,
            road_type,
@@ -435,8 +464,10 @@ def meetup(car1_loc,
         If no trajectory, or speed is given, car drives at max speed
         TODO: now I've just implemented the case for ego car to meet another detected car
     """
-    car1_loc = Point(car1_loc) if isinstance(car1_loc, tuple) else car1_loc
-    car2_loc = Point(car2_loc) if isinstance(car2_loc, tuple) else car2_loc
+    car1_loc = Point(car1_loc[:2]) if isinstance(car1_loc, tuple) else car1_loc
+    assert isinstance(car1_loc, Point)
+    car2_loc = Point(car2_loc[:2]) if isinstance(car2_loc, tuple) else car2_loc
+    assert isinstance(car2_loc, Point)
     if car1_trajectory is not None and car2_trajectory is None:
         car2_speed = max_car_speed(road_type) if car2_speed is None else car2_speed
         car2_heading += 90
