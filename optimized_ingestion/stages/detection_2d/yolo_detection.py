@@ -65,14 +65,16 @@ class YoloDetection(Detection2D):
     @cache
     def _run(self, payload: "Payload"):
         with torch.no_grad():
-            names: "List[str]" = self.model.names
+            _names = self.model.names
+            assert isinstance(_names, dict), type(_names)
+            names: "list[str]" = class_mapping_to_list(_names)
             dataset = LoadImages(payload, img_size=self.imgsz, auto=self.pt)
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
             metadata: "list[Metadatum]" = []
             for frame_idx, im, im0s in tqdm(dataset):
                 if not payload.keep[frame_idx]:
-                    metadata.append((torch.Tensor([]), names))
+                    metadata.append(Metadatum(torch.Tensor([]), names))
                     continue
                 # t1 = time_sync()
                 im = torch.from_numpy(im).to(self.device)
@@ -102,6 +104,15 @@ class YoloDetection(Detection2D):
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0s.shape).round()
                 metadata.append(Metadatum(det, names))
         return None, {self.classname(): metadata}
+
+
+def class_mapping_to_list(names: "dict[int, str]") -> "list[str]":
+    out: "list[str]" = []
+    for i, (idx, name) in enumerate(sorted(names.items())):
+        assert i == idx, (i, idx)
+        out.append(name)
+
+    return out
 
 
 class ImageOutput(NamedTuple):
