@@ -1,4 +1,5 @@
 import torch
+
 from ...payload import Payload
 from .detection_2d import Detection2D, Metadatum
 
@@ -33,6 +34,6 @@ class ObjectTypeFilter(Detection2D):
                 assert type_index.is_integer()
                 if type_index in type_indices_to_keep:
                     det_to_keep.append(i)
-            
+
             metadata.append(Metadatum(det[det_to_keep], class_mapping))
         return None, {ObjectTypeFilter.classname(): metadata}

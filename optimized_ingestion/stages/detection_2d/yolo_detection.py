@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Iterable, Iterator, List, NamedTuple
+from typing import TYPE_CHECKING, Iterable, Iterator, NamedTuple
 
 # limit the number of cpus used by high performance libraries
 os.environ["OMP_NUM_THREADS"] = "1"
