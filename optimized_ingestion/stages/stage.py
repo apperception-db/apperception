@@ -12,8 +12,8 @@ T = TypeVar('T')
 class Stage(Generic[T]):
     runtimes: "List[dict]"
 
-    def __new__(cls):
-        obj = object.__new__(cls)
+    def __new__(cls, *_, **__):
+        obj = super(Stage, cls).__new__(cls)
         obj.runtimes = []
         return obj
 
