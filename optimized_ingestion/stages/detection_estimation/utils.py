@@ -334,7 +334,7 @@ def get_largest_polygon_containing_ego(cam_segment_mapping: "List[CameraPolygonM
         if road_segment_info.contains_ego and area > maximum_mapping_area:
             maximum_mapping = mapping
             maximum_mapping_area = area
-    
+
     assert maximum_mapping is not None, [c.road_polygon_info.id for c in cam_segment_mapping]
     return maximum_mapping
 

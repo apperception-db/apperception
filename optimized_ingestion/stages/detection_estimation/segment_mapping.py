@@ -25,7 +25,7 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import time
-from typing import Any, NamedTuple, Tuple
+from typing import NamedTuple, Tuple
 
 from ...camera_config import CameraConfig
 from .utils import Float2, Float3, Float22, line_to_polygon_intersection
