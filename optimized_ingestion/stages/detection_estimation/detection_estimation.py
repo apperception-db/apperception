@@ -34,7 +34,7 @@ from .sample_plan_algorithms import Action, get_sample_action_alg
 from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     detection_to_img_segment, detection_to_nearest_segment,
-                    get_largest_segment, get_segment_line,
+                    get_largest_polygon_containing_ego, get_segment_line,
                     relative_direction_to_ego, trajectory_3d)
 
 
@@ -189,6 +189,7 @@ class SamplePlan:
         next_sample_frame_info = self.get_next_sample_frame_info()
         if next_sample_frame_info:
             _, next_sample_frame_num, _ = next_sample_frame_info
+            assert next_sample_frame_num is not None
             self.next_frame_num = max(next_sample_frame_num, next_frame_num)
         return self.next_frame_num
 
@@ -202,13 +203,8 @@ def construct_all_detection_info(
     all_detection_info: "List[DetectionInfo]" = []
     if len(all_detections) == 0:
         return all_detection_info
-    ego_mapping = get_largest_segment(cam_polygon_mapping)
-    if ego_mapping is None:
-        # for mapping in cam_segment_mapping:
-        #     cam_segment, road_segment_info = mapping
-        raise ValueError('Ego segment not included')
 
-    _, ego_road_segment_info = ego_mapping
+    _, ego_road_polygon_info = get_largest_polygon_containing_ego(cam_polygon_mapping)
 
     for detection in all_detections:
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
@@ -227,7 +223,7 @@ def construct_all_detection_info(
                                        car_bbox2d,
                                        ego_trajectory,
                                        ego_config,
-                                       ego_road_segment_info)
+                                       ego_road_polygon_info)
         all_detection_info.append(detection_info)
 
     return all_detection_info
