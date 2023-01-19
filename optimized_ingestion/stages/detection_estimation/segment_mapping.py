@@ -24,6 +24,7 @@ import psycopg2
 import psycopg2.sql
 import shapely
 import shapely.geometry
+import shapely.wkb
 import time
 from typing import NamedTuple, Tuple
 
@@ -41,10 +42,10 @@ test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__15331532
 POLYGON_CONTAIN_QUERY = psycopg2.sql.SQL("""
 SELECT
     p.elementid,
-    FIRST(p.elementpolygon),
-    FIRST(p.segmenttypes),
-    ARRAY_AGG(s.segmentline),
-    ARRAY_AGG(s.heading),
+    p.elementpolygon,
+    p.segmenttypes,
+    ARRAY_AGG(s.segmentline)::geometry[],
+    ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),
     COUNT(DISTINCT p.segmenttypes)
 FROM segmentpolygon AS p
@@ -59,10 +60,10 @@ GROUP BY p.elementid;
 POLYGON_DWITHIN_QUERY = psycopg2.sql.SQL("""
 SELECT
     p.elementid,
-    FIRST(p.elementpolygon),
-    FIRST(p.segmenttypes),
-    ARRAY_AGG(s.segmentline),
-    ARRAY_AGG(s.heading),
+    p.elementpolygon,
+    p.segmenttypes,
+    ARRAY_AGG(s.segmentline)::geometry[],
+    ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),
     COUNT(DISTINCT p.segmenttypes)
 FROM segmentpolygon AS p
@@ -79,25 +80,25 @@ GROUP BY p.elementid;
 class RoadSegmentWithHeading(NamedTuple):
     id: 'str'
     polygon: 'postgis.Polygon'
-    segmentline: 'list[postgis.LineString]'
-    heading: 'list[float]'
     road_types: 'list[str]'
+    segmentline: 'list[shapely.geometry.LineString]'
+    heading: 'list[float]'
 
 
 class Segment(NamedTuple):
     id: 'str'
     polygon: 'postgis.Polygon'
-    segmentline: 'list[postgis.LineString]'
+    road_type: 'str'
+    segmentline: 'list[shapely.geometry.LineString]'
     heading: 'list[float]'
-    road_types: 'str'
 
 
 class AnnotatedSegment(NamedTuple):
     id: 'str'
     polygon: 'postgis.Polygon'
-    segmentline: 'list[postgis.LineString]'
+    road_type: 'str'
+    segmentline: 'list[shapely.geometry.LineString]'
     heading: 'list[float]'
-    road_types: 'str'
     contain: 'bool'
 
 
@@ -132,6 +133,21 @@ class CameraPolygonMapping(NamedTuple):
     road_polygon_info: "RoadPolygonInfo"
 
 
+def hex_str_to_linestring(hex: 'str'):
+    return shapely.geometry.LineString(shapely.wkb.loads(bytes.fromhex(hex)))
+
+
+def make_road_polygon_with_heading(row: "tuple"):
+    eid, polygon, types, lines, headings, *_ = row
+    return RoadSegmentWithHeading(
+        eid,
+        polygon,
+        types,
+        [*map(hex_str_to_linestring, lines[1:-1].split(':'))],
+        headings,
+    )
+
+
 def road_polygon_contains(
     ego_config: "CameraConfig"
 ) -> "list[RoadSegmentWithHeading]":
@@ -143,10 +159,10 @@ def road_polygon_contains(
     results = database.execute(query)
     assert all(r[5:] == (1, 1) for r in results)
 
-    output = [RoadSegmentWithHeading(*r[:5]) for r in results]
+    output = [*map(make_road_polygon_with_heading, results)]
     assert len(output) > 0
     for row in output:
-        line, types, heading = row[2:5]
+        types, line, heading = row[2:5]
         assert line is not None
         assert types is not None
         assert heading is not None
@@ -166,9 +182,9 @@ def find_polygon_dwithin(
     results = database.execute(query)
     assert all(r[5:] == (1, 1) for r in results)
 
-    output = [RoadSegmentWithHeading(*r[:5]) for r in results]
+    output = [*map(make_road_polygon_with_heading, results)]
     for row in output:
-        line, types, heading = row[2:5]
+        types, line, heading = row[2:5]
         assert line is not None
         assert types is not None
         assert heading is not None
@@ -177,15 +193,15 @@ def find_polygon_dwithin(
 
 def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
     def _(x: "RoadSegmentWithHeading") -> "Segment":
-        i, polygon, lines, headings, types = x
+        i, polygon, types, lines, headings = x
         return Segment(
             i,
             polygon,
-            lines,
-            [*map(math.degrees, headings)],
             # TODO: fix this hack: all the useful types are 'lane', 'lanegroup',
             # 'intersection' which are always at the last position
             types[-1],
+            lines,
+            [*map(math.degrees, headings)],
         )
     return list(map(_, segments))
 
@@ -396,11 +412,10 @@ def map_imgsegment_roadsegment(
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
     for road_polygon in search_space:
-        polygonid, roadpolygon, segmentlines, segmentheadings, roadtype, contains_ego = road_polygon
+        polygonid, roadpolygon, roadtype, segmentlines, segmentheadings, contains_ego = road_polygon
         assert segmentlines is not None
         assert segmentheadings is not None
 
-        segmentlines = [plpygis.Geometry(l.to_ewkb()).shapely for l in segmentlines]
         assert all(isinstance(l, shapely.geometry.LineString) for l in segmentlines)
 
         p = plpygis.Geometry(roadpolygon.to_ewkb())
