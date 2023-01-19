@@ -24,6 +24,7 @@ import psycopg2
 import psycopg2.sql
 import shapely
 import shapely.geometry
+import shapely.wkb
 import time
 from typing import NamedTuple, Tuple
 
@@ -38,60 +39,66 @@ input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
-SEGMENT_CONTAIN_QUERY = """
+POLYGON_CONTAIN_QUERY = psycopg2.sql.SQL("""
 SELECT
-    segmentpolygon.elementid,
-    segmentpolygon.elementpolygon,
-    segment.segmentline,
-    segmentpolygon.segmenttypes,
-    segment.heading
-FROM segmentpolygon
-    LEFT OUTER JOIN segment USING (elementid)
+    p.elementid,
+    p.elementpolygon,
+    p.segmenttypes,
+    ARRAY_AGG(s.segmentline)::geometry[],
+    ARRAY_AGG(s.heading)::real[],
+    COUNT(DISTINCT p.elementpolygon),
+    COUNT(DISTINCT p.segmenttypes)
+FROM segmentpolygon AS p
+    LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Contains(
-    segmentpolygon.elementpolygon,
+    p.elementpolygon,
     {ego_translation}::geometry
-) AND 'roadsection' != ALL(segmentpolygon.segmenttypes);
-"""
+) AND 'roadsection' != ALL(p.segmenttypes)
+GROUP BY p.elementid;
+""")
 
-SEGMENT_DWITHIN_QUERY = """
+POLYGON_DWITHIN_QUERY = psycopg2.sql.SQL("""
 SELECT
-    segmentpolygon.elementid,
-    segmentpolygon.elementpolygon,
-    segment.segmentline,
-    segmentpolygon.segmenttypes,
-    segment.heading
-FROM segmentpolygon
-    LEFT OUTER JOIN segment USING (elementid)
+    p.elementid,
+    p.elementpolygon,
+    p.segmenttypes,
+    ARRAY_AGG(s.segmentline)::geometry[],
+    ARRAY_AGG(s.heading)::real[],
+    COUNT(DISTINCT p.elementpolygon),
+    COUNT(DISTINCT p.segmenttypes)
+FROM segmentpolygon AS p
+    LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_DWithin(
-        elementpolygon,
+        p.elementpolygon,
         {start_segment}::geometry,
         {view_distance}
-) AND 'roadsection' != ALL(segmentpolygon.segmenttypes);
-"""
+) AND 'roadsection' != ALL(p.segmenttypes)
+GROUP BY p.elementid;
+""")
 
 
 class RoadSegmentWithHeading(NamedTuple):
     id: 'str'
     polygon: 'postgis.Polygon'
-    segmentline: 'postgis.LineString'
     road_types: 'list[str]'
-    heading: 'float'
+    segmentline: 'list[shapely.geometry.LineString]'
+    heading: 'list[float]'
 
 
 class Segment(NamedTuple):
     id: 'str'
     polygon: 'postgis.Polygon'
-    segmentline: 'postgis.LineString'
-    road_types: 'str'
-    heading: 'float'
+    road_type: 'str'
+    segmentline: 'list[shapely.geometry.LineString]'
+    heading: 'list[float]'
 
 
 class AnnotatedSegment(NamedTuple):
     id: 'str'
     polygon: 'postgis.Polygon'
-    segmentline: 'postgis.LineString'
-    road_types: 'str'
-    heading: 'float'
+    road_type: 'str'
+    segmentline: 'list[shapely.geometry.LineString]'
+    heading: 'list[float]'
     contain: 'bool'
 
 
@@ -126,53 +133,75 @@ class CameraPolygonMapping(NamedTuple):
     road_polygon_info: "RoadPolygonInfo"
 
 
-def road_segment_contains(
-    ego_config: "CameraConfig"
-) -> "list[RoadSegmentWithHeading]":
-    ego_point = postgis.point.Point(*ego_config.ego_translation[:2])
-    query = psycopg2.sql.SQL(SEGMENT_CONTAIN_QUERY).format(
-        ego_translation=psycopg2.sql.Literal(ego_point)
+def hex_str_to_linestring(hex: 'str'):
+    return shapely.geometry.LineString(shapely.wkb.loads(bytes.fromhex(hex)))
+
+
+def make_road_polygon_with_heading(row: "tuple"):
+    eid, polygon, types, lines, headings, *_ = row
+    return RoadSegmentWithHeading(
+        eid,
+        polygon,
+        types,
+        [*map(hex_str_to_linestring, lines[1:-1].split(':'))],
+        headings,
     )
 
-    output = [*map(lambda row: RoadSegmentWithHeading(*row), database.execute(query))]
+
+def road_polygon_contains(
+    ego_config: "CameraConfig"
+) -> "list[RoadSegmentWithHeading]":
+    point = postgis.Point(*ego_config.ego_translation[:2])
+    query = POLYGON_CONTAIN_QUERY.format(
+        ego_translation=psycopg2.sql.Literal(point)
+    )
+
+    results = database.execute(query)
+    assert all(r[5:] == (1, 1) for r in results)
+
+    output = [*map(make_road_polygon_with_heading, results)]
+    assert len(output) > 0
     for row in output:
-        line, types, heading = row[2:5]
+        types, line, heading = row[2:5]
         assert line is not None
         assert types is not None
         assert heading is not None
     return output
 
 
-def find_segment_dwithin(
+def find_polygon_dwithin(
     start_segment: "AnnotatedSegment",
     view_distance: "float | int" = 50
 ) -> "list[RoadSegmentWithHeading]":
     _, start_segment_polygon, _, _, _, _ = start_segment
-    query = psycopg2.sql.SQL(SEGMENT_DWITHIN_QUERY).format(
+    query = POLYGON_DWITHIN_QUERY.format(
         start_segment=psycopg2.sql.Literal(start_segment_polygon),
         view_distance=psycopg2.sql.Literal(view_distance)
     )
 
-    output = [*map(lambda row: RoadSegmentWithHeading(*row), database.execute(query))]
+    results = database.execute(query)
+    assert all(r[5:] == (1, 1) for r in results)
+
+    output = [*map(make_road_polygon_with_heading, results)]
     for row in output:
-        line, types, heading = row[2:5]
+        types, line, heading = row[2:5]
         assert line is not None
         assert types is not None
         assert heading is not None
     return output
 
 
-def reformat_return_segment(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
+def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
     def _(x: "RoadSegmentWithHeading") -> "Segment":
-        i, polygon, line, types, heading = x
+        i, polygon, types, lines, headings = x
         return Segment(
             i,
             polygon,
-            line,
             # TODO: fix this hack: all the useful types are 'lane', 'lanegroup',
             # 'intersection' which are always at the last position
             types[-1],
-            math.degrees(heading),
+            lines,
+            [*map(math.degrees, headings)],
         )
     return list(map(_, segments))
 
@@ -184,48 +213,31 @@ def annotate_contain(
     return [AnnotatedSegment(*s, contain) for s in segments]
 
 
-class HashableAnnotatedSegment:
-    val: "AnnotatedSegment"
-
-    def __init__(self, val: "AnnotatedSegment"):
-        self.val = val
-
-    def __hash__(self):
-        h1 = hash(self.val[0])
-        h2 = hash(self.val[1].wkt_coords)
-        h3 = hash(self.val[2].wkt_coords) if self.val[2] else ''
-        return hash((h1, h2, h3))
-
-    def __eq__(self, __o: object) -> bool:
-        if not isinstance(__o, HashableAnnotatedSegment):
-            return False
-        return self.val == __o.val
-
-
 def construct_search_space(
     ego_config: "CameraConfig",
     view_distance: float = 50.
 ) -> "list[AnnotatedSegment]":
     '''
-    road segment: (elementid, elementpolygon, segmenttype, heading, contains_ego?)
+    ego_config: current config of a camera
     view_distance: in meters, default 50 because scenic standard
-    return: set(road_segment)
+    return: set(road_polygon)
     '''
-    all_contain_segment = reformat_return_segment(road_segment_contains(ego_config))
-    all_contain_segment = annotate_contain(all_contain_segment, contain=True)
-    start_segment = all_contain_segment[0]
+    all_contain_polygons = reformat_return_polygon(road_polygon_contains(ego_config))
+    all_contain_polygons = annotate_contain(all_contain_polygons, contain=True)
+    start_segment = all_contain_polygons[0]
 
-    segment_within_distance = reformat_return_segment(find_segment_dwithin(start_segment, view_distance))
-    segment_within_distance = annotate_contain(segment_within_distance, contain=False)
+    polygons_within_distance = reformat_return_polygon(find_polygon_dwithin(start_segment, view_distance))
+    polygons_within_distance = annotate_contain(polygons_within_distance, contain=False)
 
-    return [
-        s.val
-        for s in {
-            # To remove duplicates
-            *map(HashableAnnotatedSegment, all_contain_segment),
-            *map(HashableAnnotatedSegment, segment_within_distance)
-        }
-    ]
+    ids: "set[str]" = set()
+    polygons: "list[AnnotatedSegment]" = []
+    for p in all_contain_polygons + polygons_within_distance:
+        if p.id not in ids:
+            ids.add(p.id)
+            polygons.append(p)
+
+    assert any(p.contain for p in polygons)
+    return polygons
 
 
 def get_fov_lines(ego_config: "CameraConfig", ego_fov: float = 70.) -> "Tuple[Float22, Float22]":
@@ -322,13 +334,13 @@ def world2pixel_all(points3d: "list[Float2]", config: "CameraConfig"):
 
 
 def construct_mapping(
-    decoded_road_segment: "list[Float2]",
+    decoded_road_polygon_points: "list[Float2]",
     frame_size: Tuple[int, int],
     fov_lines: Tuple[Float22, Float22],
     segmentid: str,
-    segmentline: "shapely.geometry.LineString",
+    segmentlines: "list[shapely.geometry.LineString]",
     segmenttype: str,
-    segmentheading: float,
+    segmentheadings: "list[float]",
     contains_ego: bool,
     ego_config: "CameraConfig"
 ) -> "CameraPolygonMapping | None":
@@ -340,34 +352,34 @@ def construct_mapping(
     """
     if segmenttype is None or segmenttype == 'None':
         return
+
     ego_translation = ego_config.ego_translation
 
     # deduced_cam_segment = list(map(worl2pixel_factory(ego_config), decoded_road_segment))
-    deduced_cam_segment = world2pixel_all(decoded_road_segment, ego_config)
+    deduced_cam_polygon_points = world2pixel_all(decoded_road_polygon_points, ego_config)
     # assert np.allclose(np.array(deduced_cam_segment).reshape((len(decoded_road_segment), 2)), deduced_cam_segment2)
-    assert len(deduced_cam_segment) == len(decoded_road_segment)
+    assert len(deduced_cam_polygon_points) == len(decoded_road_polygon_points)
     if contains_ego:
-        keep_cam_segment_point = deduced_cam_segment
-        keep_road_segment_point = decoded_road_segment
+        keep_cam_polygon_points = deduced_cam_polygon_points
+        keep_road_polygon_points = decoded_road_polygon_points
     else:
-        keep_cam_segment_point: "list[npt.NDArray[np.floating]]" = []
-        keep_road_segment_point: "list[Float2]" = []
-        for current_cam_point, current_road_point in zip(deduced_cam_segment, decoded_road_segment):
-            if in_frame(current_cam_point, frame_size) and \
-                    in_view(current_road_point, ego_translation, fov_lines):
-                keep_cam_segment_point.append(current_cam_point)
-                keep_road_segment_point.append(current_road_point)
+        keep_cam_polygon_points: "list[npt.NDArray[np.floating]]" = []
+        keep_road_polygon_points: "list[Float2]" = []
+        for current_cam_point, current_road_point in zip(deduced_cam_polygon_points, decoded_road_polygon_points):
+            if in_frame(current_cam_point, frame_size) and in_view(current_road_point, ego_translation, fov_lines):
+                keep_cam_polygon_points.append(current_cam_point)
+                keep_road_polygon_points.append(current_road_point)
     ret = None
-    if contains_ego or (len(keep_cam_segment_point) > 2
-                        and shapely.geometry.Polygon(tuple(keep_cam_segment_point)).area > 100):
+    if contains_ego or (len(keep_cam_polygon_points) > 2
+                        and shapely.geometry.Polygon(tuple(keep_cam_polygon_points)).area > 100):
         ret = CameraPolygonMapping(
-            keep_cam_segment_point,
+            keep_cam_polygon_points,
             RoadPolygonInfo(
                 segmentid,
-                shapely.geometry.Polygon(keep_road_segment_point),
-                [segmentline],
+                shapely.geometry.Polygon(keep_road_polygon_points),
+                segmentlines,
                 segmenttype,
-                [segmentheading],
+                segmentheadings,
                 contains_ego,
                 ego_config,
                 fov_lines
@@ -399,17 +411,13 @@ def map_imgsegment_roadsegment(
     def not_in_view(point: "Float2"):
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
-    for road_segment in search_space:
-        polygonid, roadpolygon, segmentline, roadtype, segmentheading, contains_ego = road_segment
-        assert segmentline is not None
-        assert segmentheading is not None
-        segmentline = plpygis.Geometry(segmentline.to_ewkb()).shapely
-        assert isinstance(segmentline, shapely.geometry.LineString)
-        if polygonid in mapping:
-            road_polygon_info = mapping[polygonid].road_polygon_info
-            road_polygon_info.segment_lines.append(segmentline)
-            road_polygon_info.segment_headings.append(segmentheading)
-            continue
+    for road_polygon in search_space:
+        polygonid, roadpolygon, roadtype, segmentlines, segmentheadings, contains_ego = road_polygon
+        assert segmentlines is not None
+        assert segmentheadings is not None
+
+        assert all(isinstance(l, shapely.geometry.LineString) for l in segmentlines)
+
         p = plpygis.Geometry(roadpolygon.to_ewkb())
         assert isinstance(p, plpygis.Polygon)
         XYs: "Tuple[array.array[float], array.array[float]]" = p.exterior.shapely.xy
@@ -418,20 +426,29 @@ def map_imgsegment_roadsegment(
         assert isinstance(XYs[1], array.array), type(XYs[1])
         assert isinstance(XYs[0][0], float), type(XYs[0][0])
         assert isinstance(XYs[1][0], float), type(XYs[1][0])
-        segmentpolygon_points = list(zip(*XYs))
-        roadpolygon = shapely.geometry.Polygon(segmentpolygon_points)
-        decoded_road_segment = segmentpolygon_points
+        polygon_points = list(zip(*XYs))
+        roadpolygon = shapely.geometry.Polygon(polygon_points)
+
+        decoded_road_polygon_points = polygon_points
         if not contains_ego:
-            road_filter = all(map(not_in_view, segmentpolygon_points))
-            if road_filter:
+            if all(map(not_in_view, polygon_points)):
                 continue
 
             intersection_points = intersection(fov_lines, roadpolygon)
-            decoded_road_segment += intersection_points
+            decoded_road_polygon_points += intersection_points
 
         current_mapping = construct_mapping(
-            decoded_road_segment, frame_size, fov_lines, polygonid,
-            segmentline, roadtype, segmentheading, contains_ego, ego_config)
+            decoded_road_polygon_points,
+            frame_size,
+            fov_lines,
+            polygonid,
+            segmentlines,
+            roadtype,
+            segmentheadings,
+            contains_ego,
+            ego_config
+        )
+
         if current_mapping is not None:
             mapping[polygonid] = current_mapping
 

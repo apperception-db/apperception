@@ -34,7 +34,7 @@ class From2DAndRoad(Detection3D):
 
             metadata: "list[Metadatum]" = []
             for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
-                if not k:
+                if not k or d2d.shape[0] == 0:
                     metadata.append(Metadatum(torch.tensor([], device=d2d.device), clss))
                     continue
 

@@ -51,7 +51,7 @@ class Video(Iterable["CameraConfig"]):
     def fps(self):
         return self._get_fps_and_length()[1]
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: "int"):
         return self.interpolated_frames[index]
 
     def __iter__(self) -> "collections.abc.Iterator":
