@@ -1,11 +1,12 @@
-from typing import Tuple
 from apperception.database import database
-import psycopg2.sql
+
 import numpy as np
+import psycopg2.sql
+from typing import Tuple
 
 from ...payload import Payload
-from ..tracking_3d.from_2d_and_road import From2DAndRoad
 from ..tracking_3d import tracking_3d
+from ..tracking_3d.from_2d_and_road import From2DAndRoad
 from . import SegmentTrajectory
 
 
@@ -20,9 +21,9 @@ class FromTracking3D(SegmentTrajectory):
             for oid, t in frame.items():
                 if oid not in object_mapping:
                     object_mapping[oid] = []
-                
+
                 object_mapping[oid].append(t)
-        
+
         points: "list[Tuple[tracking_3d.Tracking3DResult, Tuple[float, float] | None]]" = []
         for traj in object_mapping.values():
             traj.sort(key=lambda t: t.timestamp)
@@ -36,9 +37,8 @@ class FromTracking3D(SegmentTrajectory):
 
             for prev, curr, next in zip(traj[:-2], traj[1:-1], traj[2:]):
                 points.append((curr, _get_direction_2d(prev, next)))
-        
+
         return super()._run(payload)
-    pass
 
 
 def _get_direction_2d(p1: "tracking_3d.Tracking3DResult", p2: "tracking_3d.Tracking3DResult") -> "Tuple[float, float]":
@@ -56,11 +56,11 @@ def map_points_and_directions_to_segment(annotations: "list[Tuple[tracking_3d.Tr
     tzs = [a.point[2] for a, _ in annotations]
     dxs = [d and d[0] for _, d in annotations]
     dys = [d and d[1] for _, d in annotations]
-    
+
     _point = psycopg2.sql.SQL("UNNEST({fields}) AS _point (fid, oid, tx, ty, dx, dy)").format(
         fields=psycopg2.sql.SQL(',').join(map(psycopg2.sql.Literal, [frame_indices, object_indices, txs, tys, dxs, dys]))
     )
-    
+
     out = psycopg2.sql.SQL("""
     DROP FUNCTION IF EXISTS _angle(double precision);
     CREATE OR REPLACE FUNCTION _angle(a double precision) RETURNS double precision AS
@@ -151,6 +151,6 @@ def map_points_and_directions_to_segment(annotations: "list[Tuple[tracking_3d.Tr
     WHERE PointPolygonSegment.distance = MinDis.mindistance
         AND PointPolygonSegment.anglediff = MinDisMinAngle.minangle
     """).format(_point=_point)
-    
+
     result = database.execute(out)
     return result
