@@ -106,7 +106,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         return keep, {DetectionEstimation.classname(): metadata}
 
 
-def prune_detection(detection_info, det, predicate=lambda x:x.road_type == "intersection"):
+def prune_detection(detection_info, det, predicate=lambda x: x.road_type == "intersection"):
     pruned_detection_info = []
     pruned_det = []
     for d, di in zip(det, detection_info):
