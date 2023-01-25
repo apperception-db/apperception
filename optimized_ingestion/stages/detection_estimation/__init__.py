@@ -109,7 +109,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 def prune_detection(
     detection_info: "list[DetectionInfo]",
     det: "torch.Tensor",
-    predicate: "Callable[[DetectionInfo], bool]"=lambda x: x.road_type == "intersection"
+    predicate: "Callable[[DetectionInfo], bool]" = lambda x: x.road_type == "intersection"
 ):
     pruned_detection_info: "list[DetectionInfo]" = []
     pruned_det: "list[torch.Tensor]" = []
