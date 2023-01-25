@@ -3,7 +3,7 @@ import time
 import torch
 from bitarray import bitarray
 from tqdm import tqdm
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -82,21 +82,21 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         skipped_frame_num.append(len(payload.video) - 1)
 
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
-        # print(np.array(times).sum(axis=0))
-        print(f"sorted_ego_config_length {len(payload.video)}")
-        print(f"number of skipped {len(skipped_frame_num)}")
-        print(skipped_frame_num)
-        print(action_type_counts)
+        # logger.info(np.array(times).sum(axis=0))
+        logger.info(f"sorted_ego_config_length {len(payload.video)}")
+        logger.info(f"number of skipped {len(skipped_frame_num)}")
+        logger.info(skipped_frame_num)
+        logger.info(action_type_counts)
         total_run_time = time.time() - start_time
         num_runs = len(payload.video) - len(skipped_frame_num)
-        print(f"total_run_time {total_run_time}")
-        print(f"avg run time {total_run_time/num_runs}")
-        print(f"total_detection_time {total_detection_time}")
-        print(f"avg detection time {total_detection_time/num_runs}")
-        print(f"total_generate_sample_plan_time {total_sample_plan_time}")
-        print(f"avg generate_sample_plan time {total_sample_plan_time/num_runs}")
-        print(f"total_mapping_time {mapping_time}")
-        print(f"avg mapping time {mapping_time/num_runs}")
+        logger.info(f"total_run_time {total_run_time}")
+        logger.info(f"avg run time {total_run_time/num_runs}")
+        logger.info(f"total_detection_time {total_detection_time}")
+        logger.info(f"avg detection time {total_detection_time/num_runs}")
+        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        logger.info(f"avg generate_sample_plan time {total_sample_plan_time/num_runs}")
+        logger.info(f"total_mapping_time {mapping_time}")
+        logger.info(f"avg mapping time {mapping_time/num_runs}")
 
         keep = bitarray(len(payload.video))
         keep[:] = 1
@@ -106,15 +106,19 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         return keep, {DetectionEstimation.classname(): metadata}
 
 
-def prune_detection(detection_info, det, predicate=lambda x: x.road_type == "intersection"):
-    pruned_detection_info = []
-    pruned_det = []
+def prune_detection(
+    detection_info: "list[DetectionInfo]",
+    det: "torch.Tensor",
+    predicate: "Callable[[DetectionInfo], bool]"=lambda x: x.road_type == "intersection"
+):
+    pruned_detection_info: "list[DetectionInfo]" = []
+    pruned_det: "list[torch.Tensor]" = []
     for d, di in zip(det, detection_info):
         if predicate(di):
             pruned_detection_info.append(di)
             pruned_det.append(d)
-    print("length before pruning", len(det))
-    print("length after pruning", len(pruned_det))
+    logger.info("length before pruning", len(det))
+    logger.info("length after pruning", len(pruned_det))
     return pruned_detection_info, pruned_det
 
 
