@@ -3,7 +3,7 @@ import time
 import torch
 from bitarray import bitarray
 from tqdm import tqdm
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -43,6 +43,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         dets = Detection3D.get(payload)
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
+        start_time = time.time()
+        mapping_time = 0
         for i in tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
@@ -50,12 +52,19 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 metadata.append([])
                 continue
             next_frame_num = i + 1
+            start_mapping_time = time.time()
             cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
+            mapping_time += time.time() - start_mapping_time
             logger.info(f"mapping length {len(cam_polygon_mapping)}")
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, cam_polygon_mapping, current_ego_config, ego_trajectory, i)
+            all_detection_info, det = prune_detection(all_detection_info, det)
             assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
+            if len(all_detection_info) == 0:
+                skipped_frame_num.append(i)
+                metadata.append([])
+                continue
             total_detection_time += time.time() - start_detection_time
             start_generate_sample_plan = time.time()
             next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_polygon_mapping, next_frame_num, all_detection_info=all_detection_info)
@@ -73,7 +82,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         skipped_frame_num.append(len(payload.video) - 1)
 
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
-        # print(np.array(times).sum(axis=0))
+        # logger.info(np.array(times).sum(axis=0))
         logger.info(f"sorted_ego_config_length {len(payload.video)}")
         logger.info(f"number of skipped {len(skipped_frame_num)}")
         logger.info(skipped_frame_num)
@@ -86,6 +95,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(f"avg detection time {total_detection_time/num_runs}")
         logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
         logger.info(f"avg generate_sample_plan time {total_sample_plan_time/num_runs}")
+        logger.info(f"total_mapping_time {mapping_time}")
+        logger.info(f"avg mapping time {mapping_time/num_runs}")
 
         keep = bitarray(len(payload.video))
         keep[:] = 1
@@ -93,6 +104,22 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             keep[f] = 0
 
         return keep, {DetectionEstimation.classname(): metadata}
+
+
+def prune_detection(
+    detection_info: "list[DetectionInfo]",
+    det: "torch.Tensor",
+    predicate: "Callable[[DetectionInfo], bool]" = lambda x: x.road_type == "intersection"
+):
+    pruned_detection_info: "list[DetectionInfo]" = []
+    pruned_det: "list[torch.Tensor]" = []
+    for d, di in zip(det, detection_info):
+        if predicate(di):
+            pruned_detection_info.append(di)
+            pruned_det.append(d)
+    logger.info("length before pruning", len(det))
+    logger.info("length after pruning", len(pruned_det))
+    return pruned_detection_info, pruned_det
 
 
 def generate_sample_plan_once(
