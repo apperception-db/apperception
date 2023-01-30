@@ -29,8 +29,8 @@ import time
 from typing import NamedTuple, Tuple
 
 from ...camera_config import CameraConfig
-from .utils import Float2, Float3, Float22, line_to_polygon_intersection
 from .detection_estimation import obj_detection
+from .utils import Float2, Float3, Float22, line_to_polygon_intersection
 
 logger = logging.getLogger(__name__)
 
@@ -261,7 +261,7 @@ def get_largest_polygon_containing_point(
 
     output = make_road_polygon_with_heading(result)
     assert len(output) == 1
-    
+
     types, line, heading = output[2:5]
     assert line is not None
     assert types is not None
@@ -286,11 +286,11 @@ def map_detections_to_segments(detections: "list"):
     txs = [*map(lambda x: x.car_loc3d[0], detections)]
     tys = [*map(lambda x: x.car_loc3d[1], detections)]
     tzs = [*map(lambda x: x.car_loc3d[2], detections)]
-    
+
     _point = sql.SQL("UNNEST({fields}) AS _point (token, tx, ty, tz)").format(
         fields=sql.SQL(',').join(map(sql.Literal, [tokens, txs, tys, tzs]))
     )
-    
+
     out = sql.SQL("""
     WITH
     Point AS (SELECT * FROM {_point}),
@@ -341,7 +341,7 @@ def map_detections_to_segments(detections: "list"):
     WHERE p.distance = MinDis.mindistance
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
     """).format(_point=_point)
-    
+
     result = execute(out)
     return result
 
@@ -366,7 +366,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]"):
     def not_in_view(point: "Float2"):
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
-    for order_id, road_polygon in list(zip(order_ids,mapped_polygons)):
+    for order_id, road_polygon in list(zip(order_ids, mapped_polygons)):
         polygonid, roadpolygon, roadtype, segmentlines, segmentheadings, contains_ego = road_polygon
         assert segmentlines is not None
         assert segmentheadings is not None
