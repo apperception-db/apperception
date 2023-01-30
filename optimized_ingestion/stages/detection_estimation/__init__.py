@@ -59,7 +59,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, cam_polygon_mapping, current_ego_config, ego_trajectory, i)
-            all_detection_info, det = prune_detection(all_detection_info, det)
+            # all_detection_info, det = prune_detection(all_detection_info, det)
             assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
             if len(all_detection_info) == 0:
                 skipped_frame_num.append(i)
