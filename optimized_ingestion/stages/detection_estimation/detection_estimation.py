@@ -24,18 +24,16 @@ from typing import Any, List, Literal, NamedTuple, Tuple
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
-import numpy as np
-import numpy.typing as npt
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId
 from ...video import Video
+from .optimized_segment_mapping import (RoadPolygonInfo,
+                                        get_detection_polygon_mapping,
+                                        get_largest_polygon_containing_point)
 from .sample_plan_algorithms import Action, get_sample_action_alg
-from .segment_mapping import CameraPolygonMapping, RoadPolygonInfo
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
-                    detection_to_img_segment, detection_to_nearest_segment,
-                    get_largest_polygon_containing_ego, get_segment_line,
-                    relative_direction_to_ego, trajectory_3d)
+                    get_segment_line, relative_direction_to_ego, trajectory_3d)
 
 
 class obj_detection(NamedTuple):
@@ -49,7 +47,6 @@ class obj_detection(NamedTuple):
 @dataclass
 class DetectionInfo:
     detection_id: "DetectionId"
-    frame_segment: "list[npt.NDArray[np.floating]]"
     road_polygon_info: "RoadPolygonInfo"
     car_loc3d: "Float3"
     car_loc2d: "Float2"
@@ -195,7 +192,6 @@ class SamplePlan:
 
 
 def construct_all_detection_info(
-    cam_polygon_mapping: "List[CameraPolygonMapping]",
     ego_config: "CameraConfig",
     ego_trajectory: "list[trajectory_3d]",
     all_detections: "list[obj_detection]"
@@ -204,18 +200,14 @@ def construct_all_detection_info(
     if len(all_detections) == 0:
         return all_detection_info
 
-    _, ego_road_polygon_info = get_largest_polygon_containing_ego(cam_polygon_mapping)
-
+    ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
+    detections_polygon_mapping = get_detection_polygon_mapping(all_detections, ego_config)
+    assert len(all_detections) == len(detections_polygon_mapping)
     for detection in all_detections:
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
-        related_mapping = detection_to_img_segment(car_loc2d, cam_polygon_mapping)
-        if related_mapping is None:
-            cam_segment, road_segment_info = detection_to_nearest_segment(car_loc3d, cam_polygon_mapping)
-        else:
-            cam_segment, road_segment_info = related_mapping
+        road_segment_info = detections_polygon_mapping[detection_id]
 
         detection_info = DetectionInfo(detection_id,
-                                       cam_segment,
                                        road_segment_info,
                                        car_loc3d,
                                        car_loc2d,

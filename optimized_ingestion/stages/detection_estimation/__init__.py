@@ -53,7 +53,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 continue
             next_frame_num = i + 1
             start_mapping_time = time.time()
-            cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
+            # cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
             mapping_time += time.time() - start_mapping_time
             logger.info(f"mapping length {len(cam_polygon_mapping)}")
             start_detection_time = time.time()
@@ -161,7 +161,6 @@ def generate_sample_plan_once(
 
 def construct_estimated_all_detection_info(
     detections: "torch.Tensor",
-    cam_polygon_mapping: "List[CameraPolygonMapping]",
     ego_config: "CameraConfig",
     ego_trajectory: "List[trajectory_3d]",
     frame_idx: int,
@@ -182,7 +181,13 @@ def construct_estimated_all_detection_info(
         car_loc3d = tuple(map(float, (left3d + right3d) / 2))
         assert len(car_loc3d) == 3
         car_bbox3d = (tuple(map(float, left3d)), tuple(map(float, right3d)))
-        all_detections.append(obj_detection(DetectionId(frame_idx, i), car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
+        all_detections.append(obj_detection(
+            DetectionId(frame_idx, i),
+            car_loc3d,
+            car_loc2d,
+            car_bbox3d,
+            car_bbox2d)
+        )
     # logger.info("all_detections", all_detections)
-    all_detection_info = construct_all_detection_info(cam_polygon_mapping, ego_config, ego_trajectory, all_detections)
+    all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     return all_detection_info
