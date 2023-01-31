@@ -52,7 +52,7 @@ class StrongSORT(Tracking2D):
 
                 if hasattr(strongsort, 'tracker') and hasattr(strongsort.tracker, 'camera_update'):
                     if prev_frame is not None and curr_frame is not None:
-                        strongsort.tracker.camera_update(prev_frame, curr_frame)
+                        strongsort.tracker.camera_update(prev_frame, curr_frame, cache=True)
 
                 confs = det[:, 4]
                 output_ = strongsort.update(det.cpu(), im0)

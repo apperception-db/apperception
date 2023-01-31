@@ -88,15 +88,10 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(skipped_frame_num)
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
-        num_runs = len(payload.video) - len(skipped_frame_num)
         logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"avg run time {total_run_time/num_runs}")
         logger.info(f"total_detection_time {total_detection_time}")
-        logger.info(f"avg detection time {total_detection_time/num_runs}")
         logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
-        logger.info(f"avg generate_sample_plan time {total_sample_plan_time/num_runs}")
         logger.info(f"total_mapping_time {mapping_time}")
-        logger.info(f"avg mapping time {mapping_time/num_runs}")
 
         keep = bitarray(len(payload.video))
         keep[:] = 1
