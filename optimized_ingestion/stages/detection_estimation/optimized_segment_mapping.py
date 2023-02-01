@@ -179,9 +179,10 @@ def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: "shapely.geo
     return: intersection point: tuple[tuple]
     '''
     left_fov_line, right_fov_line = fov_line
-    left_intersection = line_to_polygon_intersection(segmentpolygon, left_fov_line)
-    right_intersection = line_to_polygon_intersection(segmentpolygon, right_fov_line)
-    return left_intersection + right_intersection
+    # left_intersection = line_to_polygon_intersection(segmentpolygon, left_fov_line)
+    # right_intersection = line_to_polygon_intersection(segmentpolygon, right_fov_line)
+    # return left_intersection + right_intersection
+    return []
 
 
 def in_frame(transformed_point: "npt.NDArray", frame_size: Tuple[int, int]):
