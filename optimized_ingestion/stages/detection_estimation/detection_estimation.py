@@ -20,7 +20,7 @@ import os
 import shapely.geometry
 import sys
 from dataclasses import dataclass, field
-from typing import Any, List, Literal, NamedTuple, Tuple
+from typing import Any, List, Literal, Tuple
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -201,14 +201,14 @@ def construct_all_detection_info(
             road_segment_info = detections_polygon_mapping[detection_id]
 
             detection_info = DetectionInfo(detection_id,
-                                        road_segment_info,
-                                        car_loc3d,
-                                        car_loc2d,
-                                        car_bbox3d,
-                                        car_bbox2d,
-                                        ego_trajectory,
-                                        ego_config,
-                                        ego_road_polygon_info)
+                                           road_segment_info,
+                                           car_loc3d,
+                                           car_loc2d,
+                                           car_bbox3d,
+                                           car_bbox2d,
+                                           ego_trajectory,
+                                           ego_config,
+                                           ego_road_polygon_info)
             all_detection_info.append(detection_info)
 
     return all_detection_info
