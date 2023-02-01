@@ -26,7 +26,7 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 
 
 from ...camera_config import CameraConfig
-from ...types import DetectionId
+from ...types import DetectionId, obj_detection
 from ...video import Video
 from .optimized_segment_mapping import (RoadPolygonInfo,
                                         get_detection_polygon_mapping,
@@ -34,14 +34,6 @@ from .optimized_segment_mapping import (RoadPolygonInfo,
 from .sample_plan_algorithms import Action, get_sample_action_alg
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     get_segment_line, relative_direction_to_ego, trajectory_3d)
-
-
-class obj_detection(NamedTuple):
-    detection_id: DetectionId
-    car_loc3d: "Float3"
-    car_loc2d: "Float2"
-    car_bbox3d: "Tuple[Float3, Float3]"
-    car_bbox2d: "Float22"
 
 
 @dataclass
@@ -202,21 +194,22 @@ def construct_all_detection_info(
 
     ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
     detections_polygon_mapping = get_detection_polygon_mapping(all_detections, ego_config)
-    assert len(all_detections) == len(detections_polygon_mapping)
+    # assert len(all_detections) == len(detections_polygon_mapping)
     for detection in all_detections:
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
-        road_segment_info = detections_polygon_mapping[detection_id]
+        if detection_id in detections_polygon_mapping:
+            road_segment_info = detections_polygon_mapping[detection_id]
 
-        detection_info = DetectionInfo(detection_id,
-                                       road_segment_info,
-                                       car_loc3d,
-                                       car_loc2d,
-                                       car_bbox3d,
-                                       car_bbox2d,
-                                       ego_trajectory,
-                                       ego_config,
-                                       ego_road_polygon_info)
-        all_detection_info.append(detection_info)
+            detection_info = DetectionInfo(detection_id,
+                                        road_segment_info,
+                                        car_loc3d,
+                                        car_loc2d,
+                                        car_bbox3d,
+                                        car_bbox2d,
+                                        ego_trajectory,
+                                        ego_config,
+                                        ego_road_polygon_info)
+            all_detection_info.append(detection_info)
 
     return all_detection_info
 

@@ -31,6 +31,7 @@ from typing import NamedTuple, Tuple
 from ...camera_config import CameraConfig
 from .detection_estimation import obj_detection
 from .utils import Float2, Float3, Float22, line_to_polygon_intersection
+from ...types import DetectionId, obj_detection
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ FROM segmentpolygon AS p
 WHERE ST_Contains(
     p.elementpolygon,
     {ego_translation}::geometry
-) AND 'roadsection' != ALL(p.segmenttypes)
+)
 )
 SELECT
     p.elementid,
@@ -60,7 +61,7 @@ SELECT
     ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),
     COUNT(DISTINCT p.segmenttypes)
-FROM segmentpolygon AS p
+FROM max_contain, segmentpolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
 GROUP BY p.elementid;
@@ -255,12 +256,17 @@ def get_largest_polygon_containing_point(
     )
 
     results = database.execute(query)
+    if len(results)  > 1:
+        for result in results:
+            segmenttypes = result[2]
+            if 'roadsection' not in segmenttypes:
+                results = [result]
+                break
     assert len(results) == 1
     result = results[0]
     assert result[5:] == (1, 1)
 
     output = make_road_polygon_with_heading(result)
-    assert len(output) == 1
 
     types, line, heading = output[2:5]
     assert line is not None
@@ -315,7 +321,7 @@ def map_detections_to_segments(detections: "list"):
     PointPolygonSegment AS (
         SELECT
             *,
-            ST_Distance(ST_Point(tx, ty), ST_MakeLine(startPoint, endPoint)) AS distance,
+            ST_Distance(ST_Point(tx, ty), ST_MakeLine(startPoint, endPoint)) AS distance
         FROM Point AS p
         JOIN MaxPolygonId USING (token)
         JOIN SegmentPolygon USING (elementId)
@@ -339,19 +345,21 @@ def map_detections_to_segments(detections: "list"):
         LEFT OUTER JOIN segment AS s USING (elementid)
     JOIN MinDis USING (token)
     WHERE p.distance = MinDis.mindistance
+        AND 'roadsection' != ALL(p.segmenttypes)
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
     """).format(_point=_point)
 
-    result = execute(out)
+    result = database.execute(out)
     return result
 
 
-def get_detection_polygon_mapping(detections: "list[obj_detection]"):
+def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config: "CameraConfig"):
     """
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
+    start_time = time.time()
     results = map_detections_to_segments(detections)
-    assert all(r[5:] == (1, 1) for r in results)
+    assert all(r[6:] == (1, 1) for r in results)
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
     mapped_polygons = [*map(make_road_polygon_with_heading, mapped_polygons)]
     for row in mapped_polygons:
@@ -367,7 +375,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]"):
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
     for order_id, road_polygon in list(zip(order_ids, mapped_polygons)):
-        polygonid, roadpolygon, roadtype, segmentlines, segmentheadings, contains_ego = road_polygon
+        polygonid, roadpolygon, roadtype, segmentlines, segmentheadings = road_polygon
         assert segmentlines is not None
         assert segmentheadings is not None
 
@@ -392,21 +400,23 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]"):
         decoded_road_polygon_points += intersection_points
         keep_road_polygon_points: "list[Float2]" = []
         for current_road_point in decoded_road_polygon_points:
-            if in_view(current_road_point, ego_translation, fov_lines):
+            if in_view(current_road_point, ego_config.ego_translation, fov_lines):
                 keep_road_polygon_points.append(current_road_point)
         frame_idx = detections[0].detection_id.frame_idx
-        mapped_road_polygon_info[
-            DetectionId(frame_idx=frame_idx, obj_order=order_id)
-        ] = RoadPolygonInfo(
-            polygonid,
-            shapely.geometry.Polygon(keep_road_polygon_points),
-            segmentlines,
-            roadtype,
-            segmentheadings,
-            False,
-            ego_config,
-            fov_lines
-        )
+        if (len(keep_road_polygon_points) > 2
+                        and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 100):
+            mapped_road_polygon_info[
+                DetectionId(frame_idx=frame_idx, obj_order=order_id)
+            ] = RoadPolygonInfo(
+                polygonid,
+                shapely.geometry.Polygon(keep_road_polygon_points),
+                segmentlines,
+                roadtype,
+                segmentheadings,
+                False,
+                ego_config,
+                fov_lines
+            )
 
     logger.info(f'total mapping time: {time.time() - start_time}')
     return mapped_road_polygon_info

@@ -6,6 +6,14 @@ class DetectionId(NamedTuple):
     obj_order: int
 
 
+class obj_detection(NamedTuple):
+    detection_id: DetectionId
+    car_loc3d: "Float3"
+    car_loc2d: "Float2"
+    car_bbox3d: "Tuple[Float3, Float3]"
+    car_bbox2d: "Float22"
+
+
 Float2 = Tuple[float, float]
 Float22 = Tuple[Float2, Float2]
 

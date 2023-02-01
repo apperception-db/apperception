@@ -15,7 +15,7 @@ from ..stage import Stage
 from .detection_estimation import (DetectionInfo, SamplePlan,
                                    construct_all_detection_info,
                                    generate_sample_plan, obj_detection)
-from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
+# from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
 from .utils import trajectory_3d
 
 logging.basicConfig()
@@ -44,7 +44,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        mapping_time = 0
         for i in tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
@@ -52,21 +51,19 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 metadata.append([])
                 continue
             next_frame_num = i + 1
-            start_mapping_time = time.time()
             # cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
-            mapping_time += time.time() - start_mapping_time
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
-            # all_detection_info, det = prune_detection(all_detection_info, det)
-            assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
+            all_detection_info, det = prune_detection(all_detection_info, det)
+            # assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
+            total_detection_time += time.time() - start_detection_time
             if len(all_detection_info) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
-            total_detection_time += time.time() - start_detection_time
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_polygon_mapping, next_frame_num, all_detection_info=all_detection_info)
+            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
@@ -83,19 +80,12 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
         # logger.info(np.array(times).sum(axis=0))
         logger.info(f"sorted_ego_config_length {len(payload.video)}")
-        logger.info(f"number of skipped {len(skipped_frame_num)}")
-        logger.info(skipped_frame_num)
-        logger.info(action_type_counts)
+        print(f"number of skipped {len(skipped_frame_num)}")
+        print(action_type_counts)
         total_run_time = time.time() - start_time
-        num_runs = len(payload.video) - len(skipped_frame_num)
-        logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"avg run time {total_run_time/num_runs}")
-        logger.info(f"total_detection_time {total_detection_time}")
-        logger.info(f"avg detection time {total_detection_time/num_runs}")
-        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
-        logger.info(f"avg generate_sample_plan time {total_sample_plan_time/num_runs}")
-        logger.info(f"total_mapping_time {mapping_time}")
-        logger.info(f"avg mapping time {mapping_time/num_runs}")
+        print(f"total_run_time {total_run_time}")
+        print(f"total_detection_time {total_detection_time}")
+        print(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
         keep = bitarray(len(payload.video))
         keep[:] = 1
@@ -124,21 +114,11 @@ def prune_detection(
 def generate_sample_plan_once(
     video: "Video",
     ego_config: "CameraConfig",
-    mapping: "List[CameraPolygonMapping]",
     next_frame_num: "int",
     car_loc3d=None,
     target_car_detection=None,
     all_detection_info: "List[DetectionInfo] | None" = None
 ) -> "Tuple[SamplePlan, None]":
-    # if all_detection_info is None:
-    #     assert target_car_detection and car_loc3d
-    #     x,y,w,h = list(map(int, target_car_detection))
-    #     car_loc2d = (x, y+h//2)
-    #     car_bbox2d = (x-w//2,y-h//2,x+w//2,y+h//2)
-    #     car_bbox3d = None
-    #     all_detections = []
-    #     all_detections.append(obj_detection('car_1', car_loc3d, car_loc2d, car_bbox3d, car_bbox2d))
-    #     all_detection_info = construct_all_detection_info(cam_segment_mapping, ego_trajectory, ego_config, all_detections)
     assert all_detection_info is not None
     if all_detection_info:
         logger.info(all_detection_info[0].road_type)
