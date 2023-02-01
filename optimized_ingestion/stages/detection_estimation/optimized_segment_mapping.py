@@ -31,7 +31,7 @@ from typing import NamedTuple, Tuple
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
 from .detection_estimation import obj_detection
-from .utils import Float2, Float3, Float22, line_to_polygon_intersection
+from .utils import Float2, Float3, Float22
 
 logger = logging.getLogger(__name__)
 
