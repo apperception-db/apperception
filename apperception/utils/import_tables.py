@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 
 
 def import_tables(database: "Database", data_path: str):
-
     # Import CSV
     data_Cameras = pd.read_csv(os.path.join(data_path, "cameras.csv"))
     df_Cameras = pd.DataFrame(data_Cameras)

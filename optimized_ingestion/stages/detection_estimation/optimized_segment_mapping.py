@@ -29,9 +29,9 @@ import time
 from typing import NamedTuple, Tuple
 
 from ...camera_config import CameraConfig
+from ...types import DetectionId, obj_detection
 from .detection_estimation import obj_detection
 from .utils import Float2, Float3, Float22, line_to_polygon_intersection
-from ...types import DetectionId, obj_detection
 
 logger = logging.getLogger(__name__)
 
@@ -257,7 +257,7 @@ def get_largest_polygon_containing_point(
     )
 
     results = database.execute(query)
-    if len(results)  > 1:
+    if len(results) > 1:
         for result in results:
             segmenttypes = result[2]
             if 'roadsection' not in segmenttypes:
@@ -405,7 +405,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 keep_road_polygon_points.append(current_road_point)
         frame_idx = detections[0].detection_id.frame_idx
         if (len(keep_road_polygon_points) > 2
-                        and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 100):
+                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 100):
             mapped_road_polygon_info[
                 DetectionId(frame_idx=frame_idx, obj_order=order_id)
             ] = RoadPolygonInfo(
