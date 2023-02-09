@@ -16,7 +16,7 @@ from .detection_estimation import (DetectionInfo, SamplePlan,
                                    construct_all_detection_info,
                                    generate_sample_plan, obj_detection)
 # from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
-from .utils import trajectory_3d, get_ego_avg_speed
+from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
-        
+
         keep = bitarray(len(payload.video))
         keep[:] = 1
 
@@ -43,7 +43,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         ego_speed = get_ego_avg_speed(ego_trajectory)
         print("ego_speed: ", ego_speed)
         if ego_speed < 1:
-            return keep, {DetectionEstimation.classname(): [[]]*len(keep)}
+            return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
         skipped_frame_num = []
         next_frame_num = 0
