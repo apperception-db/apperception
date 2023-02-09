@@ -376,6 +376,11 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         return not in_view(point, ego_config.ego_translation, fov_lines)
 
     for order_id, road_polygon in list(zip(order_ids, mapped_polygons)):
+        frame_idx = detections[0].detection_id.frame_idx
+        det_id = DetectionId(frame_idx=frame_idx, obj_order=order_id)
+        if det_id in mapped_road_polygon_info:
+            print("skipped")
+            continue
         polygonid, roadpolygon, roadtype, segmentlines, segmentheadings = road_polygon
         assert segmentlines is not None
         assert segmentheadings is not None
@@ -403,12 +408,9 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         for current_road_point in decoded_road_polygon_points:
             if in_view(current_road_point, ego_config.ego_translation, fov_lines):
                 keep_road_polygon_points.append(current_road_point)
-        frame_idx = detections[0].detection_id.frame_idx
         if (len(keep_road_polygon_points) > 2
                 and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 100):
-            mapped_road_polygon_info[
-                DetectionId(frame_idx=frame_idx, obj_order=order_id)
-            ] = RoadPolygonInfo(
+            mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
                 shapely.geometry.Polygon(keep_road_polygon_points),
                 segmentlines,

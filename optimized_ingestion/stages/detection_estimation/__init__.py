@@ -16,7 +16,7 @@ from .detection_estimation import (DetectionInfo, SamplePlan,
                                    construct_all_detection_info,
                                    generate_sample_plan, obj_detection)
 # from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
-from .utils import trajectory_3d
+from .utils import trajectory_3d, get_ego_avg_speed
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -27,11 +27,23 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 
 
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
+
+    def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
+        self.predicate = predicate
+        super(DetectionEstimation, self).__init__()
+
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
+        
+        keep = bitarray(len(payload.video))
+        keep[:] = 1
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
+        ego_speed = get_ego_avg_speed(ego_trajectory)
+        print("ego_speed: ", ego_speed)
+        if ego_speed < 1:
+            return keep, {DetectionEstimation.classname(): [[]]*len(keep)}
 
         skipped_frame_num = []
         next_frame_num = 0
@@ -55,7 +67,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
-            all_detection_info, det = prune_detection(all_detection_info, det)
+            all_detection_info, det = prune_detection(all_detection_info, det, self.predicate)
             # assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
             total_detection_time += time.time() - start_detection_time
             if len(all_detection_info) == 0:
@@ -87,8 +99,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         print(f"total_detection_time {total_detection_time}")
         print(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
-        keep = bitarray(len(payload.video))
-        keep[:] = 1
         for f in skipped_frame_num:
             keep[f] = 0
 
@@ -98,7 +108,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 def prune_detection(
     detection_info: "list[DetectionInfo]",
     det: "torch.Tensor",
-    predicate: "Callable[[DetectionInfo], bool]" = lambda x: x.road_type == "intersection"
+    predicate: "Callable[[DetectionInfo], bool]"
 ):
     pruned_detection_info: "list[DetectionInfo]" = []
     pruned_det: "list[torch.Tensor]" = []
