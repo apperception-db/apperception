@@ -142,7 +142,6 @@ def detect(opt: YoloV5Opt):
 
         # Process detections
         for det in pred:  # detections per image
-
             if det is None or not len(det):
                 deepsort.increment_ages()
                 continue
@@ -166,7 +165,6 @@ def detect(opt: YoloV5Opt):
 
             # collect result bounding boxes
             for output in outputs:
-
                 y1, x1, y2, x2, id, c = [int(o) for o in output]
                 bboxes = BoundingBox(x1, y1, x2, y2)
                 item_id = f"{names[c]}-{str(id)}"
