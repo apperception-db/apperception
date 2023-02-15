@@ -65,7 +65,7 @@ def overlay_trajectory(
         )
         return
 
-    for (file_prefix, camId) in frames:
+    for file_prefix, camId in frames:
         frames[(file_prefix, camId)].sort(key=lambda x: x[1])  # sort base on time
         frame_width = None
         frame_height = None
