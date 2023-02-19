@@ -67,6 +67,8 @@ WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
 GROUP BY p.elementid;
 """)
 
+USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
+
 
 class RoadSegmentWithHeading(NamedTuple):
     id: 'str'
@@ -142,12 +144,15 @@ def make_road_polygon_with_heading(row: "tuple"):
 def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
     def _(x: "RoadSegmentWithHeading") -> "Segment":
         i, polygon, types, lines, headings = x
+        type = types[-1]
+        for t in types:
+            if t in USEFUL_TYPES:
+                type = t
+                break
         return Segment(
             i,
             polygon,
-            # TODO: fix this hack: all the useful types are 'lane', 'lanegroup',
-            # 'intersection' which are always at the last position
-            types[-1],
+            type,
             lines,
             [*map(math.degrees, headings)],
         )
