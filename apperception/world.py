@@ -13,6 +13,17 @@ from apperception.data_types import Camera, FetchCameraTuple
 from apperception.database import database
 from apperception.utils import transformation
 
+from optimized_ingestion.payload import Payload
+from optimized_ingestion.pipeline import Pipeline
+from optimized_ingestion.stages.in_view import InView
+from optimized_ingestion.stages.decode_frame.parallel_decode_frame import ParallelDecodeFrame
+from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
+from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
+from optimized_ingestion.stages.filter_car_facing_sideway import FilterCarFacingSideway
+from optimized_ingestion.stages.detection_estimation import DetectionEstimation
+from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
+from optimized_ingestion.stages.detection_3d.from_2d_and_road import From2DAndRoad
+
 if TYPE_CHECKING:
     import pandas as pd
 
@@ -23,6 +34,16 @@ if TYPE_CHECKING:
 camera_nodes: Dict[str, "Camera"] = {}
 
 
+def get_default_pipeline() -> Pipeline:
+    pipeline = Pipeline()
+    pipeline.add_filter(filter=ParallelDecodeFrame())
+    pipeline.add_filter(filter=YoloDetection())
+
+    pipeline.add_filter(filter=From2DAndRoad())
+    pipeline.add_filter(filter=DetectionEstimation())  # 5 Frame p Second
+    pipeline.add_filter(filter=StrongSORT())
+    return pipeline
+
 class World:
     _parent: Optional[World]
     _name: str
@@ -32,6 +53,7 @@ class World:
     _world_id: str
     _timestamp: datetime.datetime
     _materialized: bool
+    _pipeline: Pipeline
 
     def __init__(
         self,
@@ -52,6 +74,7 @@ class World:
         self._world_id = world_id
         self._timestamp = timestamp
         self._materialized = materialized
+        self._pipeline = get_default_pipeline()
 
     def get_trajectory_images(
         self,

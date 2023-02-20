@@ -255,6 +255,10 @@ class Visitor(Generic[T]):
             self(e)
 
     def visit_CompOpNode(self, node: "CompOpNode") -> Any:
+        if isinstance(node.left, CallNode) or isinstance(node.right, CallNode):
+            print(node.left)
+            print(node.right)
+
         self(node.left)
         self(node.right)
 
