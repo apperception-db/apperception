@@ -61,11 +61,11 @@ TRAJECTORY_COLUMNS: "list[tuple[str, str]]" = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("objectType", "TEXT"),
-    ("color", "TEXT"),
+    ("roadTypes", "ttext"),
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
-    ("largestBbox", "stbox"),
     ("itemHeadings", "tfloat"),
+    # ("roadPolygons", "tgeompoint"),
     # ("period", "period") [today, nextweek]
 ]
 

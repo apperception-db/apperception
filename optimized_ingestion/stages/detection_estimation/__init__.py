@@ -33,7 +33,9 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         self.predicate = predicate
         super(DetectionEstimation, self).__init__()
 
-    # @cache
+    def filter(self, predicate: "Callable[[DetectionInfo], bool]"):
+        self.predicate = predicate
+
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
