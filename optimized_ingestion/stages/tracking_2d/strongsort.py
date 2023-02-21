@@ -1,5 +1,4 @@
 import torch
-import time
 from pathlib import Path
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List
@@ -8,7 +7,6 @@ from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...types import DetectionId
-from ...cache import cache
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
@@ -51,7 +49,7 @@ class StrongSORT(Tracking2D):
 
             assert len(detections) == len(images)
             for idx, ((det, names), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-            # for idx, ((det, names), im0s) in enumerate(zip(detections, images)):
+                # for idx, ((det, names), im0s) in enumerate(zip(detections, images)):
                 if not payload.keep[idx] or len(det) == 0:
                     metadata.append({})
                     strongsort.increment_ages()
@@ -102,7 +100,7 @@ class StrongSORT(Tracking2D):
                     metadata.append(labels)
                 else:
                     metadata.append({})
-                
+
                 # frame_benchmark.append(time.time())
                 prev_frame = curr_frame
 
