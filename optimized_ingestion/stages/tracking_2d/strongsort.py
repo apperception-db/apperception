@@ -23,10 +23,10 @@ reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 
 
 class StrongSORT(Tracking2D):
-    # def __init__(self, cache: "bool" = True) -> None:
-    #     super().__init__()
-    #     self.cache: "bool" = cache
-    #     self.ss_benchmarks: "list[list[list[float]]]" = []
+    def __init__(self, cache: "bool" = True) -> None:
+        super().__init__()
+        self.cache: "bool" = cache
+        # self.ss_benchmarks: "list[list[list[float]]]" = []
 
     # @cache
     def _run(self, payload: "Payload"):
