@@ -14,10 +14,11 @@ class ObjectTypeFilter(Detection2D):
 
         assert len(detection_2d) != 0
         _, class_mapping = detection_2d[0]
+        assert isinstance(class_mapping, list)
         type_indices_to_keep: "set[int]" = set()
 
         for t in self.types:
-            idx = list(class_mapping.values()).index(t)
+            idx = class_mapping.index(t)
             type_indices_to_keep.add(idx)
 
         metadata = []
