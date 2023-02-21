@@ -6,13 +6,13 @@ from apperception.data_types import Camera, CameraConfig
 
 
 def import_pickle(database: "Database", data_path: str):
-    with open(os.path.join(data_path, 'frames-compressed.pickle'), "rb") as f:
+    with open(os.path.join(data_path, "frames-compressed.pickle"), "rb") as f:
         data_frames = pickle.loads(f.read())
 
     database.reset(False)
     for scene, val in data_frames.items():
-        scene_info = scene.split('-')
-        scene_id = scene_info[0] + '-' + scene_info[1]
+        scene_info = scene.split("-")
+        scene_id = scene_info[0] + "-" + scene_info[1]
         configs = [
             CameraConfig(
                 frame_id=frame[1],
@@ -26,11 +26,10 @@ def import_pickle(database: "Database", data_path: str):
                 timestamp=frame[9].timestamp(),
                 cameraHeading=frame[10],
                 egoHeading=frame[11],
-            ) for frame in val['frames']
+            )
+            for frame in val["frames"]
         ]
         camera = Camera(config=configs, id=scene_id)
         database.insert_cam(camera)
-
-        
 
     database._commit()
