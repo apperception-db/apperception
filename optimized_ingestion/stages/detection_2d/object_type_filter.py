@@ -17,7 +17,7 @@ class ObjectTypeFilter(Detection2D):
         type_indices_to_keep: "set[int]" = set()
 
         for t in self.types:
-            idx = class_mapping.index(t)
+            idx = list(class_mapping.values()).index(t)
             type_indices_to_keep.add(idx)
 
         metadata = []
