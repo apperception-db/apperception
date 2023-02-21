@@ -1,20 +1,20 @@
 from apperception.database import database
 
 import numpy as np
-import psycopg2.sql
 import postgis
+import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-from typing import Tuple, NamedTuple
+from typing import NamedTuple, Tuple
 
-from .construct_segment_trajectory import SegmentPoint
-from ...types import DetectionId
 from ...payload import Payload
+from ...types import DetectionId
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
 from ..tracking_3d import tracking_3d
 from ..tracking_3d.from_2d_and_road import From2DAndRoad
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
+from .construct_segment_trajectory import SegmentPoint
 
 
 class FromTracking3D(SegmentTrajectory):
@@ -48,18 +48,17 @@ class FromTracking3D(SegmentTrajectory):
             # All other points' direction
             for prev, curr, next in zip(traj[:-2], traj[1:-1], traj[2:]):
                 points.append((curr, _get_direction_2d(prev, next)))
-        
+
         # Map a segment to each detection
         # Note: Some detection might be missing due to not having any segment mapped
         segments = map_points_and_directions_to_segment(points)
-        
+
         # Index segments using their detection id
         segment_map: "dict[DetectionId, SegmentMapping]" = {}
         for segment in segments:
             did = DetectionId(*segment[:2])
             assert did not in segment_map
             segment_map[did] = segment
-
 
         object_id_to_segmnt_map: "dict[int, list[SegmentPoint]]" = {}
         output: "list[SegmentTrajectoryMetadatum]" = [dict() for _ in t3d]
@@ -112,13 +111,13 @@ class FromTracking3D(SegmentTrajectory):
                         None,
                         None
                     )
-                
+
                 segment_trajectory.append(segment_point)
 
                 metadatum = output[did.frame_idx]
                 assert oid not in metadatum
                 metadatum[oid] = segment_point
-            
+
             for prev, next in zip(segment_trajectory[:-1], segment_trajectory[1:]):
                 prev.next = next
                 next.prev = prev
