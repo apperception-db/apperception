@@ -416,7 +416,7 @@ def map_imgsegment_roadsegment(
         assert segmentlines is not None
         assert segmentheadings is not None
 
-        assert all(isinstance(l, shapely.geometry.LineString) for l in segmentlines)
+        assert all(isinstance(line, shapely.geometry.LineString) for line in segmentlines)
 
         p = plpygis.Geometry(roadpolygon.to_ewkb())
         assert isinstance(p, plpygis.Polygon)
