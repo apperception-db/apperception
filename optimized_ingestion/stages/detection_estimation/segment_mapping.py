@@ -10,7 +10,6 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from dataclasses import dataclass
 from apperception.database import database
 
 import array
@@ -27,6 +26,7 @@ import shapely
 import shapely.geometry
 import shapely.wkb
 import time
+from dataclasses import dataclass
 from typing import NamedTuple, Tuple
 
 from ...camera_config import CameraConfig
@@ -137,7 +137,7 @@ class RoadPolygonInfo:
             end = line.coords[1]
             start_segment_map[start] = (line, heading)
             ends.add(end)
-        
+
         starts: "list[Tuple[float, float]]" = [
             start
             for start
@@ -155,7 +155,7 @@ class RoadPolygonInfo:
             sorted_headings.append(heading)
 
             start: "Tuple[float, float]" = line.coords[1]
-        
+
         self.segment_lines = sorted_lines
         self.segment_headings = sorted_headings
 
