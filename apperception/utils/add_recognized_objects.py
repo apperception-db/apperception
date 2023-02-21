@@ -91,7 +91,6 @@ def insert_general_trajectory(
     itemHeading_list: List[int],
     translation_list: List[Tuple[float, float, float]],
 ):
-
     # Creating a cursor object using the cursor() method
     cursor = conn.cursor()
 
