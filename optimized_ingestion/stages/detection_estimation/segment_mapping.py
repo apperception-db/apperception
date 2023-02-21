@@ -10,6 +10,7 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
+from dataclasses import dataclass
 from apperception.database import database
 
 import array
@@ -107,7 +108,8 @@ class SegmentLine(NamedTuple):
     heading: "float"
 
 
-class RoadPolygonInfo(NamedTuple):
+@dataclass
+class RoadPolygonInfo:
     """
     id: unique polygon id
     polygon: tuple of (x, y) coordinates
@@ -126,6 +128,36 @@ class RoadPolygonInfo(NamedTuple):
     contains_ego: bool
     ego_config: "CameraConfig"
     fov_lines: "Tuple[Float22, Float22]"
+
+    def __post_init__(self):
+        start_segment_map: "dict[Tuple[float, float], Tuple[shapely.geometry.LineString, float]]" = {}
+        ends: "set[Float2]" = set()
+        for line, heading in zip(self.segment_lines, self.segment_headings):
+            start = line.coords[0]
+            end = line.coords[1]
+            start_segment_map[start] = (line, heading)
+            ends.add(end)
+        
+        starts: "list[Tuple[float, float]]" = [
+            start
+            for start
+            in start_segment_map
+            if start not in ends
+        ]
+        assert len(starts) == 1, len(starts)
+
+        sorted_lines: "list[shapely.geometry.LineString]" = []
+        sorted_headings: "list[float]" = []
+        start: "Tuple[float, float]" = starts[0]
+        while start in start_segment_map:
+            line, heading = start_segment_map[start]
+            sorted_lines.append(line)
+            sorted_headings.append(heading)
+
+            start: "Tuple[float, float]" = line.coords[1]
+        
+        self.segment_lines = sorted_lines
+        self.segment_headings = sorted_headings
 
 
 class CameraPolygonMapping(NamedTuple):
