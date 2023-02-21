@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from .camera_config import CameraConfig, has_config, interpolate
 from .video import Video
 
@@ -9,14 +7,14 @@ class VideoSkipped(Video):
 
     def __init__(
         self,
-        videofile: "str",
-        camera_configs: "list[CameraConfig]",
+        videofile: str,
+        camera_configs: "list[CameraConfig]"
     ):
-        self.videofile = videofile
-        self._camera_configs: "list[CameraConfig]" = camera_configs
-        self._start: "datetime" = camera_configs[0].timestamp
-        self._length: "int | None" = None
-        self._fps: "float | None" = None
+        super().__init__(
+            videofile,
+            camera_configs,
+            camera_configs[0].timestamp
+        )
 
     @property
     def interpolated_frames(self):
