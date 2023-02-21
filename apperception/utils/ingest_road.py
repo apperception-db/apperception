@@ -139,6 +139,15 @@ CREATE TABLE IF NOT EXISTS Intersection(
 """
 
 
+def _remove_suffix(uid: str) -> "str | None":
+    if uid is None:
+        return None
+
+    split = uid.split("_")
+    assert len(split) == 2, f"cannot remove suffix: {uid}"
+    return split[0]
+
+
 def create_polygon_table(database: "Database", polygons, drop=True):
     if drop:
         database.update("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
@@ -148,8 +157,14 @@ def create_polygon_table(database: "Database", polygons, drop=True):
         "CREATE INDEX IF NOT EXISTS segPoly_idx ON SegmentPolygon USING GiST(elementPolygon);"
     )
 
+    ids = set([p["id"].split("_")[0] for p in polygons if len(p["id"].split("_")) == 1])
+
     values = []
     for poly in polygons:
+        i = poly["id"]
+        if len(i.split("_")) != 1:
+            assert i.split("_")[0] in ids
+            continue
         values.append(
             f"""(
                 '{poly['id']}',
@@ -174,8 +189,16 @@ def create_segment_table(database: "Database", segments, drop=True):
     database.update(CREATE_SEGMENT_SQL)
     database.update("CREATE INDEX IF NOT EXISTS element_idx ON Segment(elementId);")
 
+    ids = set(
+        [s["polygonId"].split("_")[0] for s in segments if len(s["polygonId"].split("_")) == 1]
+    )
+
     values = []
     for seg in segments:
+        i = seg["polygonId"]
+        if len(i.split("_")) != 1:
+            assert i.split("_")[0] in ids
+            continue
         values.append(
             f"""(
                 '{seg['polygonId']}',
@@ -216,9 +239,9 @@ def create_lanesection_table(database: "Database", laneSections, drop=True):
     for lanesec in laneSections:
         values.append(
             f"""(
-                '{lanesec['id']}',
-                '{lanesec['laneToLeft']}',
-                '{lanesec['laneToRight']}',
+                '{_remove_suffix(lanesec['id'])}',
+                '{_remove_suffix(lanesec['laneToLeft'])}',
+                '{_remove_suffix(lanesec['laneToRight'])}',
                 '{lanesec['fasterLane']}',
                 '{lanesec['slowerLane']}',
                 '{lanesec['isForward']}'
@@ -278,7 +301,7 @@ def create_lane_lanesec_table(database: "Database", lane_lanesec, drop=True):
         values.append(
             f"""(
                 '{ll['lane']}',
-                '{ll['laneSec']}'
+                '{_remove_suffix(ll['laneSec'])}'
             )"""
         )
 
@@ -432,7 +455,7 @@ def create_road_roadsec_table(database: "Database", road_roadsec, drop=True):
         values.append(
             f"""(
                 '{rr['road']}',
-                '{rr['roadSec']}'
+                '{_remove_suffix(rr['roadSec'])}'
             )"""
         )
 
@@ -456,15 +479,20 @@ def create_roadsection_table(database: "Database", roadSections, drop=True):
     values = []
     for roadsec in roadSections:
         if len(roadsec["forwardLanes"]) == 0:
-            roadsec["forwardLanes"] = "[]::text[]"
+            fl = "[]::text[]"
+        else:
+            fl = str([*map(_remove_suffix, roadsec["forwardLanes"])])
+
         if len(roadsec["backwardLanes"]) == 0:
-            roadsec["backwardLanes"] = "[]::text[]"
+            bl = "[]::text[]"
+        else:
+            bl = str([*map(_remove_suffix, roadsec["backwardLanes"])])
 
         values.append(
             f"""(
-                '{roadsec['id']}',
-                ARRAY{roadsec['forwardLanes']},
-                ARRAY{roadsec['backwardLanes']}
+                '{_remove_suffix(roadsec['id'])}',
+                ARRAY{fl},
+                ARRAY{bl}
             )"""
         )
 
@@ -495,8 +523,8 @@ def create_roadsec_lanesec_table(database: "Database", roadsec_lanesec, drop=Tru
     for rl in roadsec_lanesec:
         values.append(
             f"""(
-                '{rl['roadSec']}',
-                '{rl['laneSec']}'
+                '{_remove_suffix(rl['roadSec'])}',
+                '{_remove_suffix(rl['laneSec'])}'
             )"""
         )
 
@@ -521,7 +549,7 @@ def create_intersection_table(database: "Database", intersections, drop=True):
     for intersec in intersections:
         values.append(
             f"""(
-                '{intersec['id']}',
+                '{_remove_suffix(intersec['id'])}',
                 '{intersec['road']}'
             )"""
         )
@@ -537,7 +565,7 @@ def create_intersection_table(database: "Database", intersections, drop=True):
     )
 
 
-ROAD_TYPES = {"road", "lane", "lanesection", "roadSection", "intersection"}
+ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"}
 
 
 def add_segment_type(database: "Database"):

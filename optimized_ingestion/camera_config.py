@@ -47,6 +47,10 @@ def camera_config(
     return _frame
 
 
+def has_config(config: "CameraConfig"):
+    return config.filename is not None
+
+
 class CameraConfig:
     camera_id: str
     # TODO: remove
@@ -62,12 +66,11 @@ class CameraConfig:
 
     @property
     def camera_translation(self) -> Float3:
-        return self._data[1:4].tolist()
+        return tuple(self._data[1:4].tolist())
 
     @property
-    def camera_rotation(self) -> Float4:
-        rot = Quaternion(self._data[4:8]).unit
-        return (rot[0], rot[1], rot[2], rot[3])
+    def camera_rotation(self) -> "Quaternion":
+        return Quaternion(self._data[4:8]).unit
 
     @property
     def camera_intrinsic(self) -> Float33:
@@ -75,12 +78,11 @@ class CameraConfig:
 
     @property
     def ego_translation(self) -> Float3:
-        return self._data[17:20].tolist()
+        return tuple(self._data[17:20].tolist())
 
     @property
-    def ego_rotation(self) -> Float4:
-        rot = Quaternion(self._data[20:24]).unit
-        return (rot[0], rot[1], rot[2], rot[3])
+    def ego_rotation(self) -> "Quaternion":
+        return Quaternion(self._data[20:24]).unit
 
     @property
     def camera_heading(self) -> float:
@@ -95,19 +97,21 @@ class CameraConfig:
         return self._data[26].item()
 
     def __iter__(self):
-        yield self.camera_id
-        yield self.frame_id
-        yield self.frame_num
-        yield self.filename
-        yield self.camera_translation
-        yield self.camera_rotation
-        yield self.camera_intrinsic
-        yield self.ego_translation
-        yield self.ego_rotation
-        yield self.timestamp
-        yield self.camera_heading
-        yield self.ego_heading
-        yield self.road_direction
+        return iter([
+            self.camera_id,
+            self.frame_id,
+            self.frame_num,
+            self.filename,
+            self.camera_translation,
+            self.camera_rotation,
+            self.camera_intrinsic,
+            self.ego_translation,
+            self.ego_rotation,
+            self.timestamp,
+            self.camera_heading,
+            self.ego_heading,
+            self.road_direction,
+        ])
 
 
 def interpolate(f1: CameraConfig, f2: CameraConfig, timestamp: datetime):

@@ -35,7 +35,7 @@ class From2DAndRoadNaive(Tracking3D):
 
             trackings3d: "Dict[float, Tracking3DResult]" = {}
             [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
-            rotation = Quaternion(frame.camera_rotation).unit
+            rotation = frame.camera_rotation
             translation = np.array(frame.camera_translation)
 
             for oid, t in tracking.items():

@@ -94,7 +94,6 @@ class Box:
         return points
 
     def map_2d(self, view: np.ndarray = np.eye(3), normalize: bool = True) -> np.ndarray:
-
         corners = self.view_points(self.corners(), view, normalize)[:2, :]
 
         return corners

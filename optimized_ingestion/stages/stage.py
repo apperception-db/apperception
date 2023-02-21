@@ -1,27 +1,34 @@
 import time
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Generic, List, Tuple, Type, TypeVar
 
 if TYPE_CHECKING:
     from ..payload import Payload
 
 
-StageOutput = Tuple[Optional[bitarray], Optional[Dict[str, list]]]
+T = TypeVar('T')
 
 
-class Stage:
-    def __init__(self) -> None:
-        self.runtimes: "List[float]" = []
+class Stage(Generic[T]):
+    runtimes: "List[dict]"
 
-    def _run(self, payload: "Payload") -> "StageOutput":
+    def __new__(cls, *_, **__):
+        obj = super(Stage, cls).__new__(cls)
+        obj.runtimes = []
+        return obj
+
+    def _run(self, payload: "Payload") -> "Tuple[bitarray | None, Dict[str, List[T]] | None]":
         return payload.keep, payload.metadata
 
-    def run(self, payload: "Payload") -> "StageOutput":
+    def run(self, payload: "Payload") -> "Tuple[bitarray | None, Dict[str, List[T]] | None]":
         s = time.time()
         out = self._run(payload)
         e = time.time()
 
-        self.runtimes.append(e - s)
+        self.runtimes.append({
+            "name": payload.video.videofile,
+            "runtime": e - s
+        })
 
         return out
 
@@ -29,8 +36,10 @@ class Stage:
     def classname(cls):
         return ".".join(_get_classnames(cls))
 
+    _T = TypeVar('_T')
+
     @classmethod
-    def get(cls, d: "Dict[str, list] | Payload"):
+    def get(cls: "Type[Stage[_T]]", d: "Dict[str, list] | Payload") -> "List[_T] | None":
         if not isinstance(d, dict):
             d = d.metadata
 

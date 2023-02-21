@@ -61,11 +61,11 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("objectType", "TEXT"),
-    ("color", "TEXT"),
+    ("roadTypes", "ttext"),
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
-    ("largestBbox", "stbox"),
     ("itemHeadings", "tfloat"),
+    # ("roadPolygons", "tgeompoint"),
     # ("period", "period") [today, nextweek]
 ]
 
@@ -196,7 +196,7 @@ class Database:
             self.connection.commit()
 
     def execute(
-        self, query: "str | psycopg2.sql.SQL", vars: "tuple | list | None" = None
+        self, query: "str | psycopg2.sql.Composable", vars: "tuple | list | None" = None
     ) -> List[tuple]:
         try:
             self.cursor.execute(query, vars)
@@ -210,7 +210,7 @@ class Database:
             self.connection.rollback()
             raise error
 
-    def update(self, query: str, commit: bool = True) -> None:
+    def update(self, query: "str | psycopg2.sql.Composable", commit: bool = True) -> None:
         try:
             self.cursor.execute(query)
             self._commit(commit)

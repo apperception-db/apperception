@@ -65,7 +65,7 @@ def overlay_trajectory(
         )
         return
 
-    for (file_prefix, camId) in frames:
+    for file_prefix, camId in frames:
         frames[(file_prefix, camId)].sort(key=lambda x: x[1])  # sort base on time
         frame_width = None
         frame_height = None
@@ -185,13 +185,16 @@ def fetch_camera_config(filename: str, database):
         frameNum,
         fileName,
         cameraHeading,
-        egoHeading
+        egoHeading,
+        timestamp,
+        roadDirection
     FROM Cameras
     WHERE
         fileName = '{filename}'
     ORDER BY cameraId ASC, frameNum ASC;
     """
     result = database.execute(query)[0]
+    print(result)
     camera_config = {
         "cameraId": result[0],
         "egoTranslation": result[1],
@@ -199,11 +202,51 @@ def fetch_camera_config(filename: str, database):
         "cameraTranslation": result[3],
         "cameraRotation": result[4],
         "cameraIntrinsic": result[5],
-        "frameNum": result[5],
+        "frameNum": result[6],
         "fileName": result[7],
         "cameraHeading": result[8],
         "egoHeading": result[9],
+        "timestamp": result[10],
+        "roadDirection": result[11],
     }
+    return camera_config
+
+
+def fetch_camera_trajectory(video_name: str, database):
+    query = f"""
+    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
+        BEGIN
+            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
+        END;
+    $$ LANGUAGE plpgsql;
+
+    SELECT
+        cameraId,
+        ST_XYZ(egoTranslation),
+        frameNum,
+        timestamp,
+        fileName,
+        cameraHeading,
+        egoHeading
+    FROM Cameras
+    WHERE
+        fileName LIKE '%{video_name}%'
+    ORDER BY cameraId ASC, frameNum ASC;
+    """
+    result = database._execute_query(query)
+    camera_config = []
+    for row in result:
+        camera_config.append(
+            {
+                "cameraId": row[0],
+                "egoTranslation": row[1],
+                "frameNum": row[2],
+                "timestamp": row[3],
+                "fileName": row[4],
+                "cameraHeading": row[5],
+                "egoHeading": row[6],
+            }
+        )
     return camera_config
 
 

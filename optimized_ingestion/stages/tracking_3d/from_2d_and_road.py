@@ -2,48 +2,49 @@ import numpy as np
 import numpy.typing as npt
 from pyquaternion import Quaternion
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Dict, List
+from typing import Dict, List
 
 from ...payload import Payload
-from ..tracking_2d.tracking_2d import Tracking2D
+from ..tracking_2d.tracking_2d import Tracking2D, Tracking2DResult
 from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
-if TYPE_CHECKING:
-    from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
-    from ..stage import StageOutput
-
 
 class From2DAndRoad(Tracking3D):
-    def _run(self, payload: "Payload") -> "StageOutput":
+    def _run(self, payload: "Payload"):
         if not is_annotated(Tracking2D, payload):
             # payload = payload.filter(Tracking2D())
             raise Exception()
 
-        metadata: "List[Dict[float, Tracking3DResult] | None]" = []
-        trajectories: "Dict[float, List[Tracking3DResult]]" = {}
+        metadata: "list[dict[int, Tracking3DResult]]" = []
+        trajectories: "dict[int, list[Tracking3DResult]]" = {}
         video = payload.video
-        trackings: "List[Dict[float, TrackingResult] | None]" = Tracking2D.get(payload.metadata)
+        trackings = Tracking2D.get(payload.metadata)
+        assert trackings is not None
         for i, (k, tracking, frame) in tqdm(enumerate(zip(payload.keep, trackings, video)), total=len(payload.keep)):
             if not k or tracking is None:
-                metadata.append(None)
+                metadata.append({})
                 continue
 
             if len(tracking) == 0:
                 metadata.append({})
                 continue
 
-            trackings3d: "Dict[float, Tracking3DResult]" = {}
+            trackings3d: "Dict[int, Tracking3DResult]" = {}
             [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
-            rotation = Quaternion(frame.camera_rotation).unit
+            rotation = frame.camera_rotation
+            timestamp = frame.timestamp
             translation = np.array(frame.camera_translation)
 
-            ids: "List[float]" = []
+            oids: "List[int]" = []
+            _ts: "List[Tracking2DResult]" = []
             dirx = []
             diry = []
             N = len(tracking)
             for oid, t in tracking.items():
-                ids.append(oid)
+                assert oid == t.object_id
+                oids.append(oid)
+                _ts.append(t)
                 dirx.append(t.bbox_left + t.bbox_w / 2)
                 diry.append(t.bbox_top + t.bbox_h)
 
@@ -62,10 +63,12 @@ class From2DAndRoad(Tracking3D):
             points = rotated_directions * ts + translation[:, np.newaxis]
             points_from_camera = rotate(points - translation[:, np.newaxis], rotation.inverse)
 
-            for oid, point, point_from_camera in zip(ids, points.T, points_from_camera.T):
+            for t, oid, point, point_from_camera in zip(_ts, oids, points.T, points_from_camera.T):
                 assert point_from_camera.shape == (3,)
+                assert isinstance(oid, int) or oid.is_integer()
+                oid = int(oid)
                 point_from_camera = (point_from_camera[0], point_from_camera[1], point_from_camera[2])
-                trackings3d[oid] = Tracking3DResult(oid, point_from_camera, point)
+                trackings3d[oid] = Tracking3DResult(t.frame_idx, t.detection_id, oid, point_from_camera, point, t.bbox_left, t.bbox_top, t.bbox_w, t.bbox_h, t.object_type, timestamp)
                 if oid not in trajectories:
                     trajectories[oid] = []
                 trajectories[oid].append(trackings3d[oid])

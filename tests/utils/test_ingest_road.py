@@ -16,8 +16,8 @@ ingest_road(d, "./data/scenic/road_network_boston")
 
 
 @pytest.mark.parametrize("table, count", [
-    ("segmentpolygon", 5170),
-    ("segment", 16480),
+    ("segmentpolygon", 3067),
+    ("segment", 11379),
     ("lanesection", 1178),
     ("lane", 1178),
     ("lane_lanesection", 1178),
