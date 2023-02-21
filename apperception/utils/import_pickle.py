@@ -1,10 +1,8 @@
 import os
-from typing import TYPE_CHECKING
 import pickle
 
-if TYPE_CHECKING:
-    from apperception.database import Database
-    from apperception.data_types import Camera, CameraConfig
+from apperception.database import Database
+from apperception.data_types import Camera, CameraConfig
 
 
 def import_pickle(database: "Database", data_path: str):

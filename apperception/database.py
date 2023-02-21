@@ -65,7 +65,7 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
     ("itemHeadings", "tfloat"),
-    ("roadPolygons", "tgeompoint"),
+    # ("roadPolygons", "tgeompoint"),
     # ("period", "period") [today, nextweek]
 ]
 
