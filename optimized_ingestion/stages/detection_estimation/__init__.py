@@ -5,6 +5,7 @@ from bitarray import bitarray
 from tqdm import tqdm
 from typing import Callable, List, Tuple
 
+from ...cache import cache
 from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...types import DetectionId
@@ -27,6 +28,7 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 
 
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
+    # @cache
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
             raise Exception()
@@ -59,15 +61,15 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, cam_polygon_mapping, current_ego_config, ego_trajectory, i)
-            all_detection_info, det = prune_detection(all_detection_info, det)
-            assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
-            if len(all_detection_info) == 0:
+            all_detection_info_pruned, det = prune_detection(all_detection_info, det)
+            assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
+            if len(all_detection_info_pruned) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
             total_detection_time += time.time() - start_detection_time
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_polygon_mapping, next_frame_num, all_detection_info=all_detection_info)
+            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, cam_polygon_mapping, next_frame_num, all_detection_info=all_detection_info_pruned)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
