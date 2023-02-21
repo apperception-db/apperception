@@ -13,7 +13,6 @@ from apperception.data_types import Camera, FetchCameraTuple
 from apperception.database import database
 from apperception.utils import transformation
 
-
 if TYPE_CHECKING:
     import pandas as pd
 
