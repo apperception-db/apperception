@@ -5,6 +5,7 @@ from bitarray import bitarray
 from tqdm import tqdm
 from typing import Callable, List, Tuple
 
+from ...cache import cache
 from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...types import DetectionId
@@ -70,15 +71,15 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
-            all_detection_info, det = prune_detection(all_detection_info, det, self.predicate)
-            # assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
+            all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicate)
+            assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
             total_detection_time += time.time() - start_detection_time
-            if len(all_detection_info) == 0:
+            if len(all_detection_info_pruned) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info)
+            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info_pruned)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
