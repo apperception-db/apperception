@@ -42,7 +42,7 @@ CAMERA_TABLE = "Cameras"
 TRAJ_TABLE = "Item_General_Trajectory"
 BBOX_TABLE = "General_Bbox"
 
-CAMERA_COLUMNS: List[Tuple[str, str]] = [
+CAMERA_COLUMNS: "list[tuple[str, str]]" = [
     ("cameraId", "TEXT"),
     ("frameId", "TEXT"),
     ("frameNum", "Int"),
@@ -57,7 +57,7 @@ CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("egoHeading", "real"),
 ]
 
-TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
+TRAJECTORY_COLUMNS: "list[tuple[str, str]]" = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("objectType", "TEXT"),
@@ -69,7 +69,7 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
     # ("period", "period") [today, nextweek]
 ]
 
-BBOX_COLUMNS: List[Tuple[str, str]] = [
+BBOX_COLUMNS: "list[tuple[str, str]]" = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("trajBbox", "stbox"),
@@ -97,7 +97,7 @@ class Database:
     connection: "Connection"
     cursor: "Cursor"
 
-    def __init__(self, connection: Optional["Connection"] = None):
+    def __init__(self, connection: "Optional[Connection]" = None):
         # should setup a postgres in docker first
         if connection is None:
             self.connection = psycopg2.connect(
@@ -197,7 +197,7 @@ class Database:
 
     def execute(
         self, query: "str | psycopg2.sql.Composable", vars: "tuple | list | None" = None
-    ) -> List[tuple]:
+    ) -> "list[tuple]":
         try:
             self.cursor.execute(query, vars)
             for notice in self.cursor.connection.notices:
@@ -247,7 +247,7 @@ class Database:
         print("New camera inserted successfully.........")
         self.connection.commit()
 
-    def retrieve_cam(self, query: Query = None, camera_id: str = ""):
+    def retrieve_cam(self, query: "Query | None" = None, camera_id: str = ""):
         """
         Called when executing update commands (add_camera, add_objs ...etc)
         """
