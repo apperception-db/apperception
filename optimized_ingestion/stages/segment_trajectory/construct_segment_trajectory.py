@@ -109,7 +109,7 @@ class SegmentPoint:
     timestamp: "datetime.datetime"
     segment_line: "Any"
     segment_heading: "Any"
-    road_segment_info: "RoadPolygonInfo"
+    road_polygon_info: "RoadPolygonInfo"
     obj_id: "int | None" = None
     next: "SegmentPoint | None" = None
     prev: "SegmentPoint | None" = None
@@ -152,10 +152,10 @@ def find_middle_segment(current_segment: "SegmentPoint", next_segment: "SegmentP
     current_time = current_segment.timestamp
     next_time = next_segment.timestamp
 
-    current_segment_polygon = current_segment.road_segment_info.polygon
-    next_segment_polygon = next_segment.road_segment_info.polygon
+    current_segment_polygon = current_segment.road_polygon_info.polygon
+    next_segment_polygon = next_segment.road_polygon_info.polygon
 
-    assert not current_segment_polygon.intersects(next_segment_polygon)
+    assert not current_segment_polygon.intersects(next_segment_polygon), (current_segment.road_polygon_info.id, next_segment.road_polygon_info.id)
 
     # current_center_point = current_segment.road_segment_info.segment_polygon.centroid
     # next_center_point = next_segment.road_segment_info.segment_polygon.centroid
@@ -221,48 +221,56 @@ def binary_search_segment(
     if 0 <= next_segment.detection_id.frame_idx - current_segment.detection_id.frame_idx <= 1:
         # same detection or detections on consecutive frame
         return []
-    elif current_segment.road_segment_info.id == next_segment.road_segment_info.id:
-        # detections in between are in the same segment
+    elif current_segment.road_polygon_info.id == next_segment.road_polygon_info.id:
+        # detections in between are in the same polygon
+        assert current_segment.road_polygon_info == current_segment.road_polygon_info
 
-        assert current_segment.segment_line == next_segment.segment_line
-        assert current_segment.segment_heading == next_segment.segment_heading
-        assert current_segment.road_segment_info == current_segment.road_segment_info
+        if current_segment.segment_line == next_segment.segment_line:
+            # detections in between are in the same segment line
+            assert current_segment.segment_heading == next_segment.segment_heading
 
-        st = current_segment.detection_id.frame_idx + 1
-        ed = next_segment.detection_id.frame_idx
+            loc1: "npt.NDArray[np.float64]" = np.array(current_segment.car_loc3d)
+            assert loc1.dtype == np.dtype(np.float64)
+            loc2: "npt.NDArray[np.float64]" = np.array(next_segment.car_loc3d)
+            assert loc2.dtype == np.dtype(np.float64)
 
-        loc1: "npt.NDArray[np.float64]" = np.array(current_segment.car_loc3d)
-        assert loc1.dtype == np.dtype(np.float64)
-        loc2: "npt.NDArray[np.float64]" = np.array(next_segment.car_loc3d)
-        assert loc2.dtype == np.dtype(np.float64)
+            locdiff = loc2 - loc1
+            timediff = next_segment.timestamp - current_segment.timestamp
 
-        locdiff = loc2 - loc1
-        timediff = next_segment.timestamp - current_segment.timestamp
+            def interpolate_segment(args: "Tuple[int, CameraConfig]"):
+                index, frame = args
 
-        def interpolate_segment(args: "Tuple[int, CameraConfig]"):
-            index, frame = args
+                progress = (frame.timestamp - current_segment.timestamp) / timediff
+                location = loc1 + locdiff * progress
+                assert location.shape == (3,)
+                assert location.dtype == np.dtype(np.float64)
 
-            progress = (frame.timestamp - current_segment.timestamp) / timediff
-            location = loc1 + locdiff * progress
-            assert location.shape == (3,)
-            assert location.dtype == np.dtype(np.float64)
+                return SegmentPoint(
+                    DetectionId(index, None),
+                    tuple(location),
+                    frame.timestamp,
+                    current_segment.segment_line,
+                    current_segment.segment_heading,
+                    current_segment.road_polygon_info,
+                )
 
-            return SegmentPoint(
-                DetectionId(index, None),
-                tuple(location),
-                frame.timestamp,
-                current_segment.segment_line,
-                current_segment.segment_heading,
-                current_segment.road_segment_info,
-            )
+            st = current_segment.detection_id.frame_idx + 1
+            ed = next_segment.detection_id.frame_idx
+            configs_with_index = [*enumerate(payload.video._camera_configs)]
+            return [*map(interpolate_segment, configs_with_index[st:ed])]
+        else:
+            # detections in between are in different segment line
+            # TODO: interpolate all the detections between
+            # TODO: need to know what are the segment lines in between
+            return []
 
-        configs_with_index = [*enumerate(payload.video._camera_configs)]
-        return [*map(interpolate_segment, configs_with_index[st:ed])]
-    # elif current_segment_polygon.intersects(next_segment_polygon):
-    #     # both polygons are the same one of next to each other
-    #     # TODO: remove because we still need to fill in approximate locations
-    #     # of frames in between
-    #     return []
+    elif current_segment.road_polygon_info.polygon.intersects(next_segment.road_polygon_info.polygon):
+        # both polygons are next to each other
+        # TODO: remove because we still need to fill in approximate locations
+        # of frames in between
+        # TODO: interpolate between 2 consecutive segments
+        # TODO: need to know what are the segment lines in between for both polygon
+        return []
     else:
         middle_segment = find_middle_segment(current_segment, next_segment, payload)
         # import code; code.interact(local=vars())
@@ -370,5 +378,4 @@ def calibrate(
                 new_road_segment_info,
                 frame_idx,
             ))
-    complete_segment_trajectory(road_segment_trajectory, payload)
-    return road_segment_trajectory
+    return complete_segment_trajectory(road_segment_trajectory, payload)
