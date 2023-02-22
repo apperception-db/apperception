@@ -30,7 +30,6 @@ from typing import NamedTuple, Tuple
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
-from .detection_estimation import obj_detection
 from .utils import Float2, Float3, Float22
 
 logger = logging.getLogger(__name__)
@@ -390,7 +389,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         assert segmentlines is not None
         assert segmentheadings is not None
 
-        assert all(isinstance(l, shapely.geometry.LineString) for l in segmentlines)
+        assert all(isinstance(line, shapely.geometry.LineString) for line in segmentlines)
 
         p = plpygis.Geometry(roadpolygon.to_ewkb())
         assert isinstance(p, plpygis.Polygon)

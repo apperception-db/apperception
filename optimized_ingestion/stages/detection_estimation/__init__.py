@@ -5,7 +5,6 @@ from bitarray import bitarray
 from tqdm import tqdm
 from typing import Callable, List, Tuple
 
-from ...cache import cache
 from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...types import DetectionId
