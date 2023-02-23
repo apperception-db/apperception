@@ -29,11 +29,11 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
-        self.predicate = predicate
+        self.predicates = [predicate]
         super(DetectionEstimation, self).__init__()
 
-    def filter(self, predicate: "Callable[[DetectionInfo], bool]"):
-        self.predicate = predicate
+    def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
+        self.predicates.append(predicate)
 
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
@@ -70,7 +70,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
-            all_detection_info, det = prune_detection(all_detection_info, det, self.predicate)
+            all_detection_info, det = prune_detection(all_detection_info, det, self.predicates)
             # assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
             total_detection_time += time.time() - start_detection_time
             if len(all_detection_info) == 0:
@@ -111,12 +111,12 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 def prune_detection(
     detection_info: "list[DetectionInfo]",
     det: "torch.Tensor",
-    predicate: "Callable[[DetectionInfo], bool]"
+    predicates: "List[Callable[[DetectionInfo], bool]]"
 ):
     pruned_detection_info: "list[DetectionInfo]" = []
     pruned_det: "list[torch.Tensor]" = []
     for d, di in zip(det, detection_info):
-        if predicate(di):
+        if all([predicate(di) for predicate in predicates]):
             pruned_detection_info.append(di)
             pruned_det.append(d)
     logger.info("length before pruning", len(det))

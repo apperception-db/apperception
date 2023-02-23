@@ -113,11 +113,11 @@ class Database:
         mobilitydb_register(self.connection)
         self.cursor = self.connection.cursor()
 
-    def reset(self, commit=True):
-        self._create_camera_table(False)
-        self._create_item_general_trajectory_table(False)
-        self._create_general_bbox_table(False)
-        self._create_index(False)
+    def reset(self, commit=False):
+        self._create_camera_table(commit)
+        self._create_item_general_trajectory_table(commit)
+        # self._create_general_bbox_table(False)
+        self._create_index(commit)
         self._commit(commit)
 
     def _create_camera_table(self, commit=True):
@@ -161,13 +161,13 @@ class Database:
         self.cursor.execute(
             "CREATE INDEX IF NOT EXISTS trans_idx ON Item_General_Trajectory USING GiST(translations);"
         )
-        self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
-        self.cursor.execute(
-            "CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);"
-        )
-        self.cursor.execute(
-            "CREATE INDEX IF NOT EXISTS item_id_timestampx ON General_Bbox(itemId, timestamp);"
-        )
+        # self.cursor.execute("CREATE INDEX IF NOT EXISTS item_idx ON General_Bbox(itemId);")
+        # self.cursor.execute(
+        #     "CREATE INDEX IF NOT EXISTS traj_bbox_idx ON General_Bbox USING GiST(trajBbox);"
+        # )
+        # self.cursor.execute(
+        #     "CREATE INDEX IF NOT EXISTS item_id_timestampx ON General_Bbox(itemId, timestamp);"
+        # )
         self._commit(commit)
 
     def _insert_into_camera(self, value: tuple, commit=True):
@@ -230,7 +230,7 @@ class Database:
                 ARRAY{config.camera_intrinsic}::real[][],
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY[{','.join(map(str, config.ego_rotation))}]::real[],
-                '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
+                '{config.timestamp}',
                 {config.cameraHeading},
                 {config.egoHeading}
             )"""

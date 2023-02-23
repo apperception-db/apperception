@@ -9,7 +9,7 @@ def import_pickle(database: "Database", data_path: str):
     with open(os.path.join(data_path, "frames-compressed.pickle"), "rb") as f:
         data_frames = pickle.loads(f.read())
 
-    database.reset(False)
+    database.reset(True)
     for scene, val in data_frames.items():
         scene_info = scene.split("-")
         scene_id = scene_info[0] + "-" + scene_info[1]
@@ -23,7 +23,7 @@ def import_pickle(database: "Database", data_path: str):
                 camera_intrinsic=frame[6],
                 ego_translation=frame[7],
                 ego_rotation=frame[8],
-                timestamp=frame[9].timestamp(),
+                timestamp=frame[9],
                 cameraHeading=frame[10],
                 egoHeading=frame[11],
             )
