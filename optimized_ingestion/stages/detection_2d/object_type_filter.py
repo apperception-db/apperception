@@ -16,6 +16,7 @@ class ObjectTypeFilter(Detection2D):
         _, class_mapping = detection_2d[0]
         if isinstance(class_mapping, dict):
             class_mapping = list(class_mapping.values())
+        assert isinstance(class_mapping, list)
         type_indices_to_keep: "set[int]" = set()
 
         for t in self.types:
