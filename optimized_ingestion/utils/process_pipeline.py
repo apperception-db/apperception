@@ -1,5 +1,5 @@
 from apperception.database import database
-from apperception.utils import F, join, import_pickle
+from apperception.utils import join
 
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
@@ -9,6 +9,7 @@ from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
 from optimized_ingestion.stages.detection_3d.from_2d_and_road import From2DAndRoad
 from optimized_ingestion.stages.tracking_3d.from_2d_and_road import From2DAndRoad as From2DAndRoad_3d
+from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import FromTracking3D
 from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
@@ -21,22 +22,28 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=From2DAndRoad())
     pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
     pipeline.add_filter(filter=From2DAndRoad_3d())
+    pipeline.add_filter(filter=FromTracking3D())
     
     return pipeline
 
-def construct_pipeline(world, base=True):
+def construct_pipeline(world, base):
     pipeline = construct_base_pipeline()
     if base:
         return pipeline
-    pipeline.stages.insert(3, DetectionEstimation())  # 5 Frame p Second
+    pipeline.stages.insert(3, DetectionEstimation(base=base))
     PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
 
 def associate_detection_info(tracking_result, detection_info_meta):
     for detection_info in detection_info_meta[tracking_result.frame_idx]:
         if detection_info.detection_id == tracking_result.detection_id:
             return detection_info
+
+def associate_segment_mapping(tracking_result, segment_mapping_meta):
+    for segmentmapping in segment_mapping_meta[tracking_result.frame_idx]:
+        if segmentmapping.oid == tracking_result.object_id:
+            return segmentmapping
         
-def get_tracks(sortmeta, detection_estimation_meta, base):
+def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
     trajectories = {}
     for i in range(len(sortmeta)):
         frame = sortmeta[i]
@@ -45,7 +52,8 @@ def get_tracks(sortmeta, detection_estimation_meta, base):
                 trajectories[obj_id] = []
             associated_detection_info = associate_detection_info(
                 tracking_result, detection_estimation_meta) if not base else detection_estimation_meta[i]
-            trajectories[obj_id].append((tracking_result, associated_detection_info))
+            associated_segment_mapping = associate_segment_mapping(tracking_result, segment_mapping_meta)
+            trajectories[obj_id].append((tracking_result, associated_detection_info, associated_segment_mapping))
 
     for trajectory in trajectories.values():
         last = len(trajectory) - 1
@@ -64,13 +72,13 @@ def format_trajectory(video_name, obj_id, track, base):
     road_types: List[str] = []
     roadpolygons: List[List[Tuple[float, float]]] = []
 
-    for tracking_result_3d, detection_info in track:
+    for tracking_result_3d, detection_info, segment_mapping in track:
         if detection_info:
             camera_id = detection_info.camera_id if base else detection_info.ego_config.camera_id
             object_type = tracking_result_3d.object_type
             timestamps.append(detection_info.timestamp)
             pairs.append(tracking_result_3d.point)
-            itemHeadings.append(detection_info.segment_heading)
+            itemHeadings.append(segment_mapping.heading)
             translations.append(detection_info.ego_translation if base else detection_info.ego_config.ego_translation)
             road_types.append(detection_info.road_type)
             roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
@@ -140,10 +148,10 @@ def process_pipeline(video_name, frames, pipeline, base):
     else:
         detection_estimation_meta = metadata['DetectionEstimation']
     sortmeta = metadata['Tracking2D.StrongSORT']
-    tracks = get_tracks(sortmeta, detection_estimation_meta, base)
+    segment_trajectory_mapping = metadata['FromTracking3D']
+    tracks = get_tracks(sortmeta, detection_estimation_meta, segment_trajectory_mapping, base)
     for obj_id, track in tracks.items():
         trajectory = format_trajectory(video_name, obj_id, track, base)
         if trajectory:
             print("Inserting trajectory")
             insert_trajectory(database, *trajectory)
-

@@ -15,7 +15,6 @@ from ..stage import Stage
 from .detection_estimation import (DetectionInfo, SamplePlan,
                                    construct_all_detection_info,
                                    generate_sample_plan, obj_detection)
-# from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
 from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
@@ -54,7 +53,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         start_time = time.time()
         total_detection_time = 0
         total_sample_plan_time = 0
-        # times = []
         dets = Detection3D.get(payload)
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
@@ -66,14 +64,12 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 metadata.append([])
                 continue
             next_frame_num = i + 1
-            # cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
             start_detection_time = time.time()
             det, _ = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
-            all_detection_info, det = prune_detection(all_detection_info, det, self.predicates)
-            # assert len(all_detection_info) == len(det), (len(all_detection_info), len(det))
             total_detection_time += time.time() - start_detection_time
-            if len(all_detection_info_pruned) == 0:
+            all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
+            if len(all_detection_info) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
