@@ -157,10 +157,13 @@ def create_polygon_table(database: "Database", polygons, drop=True):
         "CREATE INDEX IF NOT EXISTS segPoly_idx ON SegmentPolygon USING GiST(elementPolygon);"
     )
 
+    ids = set([p["id"].split("_")[0] for p in polygons if len(p["id"].split("_")) == 1])
+
     values = []
     for poly in polygons:
         i = poly["id"]
         if len(i.split("_")) != 1:
+            assert i.split("_")[0] in ids
             continue
         values.append(
             f"""(
@@ -186,10 +189,15 @@ def create_segment_table(database: "Database", segments, drop=True):
     database.update(CREATE_SEGMENT_SQL)
     database.update("CREATE INDEX IF NOT EXISTS element_idx ON Segment(elementId);")
 
+    ids = set(
+        [s["polygonId"].split("_")[0] for s in segments if len(s["polygonId"].split("_")) == 1]
+    )
+
     values = []
     for seg in segments:
         i = seg["polygonId"]
         if len(i.split("_")) != 1:
+            assert i.split("_")[0] in ids
             continue
         values.append(
             f"""(
