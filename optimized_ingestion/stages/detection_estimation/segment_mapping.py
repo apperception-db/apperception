@@ -130,6 +130,9 @@ class RoadPolygonInfo:
     fov_lines: "Tuple[Float22, Float22]"
 
     def __post_init__(self):
+        if len(self.segment_lines) == 0:
+            return
+
         start_segment_map: "dict[Tuple[float, float], Tuple[shapely.geometry.LineString, float]]" = {}
         ends: "set[Float2]" = set()
         for line, heading in zip(self.segment_lines, self.segment_headings):
