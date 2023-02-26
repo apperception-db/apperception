@@ -616,31 +616,33 @@ CREATE_TABLES = {
 
 
 def ingest_location(database: "Database", directory: "str", location: "str"):
-    print('Location:', location)
+    print("Location:", location)
     filenames = os.listdir(directory)
 
-    assert set(filenames) == set([k + '.json' for k in CREATE_TABLES.keys()]), (sorted(filenames), sorted([k + '.json' for k in CREATE_TABLES.keys()]))
+    assert set(filenames) == set([k + ".json" for k in CREATE_TABLES.keys()]), (
+        sorted(filenames),
+        sorted([k + ".json" for k in CREATE_TABLES.keys()]),
+    )
 
     for d, fn in CREATE_TABLES.items():
         with open(os.path.join(directory, d + ".json"), "r") as f:
             data = json.load(f)
 
         print("Ingesting", d)
-        fn(database, [{'location': location, **d} for d in data], drop=False)
+        fn(database, [{"location": location, **d} for d in data], drop=False)
 
 
 def ingest_road(database: "Database", directory: str):
-
     # Create tables
     for d, fn in CREATE_TABLES.items():
-        print('Create Table', d)
+        print("Create Table", d)
         fn(database, [])
-    
+
     filenames = os.listdir(directory)
 
     if all(os.path.isdir(os.path.join(directory, f)) for f in filenames):
         for d in filenames:
-            if d == 'boston-old':
+            if d == "boston-old":
                 continue
 
             print(d)
@@ -649,7 +651,7 @@ def ingest_road(database: "Database", directory: str):
         if any(os.path.isdir(os.path.join(directory, f)) for f in filenames):
             raise Exception()
 
-        ingest_location(database, directory, '')
+        ingest_location(database, directory, "")
 
     print("adding segment types")
     add_segment_type(database)
