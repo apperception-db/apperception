@@ -23,6 +23,7 @@ def camera_config(
     timestamp: datetime,
     camera_heading: float,
     ego_heading: float,
+    location: str,
     road_direction: float,
 ):
     _frame = CameraConfig()
@@ -30,6 +31,7 @@ def camera_config(
     _frame.frame_id = frame_id
     _frame.filename = filename
     _frame.timestamp = timestamp
+    _frame.location = location
     _frame._data = np.array(
         [
             frame_num,
@@ -58,6 +60,7 @@ class CameraConfig:
     # TODO: remove
     filename: Optional[str]
     timestamp: datetime
+    location: str
     _data: "npt.NDArray[np.float32]"
 
     @property
@@ -110,11 +113,15 @@ class CameraConfig:
             self.timestamp,
             self.camera_heading,
             self.ego_heading,
+            self.location,
             self.road_direction,
         ])
 
 
 def interpolate(f1: CameraConfig, f2: CameraConfig, timestamp: datetime):
+    assert f1.camera_id == f2.camera_id
+    assert f1.location == f2.location
+
     t1 = f1.timestamp
     t2 = f2.timestamp
     total_delta = (t2 - t1).total_seconds()
@@ -127,6 +134,7 @@ def interpolate(f1: CameraConfig, f2: CameraConfig, timestamp: datetime):
     _frame.frame_id = None
     _frame.filename = None
     _frame.timestamp = timestamp
+    _frame.location = f1.location
     _frame._data = (f2._data - f1._data) * ratio + f1._data
 
     return _frame

@@ -154,6 +154,7 @@ def create_polygon_table(database: "Database", polygons, drop=True):
         database.update("DROP TABLE IF EXISTS SegmentPolygon CASCADE")
     database.update(CREATE_POLYGON_SQL)
     database.update("CREATE INDEX IF NOT EXISTS element_idx ON SegmentPolygon(elementId);")
+    database.update("CREATE INDEX IF NOT EXISTS location_idx ON SegmentPolygon(location);")
     database.update(
         "CREATE INDEX IF NOT EXISTS segPoly_idx ON SegmentPolygon USING GiST(elementPolygon);"
     )
@@ -651,7 +652,7 @@ def ingest_road(database: "Database", directory: str):
         if any(os.path.isdir(os.path.join(directory, f)) for f in filenames):
             raise Exception()
 
-        ingest_location(database, directory, "")
+        ingest_location(database, directory, "boston-seaport")
 
     print("adding segment types")
     add_segment_type(database)

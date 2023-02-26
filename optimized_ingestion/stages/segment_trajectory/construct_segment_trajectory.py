@@ -37,51 +37,63 @@ WHERE segmentpolygon.elementid = \'{segment_id}\';
 
 
 segment_closest_query = """
-WITH min_distance AS (
+WITH
+AvailablePolygon AS (
+    SELECT *
+    FROM SegmentPolygon
+    WHERE location = {location}
+),
+min_distance AS (
 SELECT
-    MIN(ST_Distance(segmentpolygon.elementpolygon, {point}::geometry)) distance
-FROM segmentpolygon
+    MIN(ST_Distance(AvailablePolygon.elementpolygon, {point}::geometry)) distance
+FROM AvailablePolygon
     LEFT OUTER JOIN segment
-        ON segmentpolygon.elementid = segment.elementid
-WHERE ST_Distance(segmentpolygon.elementpolygon, {point}::geometry) > 0
+        ON AvailablePolygon.elementid = segment.elementid
+WHERE ST_Distance(AvailablePolygon.elementpolygon, {point}::geometry) > 0
     {heading_filter}
 )
 SELECT
-    segmentpolygon.elementid,
-    segmentpolygon.elementpolygon,
+    AvailablePolygon.elementid,
+    AvailablePolygon.elementpolygon,
     segment.segmentline,
-    segmentpolygon.segmenttypes,
+    AvailablePolygon.segmenttypes,
     segment.heading
-FROM min_distance, segmentpolygon
+FROM min_distance, AvailablePolygon
 LEFT OUTER JOIN segment
-        ON segmentpolygon.elementid = segment.elementid
-WHERE ST_Distance(segmentpolygon.elementpolygon, {point}::geometry) = min_distance.distance;
+        ON AvailablePolygon.elementid = segment.elementid
+WHERE ST_Distance(AvailablePolygon.elementpolygon, {point}::geometry) = min_distance.distance;
 """
 
 
 segment_contain_vector_query = """
-WITH min_contain AS (
+WITH
+AvailablePolygon AS (
+    SELECT *
+    FROM SegmentPolygon
+    WHERE location = {location}
+),
+min_contain AS (
 SELECT
-    MIN(ST_Area(segmentpolygon.elementpolygon)) min_segment_area
-FROM segmentpolygon
+    MIN(ST_Area(AvailablePolygon.elementpolygon)) min_segment_area
+FROM AvailablePolygon
     LEFT OUTER JOIN segment
-        ON segmentpolygon.elementid = segment.elementid
+        ON AvailablePolygon.elementid = segment.elementid
 WHERE ST_Contains(
-    segmentpolygon.elementpolygon,
+    AvailablePolygon.elementpolygon,
     {point}::geometry
     )
     {heading_filter}
 )
 SELECT
-    segmentpolygon.elementid,
-    segmentpolygon.elementpolygon,
+    AvailablePolygon.elementid,
+    AvailablePolygon.elementpolygon,
     segment.segmentline,
-    segmentpolygon.segmenttypes,
+    AvailablePolygon.segmenttypes,
     segment.heading
-FROM min_contain, segmentpolygon
+FROM min_contain, AvailablePolygon
 LEFT OUTER JOIN segment
-        ON segmentpolygon.elementid = segment.elementid
-WHERE ST_Area(segmentpolygon.elementpolygon) = min_contain.min_segment_area;
+        ON AvailablePolygon.elementid = segment.elementid
+WHERE ST_Area(AvailablePolygon.elementpolygon) = min_contain.min_segment_area;
 """
 
 
@@ -184,16 +196,22 @@ def find_middle_segment(current_segment: "SegmentPoint", next_segment: "SegmentP
     assert isinstance(intersection_center, list)
     assert len(intersection_center) == 2
 
+    locations = set(f.location for f in payload.video._camera_configs)
+    assert len(locations) == 1, locations
+    location = [*locations][0]
+
     assert not current_segment_polygon.contains(Point(intersection_center))
     contain_query = psycopg2.sql.SQL(segment_contain_vector_query).format(
         point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
-        heading_filter=psycopg2.sql.SQL('AND True')
+        heading_filter=psycopg2.sql.SQL('AND True'),
+        location=psycopg2.sql.Literal(location),
     )
     result = database.execute(contain_query)
     if not result:
         closest_query = psycopg2.sql.SQL(segment_closest_query).format(
             point=psycopg2.sql.Literal(postgis.point.Point(intersection_center)),
-            heading_filter=psycopg2.sql.SQL('AND True')
+            heading_filter=psycopg2.sql.SQL('AND True'),
+            location=psycopg2.sql.Literal(location),
         )
         result = database.execute(closest_query)
     # TODO: function update_current_road_segment_info does not exist
@@ -335,6 +353,10 @@ def calibrate(
                         frame_idx,
                     ))
                 continue
+        
+        locations = set(f.location for f in payload.video._camera_configs)
+        assert len(locations) == 1, locations
+        location = [*locations][0]
 
         ### project current_point to the segment line of the previous point
         ### and then find the segment that  contains the projected point
@@ -344,7 +366,8 @@ def calibrate(
                 point_heading=psycopg2.sql.Literal(current_point_heading - 90))
             query = psycopg2.sql.SQL(segment_closest_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point(current_point)),
-                heading_filter=heading_filter
+                heading_filter=heading_filter,
+                location=psycopg2.sql.Literal(location),
             )
         else:
             prev_calibrated_point = road_segment_trajectory[-1]
@@ -356,13 +379,15 @@ def calibrate(
                 point_heading=psycopg2.sql.Literal(prev_segment_heading - 90))
             query = psycopg2.sql.SQL(segment_contain_vector_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point((projection.x, projection.y))),
-                heading_filter=heading_filter
+                heading_filter=heading_filter,
+                location=psycopg2.sql.Literal(location),
             )
         result = database.execute(query)
         if len(result) == 0:
             closest_query = psycopg2.sql.SQL(segment_closest_query).format(
                 point=psycopg2.sql.Literal(postgis.point.Point(current_point)),
-                heading_filter=heading_filter
+                heading_filter=heading_filter,
+                location=psycopg2.sql.Literal(location),
             )
             result = database.execute(closest_query)
         assert len(result) > 0

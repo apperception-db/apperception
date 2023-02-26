@@ -52,9 +52,11 @@ SELECT
 FROM segmentpolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Contains(
-    p.elementpolygon,
-    {ego_translation}::geometry
-) AND 'roadsection' != ALL(p.segmenttypes)
+        p.elementpolygon,
+        {ego_translation}::geometry
+    )
+    AND 'roadsection' != ALL(p.segmenttypes)
+    AND p.location = {location}
 GROUP BY p.elementid;
 """)
 
@@ -73,7 +75,9 @@ WHERE ST_DWithin(
         p.elementpolygon,
         {start_segment}::geometry,
         {view_distance}
-) AND 'roadsection' != ALL(p.segmenttypes)
+    )
+    AND 'roadsection' != ALL(p.segmenttypes)
+    AND p.location = {location}
 GROUP BY p.elementid;
 """)
 
@@ -188,7 +192,8 @@ def road_polygon_contains(
 ) -> "list[RoadSegmentWithHeading]":
     point = postgis.Point(*ego_config.ego_translation[:2])
     query = POLYGON_CONTAIN_QUERY.format(
-        ego_translation=psycopg2.sql.Literal(point)
+        ego_translation=psycopg2.sql.Literal(point),
+        location=psycopg2.sql.Literal(ego_config.location)
     )
 
     results = database.execute(query)
@@ -206,12 +211,14 @@ def road_polygon_contains(
 
 def find_polygon_dwithin(
     start_segment: "AnnotatedSegment",
+    ego_config: "CameraConfig",
     view_distance: "float | int" = 50
 ) -> "list[RoadSegmentWithHeading]":
     _, start_segment_polygon, _, _, _, _ = start_segment
     query = POLYGON_DWITHIN_QUERY.format(
         start_segment=psycopg2.sql.Literal(start_segment_polygon),
-        view_distance=psycopg2.sql.Literal(view_distance)
+        view_distance=psycopg2.sql.Literal(view_distance),
+        location=psycopg2.sql.Literal(ego_config.location),
     )
 
     results = database.execute(query)
@@ -261,7 +268,7 @@ def construct_search_space(
     all_contain_polygons = annotate_contain(all_contain_polygons, contain=True)
     start_segment = all_contain_polygons[0]
 
-    polygons_within_distance = reformat_return_polygon(find_polygon_dwithin(start_segment, view_distance))
+    polygons_within_distance = reformat_return_polygon(find_polygon_dwithin(start_segment, ego_config, view_distance))
     polygons_within_distance = annotate_contain(polygons_within_distance, contain=False)
 
     ids: "set[str]" = set()
