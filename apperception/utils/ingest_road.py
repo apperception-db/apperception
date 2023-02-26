@@ -10,6 +10,7 @@ CREATE_POLYGON_SQL = """
 CREATE TABLE IF NOT EXISTS SegmentPolygon(
     elementId TEXT,
     elementPolygon geometry,
+    location TEXT,
     PRIMARY KEY (elementId)
 );
 """
@@ -168,19 +169,22 @@ def create_polygon_table(database: "Database", polygons, drop=True):
         values.append(
             f"""(
                 '{poly['id']}',
-                '{poly['polygon']}'
+                '{poly['polygon']}',
+                '{poly['location']}'
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO SegmentPolygon (
-            elementId,
-            elementPolygon
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO SegmentPolygon (
+                elementId,
+                elementPolygon,
+                location
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_segment_table(database: "Database", segments, drop=True):
@@ -208,17 +212,18 @@ def create_segment_table(database: "Database", segments, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Segment (
-            elementId,
-            startPoint,
-            endPoint,
-            heading
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Segment (
+                elementId,
+                startPoint,
+                endPoint,
+                heading
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
     database.update(
         """
         UPDATE Segment
@@ -248,19 +253,20 @@ def create_lanesection_table(database: "Database", laneSections, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO LaneSection (
-            id,
-            laneToLeft,
-            laneToRight,
-            fasterLane,
-            slowerLane,
-            isForward
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO LaneSection (
+                id,
+                laneToLeft,
+                laneToRight,
+                fasterLane,
+                slowerLane,
+                isForward
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_lane_table(database: "Database", lanes, drop=True):
@@ -277,14 +283,15 @@ def create_lane_table(database: "Database", lanes, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Lane (
-            id
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Lane (
+                id
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_lane_lanesec_table(database: "Database", lane_lanesec, drop=True):
@@ -305,15 +312,16 @@ def create_lane_lanesec_table(database: "Database", lane_lanesec, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Lane_LaneSection (
-            laneId,
-            laneSectionId
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Lane_LaneSection (
+                laneId,
+                laneSectionId
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_lanegroup_table(database: "Database", laneGroups, drop=True):
@@ -326,12 +334,13 @@ def create_lanegroup_table(database: "Database", laneGroups, drop=True):
     for lg in laneGroups:
         values.append(f"('{lg['id']}')")
 
-    database.update(
-        f"""
-        INSERT INTO LaneGroup (id)
-        VALUES {','.join(values)};
-        """
-    )
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO LaneGroup (id)
+            VALUES {','.join(values)};
+            """
+        )
 
 
 def create_lanegroup_lane_table(database: "Database", lanegroup_lane, drop=True):
@@ -350,15 +359,16 @@ def create_lanegroup_lane_table(database: "Database", lanegroup_lane, drop=True)
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO LaneGroup_Lane (
-            laneGroupId,
-            laneId
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO LaneGroup_Lane (
+                laneGroupId,
+                laneId
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_opposite_lanegroup_table(database: "Database", opposite_lanegroup, drop=True):
@@ -377,15 +387,16 @@ def create_opposite_lanegroup_table(database: "Database", opposite_lanegroup, dr
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Opposite_LaneGroup (
-            laneGroupId,
-            oppositeId
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Opposite_LaneGroup (
+                laneGroupId,
+                oppositeId
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_road_table(database: "Database", roads, drop=True):
@@ -404,16 +415,17 @@ def create_road_table(database: "Database", roads, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Road (
-            id,
-            forwardLane,
-            backwardLane
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Road (
+                id,
+                forwardLane,
+                backwardLane
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_road_lanegroup_table(database: "Database", road_lanegroup, drop=True):
@@ -432,15 +444,16 @@ def create_road_lanegroup_table(database: "Database", road_lanegroup, drop=True)
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Road_LaneGroup (
-            roadId,
-            laneGroupId
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Road_LaneGroup (
+                roadId,
+                laneGroupId
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_road_roadsec_table(database: "Database", road_roadsec, drop=True):
@@ -459,15 +472,16 @@ def create_road_roadsec_table(database: "Database", road_roadsec, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Road_RoadSection (
-            roadId,
-            roadSectionId
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Road_RoadSection (
+                roadId,
+                roadSectionId
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_roadsection_table(database: "Database", roadSections, drop=True):
@@ -496,16 +510,17 @@ def create_roadsection_table(database: "Database", roadSections, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO RoadSection (
-            id,
-            forwardLanes,
-            backwardLanes
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO RoadSection (
+                id,
+                forwardLanes,
+                backwardLanes
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_roadsec_lanesec_table(database: "Database", roadsec_lanesec, drop=True):
@@ -528,15 +543,16 @@ def create_roadsec_lanesec_table(database: "Database", roadsec_lanesec, drop=Tru
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO RoadSection_LaneSection (
-            roadSectionId,
-            laneSectionId
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO RoadSection_LaneSection (
+                roadSectionId,
+                laneSectionId
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 def create_intersection_table(database: "Database", intersections, drop=True):
@@ -554,15 +570,16 @@ def create_intersection_table(database: "Database", intersections, drop=True):
             )"""
         )
 
-    database.update(
-        f"""
-        INSERT INTO Intersection (
-            id,
-            road
+    if len(values):
+        database.update(
+            f"""
+            INSERT INTO Intersection (
+                id,
+                road
+            )
+            VALUES {','.join(values)};
+            """
         )
-        VALUES {','.join(values)};
-        """
-    )
 
 
 ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"}
@@ -598,11 +615,41 @@ CREATE_TABLES = {
 }
 
 
-def ingest_road(database: "Database", directory: str):
+def ingest_location(database: "Database", directory: "str", location: "str"):
+    print('Location:', location)
+    filenames = os.listdir(directory)
+
+    assert set(filenames) == set([k + '.json' for k in CREATE_TABLES.keys()]), (sorted(filenames), sorted([k + '.json' for k in CREATE_TABLES.keys()]))
+
     for d, fn in CREATE_TABLES.items():
         with open(os.path.join(directory, d + ".json"), "r") as f:
             data = json.load(f)
+
         print("Ingesting", d)
-        fn(database, data)
+        fn(database, [{'location': location, **d} for d in data], drop=False)
+
+
+def ingest_road(database: "Database", directory: str):
+
+    # Create tables
+    for d, fn in CREATE_TABLES.items():
+        print('Create Table', d)
+        fn(database, [])
+    
+    filenames = os.listdir(directory)
+
+    if all(os.path.isdir(os.path.join(directory, f)) for f in filenames):
+        for d in filenames:
+            if d == 'boston-old':
+                continue
+
+            print(d)
+            ingest_location(database, os.path.join(directory, d), d)
+    else:
+        if any(os.path.isdir(os.path.join(directory, f)) for f in filenames):
+            raise Exception()
+
+        ingest_location(database, directory, '')
+
     print("adding segment types")
     add_segment_type(database)
