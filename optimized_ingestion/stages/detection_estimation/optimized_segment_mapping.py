@@ -20,7 +20,6 @@ import numpy.typing as npt
 import os
 import plpygis
 import postgis
-import psycopg2
 import psycopg2.sql as sql
 import shapely
 import shapely.geometry

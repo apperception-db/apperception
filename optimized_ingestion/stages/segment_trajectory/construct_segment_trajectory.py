@@ -353,7 +353,7 @@ def calibrate(
                         frame_idx,
                     ))
                 continue
-        
+
         locations = set(f.location for f in payload.video._camera_configs)
         assert len(locations) == 1, locations
         location = [*locations][0]

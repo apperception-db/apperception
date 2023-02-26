@@ -48,7 +48,7 @@ class FromTracking3D(SegmentTrajectory):
             # All other points' direction
             for prev, curr, next in zip(traj[:-2], traj[1:-1], traj[2:]):
                 points.append((curr, _get_direction_2d(prev, next)))
-        
+
         locations = set(f.location for f in payload.video._camera_configs)
         assert len(locations) == 1, locations
 
