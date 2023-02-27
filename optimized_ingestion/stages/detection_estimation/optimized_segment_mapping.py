@@ -41,9 +41,9 @@ test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__15331532
 
 MAX_POLYGON_CONTAIN_QUERY = sql.SQL("""
 WITH
-Polygon AS (
+AvailablePolygon AS (
     SELECT *
-    FROM Polygon as p
+    FROM SegmentPolygon as p
     WHERE
         p.location = {location}
         AND EXISTS (
@@ -55,7 +55,7 @@ Polygon AS (
 max_contain AS (
     SELECT
         MAX(ST_Area(p.elementpolygon)) max_segment_area
-    FROM Polygon AS p
+    FROM AvailablePolygon AS p
     WHERE ST_Contains(
             p.elementpolygon,
             {ego_translation}::geometry
@@ -63,13 +63,13 @@ max_contain AS (
 )
 SELECT
     p.elementid,
-    p.elementpolygon,
-    p.segmenttypes,
+    MIN(p.elementpolygon)::geometry,
+    MIN(p.segmenttypes),
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),
     COUNT(DISTINCT p.segmenttypes)
-FROM max_contain, Polygon AS p
+FROM max_contain, AvailablePolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
 GROUP BY p.elementid;
@@ -261,9 +261,7 @@ def world2pixel_all(points3d: "list[Float2]", config: "CameraConfig"):
     return points.T[:, :2]
 
 
-def get_largest_polygon_containing_point(
-    ego_config: "CameraConfig"
-) -> "list[RoadSegmentWithHeading]":
+def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
     point = postgis.Point(*ego_config.ego_translation[:2])
     query = MAX_POLYGON_CONTAIN_QUERY.format(
         ego_translation=sql.Literal(point),
@@ -290,9 +288,13 @@ def get_largest_polygon_containing_point(
     road_polygon = reformat_return_polygon([output])[0]
     polygonid, roadpolygon, roadtype, segmentlines, segmentheadings = road_polygon
     fov_lines = get_fov_lines(ego_config)
+
+    polygon = shapely.wkb.loads(roadpolygon.to_ewkb(), hex=True)
+    assert isinstance(polygon, shapely.geometry.Polygon)
+
     return RoadPolygonInfo(
         polygonid,
-        plpygis.Geometry(roadpolygon.to_ewkb()).shapely,
+        polygon,
         segmentlines,
         roadtype,
         segmentheadings,
@@ -320,8 +322,8 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
     AvailablePolygon AS (
         SELECT *
         FROM SegmentPolygon
-        WHERE elementPolygon = {location}
-    )
+        WHERE location = {location}
+    ),
     MaxPolygon AS (
         SELECT token, MAX(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
