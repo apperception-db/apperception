@@ -147,20 +147,20 @@ def _remove_suffix(uid: str) -> "str | None":
 
 def drop_tables(database: "Database"):
     tablenames = [
-        'segment',
-        'lanesection',
-        'lane',
-        'lane_lanesection',
-        'lanegroup',
-        'lanegroup_lane',
-        'opposite_lanegroup',
-        'road',
-        'road_lanegroup',
-        'road_roadsection',
-        'roadsection',
-        'roadsection_lanesection',
-        'intersection',
-        'segmentpolygon',
+        "segment",
+        "lanesection",
+        "lane",
+        "lane_lanesection",
+        "lanegroup",
+        "lanegroup_lane",
+        "opposite_lanegroup",
+        "road",
+        "road_lanegroup",
+        "road_roadsection",
+        "roadsection",
+        "roadsection_lanesection",
+        "intersection",
+        "segmentpolygon",
     ]
     drop_table = psql.SQL("DROP TABLE IF EXISTS {n} CASCADE;")
 
@@ -170,16 +170,13 @@ def drop_tables(database: "Database"):
 
 
 def index_factory(database: "Database"):
-    def index(
-        table: "str",
-        field: "str",
-        gist: "bool" = False,
-        commit: "bool" = False
-    ):
+    def index(table: "str", field: "str", gist: "bool" = False, commit: "bool" = False):
         name = f"{table}__{field}__idx"
         use_gist = " USING GiST" if gist else ""
-        database.update(f"CREATE INDEX IF NOT EXISTS {name} ON {table}{use_gist}({field});", commit=commit)
-    
+        database.update(
+            f"CREATE INDEX IF NOT EXISTS {name} ON {table}{use_gist}({field});", commit=commit
+        )
+
     return index
 
 
@@ -187,54 +184,54 @@ def create_tables(database: "Database"):
     index = index_factory(database)
 
     database.update(CREATE_POLYGON_SQL, commit=False)
-    index('SegmentPolygon', 'elementId')
-    index('SegmentPolygon', 'location')
-    index('SegmentPolygon', 'elementPolygon', gist=True)
+    index("SegmentPolygon", "elementId")
+    index("SegmentPolygon", "location")
+    index("SegmentPolygon", "elementPolygon", gist=True)
 
     database.update(CREATE_SEGMENT_SQL, commit=False)
-    index('Segment', 'elementId')
+    index("Segment", "elementId")
 
     database.update(CREATE_LANESECTION_SQL, commit=False)
-    index('LaneSection', 'id')
+    index("LaneSection", "id")
 
     database.update(CREATE_LANE_SQL, commit=False)
-    index('Lane', 'id')
+    index("Lane", "id")
 
     database.update(CREATE_LANE_LANESEC_SQL, commit=False)
-    index('Lane_LaneSection', 'laneId')
-    index('Lane_LaneSection', 'laneSectionId')
+    index("Lane_LaneSection", "laneId")
+    index("Lane_LaneSection", "laneSectionId")
 
     database.update(CREATE_LANEGROUP_SQL, commit=False)
-    index('LaneGroup', 'id')
+    index("LaneGroup", "id")
 
     database.update(CREATE_LANEGROUP_LANE_SQL, commit=False)
-    index('LaneGroup_Lane', 'laneId')
-    index('LaneGroup_Lane', 'laneGroupId')
+    index("LaneGroup_Lane", "laneId")
+    index("LaneGroup_Lane", "laneGroupId")
 
     database.update(CREATE_OPPOSITE_LANEGROUP_SQL, commit=False)
-    index('Opposite_LaneGroup', 'oppositeId')
-    index('Opposite_LaneGroup', 'laneGroupId')
+    index("Opposite_LaneGroup", "oppositeId")
+    index("Opposite_LaneGroup", "laneGroupId")
 
     database.update(CREATE_ROAD_SQL, commit=False)
-    index('Road', 'id')
+    index("Road", "id")
 
     database.update(CREATE_ROAD_LANEGROUP_SQL, commit=False)
-    index('Road_LaneGroup', 'roadId')
-    index('Road_LaneGroup', 'laneGroupId')
+    index("Road_LaneGroup", "roadId")
+    index("Road_LaneGroup", "laneGroupId")
 
     database.update(CREATE_ROAD_ROADSECTION_SQL, commit=False)
-    index('Road_RoadSection', 'roadId')
-    index('Road_RoadSection', 'roadSectionId')
+    index("Road_RoadSection", "roadId")
+    index("Road_RoadSection", "roadSectionId")
 
     database.update(CREATE_ROADSECTION_SQL, commit=False)
-    index('RoadSection', 'id')
+    index("RoadSection", "id")
 
     database.update(CREATE_ROADSEC_LANESEC_SQL, commit=False)
-    index('RoadSection_LaneSection', 'laneSectionId')
-    index('RoadSection_LaneSection', 'roadSectionId')
+    index("RoadSection_LaneSection", "laneSectionId")
+    index("RoadSection_LaneSection", "roadSectionId")
 
     database.update(CREATE_INTERSECTION_SQL, commit=False)
-    index('Intersection', 'id')
+    index("Intersection", "id")
 
     database._commit()
 
@@ -301,13 +298,15 @@ def insert_segment(database: "Database", segments):
             VALUES {','.join(values)};
             """
         )
-    database.update("""
+    database.update(
+        """
     UPDATE Segment
     SET segmentLine = ST_MakeLine(startPoint, endPoint)
     WHERE startPoint IS NOT NULL and endPoint IS NOT NULL;
-    """)
+    """
+    )
 
-    index_factory(database)('Segment', 'segmentLine', gist=True)
+    index_factory(database)("Segment", "segmentLine", gist=True)
 
 
 def insert_lanesection(database: "Database", laneSections, drop=True):
