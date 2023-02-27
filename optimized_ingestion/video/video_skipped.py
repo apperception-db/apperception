@@ -1,4 +1,4 @@
-from .camera_config import CameraConfig, has_config, interpolate
+from ..camera_config import CameraConfig, has_config, interpolate
 from .video import Video
 
 
