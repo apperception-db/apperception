@@ -8,6 +8,8 @@ if TYPE_CHECKING:
     from apperception.database import Database
 
 
+# TODO: use ..data_types.table.Table to define tables and insert items
+
 CREATE_POLYGON_SQL = """
 CREATE TABLE IF NOT EXISTS SegmentPolygon(
     elementId TEXT,
@@ -162,10 +164,10 @@ def drop_tables(database: "Database"):
         "intersection",
         "segmentpolygon",
     ]
-    drop_table = psql.SQL("DROP TABLE IF EXISTS {n} CASCADE;")
+    drop_table = psql.SQL("DROP TABLE IF EXISTS {} CASCADE;")
 
-    for tablename in tablenames:
-        database.update(drop_table.format(n=psql.Identifier(tablename)), commit=False)
+    for tablename in map(psql.Identifier, tablenames):
+        database.update(drop_table.format(tablename), commit=False)
     database._commit()
 
 
