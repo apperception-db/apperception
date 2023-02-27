@@ -1,26 +1,21 @@
-import collections
-import collections.abc
-import cv2
 from datetime import datetime, timedelta
-from typing import Iterable
 
-from .camera_config import CameraConfig, interpolate
+from ..camera_config import CameraConfig, interpolate
+from .video import Video
 
 
-class Video(Iterable["CameraConfig"]):
-    videofile: str
-
+class InterpolableVideo(Video):
     def __init__(
         self,
         videofile: str,
         camera_configs: "list[CameraConfig]",
-        start: "datetime | None" = None,
+        start: "datetime | None" = None
     ):
-        self.videofile = videofile
-        self._camera_configs: "list[CameraConfig]" = camera_configs
-        self._start: "datetime | None" = start
-        self._length: "int | None" = None
-        self._fps: "float | None" = None
+        super().__init__(
+            videofile,
+            camera_configs,
+            start
+        )
 
     @property
     def interpolated_frames(self):
@@ -46,26 +41,3 @@ class Video(Iterable["CameraConfig"]):
                         interpolate(self._camera_configs[idx], self._camera_configs[idx + 1], t)
                     )
         return self._interpolated_frames
-
-    @property
-    def fps(self):
-        return self._get_fps_and_length()[1]
-
-    def __getitem__(self, index: "int"):
-        return self.interpolated_frames[index]
-
-    def __iter__(self) -> "collections.abc.Iterator":
-        return iter(self.interpolated_frames)
-
-    def __len__(self):
-        return self._get_fps_and_length()[0]
-
-    def _get_fps_and_length(self):
-        if self._length is None or self._fps is None:
-            cap = cv2.VideoCapture(self.videofile)
-            assert cap.isOpened(), self.videofile
-            self._length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-            self._fps = float(cap.get(cv2.CAP_PROP_FPS))
-            cap.release()
-            cv2.destroyAllWindows()
-        return self._length, self._fps

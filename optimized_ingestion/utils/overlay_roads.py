@@ -34,9 +34,12 @@ def overlay_to_frame(args: "Tuple[CameraConfig, npt.NDArray]") -> "npt.NDArray":
     polygons: "List[Tuple[postgis.Polygon, str]]" = database.execute(sql.SQL("""
         SELECT elementPolygon
         FROM SegmentPolygon
-        WHERE ST_Distance({camera}, elementPolygon) < 10
+        WHERE
+            ST_Distance({camera}, elementPolygon) < 10
+            AND location = {location}
     """).format(
-        camera=sql.Literal(postgis.Point(*frame.camera_translation))
+        camera=sql.Literal(postgis.Point(*frame.camera_translation)),
+        location=sql.Literal(frame.location),
     ))
     polygons = [p[0] for p in polygons]
     width = 1600

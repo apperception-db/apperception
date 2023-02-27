@@ -20,7 +20,6 @@ import numpy.typing as npt
 import os
 import plpygis
 import postgis
-import psycopg2
 import psycopg2.sql as sql
 import shapely
 import shapely.geometry
@@ -40,17 +39,27 @@ input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
-MAX_POLYGON_CONTAIN_QUERY = psycopg2.sql.SQL("""
-WITH max_contain AS (
-SELECT
-    MAX(ST_Area(p.elementpolygon)) max_segment_area
-FROM segmentpolygon AS p
-    LEFT OUTER JOIN segment
-        ON p.elementid = segment.elementid
-WHERE ST_Contains(
-    p.elementpolygon,
-    {ego_translation}::geometry
-)
+MAX_POLYGON_CONTAIN_QUERY = sql.SQL("""
+WITH
+Polygon AS (
+    SELECT *
+    FROM Polygon as p
+    WHERE
+        p.location = {location}
+        AND EXISTS (
+            SELECT *
+            FROM Segment
+            WHERE p.elementid = Segment.elementid
+        )
+),
+max_contain AS (
+    SELECT
+        MAX(ST_Area(p.elementpolygon)) max_segment_area
+    FROM Polygon AS p
+    WHERE ST_Contains(
+            p.elementpolygon,
+            {ego_translation}::geometry
+        )
 )
 SELECT
     p.elementid,
@@ -60,7 +69,7 @@ SELECT
     ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),
     COUNT(DISTINCT p.segmenttypes)
-FROM max_contain, segmentpolygon AS p
+FROM max_contain, Polygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
 GROUP BY p.elementid;
@@ -257,7 +266,8 @@ def get_largest_polygon_containing_point(
 ) -> "list[RoadSegmentWithHeading]":
     point = postgis.Point(*ego_config.ego_translation[:2])
     query = MAX_POLYGON_CONTAIN_QUERY.format(
-        ego_translation=psycopg2.sql.Literal(point)
+        ego_translation=sql.Literal(point),
+        location=sql.Literal(ego_config.location)
     )
 
     results = database.execute(query)
@@ -292,11 +302,13 @@ def get_largest_polygon_containing_point(
     )
 
 
-def map_detections_to_segments(detections: "list"):
+def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "CameraConfig"):
     tokens = [*map(lambda x: x.detection_id.obj_order, detections)]
     txs = [*map(lambda x: x.car_loc3d[0], detections)]
     tys = [*map(lambda x: x.car_loc3d[1], detections)]
     tzs = [*map(lambda x: x.car_loc3d[2], detections)]
+
+    location = ego_config.location
 
     _point = sql.SQL("UNNEST({fields}) AS _point (token, tx, ty, tz)").format(
         fields=sql.SQL(',').join(map(sql.Literal, [tokens, txs, tys, tzs]))
@@ -305,10 +317,15 @@ def map_detections_to_segments(detections: "list"):
     out = sql.SQL("""
     WITH
     Point AS (SELECT * FROM {_point}),
+    AvailablePolygon AS (
+        SELECT *
+        FROM SegmentPolygon
+        WHERE elementPolygon = {location}
+    )
     MaxPolygon AS (
         SELECT token, MAX(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
-        JOIN SegmentPolygon AS Polygon
+        JOIN AvailablePolygon AS Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
             AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
         GROUP BY token
@@ -317,7 +334,7 @@ def map_detections_to_segments(detections: "list"):
         SELECT token, MIN(elementId) as elementId
         FROM Point AS p
         JOIN MaxPolygon USING (token)
-        JOIN SegmentPolygon as Polygon
+        JOIN AvailablePolygon as Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
             AND ST_Area(Polygon.elementPolygon) = MaxPolygon.size
             AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
@@ -329,7 +346,7 @@ def map_detections_to_segments(detections: "list"):
             ST_Distance(ST_Point(tx, ty), ST_MakeLine(startPoint, endPoint)) AS distance
         FROM Point AS p
         JOIN MaxPolygonId USING (token)
-        JOIN SegmentPolygon USING (elementId)
+        JOIN AvailablePolygon USING (elementId)
         JOIN Segment USING (elementId)
     ),
     MinDis as (
@@ -352,7 +369,7 @@ def map_detections_to_segments(detections: "list"):
     WHERE p.distance = MinDis.mindistance
         AND 'roadsection' != ALL(p.segmenttypes)
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
-    """).format(_point=_point)
+    """).format(_point=_point, location=sql.Literal(location))
 
     result = database.execute(out)
     return result
@@ -363,7 +380,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
     start_time = time.time()
-    results = map_detections_to_segments(detections)
+    results = map_detections_to_segments(detections, ego_config)
     assert all(r[6:] == (1, 1) for r in results)
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
     mapped_polygons = [*map(make_road_polygon_with_heading, mapped_polygons)]

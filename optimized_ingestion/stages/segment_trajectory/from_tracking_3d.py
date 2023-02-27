@@ -49,9 +49,14 @@ class FromTracking3D(SegmentTrajectory):
             for prev, curr, next in zip(traj[:-2], traj[1:-1], traj[2:]):
                 points.append((curr, _get_direction_2d(prev, next)))
 
+        locations = set(f.location for f in payload.video._camera_configs)
+        assert len(locations) == 1, locations
+
+        location = [*locations][0]
+
         # Map a segment to each detection
         # Note: Some detection might be missing due to not having any segment mapped
-        segments = map_points_and_directions_to_segment(points)
+        segments = map_points_and_directions_to_segment(points, location)
 
         # Index segments using their detection id
         segment_map: "dict[DetectionId, SegmentMapping]" = {}
@@ -142,7 +147,8 @@ class SegmentMapping(NamedTuple):
 
 
 def map_points_and_directions_to_segment(
-    annotations: "list[Tuple[tracking_3d.Tracking3DResult, Tuple[float, float] | None]]"
+    annotations: "list[Tuple[tracking_3d.Tracking3DResult, Tuple[float, float] | None]]",
+    location: "str"
 ) -> "list[SegmentMapping]":
     if len(annotations) == 0:
         return []
@@ -170,6 +176,11 @@ def map_points_and_directions_to_segment(
 
     WITH
     Point AS (SELECT * FROM {_point}),
+    AvailablePolygon AS (
+        SELECT *
+        FROM SegmentPolygon
+        WHERE location = {location}
+    ),
     _SegmentWithDirection AS (
         SELECT
             *,
@@ -189,7 +200,7 @@ def map_points_and_directions_to_segment(
     MinPolygon AS (
         SELECT fid, oid, MIN(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
-        JOIN SegmentPolygon AS Polygon
+        JOIN AvailablePolygon AS Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
             AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
         GROUP BY fid, oid
@@ -198,7 +209,7 @@ def map_points_and_directions_to_segment(
         SELECT fid, oid, MIN(elementId) as elementId
         FROM Point AS p
         JOIN MinPolygon USING (fid, oid)
-        JOIN SegmentPolygon as Polygon
+        JOIN AvailablePolygon as Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
             AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
             AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
@@ -215,10 +226,10 @@ def map_points_and_directions_to_segment(
             END AS anglediff
         FROM Point AS p
         JOIN MinPolygonId USING (fid, oid)
-        JOIN SegmentPolygon USING (elementId)
+        JOIN AvailablePolygon USING (elementId)
         JOIN SegmentWithDirection AS sd USING (elementId)
         WHERE
-            'intersection' = Any(SegmentPolygon.segmenttypes)
+            'intersection' = Any(AvailablePolygon.segmenttypes)
             OR
             p.dx IS NULL
             OR
@@ -247,7 +258,7 @@ def map_points_and_directions_to_segment(
     JOIN MinDisMinAngle USING (fid, oid)
     WHERE PointPolygonSegment.distance = MinDis.mindistance
         AND PointPolygonSegment.anglediff = MinDisMinAngle.minangle
-    """).format(_point=_point)
+    """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
     result = database.execute(out)
     return [*map(SegmentMapping._make, result)]
