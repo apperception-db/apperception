@@ -6,7 +6,7 @@ from apperception.data_types import Camera, CameraConfig
 
 
 def import_pickle(database: "Database", data_path: str):
-    with open(os.path.join(data_path, "frames-compressed.pickle"), "rb") as f:
+    with open(os.path.join(data_path, "frames.pkl"), "rb") as f:
         data_frames = pickle.loads(f.read())
 
     database.reset(True)

@@ -43,7 +43,7 @@ MAX_POLYGON_CONTAIN_QUERY = sql.SQL("""
 WITH
 Polygon AS (
     SELECT *
-    FROM Polygon as p
+    FROM SegmentPolygon as p
     WHERE
         p.location = {location}
         AND EXISTS (
@@ -72,7 +72,7 @@ SELECT
 FROM max_contain, Polygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
-GROUP BY p.elementid;
+GROUP BY p.elementid, p.elementpolygon, p.segmenttypes;
 """)
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']

@@ -61,7 +61,7 @@ TRAJECTORY_COLUMNS: "list[tuple[str, str]]" = [
     ("itemId", "TEXT"),
     ("cameraId", "TEXT"),
     ("objectType", "TEXT"),
-    ("roadTypes", "ttext"),
+    # ("roadTypes", "ttext"),
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
     ("itemHeadings", "tfloat"),
@@ -244,7 +244,7 @@ class Database:
             """
         )
 
-        print("New camera inserted successfully.........")
+        # print("New camera inserted successfully.........")
         self.connection.commit()
 
     def retrieve_cam(self, query: "Query | None" = None, camera_id: str = ""):

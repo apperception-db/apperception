@@ -21,23 +21,20 @@ BOSTON_VIDEOS = [
 ]
 NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
 
-PICKLE_DATA_PATH = '/data/apperception-data/processed/nuscenes/full-dataset-v1.0/Mini/videos/boston-seaport'
 
 
-def insert_camera():
-    ### INSERT CAMERA
-    import_pickle(database, PICKLE_DATA_PATH)
 
 def preprocess(world, base=True):
-    insert_camera()
     pipeline = construct_pipeline(world, base=base)
     if NUSCENES_PROCESSED_DATA in os.environ:
         DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
     else:
         DATA_DIR = "/work/apperception/data/nuScenes/full-dataset-v1.0/Mini"
-    with open(os.path.join(DATA_DIR, "videos/boston-seaport", "frames.pickle"), "rb") as f:
+    video_path = os.path.join(DATA_DIR, "videos/")
+    import_pickle(database, video_path)
+    with open(os.path.join(video_path, 'frames.pkl'), "rb") as f:
         videos = pickle.load(f)
-
+    
     for name, video in videos.items():
         if name not in BOSTON_VIDEOS:
             continue
@@ -48,7 +45,7 @@ def preprocess(world, base=True):
 
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(
-            os.path.join(DATA_DIR, "videos/boston-seaport", video["filename"]),
+            os.path.join(DATA_DIR, "videos", video["filename"]),
             [camera_config(*f, 0) for f in video["frames"]],
             video["start"],
         )

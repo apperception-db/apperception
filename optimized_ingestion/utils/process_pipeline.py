@@ -30,8 +30,9 @@ def construct_pipeline(world, base):
     pipeline = construct_base_pipeline()
     if base:
         return pipeline
-    pipeline.stages.insert(3, DetectionEstimation(base=base))
+    pipeline.stages.insert(3, DetectionEstimation())
     PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
+    return pipeline
 
 def associate_detection_info(tracking_result, detection_info_meta):
     for detection_info in detection_info_meta[tracking_result.frame_idx]:
@@ -39,9 +40,7 @@ def associate_detection_info(tracking_result, detection_info_meta):
             return detection_info
 
 def associate_segment_mapping(tracking_result, segment_mapping_meta):
-    for segmentmapping in segment_mapping_meta[tracking_result.frame_idx]:
-        if segmentmapping.oid == tracking_result.object_id:
-            return segmentmapping
+    return segment_mapping_meta[tracking_result.frame_idx][tracking_result.object_id]
         
 def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
     trajectories = {}
@@ -69,8 +68,8 @@ def format_trajectory(video_name, obj_id, track, base):
     pairs: List[Tuple[float, float, float]] = []
     itemHeadings: List[int] = []
     translations: List[Tuple[float, float, float]] = []
-    road_types: List[str] = []
-    roadpolygons: List[List[Tuple[float, float]]] = []
+    # road_types: List[str] = []
+    # roadpolygons: List[List[Tuple[float, float]]] = []
 
     for tracking_result_3d, detection_info, segment_mapping in track:
         if detection_info:
@@ -78,14 +77,14 @@ def format_trajectory(video_name, obj_id, track, base):
             object_type = tracking_result_3d.object_type
             timestamps.append(detection_info.timestamp)
             pairs.append(tracking_result_3d.point)
-            itemHeadings.append(segment_mapping.heading)
+            itemHeadings.append(segment_mapping.segment_heading)
             translations.append(detection_info.ego_translation if base else detection_info.ego_config.ego_translation)
-            road_types.append(detection_info.road_type)
-            roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
+            # road_types.append(segment_mapping.road_polygon_info.road_type if base else detection_info.road_type)
+            # roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
     if not len(timestamps):
         return None
     return [video_name+'_obj_'+str(obj_id), camera_id, object_type, timestamps, pairs,
-            itemHeadings, translations, road_types, roadpolygons]
+            itemHeadings, translations]
 
 from typing import List, Tuple
 def insert_trajectory(
@@ -97,17 +96,15 @@ def insert_trajectory(
     pairs: List[Tuple[float, float, float]],
     itemHeading_list: List[int],
     translation_list: List[Tuple[float, float, float]],
-    road_types: List[str],
-    roadpolygon_list: List[List[Tuple[float, float]]]
+    # road_types: List[str],
+    # roadpolygon_list: List[List[Tuple[float, float]]]
 ):
     traj_centroids = []
     translations = []
     itemHeadings = []
-    roadTypes = []
-    # roadPolygons = []
     prevTimestamp = None
-    for timestamp, current_point, curItemHeading, current_trans, cur_road_type, cur_roadpolygon in zip(
-        postgres_timestamps, pairs, itemHeading_list, translation_list, road_types, roadpolygon_list
+    for timestamp, current_point, curItemHeading, current_trans in zip(
+        postgres_timestamps, pairs, itemHeading_list, translation_list
     ):
         if prevTimestamp == timestamp:
             continue
@@ -116,24 +113,25 @@ def insert_trajectory(
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
         translations.append(f"POINT Z ({join(current_trans, ' ')})@{timestamp}")
-        itemHeadings.append(f"{curItemHeading}@{timestamp}")
-        roadTypes.append(f"{cur_road_type}@{timestamp}")
+        if curItemHeading is not None:
+            itemHeadings.append(f"{curItemHeading}@{timestamp}")
+        # roadTypes.append(f"{cur_road_type}@{timestamp}")
 #         polygon_point = ', '.join(join(cur_point, ' ') for cur_point in list(
 #             zip(*cur_roadpolygon.exterior.coords.xy)))
 #         roadPolygons.append(f"Polygon (({polygon_point}))@{timestamp}")
 
     # Insert the item_trajectory separately
+    item_headings = f"tfloat '{{[{', '.join(itemHeadings)}]}}'" if itemHeadings else "null"
     insert_trajectory = f"""
-    INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, roadTypes, trajCentroids,
+    INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, trajCentroids,
     translations, itemHeadings)
     VALUES (
         '{item_id}',
         '{camera_id}',
         '{object_type}',
-        ttext '{{[{', '.join(roadTypes)}]}}',
         tgeompoint '{{[{', '.join(traj_centroids)}]}}',
         tgeompoint '{{[{', '.join(translations)}]}}',
-        tfloat '{{[{', '.join(itemHeadings)}]}}'
+        {item_headings}
     );
     """
 
@@ -144,11 +142,11 @@ def process_pipeline(video_name, frames, pipeline, base):
     output = pipeline.run(Payload(frames)).__dict__
     metadata = output['metadata']
     if base:
-        detection_estimation_meta = frames.camera_config
+        detection_estimation_meta = frames.interpolated_frames
     else:
         detection_estimation_meta = metadata['DetectionEstimation']
-    sortmeta = metadata['Tracking2D.StrongSORT']
-    segment_trajectory_mapping = metadata['FromTracking3D']
+    sortmeta = metadata['Tracking3D.From2DAndRoad']
+    segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
     tracks = get_tracks(sortmeta, detection_estimation_meta, segment_trajectory_mapping, base)
     for obj_id, track in tracks.items():
         trajectory = format_trajectory(video_name, obj_id, track, base)
