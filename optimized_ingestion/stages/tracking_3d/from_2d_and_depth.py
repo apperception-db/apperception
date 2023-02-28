@@ -1,5 +1,4 @@
 import numpy as np
-import numpy.typing as npt
 from bitarray import bitarray
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -11,6 +10,7 @@ from .tracking_3d import Tracking3D, Tracking3DResult
 
 if TYPE_CHECKING:
     from ...payload import Payload
+
     # from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 
 

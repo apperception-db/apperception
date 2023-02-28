@@ -6,11 +6,11 @@ from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
+from ...cache import cache
 from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
-from ...cache import cache
 
 if TYPE_CHECKING:
 
