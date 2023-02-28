@@ -100,6 +100,7 @@ class FromTracking3D(SegmentTrajectory):
                             None
                         ),
                         oid,
+                        det.object_type,
                         None,
                         None,
                     )
@@ -113,6 +114,7 @@ class FromTracking3D(SegmentTrajectory):
                         None,
                         None,
                         oid,
+                        det.object_type,
                         None,
                         None
                     )
@@ -252,7 +254,7 @@ def map_points_and_directions_to_segment(
         GROUP BY fid, oid
     )
 
-    SELECT fid, oid, elementid, elementpolygon, segmentid, segmentline, segmentheading
+    SELECT fid, oid, elementid, elementpolygon, segmentid, segmentline, heading
     FROM PointPolygonSegment
     JOIN MinDis USING (fid, oid)
     JOIN MinDisMinAngle USING (fid, oid)

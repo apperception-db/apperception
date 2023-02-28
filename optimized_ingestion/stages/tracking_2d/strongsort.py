@@ -10,6 +10,7 @@ from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
+from ...cache import cache
 
 if TYPE_CHECKING:
 
@@ -28,7 +29,7 @@ class StrongSORT(Tracking2D):
         self.cache: "bool" = cache
         # self.ss_benchmarks: "list[list[list[float]]]" = []
 
-    # @cache
+    @cache
     def _run(self, payload: "Payload"):
         detections = Detection2D.get(payload)
         assert detections is not None
