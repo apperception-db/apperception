@@ -9,11 +9,11 @@ from optimized_ingestion.video import Video
 
 
 BOSTON_VIDEOS = [
-#     "scene-0757-CAM_FRONT",
+    "scene-0757-CAM_FRONT",
     # "scene-0103-CAM_FRONT",
 #     "scene-0553-CAM_FRONT",
     # "scene-0665-CAM_FRONT",
-    "scene-0655-CAM_FRONT",
+    # "scene-0655-CAM_FRONT",
 #     "scene-0655-CAM_FRONT_RIGHT",
 #     "scene-0655-CAM_BACK_RIGHT",
 #     "scene-0553-CAM_FRONT_LEFT"
@@ -24,7 +24,7 @@ NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
 
 
 
-def preprocess(world, base=True):
+def preprocess(world, video_names=[], base=True):
     pipeline = construct_pipeline(world, base=base)
     if NUSCENES_PROCESSED_DATA in os.environ:
         DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
@@ -35,13 +35,10 @@ def preprocess(world, base=True):
     with open(os.path.join(video_path, 'frames.pkl'), "rb") as f:
         videos = pickle.load(f)
     
+    if video_names:
+        videos = {name: videos[name] for name in video_names}
+
     for name, video in videos.items():
-        if name not in BOSTON_VIDEOS:
-            continue
-    #     if not name.endswith('CAM_FRONT'):
-    #         continue
-#         if 'CAM_FRONT' not in name:
-#             continue
 
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(

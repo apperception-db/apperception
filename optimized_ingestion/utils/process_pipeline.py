@@ -1,3 +1,5 @@
+import math
+
 from apperception.database import database
 from apperception.utils import join
 
@@ -63,6 +65,13 @@ def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
                 t[0].next = trajectory[i + 1][0]
     return trajectories
 
+def infer_heading(prevPoint, current_point):
+    if prevPoint is None:
+        return None
+    x1, y1, z1 = prevPoint
+    x2, y2, z2 = current_point
+    return int(90 - math.degrees(math.atan2(y2 - y1, x2 - x1)))
+
 def format_trajectory(video_name, obj_id, track, base):
     timestamps: List[str] = []
     pairs: List[Tuple[float, float, float]] = []
@@ -103,6 +112,7 @@ def insert_trajectory(
     translations = []
     itemHeadings = []
     prevTimestamp = None
+    prevPoint = None
     for timestamp, current_point, curItemHeading, current_trans in zip(
         postgres_timestamps, pairs, itemHeading_list, translation_list
     ):
@@ -110,15 +120,21 @@ def insert_trajectory(
             continue
         prevTimestamp = timestamp
 
+        
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
         translations.append(f"POINT Z ({join(current_trans, ' ')})@{timestamp}")
         if curItemHeading is not None:
             itemHeadings.append(f"{curItemHeading}@{timestamp}")
+        else:
+            curItemHeading = infer_heading(prevPoint, current_point)
+            if curItemHeading is not None:
+                itemHeadings.append(f"{curItemHeading}@{timestamp}")
         # roadTypes.append(f"{cur_road_type}@{timestamp}")
 #         polygon_point = ', '.join(join(cur_point, ' ') for cur_point in list(
 #             zip(*cur_roadpolygon.exterior.coords.xy)))
 #         roadPolygons.append(f"Polygon (({polygon_point}))@{timestamp}")
+        prevPoint = current_point
 
     # Insert the item_trajectory separately
     item_headings = f"tfloat '{{[{', '.join(itemHeadings)}]}}'" if itemHeadings else "null"
