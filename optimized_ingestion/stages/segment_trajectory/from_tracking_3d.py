@@ -256,11 +256,7 @@ def map_points_and_directions_to_segment(
         GROUP BY fid, oid
     )
 
-<<<<<<< Updated upstream
-    SELECT fid, oid, elementid, elementpolygon, segmentid, segmentline, segmentheading
-=======
     SELECT fid, oid, elementid, elementpolygon, segmentid, segmenttypes, segmentline, heading
->>>>>>> Stashed changes
     FROM PointPolygonSegment
     JOIN MinDis USING (fid, oid)
     JOIN MinDisMinAngle USING (fid, oid)
