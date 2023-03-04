@@ -6,7 +6,7 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-from typing import NamedTuple, Tuple, Any
+from typing import Any, NamedTuple, Tuple
 
 from ...payload import Payload
 from ...types import DetectionId
@@ -265,6 +265,7 @@ def map_points_and_directions_to_segment(
     """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
     result = database.execute(out)
+
     def _(x: "Any") -> "SegmentMapping":
         fid, oid, elementid, polygon, segmentid, types, line, heading = x
         type = types[-1]
