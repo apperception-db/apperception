@@ -12,8 +12,7 @@ def import_pickle(database: "Database", data_path: str):
     database.reset(True)
     for scene, val in data_frames.items():
         if val['location'] == 'boston-seaport':
-            scene_info = scene.split("-")
-            scene_id = scene_info[0] + "-" + scene_info[1]
+            cameraid = val["frames"][0][0]
             configs = [
                 CameraConfig(
                     frame_id=frame[1],
@@ -30,7 +29,7 @@ def import_pickle(database: "Database", data_path: str):
                 )
                 for frame in val["frames"]
             ]
-            camera = Camera(config=configs, id=scene_id)
+            camera = Camera(config=configs, id=cameraid)
             database.insert_cam(camera)
 
     database._commit()

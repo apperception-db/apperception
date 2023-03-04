@@ -65,7 +65,9 @@ def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
                 t[0].next = trajectory[i + 1][0]
     return trajectories
 
-def infer_heading(prevPoint, current_point):
+def infer_heading(curItemHeading, prevPoint, current_point):
+    if curItemHeading is not None:
+        return math.degrees(curItemHeading)
     if prevPoint is None:
         return None
     x1, y1, z1 = prevPoint
@@ -79,21 +81,35 @@ def format_trajectory(video_name, obj_id, track, base):
     translations: List[Tuple[float, float, float]] = []
     # road_types: List[str] = []
     # roadpolygons: List[List[Tuple[float, float]]] = []
-
+    info_found = []
     for tracking_result_3d, detection_info, segment_mapping in track:
         if detection_info:
+            if 'n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657118112404.jpg' in detection_info.filename and obj_id in [93, 98]:
+                info_found.append(
+                    [obj_id,
+                        tracking_result_3d.bbox_left,
+                        tracking_result_3d.bbox_top,
+                        tracking_result_3d.bbox_w,
+                        tracking_result_3d.bbox_h,
+                        segment_mapping.segment_heading,
+                        segment_mapping.segment_type,
+                        segment_mapping.road_polygon_info,
+                        detection_info.ego_heading])
             camera_id = detection_info.camera_id if base else detection_info.ego_config.camera_id
             object_type = tracking_result_3d.object_type
             timestamps.append(detection_info.timestamp)
             pairs.append(tracking_result_3d.point)
-            itemHeadings.append(segment_mapping.segment_heading)
+            if (segment_mapping.segment_type == 'intersection'):
+                itemHeadings.append(None)
+            else:
+                itemHeadings.append(segment_mapping.segment_heading)
             translations.append(detection_info.ego_translation if base else detection_info.ego_config.ego_translation)
             # road_types.append(segment_mapping.road_polygon_info.road_type if base else detection_info.road_type)
             # roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
     if not len(timestamps):
         return None
     return [video_name+'_obj_'+str(obj_id), camera_id, object_type, timestamps, pairs,
-            itemHeadings, translations]
+            itemHeadings, translations], info_found
 
 from typing import List, Tuple
 def insert_trajectory(
@@ -124,12 +140,9 @@ def insert_trajectory(
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
         translations.append(f"POINT Z ({join(current_trans, ' ')})@{timestamp}")
+        curItemHeading = infer_heading(curItemHeading, prevPoint, current_point)
         if curItemHeading is not None:
             itemHeadings.append(f"{curItemHeading}@{timestamp}")
-        else:
-            curItemHeading = infer_heading(prevPoint, current_point)
-            if curItemHeading is not None:
-                itemHeadings.append(f"{curItemHeading}@{timestamp}")
         # roadTypes.append(f"{cur_road_type}@{timestamp}")
 #         polygon_point = ', '.join(join(cur_point, ' ') for cur_point in list(
 #             zip(*cur_roadpolygon.exterior.coords.xy)))
@@ -164,8 +177,11 @@ def process_pipeline(video_name, frames, pipeline, base):
     sortmeta = metadata['Tracking3D.From2DAndRoad']
     segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
     tracks = get_tracks(sortmeta, detection_estimation_meta, segment_trajectory_mapping, base)
+    investigation = []
     for obj_id, track in tracks.items():
-        trajectory = format_trajectory(video_name, obj_id, track, base)
+        trajectory, info_found = format_trajectory(video_name, obj_id, track, base)
+        investigation.extend(info_found)
         if trajectory:
             print("Inserting trajectory")
             insert_trajectory(database, *trajectory)
+    print("info found", investigation)
