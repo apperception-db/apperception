@@ -6,7 +6,7 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-from typing import NamedTuple, Tuple
+from typing import NamedTuple, Tuple, Any
 
 from ...payload import Payload
 from ...types import DetectionId
@@ -15,6 +15,8 @@ from ..tracking_3d import tracking_3d
 from ..tracking_3d.from_2d_and_road import From2DAndRoad
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
+
+USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
 
 
 class FromTracking3D(SegmentTrajectory):
@@ -76,7 +78,7 @@ class FromTracking3D(SegmentTrajectory):
                 if did in segment_map:
                     # Detection that can be mapped to a segment
                     segment = segment_map[did]
-                    _fid, _oid, polygonid, polygon, segmentid, segmentline, segmentheading = segment
+                    _fid, _oid, polygonid, polygon, segmentid, segmenttype, segmentline, segmentheading = segment
                     assert did.frame_idx == _fid
                     assert did.obj_order == _oid
 
@@ -86,6 +88,7 @@ class FromTracking3D(SegmentTrajectory):
                         did,
                         tuple(det.point.tolist()),
                         det.timestamp,
+                        segmenttype,
                         segmentline,
                         segmentheading,
                         # A place-holder for Polygon that only contain polygon id and polygon
@@ -142,6 +145,7 @@ class SegmentMapping(NamedTuple):
     elementid: "str"
     polygon: "postgis.Polygon"
     segmentid: "int"
+    segmenttype: "str"
     line: "postgis.LineString"
     heading: "float"
 
@@ -252,7 +256,11 @@ def map_points_and_directions_to_segment(
         GROUP BY fid, oid
     )
 
+<<<<<<< Updated upstream
     SELECT fid, oid, elementid, elementpolygon, segmentid, segmentline, segmentheading
+=======
+    SELECT fid, oid, elementid, elementpolygon, segmentid, segmenttypes, segmentline, heading
+>>>>>>> Stashed changes
     FROM PointPolygonSegment
     JOIN MinDis USING (fid, oid)
     JOIN MinDisMinAngle USING (fid, oid)
@@ -261,4 +269,21 @@ def map_points_and_directions_to_segment(
     """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
     result = database.execute(out)
-    return [*map(SegmentMapping._make, result)]
+    def _(x: "Any") -> "SegmentMapping":
+        fid, oid, elementid, polygon, segmentid, types, line, heading = x
+        type = types[-1]
+        for t in types:
+            if t in USEFUL_TYPES:
+                type = t
+                break
+        return SegmentMapping(
+            fid,
+            oid,
+            elementid,
+            polygon,
+            segmentid,
+            type,
+            line,
+            heading
+        )
+    return list(map(_, result))

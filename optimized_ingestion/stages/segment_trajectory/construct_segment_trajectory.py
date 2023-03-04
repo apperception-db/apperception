@@ -119,6 +119,7 @@ class SegmentPoint:
     detection_id: "DetectionId"
     car_loc3d: "Float3"
     timestamp: "datetime.datetime"
+    segment_type: "str"
     segment_line: "Any"
     segment_heading: "Any"
     road_polygon_info: "RoadPolygonInfo"
