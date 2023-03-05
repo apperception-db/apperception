@@ -108,6 +108,8 @@ def format_trajectory(video_name, obj_id, track, base):
             # roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
     if not len(timestamps):
         return None
+    if obj_id == 93 or obj_id == 98:
+        print(f"pairs for obj {obj_id}:", pairs)
     return [video_name+'_obj_'+str(obj_id), camera_id, object_type, timestamps, pairs,
             itemHeadings, translations], info_found
 
