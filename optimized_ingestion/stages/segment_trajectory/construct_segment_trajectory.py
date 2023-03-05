@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from plpygis import Geometry
 from shapely.geometry import Point
 from shapely.ops import nearest_points
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
