@@ -48,8 +48,8 @@ class FromTracking3D(SegmentTrajectory):
             points.append((traj[-1], _get_direction_2d(traj[-2], traj[-1])))
 
             # All other points' direction
-            for prev, curr, next in zip(traj[:-2], traj[1:-1], traj[2:]):
-                points.append((curr, _get_direction_2d(prev, next)))
+            for prv, cur, nxt in zip(traj[:-2], traj[1:-1], traj[2:]):
+                points.append((cur, _get_direction_2d(prv, nxt)))
 
         locations = set(f.location for f in payload.video._camera_configs)
         assert len(locations) == 1, locations
@@ -78,12 +78,15 @@ class FromTracking3D(SegmentTrajectory):
                 if did in segment_map:
                     # Detection that can be mapped to a segment
                     segment = segment_map[did]
-                    _fid, _oid, polygonid, polygon, segmentid, segmenttype, segmentline, segmentheading = segment
+                    _fid, _oid, polygonid, polygon, segmentid, segmenttypes, segmentline, segmentheading = segment
                     assert did.frame_idx == _fid
                     assert did.obj_order == _oid
 
                     shapely_polygon = shapely.wkb.loads(polygon.to_ewkb(), hex=True)
                     assert isinstance(shapely_polygon, shapely.geometry.Polygon)
+
+                    segmenttype = next((t for t in segmenttypes if t in USEFUL_TYPES), segmenttypes[-1])
+
                     segment_point = SegmentPoint(
                         did,
                         tuple(det.point.tolist()),
@@ -126,9 +129,9 @@ class FromTracking3D(SegmentTrajectory):
                 assert oid not in metadatum
                 metadatum[oid] = segment_point
 
-            for prev, next in zip(segment_trajectory[:-1], segment_trajectory[1:]):
-                prev.next = next
-                next.prev = prev
+            for prv, nxt in zip(segment_trajectory[:-1], segment_trajectory[1:]):
+                prv.next = nxt
+                nxt.prev = prv
 
         return None, {self.classname(): output}
 
@@ -145,7 +148,7 @@ class SegmentMapping(NamedTuple):
     elementid: "str"
     polygon: "postgis.Polygon"
     segmentid: "int"
-    segmenttype: "str"
+    segmenttypes: "list[str]"
     line: "postgis.LineString"
     heading: "float"
 
@@ -265,21 +268,4 @@ def map_points_and_directions_to_segment(
     """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
     result = database.execute(out)
-    def _(x: "Any") -> "SegmentMapping":
-        fid, oid, elementid, polygon, segmentid, types, line, heading = x
-        type = types[-1]
-        for t in types:
-            if t in USEFUL_TYPES:
-                type = t
-                break
-        return SegmentMapping(
-            fid,
-            oid,
-            elementid,
-            polygon,
-            segmentid,
-            type,
-            line,
-            heading
-        )
-    return list(map(_, result))
+    return list(map(SegmentMapping._make, result))

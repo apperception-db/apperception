@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from plpygis import Geometry
 from shapely.geometry import Point
 from shapely.ops import nearest_points
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -120,8 +120,8 @@ class SegmentPoint:
     car_loc3d: "Float3"
     timestamp: "datetime.datetime"
     segment_type: "str"
-    segment_line: "Any"
-    segment_heading: "Any"
+    segment_line: "postgis.LineString"
+    segment_heading: "postgis.Polygon"
     road_polygon_info: "RoadPolygonInfo"
     obj_id: "int | None" = None
     next: "SegmentPoint | None" = None
