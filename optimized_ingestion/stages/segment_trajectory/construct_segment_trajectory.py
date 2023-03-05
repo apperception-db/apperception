@@ -120,8 +120,8 @@ class SegmentPoint:
     car_loc3d: "Float3"
     timestamp: "datetime.datetime"
     segment_type: "str"
-    segment_line: "Any"
-    segment_heading: "Any"
+    segment_line: "postgis.LineString"
+    segment_heading: "postgis.Polygon"
     road_polygon_info: "RoadPolygonInfo"
     obj_id: "int | None" = None
     next: "SegmentPoint | None" = None
