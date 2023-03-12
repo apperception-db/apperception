@@ -12,7 +12,10 @@ def in_view(pipeline, param):
 def object_type(pipeline, param):
     for i in range(len(pipeline.stages)):
         if isinstance(pipeline.stages[i], YoloDetection):
-            pipeline.stages.insert(i+1, ObjectTypeFilter(param))
+            if isinstance(pipeline.stages[i+1], ObjectTypeFilter):
+                pipeline.stages[i+1].add_type(param)
+            else:
+                pipeline.stages.insert(i+1, ObjectTypeFilter(param))
     
 def road_type(pipeline, param):
     for s in pipeline.stages:

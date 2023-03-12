@@ -1,5 +1,6 @@
 import os
 import pickle
+import time
 
 from apperception.database import database
 from apperception.utils import import_pickle
@@ -19,31 +20,29 @@ BOSTON_VIDEOS = [
 #     "scene-0553-CAM_FRONT_LEFT"
 #     "scene-0103-CAM_FRONT"
 ]
-NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
 
 
 
 
-def preprocess(world, video_names=[], base=True):
+
+def preprocess(world, data_dir, video_names=[], base=True):
     pipeline = construct_pipeline(world, base=base)
-    if NUSCENES_PROCESSED_DATA in os.environ:
-        DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
-    else:
-        DATA_DIR = "/work/apperception/data/nuScenes/full-dataset-v1.0/Mini"
-    video_path = os.path.join(DATA_DIR, "videos/")
+    
+    video_path = os.path.join(data_dir, "videos/")
     import_pickle(database, video_path)
     with open(os.path.join(video_path, 'frames.pkl'), "rb") as f:
         videos = pickle.load(f)
     
     if video_names:
         videos = {name: videos[name] for name in video_names}
-
+    start_time = time.time()
     for name, video in videos.items():
 
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(
-            os.path.join(DATA_DIR, "videos", video["filename"]),
-            [camera_config(*f, 0) for f in video["frames"]],
+            os.path.join(data_dir, "videos", video["filename"]),
+            [camera_config(name, *f[1:], 0) for f in video["frames"]],
             video["start"],
         )
         process_pipeline(name, frames, pipeline, base)
+    print(f"total preprocess time {time.time() - start_time}")

@@ -8,6 +8,9 @@ class ObjectTypeFilter(Detection2D):
     def __init__(self, types: "list[str]"):
         self.types = types
 
+    def add_type(self, type: "str"):
+        self.types.append(type)
+
     def _run(self, payload: "Payload"):
         detection_2d = Detection2D.get(payload)
         assert detection_2d is not None
