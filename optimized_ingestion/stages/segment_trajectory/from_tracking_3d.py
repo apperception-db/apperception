@@ -16,6 +16,8 @@ from ..tracking_3d.from_2d_and_road import From2DAndRoad
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
+USEFUL_TYPES = {'lane', 'lanegroup', 'intersection'}
+
 
 class FromTracking3D(SegmentTrajectory):
     def _run(self, payload: "Payload"):
@@ -46,8 +48,8 @@ class FromTracking3D(SegmentTrajectory):
             points.append((traj[-1], _get_direction_2d(traj[-2], traj[-1])))
 
             # All other points' direction
-            for prev, curr, next in zip(traj[:-2], traj[1:-1], traj[2:]):
-                points.append((curr, _get_direction_2d(prev, next)))
+            for prv, cur, nxt in zip(traj[:-2], traj[1:-1], traj[2:]):
+                points.append((cur, _get_direction_2d(prv, nxt)))
 
         locations = set(f.location for f in payload.video._camera_configs)
         assert len(locations) == 1, locations
@@ -76,16 +78,20 @@ class FromTracking3D(SegmentTrajectory):
                 if did in segment_map:
                     # Detection that can be mapped to a segment
                     segment = segment_map[did]
-                    _fid, _oid, polygonid, polygon, segmentid, segmentline, segmentheading = segment
+                    _fid, _oid, polygonid, polygon, segmentid, segmenttypes, segmentline, segmentheading = segment
                     assert did.frame_idx == _fid
                     assert did.obj_order == _oid
 
                     shapely_polygon = shapely.wkb.loads(polygon.to_ewkb(), hex=True)
                     assert isinstance(shapely_polygon, shapely.geometry.Polygon)
+
+                    segmenttype = next((t for t in segmenttypes if t in USEFUL_TYPES), segmenttypes[-1])
+
                     segment_point = SegmentPoint(
                         did,
                         tuple(det.point.tolist()),
                         det.timestamp,
+                        segmenttype,
                         segmentline,
                         segmentheading,
                         # A place-holder for Polygon that only contain polygon id and polygon
@@ -125,9 +131,9 @@ class FromTracking3D(SegmentTrajectory):
                 assert oid not in metadatum
                 metadatum[oid] = segment_point
 
-            for prev, next in zip(segment_trajectory[:-1], segment_trajectory[1:]):
-                prev.next = next
-                next.prev = prev
+            for prv, nxt in zip(segment_trajectory[:-1], segment_trajectory[1:]):
+                prv.next = nxt
+                nxt.prev = prv
 
         return None, {self.classname(): output}
 
@@ -144,6 +150,7 @@ class SegmentMapping(NamedTuple):
     elementid: "str"
     polygon: "postgis.Polygon"
     segmentid: "int"
+    segmenttypes: "list[str]"
     line: "postgis.LineString"
     heading: "float"
 
@@ -254,7 +261,7 @@ def map_points_and_directions_to_segment(
         GROUP BY fid, oid
     )
 
-    SELECT fid, oid, elementid, elementpolygon, segmentid, segmentline, heading
+    SELECT fid, oid, elementid, elementpolygon, segmentid, segmenttypes, segmentline, heading
     FROM PointPolygonSegment
     JOIN MinDis USING (fid, oid)
     JOIN MinDisMinAngle USING (fid, oid)
@@ -263,4 +270,4 @@ def map_points_and_directions_to_segment(
     """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
     result = database.execute(out)
-    return [*map(SegmentMapping._make, result)]
+    return list(map(SegmentMapping._make, result))
