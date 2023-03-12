@@ -1,14 +1,12 @@
-from typing import Any
-import torch
 import numpy as np
 import numpy.typing as npt
+import torch
 from pyquaternion import Quaternion
+from typing import Any
 
 from ...camera_config import Float3, Float4, Float33
-
 from ...payload import Payload
 from .detection_2d import Detection2D
-
 
 signs = [-1, 1]
 gp = []
@@ -62,10 +60,6 @@ def _3d_to_2d(
     pixels /= pixels[2:3]
 
 
-    pass
-
-
-
 class GroundTruthDetection(Detection2D):
     def __init__(self, annotations: "list[Any]"):
         self.annotations = annotations
@@ -79,18 +73,16 @@ class GroundTruthDetection(Detection2D):
             self.annotation_map[fid].append(a)
 
             classes.add(a['category'])
-        
+
         self.id_to_classes = [*classes]
         self.class_to_id = {
             c: i
             for i, c
             in enumerate(self.id_to_classes)
         }
-    
+
     def _run(self, payload: "Payload"):
         for cc in payload.video._camera_configs:
             fid = cc.frame_id
             annotations = self.annotation_map[fid]
             for a in annotations:
-                
-        pass
