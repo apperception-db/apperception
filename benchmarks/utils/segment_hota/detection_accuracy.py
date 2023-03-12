@@ -48,4 +48,5 @@ def detection_accuracy(
     if tp + fp + fn == 0:
         return 0.
 
+    print(tp, fp, fn)
     return tp / (tp + fp + fn)
