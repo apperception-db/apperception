@@ -11,8 +11,8 @@ def import_pickle(database: "Database", data_path: str):
 
     database.reset(True)
     for scene, val in data_frames.items():
-        if val['location'] == 'boston-seaport':
-            cameraid = val["frames"][0][0] ### TODO(mick): fix cameraids for full dataset
+        if val["location"] == "boston-seaport":
+            cameraid = val["frames"][0][0]  # TODO(mick): fix cameraids for full dataset
             configs = [
                 CameraConfig(
                     frame_id=frame[1],
