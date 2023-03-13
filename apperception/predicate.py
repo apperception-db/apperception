@@ -443,7 +443,7 @@ class GenSqlVisitor(Visitor[str]):
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
             return f"objectBBox({self(node.left.table.id)}, {right})"
-        if 'Headings' in left:
+        if "Headings" in left:
             return f"headingAtTimestamp({left}, {right})"
         return f"valueAtTimestamp({left},{right})"
 

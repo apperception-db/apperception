@@ -1,20 +1,24 @@
-import math
-import time
-
 from apperception.database import database
 from apperception.utils import join
 
+import math
+import time
+
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
-from optimized_ingestion.stages.decode_frame.parallel_decode_frame import ParallelDecodeFrame
-from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
+from optimized_ingestion.stages.decode_frame.parallel_decode_frame import \
+    ParallelDecodeFrame
+from optimized_ingestion.stages.detection_2d.yolo_detection import \
+    YoloDetection
+from optimized_ingestion.stages.detection_3d.from_2d_and_road import \
+    From2DAndRoad
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
+from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
+    FromTracking3D
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
-from optimized_ingestion.stages.detection_3d.from_2d_and_road import From2DAndRoad
-from optimized_ingestion.stages.tracking_3d.from_2d_and_road import From2DAndRoad as From2DAndRoad_3d
-from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import FromTracking3D
+from optimized_ingestion.stages.tracking_3d.from_2d_and_road import \
+    From2DAndRoad as From2DAndRoad_3d
 from optimized_ingestion.utils.query_analyzer import PipelineConstructor
-
 
 
 def construct_base_pipeline():
@@ -26,8 +30,9 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
     pipeline.add_filter(filter=From2DAndRoad_3d())
     pipeline.add_filter(filter=FromTracking3D())
-    
+
     return pipeline
+
 
 def construct_pipeline(world, base):
     pipeline = construct_base_pipeline()
@@ -37,14 +42,17 @@ def construct_pipeline(world, base):
     PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
     return pipeline
 
+
 def associate_detection_info(tracking_result, detection_info_meta):
     for detection_info in detection_info_meta[tracking_result.frame_idx]:
         if detection_info.detection_id == tracking_result.detection_id:
             return detection_info
 
+
 def associate_segment_mapping(tracking_result, segment_mapping_meta):
     return segment_mapping_meta[tracking_result.frame_idx][tracking_result.object_id]
-        
+
+
 def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
     trajectories = {}
     for i in range(len(sortmeta)):
@@ -66,6 +74,7 @@ def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
                 t[0].next = trajectory[i + 1][0]
     return trajectories
 
+
 def infer_heading(curItemHeading, prevPoint, current_point):
     if curItemHeading is not None:
         return math.degrees(curItemHeading)
@@ -74,6 +83,7 @@ def infer_heading(curItemHeading, prevPoint, current_point):
     x1, y1, z1 = prevPoint
     x2, y2, z2 = current_point
     return int(90 - math.degrees(math.atan2(y2 - y1, x2 - x1)))
+
 
 def format_trajectory(video_name, obj_id, track, base):
     timestamps: List[str] = []
@@ -84,7 +94,7 @@ def format_trajectory(video_name, obj_id, track, base):
     # roadpolygons: List[List[Tuple[float, float]]] = []
     ### TODO (fge): remove investigation code
     info_found = []
-    investigation_ids = [116,107,161, 85, 61]
+    investigation_ids = [116, 107, 161, 85, 61]
     for tracking_result_3d, detection_info, segment_mapping in track:
         if detection_info:
             if base and 'sweeps/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657125362404.jpg' in detection_info.filename and obj_id in investigation_ids:
@@ -111,13 +121,16 @@ def format_trajectory(video_name, obj_id, track, base):
     #     print(f"pairs for obj {obj_id}:", [(e[0], e[1]) for e in pairs])
     #     print(f"itemHeadings for obj {obj_id}:", itemHeadings)
     if base:
-        return [video_name+'_obj_'+str(obj_id), camera_id, object_type, timestamps, pairs,
+        return [video_name + '_obj_' + str(obj_id), camera_id, object_type, timestamps, pairs,
                 itemHeadings, translations], info_found
     else:
-        return [video_name+'_obj_'+str(obj_id), camera_id, object_type, timestamps, pairs,
+        return [video_name + '_obj_' + str(obj_id), camera_id, object_type, timestamps, pairs,
                 itemHeadings, translations]
 
+
 from typing import List, Tuple
+
+
 def insert_trajectory(
     database,
     item_id: str,
@@ -142,7 +155,6 @@ def insert_trajectory(
             continue
         prevTimestamp = timestamp
 
-        
         # Construct trajectory
         traj_centroids.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
         translations.append(f"POINT Z ({join(current_point, ' ')})@{timestamp}")
@@ -173,6 +185,7 @@ def insert_trajectory(
     database.execute(insert_trajectory)
     database._commit()
 
+
 def process_pipeline(video_name, frames, pipeline, base):
     output = pipeline.run(Payload(frames)).__dict__
     metadata = output['metadata']
@@ -191,7 +204,7 @@ def process_pipeline(video_name, frames, pipeline, base):
             investigation.extend(info_found)
         else:
             trajectory = format_trajectory(video_name, obj_id, track, base)
-        
+
         if trajectory:
             # print("Inserting trajectory")
             insert_trajectory(database, *trajectory)
