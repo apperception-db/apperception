@@ -69,7 +69,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
-            if len(all_detection_info) == 0:
+            if len(det) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
@@ -109,6 +109,10 @@ def prune_detection(
     det: "torch.Tensor",
     predicates: "List[Callable[[DetectionInfo], bool]]"
 ):
+    #TODO (fge): this is a hack before fixing the mapping between det and detection_info
+    return detection_info, det
+    if len(detection_info) == 0:
+        return detection_info, det
     pruned_detection_info: "list[DetectionInfo]" = []
     pruned_det: "list[torch.Tensor]" = []
     for d, di in zip(det, detection_info):
