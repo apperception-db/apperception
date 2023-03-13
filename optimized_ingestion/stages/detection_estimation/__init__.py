@@ -109,7 +109,7 @@ def prune_detection(
     det: "torch.Tensor",
     predicates: "List[Callable[[DetectionInfo], bool]]"
 ):
-    #TODO (fge): this is a hack before fixing the mapping between det and detection_info
+    # TODO (fge): this is a hack before fixing the mapping between det and detection_info
     return detection_info, det
     if len(detection_info) == 0:
         return detection_info, det
