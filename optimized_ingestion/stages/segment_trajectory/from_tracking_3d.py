@@ -6,7 +6,7 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-from typing import NamedTuple, Tuple, Any
+from typing import NamedTuple, Tuple
 
 from ...payload import Payload
 from ...types import DetectionId
