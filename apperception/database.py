@@ -117,7 +117,6 @@ class Database:
         self._create_item_general_trajectory_table(commit)
         # self._create_general_bbox_table(False)
         self._create_index(commit)
-        self._commit(commit)
 
     def _create_camera_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Cameras CASCADE;")
