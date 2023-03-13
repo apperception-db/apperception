@@ -83,17 +83,16 @@ def format_trajectory(video_name, obj_id, track, base):
     # road_types: List[str] = []
     # roadpolygons: List[List[Tuple[float, float]]] = []
     info_found = []
+    investigation_ids = [116,107,161, 85, 61]
     for tracking_result_3d, detection_info, segment_mapping in track:
         if detection_info:
-            if base and 'n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657118112404.jpg' in detection_info.filename and obj_id in [93, 98]:
+            if base and 'sweeps/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657125362404.jpg' in detection_info.filename and obj_id in investigation_ids:
                 info_found.append(
                     [obj_id,
                      tracking_result_3d.bbox_left,
                      tracking_result_3d.bbox_top,
                      tracking_result_3d.bbox_w,
-                     tracking_result_3d.bbox_h,
-                     tracking_result_3d.point,
-                     detection_info.timestamp])
+                     tracking_result_3d.bbox_h,])
             camera_id = detection_info.camera_id if base else detection_info.ego_config.camera_id
             object_type = tracking_result_3d.object_type
             timestamps.append(detection_info.timestamp)
@@ -107,9 +106,9 @@ def format_trajectory(video_name, obj_id, track, base):
             # roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
     if not len(timestamps):
         return None
-    if obj_id == 93 or obj_id == 98:
-        print(f"pairs for obj {obj_id}:", [(e[0], e[1]) for e in pairs])
-        print(f"itemHeadings for obj {obj_id}:", itemHeadings)
+    # if obj_id in investigation_ids:
+    #     print(f"pairs for obj {obj_id}:", [(e[0], e[1]) for e in pairs])
+    #     print(f"itemHeadings for obj {obj_id}:", itemHeadings)
     if base:
         return [video_name+'_obj_'+str(obj_id), camera_id, object_type, timestamps, pairs,
                 itemHeadings, translations], info_found
@@ -156,7 +155,7 @@ def insert_trajectory(
         prevPoint = current_point
 
     # Insert the item_trajectory separately
-    item_headings = f"tfloat '{{[{', '.join(itemHeadings)}]}}'" if itemHeadings else "null"
+    item_headings = f"tfloat 'Interp=Stepwise;{{[{', '.join(itemHeadings)}]}}'" if itemHeadings else "null"
     insert_trajectory = f"""
     INSERT INTO Item_General_Trajectory (itemId, cameraId, objectType, trajCentroids,
     translations, itemHeadings)

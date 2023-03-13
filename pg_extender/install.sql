@@ -1,4 +1,5 @@
 \i facingRelative.sql;
+\i headingAtTimestamp.sql;
 \i getX.sql;
 \i getY.sql;
 \i getZ.sql;

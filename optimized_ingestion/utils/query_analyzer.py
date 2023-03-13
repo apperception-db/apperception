@@ -10,23 +10,27 @@ def in_view(pipeline, param):
     pipeline.stages.insert(0, InView(**param))
     
 def object_type(pipeline, param):
+    # pass
     for i in range(len(pipeline.stages)):
         if isinstance(pipeline.stages[i], YoloDetection):
             if isinstance(pipeline.stages[i+1], ObjectTypeFilter):
                 pipeline.stages[i+1].add_type(param)
             else:
-                pipeline.stages.insert(i+1, ObjectTypeFilter(param))
+                assert isinstance(param, str)
+                pipeline.stages.insert(i+1, ObjectTypeFilter([param]))
     
 def road_type(pipeline, param):
-    for s in pipeline.stages:
-        if isinstance(s, DetectionEstimation):
-            s.add_filter(lambda x: x.road_type == param)
+    pass
+    # for s in pipeline.stages:
+    #     if isinstance(s, DetectionEstimation):
+    #         s.add_filter(lambda x: x.road_type == param)
             
 def distance_to_ego(pipeline, param):
-    for s in pipeline.stages:
-        if isinstance(s, DetectionEstimation):
-            s.add_filter(lambda x: compute_distance(
-                x.car_loc3d, x.ego_config.ego_translation) < param)
+    pass
+    # for s in pipeline.stages:
+    #     if isinstance(s, DetectionEstimation):
+    #         s.add_filter(lambda x: compute_distance(
+    #             x.car_loc3d, x.ego_config.ego_translation) < param)
             
 ALL_MAPPING_RULES = {
     'in_view': {'condition': lambda x: (isinstance(x, CompOpNode) and
@@ -41,7 +45,7 @@ ALL_MAPPING_RULES = {
     'object_type': {'condition': lambda x: (isinstance(x, CallNode) and
                                             x._fn[0].__name__ == 'like' and
                                             x.params[0].name == 'objectType'),
-                    'param': lambda x: [x.params[1].value],
+                    'param': lambda x: x.params[1].value,
                     'pipeline': object_type},
     'road_type': {'condition': lambda x: (isinstance(x, CallNode) and
                                          x._fn[0].__name__ == 'contains_all'),
