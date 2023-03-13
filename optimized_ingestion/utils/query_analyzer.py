@@ -20,6 +20,7 @@ def object_type(pipeline, param):
                 pipeline.stages.insert(i+1, ObjectTypeFilter([param]))
     
 def road_type(pipeline, param):
+    ### TODO(fge): reenable pruning after fixing detection info
     pass
     # for s in pipeline.stages:
     #     if isinstance(s, DetectionEstimation):

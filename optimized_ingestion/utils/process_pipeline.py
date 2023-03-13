@@ -82,6 +82,7 @@ def format_trajectory(video_name, obj_id, track, base):
     translations: List[Tuple[float, float, float]] = []
     # road_types: List[str] = []
     # roadpolygons: List[List[Tuple[float, float]]] = []
+    ### TODO (fge): remove investigation code
     info_found = []
     investigation_ids = [116,107,161, 85, 61]
     for tracking_result_3d, detection_info, segment_mapping in track:
