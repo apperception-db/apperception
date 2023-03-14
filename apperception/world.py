@@ -216,11 +216,13 @@ class World:
         )._execute_from_root()
 
     def get_id_time_camId_filename(self, num_joined_tables: int):
-        return derive_world(
+        result = derive_world(
             self,
             database.get_id_time_camId_filename,
             num_joined_tables=num_joined_tables,
         )._execute_from_root()
+        result = sorted(result, key=lambda x: x[num_joined_tables])
+        return result
 
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
