@@ -72,7 +72,7 @@ SELECT
 FROM max_contain, AvailablePolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
-GROUP BY p.elementid;
+GROUP BY p.elementid, p.elementpolygon, p.segmenttypes;
 """)
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']

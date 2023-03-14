@@ -167,8 +167,7 @@ def drop_tables(database: "Database"):
     drop_table = psql.SQL("DROP TABLE IF EXISTS {} CASCADE;")
 
     for tablename in map(psql.Identifier, tablenames):
-        database.update(drop_table.format(tablename), commit=False)
-    database._commit()
+        database.update(drop_table.format(tablename), commit=True)
 
 
 def index_factory(database: "Database"):

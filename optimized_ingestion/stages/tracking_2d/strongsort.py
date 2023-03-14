@@ -6,6 +6,7 @@ from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
+from ...cache import cache
 from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
@@ -28,7 +29,7 @@ class StrongSORT(Tracking2D):
         self.cache: "bool" = cache
         # self.ss_benchmarks: "list[list[list[float]]]" = []
 
-    # @cache
+    @cache
     def _run(self, payload: "Payload"):
         detections = Detection2D.get(payload)
         assert detections is not None
