@@ -1,6 +1,7 @@
 from apperception.predicate import (BinOpNode, CallNode, CompOpNode,
                                     LiteralNode, PredicateNode, TableAttrNode,
                                     Visitor)
+
 from optimized_ingestion.stages.detection_2d.object_type_filter import \
     ObjectTypeFilter
 from optimized_ingestion.stages.detection_2d.yolo_detection import \
