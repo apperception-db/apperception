@@ -168,7 +168,6 @@ def drop_tables(database: "Database"):
 
     for tablename in map(psql.Identifier, tablenames):
         database.update(drop_table.format(tablename), commit=True)
-    database._commit()
 
 
 def index_factory(database: "Database"):
