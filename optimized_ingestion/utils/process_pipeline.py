@@ -60,8 +60,7 @@ def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
         for obj_id, tracking_result in frame.items():
             if obj_id not in trajectories:
                 trajectories[obj_id] = []
-            associated_detection_info = associate_detection_info(
-                tracking_result, detection_estimation_meta) if not base else detection_estimation_meta[i]
+            associated_detection_info = detection_estimation_meta[i]
             associated_segment_mapping = associate_segment_mapping(tracking_result, segment_mapping_meta)
             trajectories[obj_id].append((tracking_result, associated_detection_info, associated_segment_mapping))
 
@@ -86,6 +85,7 @@ def infer_heading(curItemHeading, prevPoint, current_point):
 
 
 def format_trajectory(video_name, obj_id, track, base):
+    print("obj_id", obj_id)
     timestamps: List[str] = []
     pairs: List[Tuple[float, float, float]] = []
     itemHeadings: List[int] = []
@@ -104,7 +104,7 @@ def format_trajectory(video_name, obj_id, track, base):
                      tracking_result_3d.bbox_top,
                      tracking_result_3d.bbox_w,
                      tracking_result_3d.bbox_h,])
-            camera_id = detection_info.camera_id if base else detection_info.ego_config.camera_id
+            camera_id = detection_info.camera_id
             object_type = tracking_result_3d.object_type
             timestamps.append(detection_info.timestamp)
             pairs.append(tracking_result_3d.point)
@@ -112,7 +112,7 @@ def format_trajectory(video_name, obj_id, track, base):
                 itemHeadings.append(None)
             else:
                 itemHeadings.append(segment_mapping.segment_heading)
-            translations.append(detection_info.ego_translation if base else detection_info.ego_config.ego_translation)
+            translations.append(detection_info.ego_translation)
             # road_types.append(segment_mapping.road_polygon_info.road_type if base else detection_info.road_type)
             # roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
     if not len(timestamps):
@@ -189,10 +189,7 @@ def insert_trajectory(
 def process_pipeline(video_name, frames, pipeline, base):
     output = pipeline.run(Payload(frames)).__dict__
     metadata = output['metadata']
-    if base:
-        detection_estimation_meta = frames.interpolated_frames
-    else:
-        detection_estimation_meta = metadata['DetectionEstimation']
+    detection_estimation_meta = frames.interpolated_frames
     sortmeta = metadata['Tracking3D.From2DAndRoad']
     segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
     tracks = get_tracks(sortmeta, detection_estimation_meta, segment_trajectory_mapping, base)

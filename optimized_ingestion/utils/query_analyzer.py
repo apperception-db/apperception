@@ -14,14 +14,14 @@ def in_view(pipeline, param):
 
 
 def object_type(pipeline, param):
-    pass
-    # for i in range(len(pipeline.stages)):
-    #     if isinstance(pipeline.stages[i], YoloDetection):
-    #         if isinstance(pipeline.stages[i + 1], ObjectTypeFilter):
-    #             pipeline.stages[i + 1].add_type(param)
-    #         else:
-    #             assert isinstance(param, str)
-    #             pipeline.stages.insert(i + 1, ObjectTypeFilter([param]))
+    # pass
+    for i in range(len(pipeline.stages)):
+        if isinstance(pipeline.stages[i], YoloDetection):
+            if isinstance(pipeline.stages[i + 1], ObjectTypeFilter):
+                pipeline.stages[i + 1].add_type(param)
+            else:
+                assert isinstance(param, str)
+                pipeline.stages.insert(i + 1, ObjectTypeFilter([param]))
 
 
 def road_type(pipeline, param):
