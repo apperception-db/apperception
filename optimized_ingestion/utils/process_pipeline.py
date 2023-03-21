@@ -53,16 +53,16 @@ def associate_segment_mapping(tracking_result, segment_mapping_meta):
     return segment_mapping_meta[tracking_result.frame_idx][tracking_result.object_id]
 
 
-def get_tracks(sortmeta, detection_estimation_meta, segment_mapping_meta, base):
+def get_tracks(sortmeta, ego_meta, segment_mapping_meta, base):
     trajectories = {}
     for i in range(len(sortmeta)):
         frame = sortmeta[i]
         for obj_id, tracking_result in frame.items():
             if obj_id not in trajectories:
                 trajectories[obj_id] = []
-            associated_detection_info = detection_estimation_meta[i]
+            associated_ego_info = ego_meta[i]
             associated_segment_mapping = associate_segment_mapping(tracking_result, segment_mapping_meta)
-            trajectories[obj_id].append((tracking_result, associated_detection_info, associated_segment_mapping))
+            trajectories[obj_id].append((tracking_result, associated_ego_info, associated_segment_mapping))
 
     for trajectory in trajectories.values():
         last = len(trajectory) - 1
@@ -81,7 +81,7 @@ def infer_heading(curItemHeading, prevPoint, current_point):
         return None
     x1, y1, z1 = prevPoint
     x2, y2, z2 = current_point
-    return int(90 - math.degrees(math.atan2(y2 - y1, x2 - x1)))
+    return int(math.degrees(math.atan2(y2 - y1, x2 - x1)) - 90)
 
 
 def format_trajectory(video_name, obj_id, track, base):
@@ -94,25 +94,27 @@ def format_trajectory(video_name, obj_id, track, base):
     # roadpolygons: List[List[Tuple[float, float]]] = []
     ### TODO (fge): remove investigation code
     info_found = []
-    investigation_ids = [116, 107, 161, 85, 61]
-    for tracking_result_3d, detection_info, segment_mapping in track:
-        if detection_info:
-            if base and 'sweeps/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657125362404.jpg' in detection_info.filename and obj_id in investigation_ids:
+    investigation_ids = [161, 116]
+    # if obj_id in investigation_ids:
+    #     print(f"obj_id, {obj_id}:", [e[1].filename for e in track])
+    for tracking_result_3d, ego_info, segment_mapping in track:
+        if ego_info:
+            if 'sweeps/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657125362404.jpg' in ego_info.filename:
                 info_found.append(
                     [obj_id,
                      tracking_result_3d.bbox_left,
                      tracking_result_3d.bbox_top,
                      tracking_result_3d.bbox_w,
-                     tracking_result_3d.bbox_h,])
-            camera_id = detection_info.camera_id
+                     tracking_result_3d.bbox_h])
+            camera_id = ego_info.camera_id
             object_type = tracking_result_3d.object_type
-            timestamps.append(detection_info.timestamp)
+            timestamps.append(ego_info.timestamp)
             pairs.append(tracking_result_3d.point)
             if (segment_mapping.segment_type == 'intersection'):
                 itemHeadings.append(None)
             else:
                 itemHeadings.append(segment_mapping.segment_heading)
-            translations.append(detection_info.ego_translation)
+            translations.append(ego_info.ego_translation)
             # road_types.append(segment_mapping.road_polygon_info.road_type if base else detection_info.road_type)
             # roadpolygons.append(None if base else detection_info.road_polygon_info.polygon)
     if not len(timestamps):
@@ -120,12 +122,9 @@ def format_trajectory(video_name, obj_id, track, base):
     # if obj_id in investigation_ids:
     #     print(f"pairs for obj {obj_id}:", [(e[0], e[1]) for e in pairs])
     #     print(f"itemHeadings for obj {obj_id}:", itemHeadings)
-    if base:
-        return [video_name + '_obj_' + str(obj_id), camera_id, object_type, timestamps, pairs,
-                itemHeadings, translations], info_found
-    else:
-        return [video_name + '_obj_' + str(obj_id), camera_id, object_type, timestamps, pairs,
-                itemHeadings, translations]
+
+    return [video_name + '_obj_' + str(obj_id), camera_id, object_type, timestamps, pairs,
+            itemHeadings, translations], info_found
 
 
 from typing import List, Tuple
@@ -189,18 +188,15 @@ def insert_trajectory(
 def process_pipeline(video_name, frames, pipeline, base):
     output = pipeline.run(Payload(frames)).__dict__
     metadata = output['metadata']
-    detection_estimation_meta = frames.interpolated_frames
+    ego_meta = frames.interpolated_frames
     sortmeta = metadata['Tracking3D.From2DAndRoad']
     segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
-    tracks = get_tracks(sortmeta, detection_estimation_meta, segment_trajectory_mapping, base)
+    tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, base)
     investigation = []
     start = time.time()
     for obj_id, track in tracks.items():
-        if base:
-            trajectory, info_found = format_trajectory(video_name, obj_id, track, base)
-            investigation.extend(info_found)
-        else:
-            trajectory = format_trajectory(video_name, obj_id, track, base)
+        trajectory, info_found = format_trajectory(video_name, obj_id, track, base)
+        investigation.extend(info_found)
 
         if trajectory:
             # print("Inserting trajectory")

@@ -118,6 +118,7 @@ class FromTracking3D(SegmentTrajectory):
                         None,
                         None,
                         None,
+                        None,
                         oid,
                         None,
                         None

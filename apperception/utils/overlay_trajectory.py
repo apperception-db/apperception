@@ -186,8 +186,7 @@ def fetch_camera_config(filename: str, database):
         fileName,
         cameraHeading,
         egoHeading,
-        timestamp,
-        roadDirection
+        timestamp
     FROM Cameras
     WHERE
         fileName = '{filename}'
@@ -207,7 +206,6 @@ def fetch_camera_config(filename: str, database):
         "cameraHeading": result[8],
         "egoHeading": result[9],
         "timestamp": result[10],
-        "roadDirection": result[11],
     }
     return camera_config
 
