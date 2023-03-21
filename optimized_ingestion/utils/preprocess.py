@@ -35,7 +35,8 @@ def preprocess(world, data_dir, video_names=[], base=True):
         videos = {name: videos[name] for name in video_names}
     start_time = time.time()
     for name, video in videos.items():
-
+        if video['location'] != 'boston-seaport':
+            continue
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(
             os.path.join(data_dir, "videos", video["filename"]),
