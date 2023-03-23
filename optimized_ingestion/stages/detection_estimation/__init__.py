@@ -68,8 +68,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
             # cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
             start_detection_time = time.time()
-            det, _ = dets[i]
-            all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
+            det, _, dids = dets[i]
+            all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicate)
             assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
             total_detection_time += time.time() - start_detection_time
@@ -153,12 +153,12 @@ def generate_sample_plan_once(
 
 def construct_estimated_all_detection_info(
     detections: "torch.Tensor",
+    detection_ids: "list[DetectionId]",
     ego_config: "CameraConfig",
-    ego_trajectory: "List[trajectory_3d]",
-    frame_idx: int,
-) -> "List[DetectionInfo]":
+    ego_trajectory: "list[trajectory_3d]",
+) -> "list[DetectionInfo]":
     all_detections = []
-    for i, det in enumerate(detections):
+    for det, did in zip(detections, detection_ids):
         bbox = det[:4]
         # conf = det[4]
         # obj_cls = det[5]
@@ -174,7 +174,7 @@ def construct_estimated_all_detection_info(
         assert len(car_loc3d) == 3
         car_bbox3d = (tuple(map(float, left3d)), tuple(map(float, right3d)))
         all_detections.append(obj_detection(
-            DetectionId(frame_idx, i),
+            did,
             car_loc3d,
             car_loc2d,
             car_bbox3d,

@@ -33,9 +33,9 @@ class From2DAndRoad(Detection3D):
             assert detection2ds is not None
 
             metadata: "list[Metadatum]" = []
-            for k, (d2d, clss), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
+            for k, (d2d, clss, dids), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
                 if not k or d2d.shape[0] == 0:
-                    metadata.append(Metadatum(torch.tensor([], device=d2d.device), clss))
+                    metadata.append(Metadatum(torch.tensor([], device=d2d.device), clss, []))
                     continue
 
                 device = d2d.device
@@ -93,7 +93,7 @@ class From2DAndRoad(Detection3D):
                 ), dim=1)
                 assert ((N, (d + 12)) == d3d.shape), d3d.shape
 
-                metadata.append((d3d, clss))
+                metadata.append(Metadatum(d3d, clss, dids))
 
             return None, {self.classname(): metadata}
 

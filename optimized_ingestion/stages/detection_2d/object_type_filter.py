@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 from ...payload import Payload
 from .detection_2d import Detection2D, Metadatum
@@ -13,7 +14,7 @@ class ObjectTypeFilter(Detection2D):
         assert detection_2d is not None
 
         assert len(detection_2d) != 0
-        _, class_mapping = detection_2d[0]
+        _, class_mapping, _ = detection_2d[0]
         assert isinstance(class_mapping, list)
         type_indices_to_keep: "set[int]" = set()
 
@@ -22,9 +23,9 @@ class ObjectTypeFilter(Detection2D):
             type_indices_to_keep.add(idx)
 
         metadata = []
-        for keep, (det, _) in zip(payload.keep, detection_2d):
+        for keep, (det, _, ids) in zip(payload.keep, detection_2d):
             if not keep:
-                metadata.append(Metadatum(torch.Tensor([]), class_mapping))
+                metadata.append(Metadatum(torch.Tensor([]), class_mapping, []))
                 continue
 
             det_to_keep: "list[int]" = []
@@ -37,5 +38,5 @@ class ObjectTypeFilter(Detection2D):
                     if type_index in type_indices_to_keep:
                         det_to_keep.append(i)
 
-            metadata.append(Metadatum(det[det_to_keep], class_mapping))
+            metadata.append(Metadatum(det[det_to_keep], class_mapping, np.array(ids)[det_to_keep].tolist()))
         return None, {ObjectTypeFilter.classname(): metadata}
