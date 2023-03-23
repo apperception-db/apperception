@@ -20,9 +20,9 @@ from yolo_tracker.yolov5.utils.general import (check_img_size,
                                                scale_boxes)
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
-from ...types import DetectionId
 from ...cache import cache
 from ...stages.decode_frame.decode_frame import DecodeFrame
+from ...types import DetectionId
 from .detection_2d import Detection2D, Metadatum
 
 if TYPE_CHECKING:

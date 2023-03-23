@@ -1,5 +1,5 @@
-import torch
 import numpy as np
+import torch
 
 from ...payload import Payload
 from .detection_2d import Detection2D, Metadatum

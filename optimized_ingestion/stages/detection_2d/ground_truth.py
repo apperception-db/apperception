@@ -4,9 +4,9 @@ import torch
 from pyquaternion import Quaternion
 from typing import Any
 
-from ...types import DetectionId
 from ...camera_config import Float3, Float4, Float33
 from ...payload import Payload
+from ...types import DetectionId
 from .detection_2d import Detection2D, Metadatum
 
 signs = [-1, 1]
@@ -72,15 +72,15 @@ def _3d_to_2d(
 
 
 classes = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck',
-    'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
-    'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
-    'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
-    'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
-    'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
-    'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair',
-    'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
-    'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book',
-    'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
+           'boat', 'traffic light', 'fire hydrant', 'stop sign', 'parking meter', 'bench', 'bird',
+           'cat', 'dog', 'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'backpack',
+           'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis', 'snowboard', 'sports ball',
+           'kite', 'baseball bat', 'baseball glove', 'skateboard', 'surfboard', 'tennis racket',
+           'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple',
+           'sandwich', 'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake', 'chair',
+           'couch', 'potted plant', 'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote',
+           'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'book',
+           'clock', 'vase', 'scissors', 'teddy bear', 'hair drier', 'toothbrush']
 
 
 CLASS_MAP = {
@@ -141,5 +141,5 @@ class GroundTruthDetection(Detection2D):
                 metadata.append(Metadatum(torch.Tensor([]), classes, []))
             else:
                 metadata.append(Metadatum(torch.Tensor(tensor), classes, [DetectionId(i, _id) for _id in ids]))
-        
+
         return {self.classname(): metadata}
