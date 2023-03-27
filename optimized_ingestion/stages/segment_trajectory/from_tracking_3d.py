@@ -65,7 +65,7 @@ class FromTracking3D(SegmentTrajectory):
         for segment in segments:
             did = DetectionId(*segment[:2])
             if did not in segment_map:
-            # assert did not in segment_map
+                # assert did not in segment_map
                 segment_map[did] = segment
 
         object_id_to_segmnt_map: "dict[int, list[SegmentPoint]]" = {}

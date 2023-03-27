@@ -395,7 +395,7 @@ def time_to_exit_current_segment(
     current_time,
     car_loc,
     car_trajectory=None,
-    is_ego = False
+    is_ego=False
 ):
     """Return the time that the car exit the current segment
 
@@ -409,7 +409,7 @@ def time_to_exit_current_segment(
     else:
         current_polygon_info = detection_info.road_polygon_info
         polygon = current_polygon_info.polygon
-    
+
     if car_trajectory:
         for point in car_trajectory:
             if (point.timestamp > current_time
@@ -538,7 +538,7 @@ def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, current_tim
     print(f"ego_speed: {ego_speed}, car_speed: {car_speed}")
     print(f"view_distance: {view_distance}")
     print(f"road_type: {road_type}")
-    exit_view_time = time_elapse(current_time, (view_distance-compute_distance(ego_loc, car_loc)) / (car_speed - ego_speed))
+    exit_view_time = time_elapse(current_time, (view_distance - compute_distance(ego_loc, car_loc)) / (car_speed - ego_speed))
     return timestamp_to_nearest_trajectory(ego_trajectory, exit_view_time)
 
 

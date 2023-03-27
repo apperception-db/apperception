@@ -66,7 +66,7 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
             'total_runtime': total_runtime
         })
         if num_video:
-            benchmarks.append({'average runtime': sum([b['total_runtime'] for b in benchmarks])/num_video})
+            benchmarks.append({'average runtime': sum([b['total_runtime'] for b in benchmarks]) / num_video})
 
         with open(benchmark_path, "w") as f3:
             json.dump(benchmarks, f3)
