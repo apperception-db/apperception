@@ -18,7 +18,6 @@ from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
 from optimized_ingestion.stages.tracking_3d.from_2d_and_road import \
     From2DAndRoad as From2DAndRoad_3d
-from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
 def construct_base_pipeline():

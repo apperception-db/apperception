@@ -86,7 +86,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
             metadata.append(all_detection_info)
             if skip_ratio != 0:
-                next_frame_num = i + int(len(payload.video)/((1-skip_ratio)*100))
+                next_frame_num = i + int(len(payload.video) / ((1 - skip_ratio) * 100))
 
         # TODO: ignore the last frame ->
         metadata.append([])
