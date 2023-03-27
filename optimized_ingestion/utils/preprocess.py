@@ -24,8 +24,8 @@ BOSTON_VIDEOS = [
 ]
 
 
-def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
-    pipeline = construct_pipeline(world, base=base)
+def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, skip_ratio=0):
+    pipeline = construct_pipeline(world, base=base, skip_ratio=skip_ratio)
 
     video_path = os.path.join(data_dir, "videos/")
     import_pickle(database, video_path)

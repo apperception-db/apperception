@@ -34,12 +34,12 @@ def construct_base_pipeline():
     return pipeline
 
 
-def construct_pipeline(world, base):
+def construct_pipeline(world, base, skip_ratio):
     pipeline = construct_base_pipeline()
     if base:
         return pipeline
-    pipeline.stages.insert(3, DetectionEstimation())
-    PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
+    pipeline.stages.insert(3, DetectionEstimation(skip_ratio=skip_ratio))
+    # PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
     return pipeline
 
 

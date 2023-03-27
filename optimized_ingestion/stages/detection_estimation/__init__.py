@@ -27,8 +27,10 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
-    def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
+    def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True, skip_ratio=0):
         self.predicates = [predicate]
+        ### ratio is only for benchmarking, not part of the actual detection estimation stage
+        self.skip_ratio = skip_ratio
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -83,6 +85,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
             metadata.append(all_detection_info)
+            if skip_ratio != 0:
+                next_frame_num = i + int(len(payload.video)/((1-skip_ratio)*100))
 
         # TODO: ignore the last frame ->
         metadata.append([])
