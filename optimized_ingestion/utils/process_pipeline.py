@@ -85,7 +85,6 @@ def infer_heading(curItemHeading, prevPoint, current_point):
 
 
 def format_trajectory(video_name, obj_id, track, base):
-    print("obj_id", obj_id)
     timestamps: List[str] = []
     pairs: List[Tuple[float, float, float]] = []
     itemHeadings: List[int] = []
