@@ -3,6 +3,7 @@ import numpy.typing as npt
 import torch
 from pyquaternion import Quaternion
 from typing import Any
+import pandas as pd
 
 from ...camera_config import Float3, Float4, Float33
 from ...payload import Payload
@@ -45,7 +46,7 @@ def _3d_to_2d(
     _camera_intrinsics: "Float33"
 ) -> "Float4":
     translation = np.array(_translation)
-    size = np.array(_size)
+    size = np.array((_size[1], _size[0], _size[2])) / 2.
     rotation = Quaternion(_rotation)
     camera_translation = np.array(_camera_translation)
     camera_rotation = _camera_rotation
@@ -55,20 +56,20 @@ def _3d_to_2d(
 
     translations = rotate(points.T, rotation).T + translation
 
-    points_from_camera = rotate((translations - camera_translation).T, camera_rotation)
+    points_from_camera = rotate((translations - camera_translation).T, camera_rotation.inverse)
 
     pixels = camera_intrinsics @ points_from_camera
     pixels /= pixels[2:3]
 
     xs = pixels[0].tolist()
-    ys = pixels[0].tolist()
+    ys = pixels[1].tolist()
 
     l = min(xs)
     t = min(ys)
-    w = max(xs) - l
-    h = max(ys) - t
+    r = max(xs)
+    b = max(ys)
 
-    return l, t, w, h
+    return l, t, r, b
 
 
 classes = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck',
@@ -100,16 +101,17 @@ CLASS_MAP = {
 
 
 class GroundTruthDetection(Detection2D):
-    def __init__(self, annotations: "list[Any]"):
-        self.annotations = annotations
-        self.annotation_map = {}
+    def __init__(self, df_annotations: "pd.DataFrame"):
+        annotations: "list[dict]" = df_annotations.to_dict('records')
+        self.annotation_map: "dict[str, list[dict]]" = {}
 
         classes: "set[str]" = set()
         for a in annotations:
-            fid = a['sample_data_tokens']
-            if fid not in self.annotation_map:
-                self.annotation_map[fid] = []
-            self.annotation_map[fid].append(a)
+            fids: "list[str]" = a['sample_data_tokens']
+            for fid in fids:
+                if fid not in self.annotation_map:
+                    self.annotation_map[fid] = []
+                self.annotation_map[fid].append(a)
 
             classes.add(a['category'])
 
@@ -122,19 +124,33 @@ class GroundTruthDetection(Detection2D):
 
     def _run(self, payload: "Payload"):
         metadata: "list[Metadatum | None]" = []
+        dimension = payload.video.dimension
         for i, cc in enumerate(payload.video._camera_configs):
             fid = cc.frame_id
-            annotations = self.annotation_map[fid]
+            assert isinstance(fid, str)
+            annotations = self.annotation_map.get(fid, [])
             tensor = []
             ids = []
             for a in annotations:
                 if a['category'] not in CLASS_MAP:
                     continue
-                tensor.append([
-                    *_3d_to_2d(a['translation'], a['size'], a['rotation'], cc.camera_translation, cc.camera_rotation, cc.camera_intrinsic),
-                    1,
-                    CLASS_MAP[a['category']]
-                ])
+
+                l, t, r, b = _3d_to_2d(
+                    a['translation'],
+                    a['size'],
+                    a['rotation'],
+                    cc.camera_translation,
+                    cc.camera_rotation,
+                    cc.camera_intrinsic
+                )
+
+                l = max(0, min(l, dimension[0] - 1))
+                r = max(0, min(r, dimension[0] - 1))
+                t = max(0, min(t, dimension[1] - 1))
+                b = max(0, min(b, dimension[1] - 1))
+
+                d2d = [l, t, r - l, b - t]
+                tensor.append([*d2d, 1, CLASS_MAP[a['category']]])
                 ids.append(a['token'])
 
             if len(tensor) == 0:
@@ -142,4 +158,4 @@ class GroundTruthDetection(Detection2D):
             else:
                 metadata.append(Metadatum(torch.Tensor(tensor), classes, [DetectionId(i, _id) for _id in ids]))
 
-        return {self.classname(): metadata}
+        return None, {self.classname(): metadata}

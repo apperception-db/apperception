@@ -2,7 +2,7 @@ import cv2
 from bitarray import bitarray
 from dataclasses import dataclass
 from tqdm import tqdm
-from typing import TYPE_CHECKING, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 from yolo_tracker.yolov5.utils.plots import Annotator, colors
 
 from .stages.filter_car_facing_sideway import FilterCarFacingSideway
@@ -64,6 +64,16 @@ class Payload:
         print("\n".join(_split_keep(keep, 100)))
 
         return Payload(self.video, keep, metadata)
+    
+    def __getitem__(self, stage) -> "list[Any] | None":
+        if isinstance(stage, str):
+            if stage in self.metadata:
+                return self.metadata[stage]
+            for k, v in reversed(self.metadata.items()):
+                if k.startswith(stage):
+                    return v
+            return None
+        return stage.get(self.metadata)
 
     def save(self, filename: str, bbox: bool = True, depth: bool = True) -> None:
         video = cv2.VideoCapture(self.video.videofile)
