@@ -24,6 +24,7 @@ BOSTON_VIDEOS = [
 ]
 error_videos = ["scene-0757-CAM_BACK_LEFT", "scene-0757-CAM_FRONT_RIGHT", "scene-0757-CAM_BACK_RIGHT"]
 
+
 def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, skip_ratio=0):
     pipeline = construct_pipeline(world, base=base, skip_ratio=skip_ratio)
 
@@ -49,11 +50,9 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, 
         try:
             process_pipeline(name, frames, pipeline, base)
             num_video += 1
-        except:
+        except BaseException:
             print(f"error video: {name}")
 
-  
-        
     print(f"total preprocess time {time.time() - start_time}")
 
     if benchmark_path:
