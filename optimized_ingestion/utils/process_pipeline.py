@@ -18,7 +18,6 @@ from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
 from optimized_ingestion.stages.tracking_3d.from_2d_and_road import \
     From2DAndRoad as From2DAndRoad_3d
-from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
 def construct_base_pipeline():
@@ -39,7 +38,7 @@ def construct_pipeline(world, base, skip_ratio):
     if base:
         return pipeline
     pipeline.stages.insert(3, DetectionEstimation(skip_ratio=skip_ratio))
-    # PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
+    PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
     return pipeline
 
 
