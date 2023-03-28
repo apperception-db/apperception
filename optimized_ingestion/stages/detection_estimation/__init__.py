@@ -2,6 +2,7 @@ import logging
 import time
 import torch
 from bitarray import bitarray
+import random
 from tqdm import tqdm
 from typing import Callable, List, Tuple
 
@@ -46,7 +47,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
         print("ego_speed: ", ego_speed)
-        if ego_speed < 2:
+        if ego_speed < 1:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
         skipped_frame_num = []
@@ -61,10 +62,17 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         start_time = time.time()
         for i in tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
-            if i != next_frame_num:
-                skipped_frame_num.append(i)
-                metadata.append([])
-                continue
+            if self.skip_ratio != 0:
+                random_number = random.random()
+                if random_number < self.skip_ratio:
+                    skipped_frame_num.append(i)
+                    metadata.append([])
+                    continue
+            else:
+                if i != next_frame_num:
+                    skipped_frame_num.append(i)
+                    metadata.append([])
+                    continue
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _ = dets[i]
@@ -85,8 +93,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
             metadata.append(all_detection_info)
-            if skip_ratio != 0:
-                next_frame_num = i + int(len(payload.video)/((1-skip_ratio)*100))
 
         # TODO: ignore the last frame ->
         metadata.append([])
