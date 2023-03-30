@@ -24,6 +24,7 @@ BOSTON_VIDEOS = [
 ]
 error_videos = ["scene-0757-CAM_BACK_LEFT", "scene-0757-CAM_FRONT_RIGHT", "scene-0757-CAM_BACK_RIGHT"]
 
+
 def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, skip_ratio=0):
     pipeline = construct_pipeline(world, base=base, skip_ratio=skip_ratio)
 

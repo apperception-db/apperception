@@ -1,8 +1,8 @@
 import logging
+import random
 import time
 import torch
 from bitarray import bitarray
-import random
 from tqdm import tqdm
 from typing import Callable, List, Tuple
 
