@@ -49,12 +49,12 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, 
         )
         try:
             process_pipeline(name, frames, pipeline, base)
-        except:
+        except BaseException:
             print(f"error video: {name} with skip ratio {skip_ratio}")
         num_video += 1
 
     print("num_video: ", num_video)
-        
+
     print(f"total preprocess time {time.time() - start_time}")
 
     if benchmark_path:

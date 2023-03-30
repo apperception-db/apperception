@@ -6,7 +6,6 @@ import time
 
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
-from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 from optimized_ingestion.stages.decode_frame.parallel_decode_frame import \
     ParallelDecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import \
@@ -19,6 +18,7 @@ from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
 from optimized_ingestion.stages.tracking_3d.from_2d_and_road import \
     From2DAndRoad as From2DAndRoad_3d
+from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
 def construct_base_pipeline():
