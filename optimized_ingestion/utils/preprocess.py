@@ -48,11 +48,11 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, 
         )
         try:
             process_pipeline(name, frames, pipeline, base)
-            num_video += 1
         except:
-            print(f"error video: {name}")
+            print(f"error video: {name} with skip ratio {skip_ratio}")
+        num_video += 1
 
-  
+    print("num_video: ", num_video)
         
     print(f"total preprocess time {time.time() - start_time}")
 
@@ -73,6 +73,7 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None, 
         })
         if num_video:
             benchmarks.append({'average runtime': sum([b['total_runtime'] for b in benchmarks]) / num_video})
+            benchmarks.append({'number of videos': num_video})
 
         with open(benchmark_path, "w") as f3:
             json.dump(benchmarks, f3)

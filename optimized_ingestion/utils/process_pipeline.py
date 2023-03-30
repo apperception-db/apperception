@@ -6,6 +6,7 @@ import time
 
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
+from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 from optimized_ingestion.stages.decode_frame.parallel_decode_frame import \
     ParallelDecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import \
@@ -38,7 +39,8 @@ def construct_pipeline(world, base, skip_ratio):
     if base:
         return pipeline
     pipeline.stages.insert(3, DetectionEstimation(skip_ratio=skip_ratio))
-    PipelineConstructor().add_pipeline(pipeline)(world.kwargs['predicate'])
+    if world.kwargs.get('predicate'):
+        PipelineConstructor().add_pipeline(pipeline)(world.kwargs.get('predicate'))
     return pipeline
 
 
