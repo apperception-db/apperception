@@ -2,7 +2,6 @@ import logging
 import time
 import torch
 from bitarray import bitarray
-from tqdm import tqdm
 from typing import Callable, List, Tuple
 
 from ...camera_config import CameraConfig
