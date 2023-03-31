@@ -21,6 +21,7 @@ class Video(Iterable["CameraConfig"]):
         self._start: "datetime | None" = start
         self._length: "int | None" = None
         self._fps: "float | None" = None
+        self._dimension: "tuple[int, int] | None" = None
 
     @property
     def interpolated_frames(self):
@@ -28,7 +29,14 @@ class Video(Iterable["CameraConfig"]):
 
     @property
     def fps(self):
-        return self._get_fps_and_length()[1]
+        return self._get_props()[1]
+
+    @property
+    def dimension(self):
+        """
+        Returns: (width, height)
+        """
+        return self._get_props()[2]
 
     def __getitem__(self, index: "int"):
         return self.interpolated_frames[index]
@@ -37,14 +45,18 @@ class Video(Iterable["CameraConfig"]):
         return iter(self.interpolated_frames)
 
     def __len__(self):
-        return self._get_fps_and_length()[0]
+        return self._get_props()[0]
 
-    def _get_fps_and_length(self):
-        if self._length is None or self._fps is None:
+    def _get_props(self):
+        if self._length is None or self._fps is None or self._dimension is None:
             cap = cv2.VideoCapture(self.videofile)
             assert cap.isOpened(), self.videofile
             self._length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
             self._fps = float(cap.get(cv2.CAP_PROP_FPS))
+            self._dimension = (
+                int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+            )
             cap.release()
             cv2.destroyAllWindows()
-        return self._length, self._fps
+        return self._length, self._fps, self._dimension
