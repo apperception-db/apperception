@@ -16,7 +16,7 @@ from ..tracking_3d.from_2d_and_road import From2DAndRoad
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
-USEFUL_TYPES = {'lane', 'lanegroup', 'intersection'}
+USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
 
 
 class FromTracking3D(SegmentTrajectory):

@@ -15,7 +15,6 @@ from ..stage import Stage
 from .detection_estimation import (DetectionInfo, SamplePlan,
                                    construct_all_detection_info,
                                    generate_sample_plan, obj_detection)
-# from .segment_mapping import CameraPolygonMapping, map_imgsegment_roadsegment
 from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
@@ -29,12 +28,12 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
-        self.predicate = predicate
+        self.predicates = [predicate]
         self.skip_rates = []
         super(DetectionEstimation, self).__init__()
 
-    def filter(self, predicate: "Callable[[DetectionInfo], bool]"):
-        self.predicate = predicate
+    def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
+        self.predicates.append(predicate)
 
     def _run(self, payload: "Payload"):
         if Detection2D.get(payload) is None:
@@ -55,7 +54,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         start_time = time.time()
         total_detection_time = 0
         total_sample_plan_time = 0
-        # times = []
         dets = Detection3D.get(payload)
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
@@ -67,14 +65,13 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 metadata.append([])
                 continue
             next_frame_num = i + 1
-            # cam_polygon_mapping = map_imgsegment_roadsegment(current_ego_config)
             start_detection_time = time.time()
             det, _, dids = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
-            all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicate)
-            assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
             total_detection_time += time.time() - start_detection_time
-            if len(all_detection_info_pruned) == 0:
+            all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
+            assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
+            if len(det) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
@@ -113,12 +110,16 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 def prune_detection(
     detection_info: "list[DetectionInfo]",
     det: "torch.Tensor",
-    predicate: "Callable[[DetectionInfo], bool]"
+    predicates: "List[Callable[[DetectionInfo], bool]]"
 ):
+    # TODO (fge): this is a hack before fixing the mapping between det and detection_info
+    return detection_info, det
+    if len(detection_info) == 0:
+        return detection_info, det
     pruned_detection_info: "list[DetectionInfo]" = []
     pruned_det: "list[torch.Tensor]" = []
     for d, di in zip(det, detection_info):
-        if predicate(di):
+        if all([predicate(di) for predicate in predicates]):
             pruned_detection_info.append(di)
             pruned_det.append(d)
     logger.info("length before pruning", len(det))
