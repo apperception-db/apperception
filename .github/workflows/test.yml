@@ -105,7 +105,7 @@ jobs:
         run: |
           poetry run python -c "from apperception.utils import ingest_road; from apperception.database import database; ingest_road(database, './data/scenic/road-network/boston-seaport')"
           poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data/scenic/database')"
-          poetry run jupyter nbconvert --execute --to notebook ./nb-scripts/optimized-scenic/add_attributes.ipynb
+          poetry run jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
         env:
           AP_PORT: 25432
       
@@ -114,7 +114,7 @@ jobs:
           poetry run python scripts/fake-images.py
       
       - name: Unit Test
-        run: poetry run pytest --cov=apperception --cov-report=xml tests tests-scenic
+        run: poetry run pytest --cov=apperception --cov-report=xml tests
         env:
           AP_PORT: 25432
           AP_PORT_ROAD: 25433

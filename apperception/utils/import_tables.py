@@ -18,8 +18,8 @@ def import_tables(database: "Database", data_path: str):
     df_Item_General_Trajectory = pd.DataFrame(data_Item_General_Trajectory)
     df_Item_General_Trajectory.drop(columns=["color", "largestbbox"], inplace=True)
 
-    data_General_Bbox = pd.read_csv(os.path.join(data_path, "general_bbox.csv"))
-    df_General_Bbox = pd.DataFrame(data_General_Bbox)
+    # data_General_Bbox = pd.read_csv(os.path.join(data_path, "general_bbox.csv"))
+    # df_General_Bbox = pd.DataFrame(data_General_Bbox)
 
     database.reset(False)
 
@@ -29,7 +29,7 @@ def import_tables(database: "Database", data_path: str):
     for _, row in df_Item_General_Trajectory.iterrows():
         database._insert_into_item_general_trajectory(row, False)
 
-    for _, row in df_General_Bbox.iterrows():
-        database._insert_into_general_bbox(row, False)
+    # for _, row in df_General_Bbox.iterrows():
+    #     database._insert_into_general_bbox(row, False)
 
     database._commit()
