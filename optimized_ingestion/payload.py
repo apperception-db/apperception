@@ -52,7 +52,7 @@ class Payload:
         # print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
 
         return Payload(self.video, keep, metadata)
-    
+
     def __getitem__(self, stage) -> "list[Any] | None":
         if isinstance(stage, str):
             if stage in self.metadata:

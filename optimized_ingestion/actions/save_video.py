@@ -1,14 +1,12 @@
 import cv2
 from tqdm import tqdm
-
 from yolo_tracker.yolov5.utils.plots import Annotator, colors
 
+from ..payload import Payload
 from ..stages.filter_car_facing_sideway import FilterCarFacingSideway
 from ..stages.tracking_2d.tracking_2d import Tracking2D
-from ..stages.tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
-from ..stages.tracking_2d.tracking_2d import Tracking2DResult
+from ..stages.tracking_3d.tracking_3d import Tracking3D
 from ..utils.iterate_video import iterate_video
-from ..payload import Payload
 
 
 def save_video(payload: "Payload", filename: str, bbox: bool = True, depth: bool = True) -> None:

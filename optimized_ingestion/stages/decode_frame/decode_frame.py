@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from tqdm import tqdm
 from typing import TYPE_CHECKING
 
 from ...cache import cache

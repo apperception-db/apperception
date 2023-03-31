@@ -1,10 +1,10 @@
-import numpy as np
 import cv2
+import numpy as np
 import os
 
-from ..stages.detection_2d.detection_2d import Detection2D, Metadatum
-from ..stages.decode_frame.decode_frame import DecodeFrame
 from ..payload import Payload
+from ..stages.decode_frame.decode_frame import DecodeFrame
+from ..stages.detection_2d.detection_2d import Detection2D, Metadatum
 
 
 def bbox2d_overlay(payload: "Payload", base_dir: "str"):
@@ -31,7 +31,7 @@ def bbox2d_overlay(payload: "Payload", base_dir: "str"):
             color = (255, 0, 0)
             thickness = 2
             image = cv2.rectangle(image, start, end, color, thickness)
-        
+
         out.write(image)
 
     out.release()
