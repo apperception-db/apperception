@@ -174,6 +174,7 @@ def map_points_and_directions_to_segment(
     )
 
     out = psycopg2.sql.SQL("""
+    SET client_min_messages TO WARNING;
     DROP FUNCTION IF EXISTS _angle(double precision);
     CREATE OR REPLACE FUNCTION _angle(a double precision) RETURNS double precision AS
     $BODY$

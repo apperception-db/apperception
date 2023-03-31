@@ -2,7 +2,6 @@ import numpy as np
 import numpy.typing as npt
 import torch
 from pyquaternion import Quaternion
-from tqdm import tqdm
 from typing import TYPE_CHECKING
 
 from ..detection_2d.detection_2d import Detection2D
@@ -33,7 +32,7 @@ class From2DAndRoad(Detection3D):
             assert detection2ds is not None
 
             metadata: "list[Metadatum]" = []
-            for k, (d2d, clss, dids), frame in tqdm(zip(payload.keep, detection2ds, payload.video)):
+            for k, (d2d, clss, dids), frame in zip(payload.keep, detection2ds, payload.video):
                 if not k or d2d.shape[0] == 0:
                     metadata.append(Metadatum(torch.tensor([], device=d2d.device), clss, []))
                     continue

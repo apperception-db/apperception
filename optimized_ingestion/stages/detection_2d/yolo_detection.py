@@ -73,7 +73,8 @@ class YoloDetection(Detection2D):
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
             metadata: "list[Metadatum]" = []
-            for frame_idx, im, im0s in tqdm(dataset):
+            # for frame_idx, im, im0s in tqdm(dataset):
+            for frame_idx, im, im0s in dataset:
                 if not payload.keep[frame_idx]:
                     metadata.append(Metadatum(torch.Tensor([]), names, []))
                     continue

@@ -38,5 +38,5 @@ class ObjectTypeFilter(Detection2D):
                     if type_index in type_indices_to_keep:
                         det_to_keep.append(i)
 
-            metadata.append(Metadatum(det[det_to_keep], class_mapping, np.array(ids)[det_to_keep].tolist()))
+            metadata.append(Metadatum(det[det_to_keep], class_mapping, [ids[k] for k in det_to_keep]))
         return None, {ObjectTypeFilter.classname(): metadata}

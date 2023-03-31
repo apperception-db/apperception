@@ -30,6 +30,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicate = predicate
+        self.skip_rates = []
         super(DetectionEstimation, self).__init__()
 
     def filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -44,7 +45,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
-        print("ego_speed: ", ego_speed)
+        logger.info("ego_speed: ", ego_speed)
         if ego_speed < 1:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
@@ -59,7 +60,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        for i in tqdm(range(len(payload.video) - 1)):
+        for i in range(len(payload.video) - 1):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
                 skipped_frame_num.append(i)
@@ -95,13 +96,14 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
         # logger.info(np.array(times).sum(axis=0))
         logger.info(f"sorted_ego_config_length {len(payload.video)}")
-        print(f"number of skipped {len(skipped_frame_num)}")
-        print(action_type_counts)
+        logger.info(f"number of skipped {len(skipped_frame_num)}")
+        logger.info(action_type_counts)
         total_run_time = time.time() - start_time
-        print(f"total_run_time {total_run_time}")
-        print(f"total_detection_time {total_detection_time}")
-        print(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        logger.info(f"total_run_time {total_run_time}")
+        logger.info(f"total_detection_time {total_detection_time}")
+        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
+        self.skip_rates.append(len(skipped_frame_num) / len(payload.video))
         for f in skipped_frame_num:
             keep[f] = 0
 

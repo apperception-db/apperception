@@ -48,8 +48,8 @@ class StrongSORT(Tracking2D):
                     strongsort.model.warmup()
 
             assert len(detections) == len(images)
-            for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-                # for idx, ((det, names), im0s) in enumerate(zip(detections, images)):
+            # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
+            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
                 if not payload.keep[idx] or len(det) == 0:
                     metadata.append({})
                     strongsort.increment_ages()
