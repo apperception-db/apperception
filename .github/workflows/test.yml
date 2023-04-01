@@ -13,7 +13,7 @@ jobs:
       mobilitydb:
         image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25432:5432
+          - 25440:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -22,7 +22,7 @@ jobs:
       mobilitydb-road:
         image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25433:5432
+          - 25441:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -31,7 +31,7 @@ jobs:
       mobilitydb-reset:
         image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25434:5432
+          - 25442:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -40,7 +40,7 @@ jobs:
       mobilitydb-import:
         image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25435:5432
+          - 25443:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -49,7 +49,7 @@ jobs:
       mobilitydb-sql:
         image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25436:5432
+          - 25444:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -92,11 +92,11 @@ jobs:
       - name: Extend MobilityDB with User-Defined functions
         run: |
           pushd pg_extender
-          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25433 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25434 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25435 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25436 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25440 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25441 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25442 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25443 -d mobilitydb -U docker -c "\i install.sql;"
+          psql -h localhost -p 25444 -d mobilitydb -U docker -c "\i install.sql;"
           popd
         env:
           PGPASSWORD: docker
@@ -107,7 +107,7 @@ jobs:
           poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data/scenic/database')"
           poetry run jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
         env:
-          AP_PORT: 25432
+          AP_PORT: 25440
       
       - name: Generate Image data
         run: |
@@ -116,11 +116,11 @@ jobs:
       - name: Unit Test
         run: poetry run pytest --cov=apperception --cov-report=xml tests
         env:
-          AP_PORT: 25432
-          AP_PORT_ROAD: 25433
-          AP_PORT_RESET: 25434
-          AP_PORT_IMPORT: 25435
-          AP_PORT_SQL: 25436
+          AP_PORT: 25440
+          AP_PORT_ROAD: 25441
+          AP_PORT_RESET: 25442
+          AP_PORT_IMPORT: 25443
+          AP_PORT_SQL: 25444
       
       - name: Upload coverage reports to Codecov
         run: |
