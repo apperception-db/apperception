@@ -12,7 +12,7 @@ c = camera
     (ahead(o.trans@c.time, c.cam), 
         "ahead(valueAtTimestamp(t0.translations,timestamp),cameraTranslation,cameraHeading)"),
     (ahead(o.trans@c.time, o.trans@c.time), 
-        "ahead(valueAtTimestamp(t0.translations,timestamp),valueAtTimestamp(t0.translations,timestamp),(headingAtTimestamp(t0.itemHeadings, timestamp))::real)"),
+        "ahead(valueAtTimestamp(t0.translations,timestamp),valueAtTimestamp(t0.translations,timestamp),(headingAtTimestamp(t0.itemHeadings,timestamp))::real)"),
 ])
 def test_ahead(fn, sql):
     assert gen(fn) == sql
