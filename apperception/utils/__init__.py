@@ -15,7 +15,7 @@ from .import_pickle import import_pickle
 from .ingest_road import ingest_road
 from .join import join
 from .overlay_bboxes import overlay_bboxes
-from .overlay_trajectory import fetch_camera_config, fetch_camera_trajectory, overlay_trajectory
+from .overlay_trajectory import fetch_camera_config, overlay_trajectory
 from .query_to_str import query_to_str
 from .recognize import recognize
 from .reformat_bbox_trajectories import reformat_bbox_trajectories
@@ -42,7 +42,6 @@ __all__ = [
     "get_video_roi",
     "get_video_box",
     "fetch_camera_config",
-    "fetch_camera_trajectory",
     "join",
     "transformation",
     "fetch_camera",

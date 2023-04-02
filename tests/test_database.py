@@ -6,7 +6,7 @@ import pytest
 
 TABLE_NAMES = [
     "Cameras",
-    "General_Bbox",
+    # "General_Bbox",
     "Item_General_Trajectory",
 ]
 

@@ -46,6 +46,7 @@ gen = GenSqlVisitor()
     (o.c1 @ c.timestamp, "valueAtTimestamp(t0.c1,timestamp)"),
     (c.timestamp @ 1, "valueAtTimestamp(timestamp,1)"),
     ([o.c1, o.c2] @ c.timestamp, "ARRAY[valueAtTimestamp(t0.c1,timestamp),valueAtTimestamp(t0.c2,timestamp)]"),
+    (o.bbox @ c.timestamp, "objectBBox(t0.itemId,timestamp)"),
 ])
 def test_simple_ops(fn, sql):
     assert gen(normalize(fn)) == sql

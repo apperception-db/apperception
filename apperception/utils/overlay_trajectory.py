@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple, Union
 
 if TYPE_CHECKING:
     pass
@@ -28,7 +28,7 @@ Outputs videos for all recognized objects.
 def overlay_trajectory(
     world,
     database,
-    images_data_path: Optional[str] = None,
+    images_data_path: str,
     num_joined_tables: int = 1,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
@@ -73,9 +73,9 @@ def overlay_trajectory(
         for frame in frames[(file_prefix, camId)]:
             objId, time, camId, cam_filename = frame
             filename = cam_filename
-            if images_data_path is not None:
-                filename_no_prefix = filename.split("/")[-1]
-                filename = images_data_path + "/" + filename_no_prefix
+            assert images_data_path is not None
+            filename_no_prefix = filename.split("/")[-1]
+            filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
 
             camera_config = fetch_camera_config(cam_filename, database)
@@ -106,7 +106,7 @@ def overlay_trajectory_keep_whole(
     database,
     camIds: Dict[str, Dict[str, str]],
     itemIds: Set[str],
-    images_data_path: Optional[str] = None,
+    images_data_path: str,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
     is_overlay_objects: bool = False,
@@ -119,10 +119,8 @@ def overlay_trajectory_keep_whole(
         for cam_filename in filenames:
             filename_no_prefix = cam_filename.split("/")[-1]
             prefix = "-".join(cam_filename.split("/")[:-1])
-            if images_data_path is not None:
-                filename = images_data_path + "/" + filename_no_prefix
-            else:
-                filename = cam_filename
+            assert images_data_path is not None
+            filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
             camera_config = fetch_camera_config(cam_filename, database)
             if is_overlay_objects and cam_filename in camIds[camId]:
@@ -209,44 +207,6 @@ def fetch_camera_config(filename: str, database):
         "timestamp": result[10],
         "roadDirection": result[11],
     }
-    return camera_config
-
-
-def fetch_camera_trajectory(video_name: str, database):
-    query = f"""
-    CREATE OR REPLACE FUNCTION ST_XYZ (g geometry) RETURNS real[] AS $$
-        BEGIN
-            RETURN ARRAY[ST_X(g), ST_Y(g), ST_Z(g)];
-        END;
-    $$ LANGUAGE plpgsql;
-
-    SELECT
-        cameraId,
-        ST_XYZ(egoTranslation),
-        frameNum,
-        timestamp,
-        fileName,
-        cameraHeading,
-        egoHeading
-    FROM Cameras
-    WHERE
-        fileName LIKE '%{video_name}%'
-    ORDER BY cameraId ASC, frameNum ASC;
-    """
-    result = database._execute_query(query)
-    camera_config = []
-    for row in result:
-        camera_config.append(
-            {
-                "cameraId": row[0],
-                "egoTranslation": row[1],
-                "frameNum": row[2],
-                "timestamp": row[3],
-                "fileName": row[4],
-                "cameraHeading": row[5],
-                "egoHeading": row[6],
-            }
-        )
     return camera_config
 
 

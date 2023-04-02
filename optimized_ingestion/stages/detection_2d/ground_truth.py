@@ -63,12 +63,12 @@ def _3d_to_2d(
     xs = pixels[0].tolist()
     ys = pixels[1].tolist()
 
-    l = min(xs)
-    t = min(ys)
-    r = max(xs)
-    b = max(ys)
+    left = min(xs)
+    top = min(ys)
+    right = max(xs)
+    bottom = max(ys)
 
-    return l, t, r, b
+    return left, top, right, bottom
 
 
 classes = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 'train', 'truck',
@@ -134,7 +134,7 @@ class GroundTruthDetection(Detection2D):
                 if a['category'] not in CLASS_MAP:
                     continue
 
-                l, t, r, b = _3d_to_2d(
+                left, top, right, bottom = _3d_to_2d(
                     a['translation'],
                     a['size'],
                     a['rotation'],
@@ -143,12 +143,12 @@ class GroundTruthDetection(Detection2D):
                     cc.camera_intrinsic
                 )
 
-                l = max(0, min(l, dimension[0] - 1))
-                r = max(0, min(r, dimension[0] - 1))
-                t = max(0, min(t, dimension[1] - 1))
-                b = max(0, min(b, dimension[1] - 1))
+                left = max(0, min(left, dimension[0] - 1))
+                right = max(0, min(right, dimension[0] - 1))
+                top = max(0, min(top, dimension[1] - 1))
+                bottom = max(0, min(bottom, dimension[1] - 1))
 
-                d2d = [l, t, r - l, b - t]
+                d2d = [left, top, right - left, bottom - top]
                 tensor.append([*d2d, 1, CLASS_MAP[a['category']]])
                 ids.append(a['token'])
 
