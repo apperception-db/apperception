@@ -1,5 +1,5 @@
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Tuple
 
 import pandas as pd
 import psycopg2
