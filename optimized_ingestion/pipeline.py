@@ -18,6 +18,6 @@ class Pipeline:
         return self
 
     def run(self, payload: "Payload") -> "Payload":
-        for filter in self.stages:
-            payload = payload.filter(filter)
+        for stage in self.stages:
+            payload = payload.filter(stage)
         return payload

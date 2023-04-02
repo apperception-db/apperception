@@ -124,6 +124,7 @@ class SegmentPoint:
     segment_heading: "postgis.Polygon"
     road_polygon_info: "RoadPolygonInfo"
     obj_id: "int | None" = None
+    type: "str | None" = None
     next: "SegmentPoint | None" = None
     prev: "SegmentPoint | None" = None
 

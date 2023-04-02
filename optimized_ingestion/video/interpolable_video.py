@@ -20,7 +20,7 @@ class InterpolableVideo(Video):
     @property
     def interpolated_frames(self):
         if not hasattr(self, "_interpolated_frames"):
-            num_frames, fps = self._get_fps_and_length()
+            num_frames, fps, _ = self._get_props()
 
             if len(self._camera_configs) == 1:
                 self._start = self._camera_configs[0].timestamp

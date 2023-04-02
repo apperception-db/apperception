@@ -19,7 +19,7 @@ class VideoSkipped(Video):
     @property
     def interpolated_frames(self):
         if not hasattr(self, "_interpolated_frames"):
-            length, fps = self._get_fps_and_length()
+            length, fps, _ = self._get_props()
 
             if len(self._camera_configs) == 1:
                 config0 = self._camera_configs[0]

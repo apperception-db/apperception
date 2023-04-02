@@ -3,7 +3,6 @@ import random
 import time
 import torch
 from bitarray import bitarray
-from tqdm import tqdm
 from typing import Callable, List, Tuple
 
 from ...camera_config import CameraConfig
@@ -32,6 +31,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         self.predicates = [predicate]
         ### ratio is only for benchmarking, not part of the actual detection estimation stage
         self.skip_ratio = skip_ratio
+        self.skip_rates = []
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -46,7 +46,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
-        print("ego_speed: ", ego_speed)
+        logger.info("ego_speed: ", ego_speed)
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
@@ -60,7 +60,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        for i in tqdm(range(len(payload.video) - 1)):
+        for i in range(len(payload.video) - 1):
             current_ego_config = payload.video[i]
             if self.skip_ratio != 0:
                 random_number = random.random()
@@ -75,10 +75,11 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                     continue
             next_frame_num = i + 1
             start_detection_time = time.time()
-            det, _ = dets[i]
-            all_detection_info = construct_estimated_all_detection_info(det, current_ego_config, ego_trajectory, i)
+            det, _, dids = dets[i]
+            all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
+            assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
             if len(det) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
@@ -101,13 +102,14 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
         # logger.info(np.array(times).sum(axis=0))
         logger.info(f"sorted_ego_config_length {len(payload.video)}")
-        print(f"number of skipped {len(skipped_frame_num)}")
-        print(action_type_counts)
+        logger.info(f"number of skipped {len(skipped_frame_num)}")
+        logger.info(action_type_counts)
         total_run_time = time.time() - start_time
-        print(f"total_run_time {total_run_time}")
-        print(f"total_detection_time {total_detection_time}")
-        print(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        logger.info(f"total_run_time {total_run_time}")
+        logger.info(f"total_detection_time {total_detection_time}")
+        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
+        self.skip_rates.append(len(skipped_frame_num) / len(payload.video))
         for f in skipped_frame_num:
             keep[f] = 0
 
@@ -163,12 +165,12 @@ def generate_sample_plan_once(
 
 def construct_estimated_all_detection_info(
     detections: "torch.Tensor",
+    detection_ids: "list[DetectionId]",
     ego_config: "CameraConfig",
-    ego_trajectory: "List[trajectory_3d]",
-    frame_idx: int,
-) -> "List[DetectionInfo]":
+    ego_trajectory: "list[trajectory_3d]",
+) -> "list[DetectionInfo]":
     all_detections = []
-    for i, det in enumerate(detections):
+    for det, did in zip(detections, detection_ids):
         bbox = det[:4]
         # conf = det[4]
         # obj_cls = det[5]
@@ -184,7 +186,7 @@ def construct_estimated_all_detection_info(
         assert len(car_loc3d) == 3
         car_bbox3d = (tuple(map(float, left3d)), tuple(map(float, right3d)))
         all_detections.append(obj_detection(
-            DetectionId(frame_idx, i),
+            did,
             car_loc3d,
             car_loc2d,
             car_bbox3d,
