@@ -1,14 +1,14 @@
+from apperception.database import database
+
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
-from pyquaternion import Quaternion
 from postgis import MultiPoint
 from psycopg2 import sql
+from pyquaternion import Quaternion
 
-from apperception.database import database
-
-from .stage import Stage
 from ..payload import Payload
+from .stage import Stage
 
 
 class InView(Stage):
@@ -16,7 +16,7 @@ class InView(Stage):
         super().__init__()
         self.distance = distance
         self.segment_type = segment_type if isinstance(segment_type, list) else [segment_type]
-    
+
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
         width, height = payload.video.dimension
         Z = self.distance
@@ -30,11 +30,12 @@ class InView(Stage):
             (0, 0, 0),
         ]).T
         assert point_2ds.shape == (3, 5), point_2ds.shape
-        
+
         pixel2worlds: "list[npt.NDArray]" = []
         indices: "list[int]" = []
         for i, (k, f) in enumerate(zip(payload.keep, payload.video.interpolated_frames)):
-            if not k: continue
+            if not k:
+                continue
 
             rotation = Quaternion(f.camera_rotation)
             rotation_matrix = rotation.unit.rotation_matrix
@@ -60,9 +61,9 @@ class InView(Stage):
 
             pixel2worlds.append(pixel2world)
             indices.append(i)
-        
+
         N = len(pixel2worlds)
-        
+
         # add 1 to the last row
         _point_2ds = np.concatenate((point_2ds, np.ones_like(point_2ds[:1])))
         assert _point_2ds.shape == (4, 5), _point_2ds.shape
@@ -84,11 +85,11 @@ class InView(Stage):
             for i in range(5)
         )
 
-        view_areas: "list[MultiPoint]" =  []
+        view_areas: "list[MultiPoint]" = []
         for i, view_area_2d in zip(indices, view_area_2ds):
             view_area = MultiPoint(view_area_2d.tolist())
             view_areas.append(view_area)
-        
+
         # TODO: where clause should depends on query predicate
         results = database.execute(sql.SQL("""
         SELECT index
