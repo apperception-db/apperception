@@ -46,7 +46,7 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
             [camera_config(name, *f[1:], 0) for f in video["frames"]],
             video["start"],
         )
-        
+
         process_pipeline(name, frames, pipeline, base)
         num_video += 1
 
