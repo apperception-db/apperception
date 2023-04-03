@@ -1,5 +1,4 @@
 import logging
-import random
 import time
 import torch
 from bitarray import bitarray
