@@ -27,11 +27,8 @@ DetectionEstimationMetadatum = List[DetectionInfo]
 
 class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
-    def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True, skip_ratio=0):
+    def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicates = [predicate]
-        ### ratio is only for benchmarking, not part of the actual detection estimation stage
-        self.skip_ratio = skip_ratio
-        self.skip_rates = []
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -62,17 +59,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         start_time = time.time()
         for i in range(len(payload.video) - 1):
             current_ego_config = payload.video[i]
-            if self.skip_ratio != 0:
-                random_number = random.random()
-                if random_number < self.skip_ratio:
-                    skipped_frame_num.append(i)
-                    metadata.append([])
-                    continue
-            else:
-                if i != next_frame_num:
-                    skipped_frame_num.append(i)
-                    metadata.append([])
-                    continue
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _, dids = dets[i]
