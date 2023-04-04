@@ -80,7 +80,7 @@ def ego_exit_current_segment(
     current_time = detection_info.timestamp
     ego_loc = ego_config.ego_translation[:2]
     exit_time, exit_point = time_to_exit_current_segment(
-        detection_info, current_time, ego_loc, ego_trajectory)
+        detection_info, current_time, ego_loc, car_trajectory=ego_trajectory, is_ego=True)
     exit_action = Action(current_time, exit_time, ego_loc, exit_point,
                          action_type=EGO_EXIT_SEGMENT)
     return exit_action
@@ -162,14 +162,12 @@ def same_direction_sample_action(detection_info: "DetectionInfo", view_distance:
     # logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # logger.info(f'car_exit_segment_action {car_exit_segment_action}')
-    car_go_beyong_view_action = car_exit_view(
-        detection_info, ego_trajectory, ego_config, view_distance)
+    # car_go_beyong_view_action = car_exit_view(
+    #     detection_info, ego_trajectory, ego_config, view_distance)
     # logger.info(f'car_go_beyong_view_action {car_go_beyong_view_action}')
     # ego_by_pass_car_action = ego_by_pass_car(detection_info, ego_trajectory, ego_config)
     return combine_sample_actions([ego_exit_segment_action,
-                                   car_exit_segment_action,
-                                   car_go_beyong_view_action, ])
-    # ego_by_pass_car_action])
+                                   car_exit_segment_action])
 
 
 def opposite_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
@@ -179,11 +177,11 @@ def opposite_direction_sample_action(detection_info: "DetectionInfo", view_dista
     if _ego_stop:
         return ego_stop_action
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    # logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
+    logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
     car_exit_segment_action = car_exit_current_segment(detection_info)
-    # logger.info(f'car_exit_segment_action {car_exit_segment_action}')
+    logger.info(f'car_exit_segment_action {car_exit_segment_action}')
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
-    # logger.info(f'meet_ego_action {meet_ego_action}')
+    logger.info(f'meet_ego_action {meet_ego_action}')
     # return car_exit_segment_action
     actions = [ego_exit_segment_action, car_exit_segment_action]
     if meet_ego_action is not None:

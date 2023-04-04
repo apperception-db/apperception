@@ -28,7 +28,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicates = [predicate]
-        self.skip_rates = []
+        self.skip_rates: "list[float]" = []
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -44,7 +44,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
         logger.info("ego_speed: ", ego_speed)
-        if ego_speed < 1:
+        if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
         skipped_frame_num = []

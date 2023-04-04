@@ -1,6 +1,7 @@
 from apperception.database import database
 from apperception.utils import import_pickle
 
+import json
 import os
 import pickle
 import time
@@ -23,7 +24,7 @@ BOSTON_VIDEOS = [
 ]
 
 
-def preprocess(world, data_dir, video_names=[], base=True):
+def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
     pipeline = construct_pipeline(world, base=base)
 
     video_path = os.path.join(data_dir, "videos/")
@@ -34,13 +35,43 @@ def preprocess(world, data_dir, video_names=[], base=True):
     if video_names:
         videos = {name: videos[name] for name in video_names}
     start_time = time.time()
-    for name, video in videos.items():
 
+    num_video = 0
+    for name, video in videos.items():
+        if video['location'] != 'boston-seaport':
+            continue
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(
             os.path.join(data_dir, "videos", video["filename"]),
             [camera_config(name, *f[1:], 0) for f in video["frames"]],
             video["start"],
         )
+
         process_pipeline(name, frames, pipeline, base)
+        num_video += 1
+
+    print("num_video: ", num_video)
+
     print(f"total preprocess time {time.time() - start_time}")
+
+    if benchmark_path:
+        total_runtime = 0
+        stage_runtimes = []
+        benchmarks = []
+        for stage in pipeline.stages:
+            stage_runtimes.append({
+                "stage": stage.classname(),
+                "runtimes": stage.runtimes,
+            })
+            total_runtime += sum([run['runtime'] for run in stage.runtimes])
+
+        benchmarks.append({
+            'stage_runtimes': stage_runtimes,
+            'total_runtime': total_runtime
+        })
+        if num_video:
+            benchmarks.append({'average runtime': sum([b['total_runtime'] for b in benchmarks]) / num_video})
+            benchmarks.append({'number of videos': num_video})
+
+        with open(benchmark_path, "w") as f3:
+            json.dump(benchmarks, f3)
