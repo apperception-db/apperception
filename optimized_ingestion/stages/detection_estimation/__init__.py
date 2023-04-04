@@ -28,6 +28,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicates = [predicate]
+        self.skip_rates: "list[float]" = []
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
