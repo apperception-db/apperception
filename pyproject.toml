@@ -24,7 +24,6 @@ jupyterlab-lsp = "^4.0.1"
 python-lsp-server = {extras = ["all"], version = "^1.7.1"}
 altair = "^4.2.2"
 ipywidgets = "^8.0.6"
-torch = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.961"
