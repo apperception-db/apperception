@@ -7,8 +7,8 @@ from postgis import MultiPoint
 from psycopg2 import sql
 from pyquaternion import Quaternion
 
-from ..payload import Payload
-from .stage import Stage
+from ...payload import Payload
+from ..stage import Stage
 
 
 class InView(Stage):
@@ -76,14 +76,14 @@ class InView(Stage):
         assert view_area_3ds.shape == (N, 3, 5), view_area_3ds.shape
 
         # project view_area to 2D from top-down view
-        view_area_2ds = view_area_3ds[:, :2].reshape((-1, 5, 2))
+        view_area_2ds = view_area_3ds[:, :2].swapaxes(1, 2)
         assert view_area_2ds.shape == (N, 5, 2), view_area_2ds.shape
 
         assert any(
             np.array_equal(view_area_3ds[n, :2, i], view_area_2ds[n, i])
             for n in range(N)
             for i in range(5)
-        )
+        ), (view_area_3ds, view_area_2ds)
 
         view_areas: "list[MultiPoint]" = []
         for i, view_area_2d in zip(indices, view_area_2ds):
@@ -94,12 +94,11 @@ class InView(Stage):
         results = database.execute(sql.SQL("""
         SELECT index
         FROM UNNEST (
-            {view_areas}::MultiPoint[],
+            {view_areas},
             {indices}::int[]
-        ) as ViewArea(points, index)
-        JOIN SegmentPolygon
+        ) AS ViewArea(points, index)
+        JOIN SegmentPolygon ON ST_Intersects(ST_ConvexHull(points), elementPolygon)
         WHERE segmentTypes && {segment_type}
-        AND ST_Intersects(ST_ConvexHull(points), elementPolygon)
         """).format(
             view_areas=sql.Literal(view_areas),
             indices=sql.Literal(indices),
