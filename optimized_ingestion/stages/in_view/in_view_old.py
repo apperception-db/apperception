@@ -3,9 +3,9 @@ from apperception.database import database
 from bitarray import bitarray
 from typing import Dict, List, Optional, Tuple
 
-from ..stage import Stage
 from ...camera_config import Float3
 from ...payload import Payload
+from ..stage import Stage
 
 
 class InViewOld(Stage):
