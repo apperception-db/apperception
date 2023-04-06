@@ -8,7 +8,7 @@ from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 
 
-class From2DAndDepth(Detection3D):
+class FromDetection2DAndDepth(Detection3D):
     def _run(self, payload: "Payload"):
         depths = DepthEstimation.get(payload.metadata)
         assert depths is not None

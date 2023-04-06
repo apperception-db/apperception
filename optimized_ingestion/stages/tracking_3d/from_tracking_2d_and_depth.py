@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     # from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 
 
-class From2DAndDepth(Tracking3D):
+class FromTracking2DAndDepth(Tracking3D):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         metadata: "List[Dict[int, Tracking3DResult] | None]" = []
         trajectories: "Dict[int, List[Tracking3DResult]]" = {}

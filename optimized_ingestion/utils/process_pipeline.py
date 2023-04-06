@@ -10,14 +10,14 @@ from optimized_ingestion.stages.decode_frame.parallel_decode_frame import \
     ParallelDecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import \
     YoloDetection
-from optimized_ingestion.stages.detection_3d.from_2d_and_road import \
-    From2DAndRoad
+from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import \
+    FromDetection2DAndRoad
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
     FromTracking3D
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
-from optimized_ingestion.stages.tracking_3d.from_2d_and_road import \
-    From2DAndRoad as From2DAndRoad_3d
+from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import \
+    FromTracking2DAndRoad as From2DAndRoad_3d
 from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
@@ -26,7 +26,7 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=ParallelDecodeFrame())
     pipeline.add_filter(filter=YoloDetection())
 
-    pipeline.add_filter(filter=From2DAndRoad())
+    pipeline.add_filter(filter=FromDetection2DAndRoad())
     pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
     pipeline.add_filter(filter=From2DAndRoad_3d())
     pipeline.add_filter(filter=FromTracking3D())

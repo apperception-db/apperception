@@ -28,7 +28,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicates = [predicate]
-        self.benchmark_skiprate: "float" = -1.
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -101,7 +100,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         for f in skipped_frame_num:
             keep[f] = 0
-        self.benchmark_skiprate = (sum(payload.keep) - sum(payload.keep & keep)) / sum(payload.keep)
 
         return keep, {DetectionEstimation.classname(): metadata}
 

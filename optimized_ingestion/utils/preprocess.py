@@ -49,9 +49,9 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
         for stage in pipeline.stages:
             stage_runtimes.append({
                 "stage": stage.classname(),
-                "runtimes": stage.runtimes,
+                "runtimes": stage.benchmark,
             })
-            total_runtime += sum([run['runtime'] for run in stage.runtimes])
+            total_runtime += sum([run['runtime'] for run in stage.benchmark])
 
         benchmarks.append({
             'stage_runtimes': stage_runtimes,

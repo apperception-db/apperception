@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.typing as npt
 from pyquaternion import Quaternion
-from tqdm import tqdm
 from typing import Dict, List
 
 from ...payload import Payload
@@ -10,7 +9,7 @@ from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
 
-class From2DAndRoad(Tracking3D):
+class FromTracking2DAndRoad(Tracking3D):
     def _run(self, payload: "Payload"):
         if not is_annotated(Tracking2D, payload):
             # payload = payload.filter(Tracking2D())
@@ -21,7 +20,7 @@ class From2DAndRoad(Tracking3D):
         video = payload.video
         trackings = Tracking2D.get(payload.metadata)
         assert trackings is not None
-        for i, (k, tracking, frame) in tqdm(enumerate(zip(payload.keep, trackings, video)), total=len(payload.keep)):
+        for i, (k, tracking, frame) in enumerate(zip(payload.keep, trackings, video)):
             if not k or tracking is None:
                 metadata.append({})
                 continue
