@@ -1,9 +1,8 @@
 import numpy as np
 import numpy.typing as npt
 from math import sqrt
-from typing import Tuple
 
-from ..types import Float33, Float3
+from ..types import Float3, Float33
 
 
 def depth_to_3d(

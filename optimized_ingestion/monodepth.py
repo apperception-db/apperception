@@ -7,7 +7,6 @@ from monodepth2.monodepth2.layers import disp_to_depth
 from monodepth2.monodepth2.utils import (download_model_if_doesnt_exist,
                                          monodepth2_models_path)
 from torchvision import transforms
-from tqdm import tqdm
 from typing import List
 
 MODEL_NAMES = [

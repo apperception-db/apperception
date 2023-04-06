@@ -1,11 +1,11 @@
 import numpy as np
 import torch
 
-from . import Metadatum, Detection3D
-from ..depth_estimation import DepthEstimation
-from ..detection_2d.detection_2d import Detection2D
 from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
+from ..depth_estimation import DepthEstimation
+from ..detection_2d.detection_2d import Detection2D
+from . import Detection3D, Metadatum
 
 
 class FromDetection2DAndDepth(Detection3D):

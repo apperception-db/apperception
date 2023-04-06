@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from ..monodepth import monodepth
 from .decode_frame.decode_frame import DecodeFrame
 from .stage import Stage
-from .utils.is_annotated import is_annotated
 
 if TYPE_CHECKING:
     from ..payload import Payload
