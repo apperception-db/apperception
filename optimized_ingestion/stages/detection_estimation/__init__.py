@@ -28,7 +28,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicates = [predicate]
-        self.skip_rates: "list[float]" = []
+        self.benchmark_skiprate: "float" = -1.
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
@@ -69,7 +69,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
-            assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
+            # assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
             if len(det) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
@@ -99,9 +99,9 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(f"total_detection_time {total_detection_time}")
         logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
-        self.skip_rates.append(len(skipped_frame_num) / len(payload.video))
         for f in skipped_frame_num:
             keep[f] = 0
+        self.benchmark_skiprate = (sum(payload.keep) - sum(payload.keep & keep)) / sum(payload.keep)
 
         return keep, {DetectionEstimation.classname(): metadata}
 

@@ -11,7 +11,6 @@ from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
-
     from ...payload import Payload
 
 

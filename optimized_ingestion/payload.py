@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from .video import Video
 
 
-Metadata = Dict[str, list]
+Metadata = Dict[str, list[Any]]
 
 
 # TODO: add Generic depending on the type of stage applied
@@ -32,7 +32,7 @@ class Payload:
         self.metadata = metadata
 
     def filter(self, filter: "Stage"):
-        # print("Stage: ", filter.classname())
+        print("Stage: ", filter.classname())
         keep, metadata = filter.run(self)
 
         if keep is None:

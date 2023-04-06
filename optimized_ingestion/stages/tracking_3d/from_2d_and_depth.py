@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d.tracking_2d import Tracking2D
-from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
 if TYPE_CHECKING:
@@ -16,14 +15,6 @@ if TYPE_CHECKING:
 
 class From2DAndDepth(Tracking3D):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        if not is_annotated(DepthEstimation, payload):
-            # payload = payload.filter(DepthEstimation())
-            raise Exception()
-
-        if not is_annotated(Tracking2D, payload):
-            # payload = payload.filter(Tracking2D())
-            raise Exception()
-
         metadata: "List[Dict[int, Tracking3DResult] | None]" = []
         trajectories: "Dict[int, List[Tracking3DResult]]" = {}
 

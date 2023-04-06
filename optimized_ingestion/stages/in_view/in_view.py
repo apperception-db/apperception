@@ -16,6 +16,7 @@ class InView(Stage):
         super().__init__()
         self.distance = distance
         self.segment_type = segment_type if isinstance(segment_type, list) else [segment_type]
+        self.benchmark_skiprate: "float" = -1.
 
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
         width, height = payload.video.dimension
@@ -109,5 +110,6 @@ class InView(Stage):
         keep.setall(0)
         for (index, ) in results:
             keep[index] = 1
+        self.benchmark_skiprate = (sum(payload.keep) - sum(payload.keep & keep)) / sum(payload.keep)
 
         return keep, None

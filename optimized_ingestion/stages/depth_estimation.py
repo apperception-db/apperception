@@ -13,10 +13,6 @@ if TYPE_CHECKING:
 
 class DepthEstimation(Stage["npt.NDArray | None"]):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        if not is_annotated(DecodeFrame, payload):
-            raise Exception()
-            # payload = payload.filter(DecodeFrame())
-
         md = monodepth()
         assert payload.metadata is not None
         images: "List[npt.NDArray | None]" = []
