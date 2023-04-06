@@ -6,13 +6,12 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-from typing import NamedTuple, Tuple
+from typing import NamedTuple
 
 from ...payload import Payload
 from ...types import DetectionId
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
-from ..tracking_3d import tracking_3d
-from ..tracking_3d.from_tracking_2d_and_road import FromTracking2DAndRoad
+from ..tracking_3d.tracking_3d import Tracking3D, Tracking3DResult, Metadatum as Tracking3DMetadatum
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
@@ -22,11 +21,11 @@ USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
 class FromTracking3D(SegmentTrajectory):
     def _run(self, payload: "Payload"):
 
-        t3d: "list[tracking_3d.Metadatum] | None" = FromTracking2DAndRoad.get(payload)
+        t3d: "list[Tracking3DMetadatum] | None" = Tracking3D.get(payload)
         assert t3d is not None
 
         # Index object trajectories using their object id
-        object_map: "dict[int, list[tracking_3d.Tracking3DResult]]" = dict()
+        object_map: "dict[int, list[Tracking3DResult]]" = dict()
         for frame in t3d:
             for oid, t in frame.items():
                 if oid not in object_map:
@@ -35,7 +34,7 @@ class FromTracking3D(SegmentTrajectory):
                 object_map[oid].append(t)
 
         # Create a list of detection points with each of its corresponding direction
-        points: "list[Tuple[tracking_3d.Tracking3DResult, Tuple[float, float] | None]]" = []
+        points: "list[tuple[Tracking3DResult, tuple[float, float] | None]]" = []
         for traj in object_map.values():
             traj.sort(key=lambda t: t.timestamp)
 
@@ -140,7 +139,7 @@ class FromTracking3D(SegmentTrajectory):
         return None, {self.classname(): output}
 
 
-def _get_direction_2d(p1: "tracking_3d.Tracking3DResult", p2: "tracking_3d.Tracking3DResult") -> "Tuple[float, float]":
+def _get_direction_2d(p1: "Tracking3DResult", p2: "Tracking3DResult") -> "tuple[float, float]":
     diff = (p2.point - p1.point)[:2]
     udiff = diff / np.linalg.norm(diff)
     return tuple(udiff)
@@ -158,7 +157,7 @@ class SegmentMapping(NamedTuple):
 
 
 def map_points_and_directions_to_segment(
-    annotations: "list[Tuple[tracking_3d.Tracking3DResult, Tuple[float, float] | None]]",
+    annotations: "list[tuple[Tracking3DResult, tuple[float, float] | None]]",
     location: "str"
 ) -> "list[SegmentMapping]":
     if len(annotations) == 0:

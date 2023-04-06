@@ -199,7 +199,7 @@ with open(os.path.join(DATA_DIR, 'cities.pkl'), 'rb') as f:
     cities = pickle.load(f)
 
 
-# In[17]:
+# In[13]:
 
 
 def run_benchmark(pipeline, filename, ignore_error=False):
@@ -269,7 +269,7 @@ def run_benchmark(pipeline, filename, ignore_error=False):
             json.dump(performance, f, indent=2)
 
 
-# In[18]:
+# In[14]:
 
 
 def create_pipeline(
@@ -328,7 +328,7 @@ def create_pipeline(
     return pipeline
 
 
-# In[19]:
+# In[15]:
 
 
 predicate = None
@@ -400,7 +400,7 @@ pipelines = {
 }
 
 
-# In[20]:
+# In[ ]:
 
 
 for i in range(10):
