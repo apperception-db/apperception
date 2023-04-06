@@ -11,7 +11,8 @@ from typing import NamedTuple
 from ...payload import Payload
 from ...types import DetectionId
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
-from ..tracking_3d.tracking_3d import Tracking3D, Tracking3DResult, Metadatum as Tracking3DMetadatum
+from ..tracking_3d.tracking_3d import Metadatum as Tracking3DMetadatum
+from ..tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
