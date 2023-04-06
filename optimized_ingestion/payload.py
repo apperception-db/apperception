@@ -1,16 +1,15 @@
 from bitarray import bitarray
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from .stages.stage import Stage
     from .video import Video
 
 
-Metadata = Dict[str, list]
+Metadata = Dict[str, List[Any]]
 
 
-# TODO: add Generic depending on the type of stage applied
 @dataclass
 class Payload:
     video: "Video"
@@ -20,8 +19,8 @@ class Payload:
     def __init__(
         self,
         video: "Video",
-        keep: "Optional[bitarray]" = None,
-        metadata: "Optional[Metadata]" = None,
+        keep: "bitarray | None" = None,
+        metadata: "Metadata | None" = None,
     ):
         self.keep = _default_keep(video, keep)
         self.video = video
@@ -48,9 +47,6 @@ class Payload:
             assert metadata_l == len(keep), f"{filter.classname()} -- metadata: {metadata_l}, keep: {len(keep)}"
 
         metadata = {**self.metadata, **metadata}
-
-        # print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
-
         return Payload(self.video, keep, metadata)
 
     def __getitem__(self, stage) -> "list[Any] | None":
@@ -64,7 +60,7 @@ class Payload:
         return stage.get(self.metadata)
 
 
-def metadata_len(metadata: "Dict[str, list]") -> "int | None":
+def metadata_len(metadata: "dict[str, list[Any]]") -> "int | None":
     length: "int | None" = None
     for v in metadata.values():
         if length is None:
@@ -74,7 +70,7 @@ def metadata_len(metadata: "Dict[str, list]") -> "int | None":
     return length
 
 
-def _default_keep(video: "Video", keep: "Optional[bitarray]" = None):
+def _default_keep(video: "Video", keep: "bitarray | None" = None):
     if keep is None:
         keep = bitarray(len(video))
         keep.setall(1)

@@ -25,7 +25,7 @@ TO_BOTTOM_CENTER = np.array([
 ])
 
 
-class From2DAndRoad(Detection3D):
+class FromDetection2DAndRoad(Detection3D):
     def _run(self, payload: "Payload"):
         with torch.no_grad():
             detection2ds = Detection2D.get(payload)

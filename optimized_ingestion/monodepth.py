@@ -7,7 +7,6 @@ from monodepth2.monodepth2.layers import disp_to_depth
 from monodepth2.monodepth2.utils import (download_model_if_doesnt_exist,
                                          monodepth2_models_path)
 from torchvision import transforms
-from tqdm import tqdm
 from typing import List
 
 MODEL_NAMES = [
@@ -97,7 +96,8 @@ class monodepth:
     def eval_all(self, input_images: "List[npt.NDArray | None]"):
         output: "List[npt.NDArray | None]" = []
         with torch.no_grad():
-            for im in tqdm(input_images):
+            # for im in tqdm(input_images):
+            for im in input_images:
                 if im is None:
                     output.append(None)
                     continue

@@ -10,24 +10,33 @@ T = TypeVar('T')
 
 
 class Stage(Generic[T]):
-    runtimes: "list[dict]"
+    benchmark: "list[dict]"
+    keeps: "list[tuple[int, int]]"
 
     def __new__(cls, *_, **__):
         obj = super(Stage, cls).__new__(cls)
-        obj.runtimes = []
+        obj.benchmark = []
+        obj.keeps = []
         return obj
 
     def _run(self, payload: "Payload") -> "tuple[bitarray | None, dict[str, list[T]] | None]":
         return payload.keep, payload.metadata
 
     def run(self, payload: "Payload") -> "tuple[bitarray | None, dict[str, list[T]] | None]":
+        keep_before = payload.keep
         s = time.time()
         out = self._run(payload)
         e = time.time()
+        keep_after = out[0]
 
-        self.runtimes.append({
+        if keep_after is None:
+            keep_after = keep_before
+        _keep = keep_after & keep_before
+
+        self.benchmark.append({
             "name": payload.video.videofile,
-            "runtime": e - s
+            "runtime": e - s,
+            "keep": (sum(_keep), sum(keep_before))
         })
 
         return out

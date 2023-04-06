@@ -11,18 +11,6 @@ from optimized_ingestion.utils.process_pipeline import (construct_pipeline,
                                                         process_pipeline)
 from optimized_ingestion.video import Video
 
-BOSTON_VIDEOS = [
-    "scene-0757-CAM_FRONT",
-    # "scene-0103-CAM_FRONT",
-    #     "scene-0553-CAM_FRONT",
-    # "scene-0665-CAM_FRONT",
-    # "scene-0655-CAM_FRONT",
-    #     "scene-0655-CAM_FRONT_RIGHT",
-    #     "scene-0655-CAM_BACK_RIGHT",
-    #     "scene-0553-CAM_FRONT_LEFT"
-    #     "scene-0103-CAM_FRONT"
-]
-
 
 def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
     pipeline = construct_pipeline(world, base=base)
@@ -61,9 +49,9 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
         for stage in pipeline.stages:
             stage_runtimes.append({
                 "stage": stage.classname(),
-                "runtimes": stage.runtimes,
+                "runtimes": stage.benchmark,
             })
-            total_runtime += sum([run['runtime'] for run in stage.runtimes])
+            total_runtime += sum([run['runtime'] for run in stage.benchmark])
 
         benchmarks.append({
             'stage_runtimes': stage_runtimes,

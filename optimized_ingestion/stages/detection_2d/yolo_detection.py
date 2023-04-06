@@ -49,9 +49,9 @@ class YoloDetection(Detection2D):
     ):
         self.device = select_device("")
         try:
-            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(self.device)
+            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False).model.to(self.device)
         except BaseException:
-            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', force_reload=True).model.to(self.device)
+            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False, force_reload=True).model.to(self.device)
         stride, self.pt = self.model.stride, self.model.pt
         self.imgsz = check_img_size((640, 640), s=stride)
         self.half = half
