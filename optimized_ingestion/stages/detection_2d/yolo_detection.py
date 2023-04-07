@@ -49,9 +49,11 @@ class YoloDetection(Detection2D):
     ):
         self.device = select_device("")
         try:
-            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False).model.to(self.device)
+            model = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False, _verbose=False)
+            self.model: "DetectMultiBackend" = model.model.to(self.device)
         except BaseException:
-            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False, force_reload=True).model.to(self.device)
+            model = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False, _verbose=False, force_reload=True)
+            self.model: "DetectMultiBackend" = model.model.to(self.device)
         stride, self.pt = self.model.stride, self.model.pt
         self.imgsz = check_img_size((640, 640), s=stride)
         self.half = half
@@ -176,16 +178,6 @@ class LoadImages(Iterator[ImageOutput], Iterable[ImageOutput]):
         self.len = int(self.frames / self.vid_stride)
         self.orientation = int(self.cap.get(cv2.CAP_PROP_ORIENTATION_META))  # rotation degrees
         # self.cap.set(cv2.CAP_PROP_ORIENTATION_AUTO, 0)  # disable https://github.com/ultralytics/yolov5/issues/8493
-
-    def _cv2_rotate(self, im):
-        # Rotate a cv2 video manually
-        if self.orientation == 0:
-            return cv2.rotate(im, cv2.ROTATE_90_CLOCKWISE)
-        elif self.orientation == 180:
-            return cv2.rotate(im, cv2.ROTATE_90_COUNTERCLOCKWISE)
-        elif self.orientation == 90:
-            return cv2.rotate(im, cv2.ROTATE_180)
-        return im
 
     def __len__(self):
         return self.len

@@ -1,14 +1,11 @@
 import numpy as np
 from bitarray import bitarray
-from typing import TYPE_CHECKING
 
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d.tracking_2d import Tracking2D
 from .tracking_3d import Tracking3D, Tracking3DResult, Metadatum
-
-if TYPE_CHECKING:
-    from ...payload import Payload
+from ...payload import Payload
 
 
 class FromTracking2DAndDepth(Tracking3D):
