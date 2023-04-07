@@ -1,11 +1,11 @@
 import numpy as np
 from bitarray import bitarray
 
+from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d.tracking_2d import Tracking2D
-from .tracking_3d import Tracking3D, Tracking3DResult, Metadatum
-from ...payload import Payload
+from .tracking_3d import Metadatum, Tracking3D, Tracking3DResult
 
 
 class FromTracking2DAndDepth(Tracking3D):

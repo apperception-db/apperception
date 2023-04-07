@@ -5,11 +5,10 @@ from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...cache import cache
+from ...payload import Payload
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
-from ...payload import Payload
 from .tracking_2d import Tracking2D, Tracking2DResult
-
 
 FILE = Path(__file__).resolve()
 APPERCEPTION = FILE.parent.parent.parent.parent
