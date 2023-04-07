@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 
 FILE = Path(__file__).resolve()
-APPERCEPTION = FILE.parent.parent.parent.parent.parent
+APPERCEPTION = FILE.parent.parent.parent.parent
 WEIGHTS = APPERCEPTION / "weights"
 torch.hub.set_dir(str(WEIGHTS))
 
