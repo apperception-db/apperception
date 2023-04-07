@@ -410,7 +410,7 @@ for i in range(10):
 # In[ ]:
 
 
-# subprocess.Popen('shutdown -h now', shell=True)
+subprocess.Popen('shutdown -h now', shell=True)
 
 
 # In[ ]:
