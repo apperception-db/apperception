@@ -177,7 +177,7 @@ def process_pipeline(video_name, frames, pipeline, base):
     output = pipeline.run(Payload(frames)).__dict__
     metadata = output['metadata']
     ego_meta = frames.interpolated_frames
-    sortmeta = metadata['Tracking3D.From2DAndRoad']
+    sortmeta = metadata['Tracking3D.FromTracking2DAndRoad']
     segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
     tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, base)
     start = time.time()
