@@ -36,7 +36,7 @@ class Stage(Generic[T]):
         self.benchmark.append({
             "name": payload.video.videofile,
             "runtime": e - s,
-            "keep": (sum(_keep), sum(keep_before))
+            "keep": (sum(_keep), sum(keep_before), len(_keep))
         })
 
         return out
