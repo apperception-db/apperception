@@ -1,20 +1,19 @@
 from apperception.database import database
 
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from .stage import Stage
-
-if TYPE_CHECKING:
-    from ..camera_config import Float3
-    from ..payload import Payload
+from ...camera_config import Float3
+from ...payload import Payload
+from ..stage import Stage
 
 
-class InView(Stage):
-    def __init__(self, distance: float, segment_type: str) -> None:
+class InViewOld(Stage):
+    def __init__(self, distance: float, segment_type: str, min_distance=False) -> None:
         super().__init__()
         self.distance = distance
         self.segment_type = segment_type
+        self.min_distance = min_distance
 
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
         keep = bitarray(payload.keep)
@@ -32,7 +31,7 @@ class InView(Stage):
         results = database.execute(
             f"""
             SELECT
-                minDistance(t, '{self.segment_type}') < {self.distance} AND
+                {f"minDistance(t, '{self.segment_type}'::text) < {self.distance} AND" if self.min_distance else ""}
                 inView('intersection', h, t, {self.distance}, 35)
             FROM
                 UNNEST(
@@ -48,4 +47,4 @@ class InView(Stage):
 
 
 def _tuple_to_point(t: "Float3"):
-    return f"'POINT Z ({' '.join(map(str, t))})'"
+    return f"'POINT Z ({' '.join(map(str, t))})'::geometry"

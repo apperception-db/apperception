@@ -13,13 +13,17 @@ matplotlib = "^3.5.2"
 opencv-python = "^4.6.0"
 pandas = "^1.4.2"
 psycopg2-binary = "^2.9.3"
-notebook = "^6.4.12"
 bitarray = "^2.6.0"
 tqdm = "^4.64.1"
 python-mobilitydb = "^0.1.2"
 postgis = "^1.0.4"
 shapely = "^1.8.5.post1"
 plpygis = "^0.2.0"
+jupyterlab = "^3.6.2"
+jupyterlab-lsp = "^4.0.1"
+python-lsp-server = {extras = ["all"], version = "^1.7.1"}
+altair = "^4.2.2"
+ipywidgets = "^8.0.6"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^0.961"

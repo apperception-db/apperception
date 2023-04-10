@@ -1,6 +1,7 @@
 import torch
 from typing import NamedTuple
 
+from ...types import DetectionId
 from ..stage import Stage
 
 
@@ -37,6 +38,7 @@ class Metadatum(NamedTuple):
     """
     detections: "torch.Tensor"
     class_map: "list[str]"
+    detection_ids: "list[DetectionId]"
 
 
 class Detection3D(Stage[Metadatum]):

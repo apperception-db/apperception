@@ -13,6 +13,7 @@ output
 .venv
 .coverage
 coverage.xml
+.virtual_documents
 
 *.pickle
 maps

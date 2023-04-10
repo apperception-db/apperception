@@ -1,5 +1,4 @@
 from apperception.database import database
-from apperception.utils import fetch_camera_trajectory
 
 import datetime
 import logging
@@ -201,14 +200,9 @@ def min_car_speed(road_type):
 
 
 ### HELPER FUNCTIONS ###
-def get_ego_trajectory(video: str, sorted_ego_config: "List[CameraConfig]"):
-    """Get the ego trajectory from the database."""
-    if sorted_ego_config is None:
-        raise Exception()
-        camera_trajectory_config = fetch_camera_trajectory(video, database)
-    else:
-        camera_trajectory_config = sorted_ego_config
-    return [trajectory_3d(config.ego_translation, config.timestamp) for config in camera_trajectory_config]
+def get_ego_trajectory(video: str, sorted_ego_config: "list[CameraConfig]"):
+    assert sorted_ego_config is not None
+    return [trajectory_3d(config.ego_translation, config.timestamp) for config in sorted_ego_config]
 
 
 def get_ego_speed(ego_trajectory):
@@ -535,9 +529,6 @@ def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, current_tim
     """
     ego_speed = get_ego_avg_speed(ego_trajectory)
     car_speed = max_car_speed(road_type)
-    print(f"ego_speed: {ego_speed}, car_speed: {car_speed}")
-    print(f"view_distance: {view_distance}")
-    print(f"road_type: {road_type}")
     exit_view_time = time_elapse(current_time, (view_distance - compute_distance(ego_loc, car_loc)) / (car_speed - ego_speed))
     return timestamp_to_nearest_trajectory(ego_trajectory, exit_view_time)
 

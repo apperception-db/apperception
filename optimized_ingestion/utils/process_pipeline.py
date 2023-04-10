@@ -10,14 +10,14 @@ from optimized_ingestion.stages.decode_frame.parallel_decode_frame import \
     ParallelDecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import \
     YoloDetection
-from optimized_ingestion.stages.detection_3d.from_2d_and_road import \
-    From2DAndRoad
+from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import \
+    FromDetection2DAndRoad
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
     FromTracking3D
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
-from optimized_ingestion.stages.tracking_3d.from_2d_and_road import \
-    From2DAndRoad as From2DAndRoad_3d
+from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import \
+    FromTracking2DAndRoad as From2DAndRoad_3d
 from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
@@ -26,7 +26,7 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=ParallelDecodeFrame())
     pipeline.add_filter(filter=YoloDetection())
 
-    pipeline.add_filter(filter=From2DAndRoad())
+    pipeline.add_filter(filter=FromDetection2DAndRoad())
     pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
     pipeline.add_filter(filter=From2DAndRoad_3d())
     pipeline.add_filter(filter=FromTracking3D())
@@ -92,20 +92,8 @@ def format_trajectory(video_name, obj_id, track, base):
     translations: List[Tuple[float, float, float]] = []
     # road_types: List[str] = []
     # roadpolygons: List[List[Tuple[float, float]]] = []
-    ### TODO (fge): remove investigation code
-    info_found = []
-    investigation_ids = [161, 116]
-    # if obj_id in investigation_ids:
-    #     print(f"obj_id, {obj_id}:", [e[1].filename for e in track])
     for tracking_result_3d, ego_info, segment_mapping in track:
         if ego_info:
-            if 'sweeps/CAM_FRONT/n008-2018-08-30-15-16-55-0400__CAM_FRONT__1535657125362404.jpg' in ego_info.filename:
-                info_found.append(
-                    [obj_id,
-                     tracking_result_3d.bbox_left,
-                     tracking_result_3d.bbox_top,
-                     tracking_result_3d.bbox_w,
-                     tracking_result_3d.bbox_h])
             camera_id = ego_info.camera_id
             object_type = tracking_result_3d.object_type
             timestamps.append(ego_info.timestamp)
@@ -124,7 +112,7 @@ def format_trajectory(video_name, obj_id, track, base):
     #     print(f"itemHeadings for obj {obj_id}:", itemHeadings)
 
     return [video_name + '_obj_' + str(obj_id), camera_id, object_type, timestamps, pairs,
-            itemHeadings, translations], info_found
+            itemHeadings, translations]
 
 
 from typing import List, Tuple
@@ -192,15 +180,12 @@ def process_pipeline(video_name, frames, pipeline, base):
     sortmeta = metadata['Tracking3D.From2DAndRoad']
     segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
     tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, base)
-    investigation = []
     start = time.time()
     for obj_id, track in tracks.items():
-        trajectory, info_found = format_trajectory(video_name, obj_id, track, base)
-        investigation.extend(info_found)
+        trajectory = format_trajectory(video_name, obj_id, track, base)
 
         if trajectory:
             # print("Inserting trajectory")
             insert_trajectory(database, *trajectory)
     trajectory_ingestion_time = time.time() - start
     print("Time taken to insert trajectories:", trajectory_ingestion_time)
-    print("info found", investigation)

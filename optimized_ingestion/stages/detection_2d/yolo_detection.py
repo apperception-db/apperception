@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from tqdm import tqdm
 from typing import TYPE_CHECKING, Iterable, Iterator, NamedTuple
 
 # limit the number of cpus used by high performance libraries
@@ -22,6 +21,7 @@ from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...cache import cache
 from ...stages.decode_frame.decode_frame import DecodeFrame
+from ...types import DetectionId
 from .detection_2d import Detection2D, Metadatum
 
 if TYPE_CHECKING:
@@ -49,9 +49,9 @@ class YoloDetection(Detection2D):
     ):
         self.device = select_device("")
         try:
-            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s').model.to(self.device)
+            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False).model.to(self.device)
         except BaseException:
-            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', force_reload=True).model.to(self.device)
+            self.model: "DetectMultiBackend" = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False, force_reload=True).model.to(self.device)
         stride, self.pt = self.model.stride, self.model.pt
         self.imgsz = check_img_size((640, 640), s=stride)
         self.half = half
@@ -72,9 +72,10 @@ class YoloDetection(Detection2D):
             self.model.eval()
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
             metadata: "list[Metadatum]" = []
-            for frame_idx, im, im0s in tqdm(dataset):
+            # for frame_idx, im, im0s in tqdm(dataset):
+            for frame_idx, im, im0s in dataset:
                 if not payload.keep[frame_idx]:
-                    metadata.append(Metadatum(torch.Tensor([]), names))
+                    metadata.append(Metadatum(torch.Tensor([]), names, []))
                     continue
                 # t1 = time_sync()
                 im = torch.from_numpy(im).to(self.device)
@@ -102,7 +103,7 @@ class YoloDetection(Detection2D):
                 det = pred[0]
                 assert isinstance(det, torch.Tensor), type(det)
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0s.shape).round()
-                metadata.append(Metadatum(det, names))
+                metadata.append(Metadatum(det, names, [DetectionId(frame_idx, order) for order in range(len(det))]))
         return None, {self.classname(): metadata}
 
 
