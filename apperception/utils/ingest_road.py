@@ -1,6 +1,6 @@
 import json
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import psycopg2.sql as psql
 
@@ -237,7 +237,7 @@ def create_tables(database: "Database"):
     database._commit()
 
 
-def insert_polygon(database: "Database", polygons):
+def insert_polygon(database: "Database", polygons: "list[dict]"):
     ids = set([p["id"].split("_")[0] for p in polygons if len(p["id"].split("_")) == 1])
 
     values = []
@@ -267,7 +267,7 @@ def insert_polygon(database: "Database", polygons):
         )
 
 
-def insert_segment(database: "Database", segments):
+def insert_segment(database: "Database", segments: "list[dict]"):
     ids = set(
         [s["polygonId"].split("_")[0] for s in segments if len(s["polygonId"].split("_")) == 1]
     )
@@ -310,7 +310,7 @@ def insert_segment(database: "Database", segments):
     index_factory(database)("Segment", "segmentLine", gist=True)
 
 
-def insert_lanesection(database: "Database", laneSections, drop=True):
+def insert_lanesection(database: "Database", laneSections: "list[dict]"):
     values = []
     for lanesec in laneSections:
         values.append(
@@ -340,7 +340,7 @@ def insert_lanesection(database: "Database", laneSections, drop=True):
         )
 
 
-def insert_lane(database: "Database", lanes, drop=True):
+def insert_lane(database: "Database", lanes: "list[dict]"):
     values = []
     for lane in lanes:
         values.append(
@@ -360,7 +360,7 @@ def insert_lane(database: "Database", lanes, drop=True):
         )
 
 
-def insert_lane_lanesec(database: "Database", lane_lanesec, drop=True):
+def insert_lane_lanesec(database: "Database", lane_lanesec: "list[dict]"):
     values = []
     for ll in lane_lanesec:
         values.append(
@@ -382,7 +382,7 @@ def insert_lane_lanesec(database: "Database", lane_lanesec, drop=True):
         )
 
 
-def insert_lanegroup(database: "Database", laneGroups, drop=True):
+def insert_lanegroup(database: "Database", laneGroups: "list[dict]"):
     values = []
     for lg in laneGroups:
         values.append(f"('{lg['id']}')")
@@ -396,7 +396,7 @@ def insert_lanegroup(database: "Database", laneGroups, drop=True):
         )
 
 
-def insert_lanegroup_lane(database: "Database", lanegroup_lane, drop=True):
+def insert_lanegroup_lane(database: "Database", lanegroup_lane: "list[dict]"):
     values = []
     for ll in lanegroup_lane:
         values.append(
@@ -418,7 +418,7 @@ def insert_lanegroup_lane(database: "Database", lanegroup_lane, drop=True):
         )
 
 
-def insert_opposite_lanegroup(database: "Database", opposite_lanegroup, drop=True):
+def insert_opposite_lanegroup(database: "Database", opposite_lanegroup: "list[dict]"):
     values = []
     for oppo in opposite_lanegroup:
         values.append(
@@ -440,7 +440,7 @@ def insert_opposite_lanegroup(database: "Database", opposite_lanegroup, drop=Tru
         )
 
 
-def insert_road(database: "Database", roads, drop=True):
+def insert_road(database: "Database", roads: "list[dict]"):
     values = []
     for road in roads:
         values.append(
@@ -464,7 +464,7 @@ def insert_road(database: "Database", roads, drop=True):
         )
 
 
-def insert_road_lanegroup(database: "Database", road_lanegroup, drop=True):
+def insert_road_lanegroup(database: "Database", road_lanegroup: "list[dict]"):
     values = []
     for rl in road_lanegroup:
         values.append(
@@ -486,7 +486,7 @@ def insert_road_lanegroup(database: "Database", road_lanegroup, drop=True):
         )
 
 
-def insert_road_roadsec(database: "Database", road_roadsec, drop=True):
+def insert_road_roadsec(database: "Database", road_roadsec: "list[dict]"):
     values = []
     for rr in road_roadsec:
         values.append(
@@ -508,18 +508,11 @@ def insert_road_roadsec(database: "Database", road_roadsec, drop=True):
         )
 
 
-def insert_roadsection(database: "Database", roadSections, drop=True):
+def insert_roadsection(database: "Database", roadSections: "list[dict]"):
     values = []
     for roadsec in roadSections:
-        if len(roadsec["forwardLanes"]) == 0:
-            fl = "[]::text[]"
-        else:
-            fl = str([*map(_remove_suffix, roadsec["forwardLanes"])])
-
-        if len(roadsec["backwardLanes"]) == 0:
-            bl = "[]::text[]"
-        else:
-            bl = str([*map(_remove_suffix, roadsec["backwardLanes"])])
+        fl = f"{[*map(_remove_suffix, roadsec['forwardLanes'])]}::text[]"
+        bl = f"{[*map(_remove_suffix, roadsec['backwardLanes'])]}::text[]"
 
         values.append(
             f"""(
@@ -542,7 +535,7 @@ def insert_roadsection(database: "Database", roadSections, drop=True):
         )
 
 
-def insert_roadsec_lanesec(database: "Database", roadsec_lanesec, drop=True):
+def insert_roadsec_lanesec(database: "Database", roadsec_lanesec: "list[dict]"):
     values = []
     for rl in roadsec_lanesec:
         values.append(
@@ -564,7 +557,7 @@ def insert_roadsec_lanesec(database: "Database", roadsec_lanesec, drop=True):
         )
 
 
-def insert_intersection(database: "Database", intersections, drop=True):
+def insert_intersection(database: "Database", intersections: "list[dict]"):
     values = []
     for intersec in intersections:
         values.append(
@@ -601,7 +594,7 @@ def add_segment_type(database: "Database"):
         print("added type:", road_type)
 
 
-INSERT = {
+INSERT: "dict[str, Callable[[Database, list[dict]], None]]" = {
     "polygon": insert_polygon,
     "segment": insert_segment,
     "laneSection": insert_lanesection,
@@ -650,9 +643,7 @@ def ingest_road(database: "Database", directory: str):
             print(d)
             ingest_location(database, os.path.join(directory, d), d)
     else:
-        if any(os.path.isdir(os.path.join(directory, f)) for f in filenames):
-            raise Exception()
-
+        assert all(os.path.isfile(os.path.join(directory, f)) for f in filenames)
         ingest_location(database, directory, "boston-seaport")
 
     print("adding segment types")

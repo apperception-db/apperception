@@ -41,8 +41,8 @@ def distance_to_ego(pipeline, param):
 
 
 ALL_MAPPING_RULES = {
-    'in_view': {'condition': lambda x: (isinstance(x, CompOpNode) and
-                                        isinstance(x.left, CallNode)
+    'in_view': {'condition': lambda x: (isinstance(x, CompOpNode)
+                                        and isinstance(x.left, CallNode)
                                         and isinstance(x.right, LiteralNode)
                                         and x.left._fn[0].__name__ == 'fn'
                                         and isinstance(x.left.params[0], TableAttrNode)
@@ -59,8 +59,8 @@ ALL_MAPPING_RULES = {
                                           and x._fn[0].__name__ == 'contains_all'),
                   'param': lambda x: x.params[0].value,
                   'pipeline': road_type},
-    'distance_to_ego': {'condition': lambda x: (isinstance(x, CompOpNode) and
-                                                isinstance(x.left, CallNode)
+    'distance_to_ego': {'condition': lambda x: (isinstance(x, CompOpNode)
+                                                and isinstance(x.left, CallNode)
                                                 and isinstance(x.right, LiteralNode)
                                                 and x.left._fn[0].__name__ == 'fn'
                                                 and isinstance(x.left.params[0], TableAttrNode)

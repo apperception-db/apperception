@@ -12,7 +12,7 @@ from tqdm import tqdm
 from typing import TYPE_CHECKING, List, Tuple
 
 from ..camera_config import CameraConfig
-from ..stages.tracking_3d.from_2d_and_road import rotate
+from ..stages.tracking_3d.from_tracking_2d_and_road import rotate
 from ..utils.iterate_video import iterate_video
 
 if TYPE_CHECKING:

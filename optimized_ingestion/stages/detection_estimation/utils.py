@@ -1,5 +1,4 @@
 from apperception.database import database
-from apperception.utils import fetch_camera_trajectory
 
 import datetime
 import logging
@@ -43,13 +42,13 @@ def mph_to_mps(mph: 'float'):
 
 
 MAX_CAR_SPEED = {
-    'lane': 35.,
+    'lane': 25.,
     # TODO: if we decide to map to smallest polygon,
     # 'lanegroup' would mean street parking spots.
-    'lanegroup': 35.,
-    'road': 35.,
-    'lanesection': 35.,
-    'roadSection': 35.,
+    'lanegroup': 25.,
+    'road': 25.,
+    'lanesection': 25.,
+    'roadSection': 25.,
     'intersection': 25.,
     'highway': 55.,
     'residential': 25.,
@@ -169,7 +168,7 @@ def line_to_polygon_intersection(polygon: "shapely.geometry.Polygon", line: "Flo
     """Find the intersection between a line and a polygon."""
     try:
         extended_line = _construct_extended_line(polygon, line)
-        intersection = extended_line.intersection(polygon)
+        intersection = extended_line.intersection(polygon.buffer(0))
     except BaseException:
         return []
     if intersection.is_empty:
@@ -201,14 +200,9 @@ def min_car_speed(road_type):
 
 
 ### HELPER FUNCTIONS ###
-def get_ego_trajectory(video: str, sorted_ego_config: "List[CameraConfig]"):
-    """Get the ego trajectory from the database."""
-    if sorted_ego_config is None:
-        raise Exception()
-        camera_trajectory_config = fetch_camera_trajectory(video, database)
-    else:
-        camera_trajectory_config = sorted_ego_config
-    return [trajectory_3d(config.ego_translation, config.timestamp) for config in camera_trajectory_config]
+def get_ego_trajectory(video: str, sorted_ego_config: "list[CameraConfig]"):
+    assert sorted_ego_config is not None
+    return [trajectory_3d(config.ego_translation, config.timestamp) for config in sorted_ego_config]
 
 
 def get_ego_speed(ego_trajectory):
@@ -394,7 +388,8 @@ def time_to_exit_current_segment(
     detection_info: "DetectionInfo",
     current_time,
     car_loc,
-    car_trajectory=None
+    car_trajectory=None,
+    is_ego=False
 ):
     """Return the time that the car exit the current segment
 
@@ -402,24 +397,27 @@ def time_to_exit_current_segment(
     car heading is the same as road heading
     car drives at max speed if no trajectory is given
     """
-    current_polygon_info = detection_info.road_polygon_info
-    polygon = current_polygon_info.polygon
-    if detection_info.segment_heading is None:
-        return time_elapse(current_time, -1), None
-    segmentheading = detection_info.segment_heading + 90
+    if is_ego:
+        current_polygon_info = detection_info.ego_road_polygon_info
+        polygon = current_polygon_info.polygon
+    else:
+        current_polygon_info = detection_info.road_polygon_info
+        polygon = current_polygon_info.polygon
+
     if car_trajectory:
         for point in car_trajectory:
             if (point.timestamp > current_time
-               and not shapely.geometry.Polygon(polygon).contains(shapely.geometry.Point(point.coordinates))):
-                return point.timestamp, point.coordinates
+               and not shapely.geometry.Polygon(polygon).contains(shapely.geometry.Point(point.coordinates[:2]))):
+                return point.timestamp, point.coordinates[:2]
         return time_elapse(current_time, -1), None
+    if detection_info.segment_heading is None:
+        return time_elapse(current_time, -1), None
+    segmentheading = detection_info.segment_heading + 90
     car_loc = shapely.geometry.Point(car_loc[:2])
     car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
                   car_loc.y + math.sin(math.radians(segmentheading)))
     car_heading_line = shapely.geometry.LineString([car_loc, car_vector])
-    # logger.info(f'car_heading_vector {car_heading_line}')
     intersection = line_to_polygon_intersection(polygon, car_heading_line)
-    # logger.info(f"mapped polygon", segat intersection
     if len(intersection) == 2:
         intersection_1_vector = (intersection[0][0] - car_loc.x,
                                  intersection[0][1] - car_loc.y)
@@ -531,7 +529,7 @@ def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, current_tim
     """
     ego_speed = get_ego_avg_speed(ego_trajectory)
     car_speed = max_car_speed(road_type)
-    exit_view_time = time_elapse(current_time, view_distance / (car_speed - ego_speed))
+    exit_view_time = time_elapse(current_time, (view_distance - compute_distance(ego_loc, car_loc)) / (car_speed - ego_speed))
     return timestamp_to_nearest_trajectory(ego_trajectory, exit_view_time)
 
 

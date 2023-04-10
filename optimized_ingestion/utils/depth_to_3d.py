@@ -1,12 +1,16 @@
 import numpy as np
 import numpy.typing as npt
 from math import sqrt
-from typing import Tuple
+
+from ..types import Float3, Float33
 
 
 def depth_to_3d(
-    x: float, y: float, depth: float, intrinsic: npt.NDArray[np.float32]
-) -> Tuple[float, float, float]:
+    x: float,
+    y: float,
+    depth: float,
+    intrinsic: "npt.NDArray[np.float32] | Float33",
+) -> "Float3":
     [[fx, _, x0], [_, fy, y0], [_, _, s]] = intrinsic
 
     unit_x: float = (s * x - x0) / fx

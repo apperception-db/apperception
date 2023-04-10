@@ -1,45 +1,41 @@
 import numpy as np
-import numpy.typing as npt
 from bitarray import bitarray
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d.tracking_2d import Tracking2D
-from ..utils.is_annotated import is_annotated
 from .tracking_3d import Tracking3D, Tracking3DResult
 
 if TYPE_CHECKING:
     from ...payload import Payload
-    from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
+
+    # from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 
 
-class From2DAndDepth(Tracking3D):
+class FromTracking2DAndDepth(Tracking3D):
     def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        if not is_annotated(DepthEstimation, payload):
-            # payload = payload.filter(DepthEstimation())
-            raise Exception()
+        metadata: "List[Dict[int, Tracking3DResult] | None]" = []
+        trajectories: "Dict[int, List[Tracking3DResult]]" = {}
 
-        if not is_annotated(Tracking2D, payload):
-            # payload = payload.filter(Tracking2D())
-            raise Exception()
+        depths = DepthEstimation.get(payload.metadata)
+        assert depths is not None
 
-        metadata: "List[Dict[float, Tracking3DResult] | None]" = []
-        trajectories: "Dict[float, List[Tracking3DResult]]" = {}
+        trackings = Tracking2D.get(payload.metadata)
+        assert trackings is not None
 
-        depths: "List[npt.NDArray | None]" = DepthEstimation.get(payload.metadata)
-        trackings: "List[Dict[float, TrackingResult] | None]" = Tracking2D.get(payload.metadata)
-        for k, depth, tracking in zip(payload.keep, depths, trackings):
+        for k, depth, tracking, frame in zip(payload.keep, depths, trackings, payload.video):
             if not k or tracking is None or depth is None:
                 metadata.append(None)
                 continue
 
-            trackings3d: "Dict[float, Tracking3DResult]" = {}
+            trackings3d: "Dict[int, Tracking3DResult]" = {}
             for object_id, t in tracking.items():
                 x = int(t.bbox_left + (t.bbox_w / 2))
                 y = int(t.bbox_top + (t.bbox_h / 2))
                 idx = t.frame_idx
-                d = depth[y, x]
+                height, width = depth.shape
+                d = depth[min(y, height - 1), min(x, width - 1)]
                 camera = payload.video[idx]
                 intrinsic = camera.camera_intrinsic
 
@@ -48,7 +44,19 @@ class From2DAndDepth(Tracking3D):
                     np.array(point_from_camera)
                 )
                 point = np.array(camera.camera_translation) + rotated_offset
-                trackings3d[object_id] = Tracking3DResult(object_id, point_from_camera, point)
+                trackings3d[object_id] = Tracking3DResult(
+                    t.frame_idx,
+                    t.detection_id,
+                    t.object_id,
+                    point_from_camera,
+                    point,
+                    t.bbox_left,
+                    t.bbox_top,
+                    t.bbox_w,
+                    t.bbox_h,
+                    t.object_type,
+                    frame.timestamp
+                )
                 if object_id not in trajectories:
                     trajectories[object_id] = []
                 trajectories[object_id].append(trackings3d[object_id])

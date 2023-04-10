@@ -12,7 +12,7 @@ from optimized_ingestion.stages.filter_car_facing_sideway import FilterCarFacing
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
 from optimized_ingestion.stages.tracking_2d.tracking_2d import Tracking2D
-from optimized_ingestion.stages.tracking_3d.from_2d_and_road import From2DAndRoad
+from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import FromTracking2DAndRoad
 from optimized_ingestion.stages.tracking_3d.tracking_3d import Tracking3DResult
 # from optimized_ingestion.trackers.yolov5_strongsort_osnet_tracker import TrackingResult
 from optimized_ingestion.video import Video

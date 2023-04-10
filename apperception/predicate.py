@@ -9,21 +9,16 @@ UnaryOp = Literal["invert", "neg"]
 class PredicateNode:
     def __init__(self, *args, **kwargs):
         anns = self.__annotations__.keys()
-        if len(args) + len(kwargs) != len(anns):
-            raise Exception(
-                f"Mismatch number of arguments: expecting {len(anns)}, received {len(args)} args and {len(kwargs)} kwargs"
-            )
+        assert len(args) + len(kwargs) == len(
+            anns
+        ), f"Mismatch number of arguments: expecting {len(anns)}, received {len(args)} args and {len(kwargs)} kwargs"
 
         for k in kwargs:
-            if k not in anns:
-                raise Exception(f"{self.__class__.__name__} does not have attribute {k}")
+            assert k in anns, f"{self.__class__.__name__} does not have attribute {k}"
 
         arg = iter(args)
         for k in anns:
-            if k in kwargs:
-                setattr(self, k, kwargs[k])
-            else:
-                setattr(self, k, next(arg))
+            setattr(self, k, kwargs[k] if k in kwargs else next(arg))
 
     def __add__(self, other):
         other = wrap_literal(other)
@@ -246,8 +241,7 @@ T = TypeVar("T")
 class Visitor(Generic[T]):
     def __call__(self, node: "PredicateNode") -> T:
         attr = f"visit_{node.__class__.__name__}"
-        if not hasattr(self, attr):
-            raise Exception("Unknown node type:", node.__class__.__name__)
+        assert hasattr(self, attr), "Unknown node type: " + node.__class__.__name__
         return getattr(self, attr)(node)
 
     def visit_ArrayNode(self, node: "ArrayNode") -> Any:
@@ -442,9 +436,9 @@ class GenSqlVisitor(Visitor[str]):
             return f"({left}{BIN_OP[node.op]}{right})"
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
-            return f"objectBBox({self(node.left.table.id)}, {right})"
+            return f"objectBBox({self(node.left.table.id)},{right})"
         if "Headings" in left:
-            return f"headingAtTimestamp({left}, {right})"
+            return f"headingAtTimestamp({left},{right})"
         return f"valueAtTimestamp({left},{right})"
 
     def visit_BoolOpNode(self, node: "BoolOpNode"):
@@ -457,12 +451,12 @@ class GenSqlVisitor(Visitor[str]):
 
     def visit_TableAttrNode(self, node: "TableAttrNode"):
         table = node.table
+        assert isinstance(table, (ObjectTableNode, CameraTableNode)), "table type not supported"
+
         if isinstance(table, ObjectTableNode):
             return resolve_object_attr(node.name, table.index)
         elif isinstance(table, CameraTableNode):
             return resolve_camera_attr(node.name, table.index)
-        else:
-            raise Exception("table type not supported")
 
     def visit_CompOpNode(self, node: "CompOpNode"):
         left = self(node.left)
@@ -516,13 +510,6 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
 ]
 
 
-def map_object(to: int, from_: Optional[int] = None):
-    return ",".join(
-        f"{resolve_object_attr(attr, from_)} AS {resolve_object_attr(attr, to)}"
-        for attr, _ in TRAJECTORY_COLUMNS
-    )
-
-
 CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("cameraId", "TEXT"),
     ("frameId", "TEXT"),
@@ -537,10 +524,3 @@ CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("cameraHeading", "real"),
     ("egoHeading", "real"),
 ]
-
-
-def map_camera(to: int, from_: Optional[int] = None):
-    return ",".join(
-        f"{resolve_camera_attr(attr, from_)} AS {resolve_camera_attr(attr, to)}"
-        for attr, _ in TRAJECTORY_COLUMNS
-    )

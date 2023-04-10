@@ -1,5 +1,5 @@
 from os import environ
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, List, Tuple
 
 import pandas as pd
 import psycopg2
@@ -96,18 +96,8 @@ class Database:
     connection: "Connection"
     cursor: "Cursor"
 
-    def __init__(self, connection: "Optional[Connection]" = None):
-        # should setup a postgres in docker first
-        if connection is None:
-            self.connection = psycopg2.connect(
-                dbname="mobilitydb",
-                user="docker",
-                host="localhost",
-                port="25432",
-                password="docker",
-            )
-        else:
-            self.connection = connection
+    def __init__(self, connection: "Connection"):
+        self.connection = connection
         postgis_register(self.connection)
         mobilitydb_register(self.connection)
         self.cursor = self.connection.cursor()
@@ -123,18 +113,18 @@ class Database:
         self.cursor.execute(f"CREATE TABLE Cameras ({columns(_schema, CAMERA_COLUMNS)})")
         self._commit(commit)
 
-    def _create_general_bbox_table(self, commit=True):
-        self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
-        self.cursor.execute(
-            f"""
-            CREATE TABLE General_Bbox (
-                {columns(_schema, BBOX_COLUMNS)},
-                FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
-                PRIMARY KEY (itemId, timestamp)
-            )
-            """
-        )
-        self._commit(commit)
+    # def _create_general_bbox_table(self, commit=True):
+    #     self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
+    #     self.cursor.execute(
+    #         f"""
+    #         CREATE TABLE General_Bbox (
+    #             {columns(_schema, BBOX_COLUMNS)},
+    #             FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
+    #             PRIMARY KEY (itemId, timestamp)
+    #         )
+    #         """
+    #     )
+    #     self._commit(commit)
 
     def _create_item_general_trajectory_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
@@ -182,12 +172,12 @@ class Database:
         )
         self._commit(commit)
 
-    def _insert_into_general_bbox(self, value: tuple, commit=True):
-        self.cursor.execute(
-            f"INSERT INTO General_Bbox ({columns(_name, BBOX_COLUMNS)}) VALUES ({place_holder(len(BBOX_COLUMNS))})",
-            tuple(value),
-        )
-        self._commit(commit)
+    # def _insert_into_general_bbox(self, value: tuple, commit=True):
+    #     self.cursor.execute(
+    #         f"INSERT INTO General_Bbox ({columns(_name, BBOX_COLUMNS)}) VALUES ({place_holder(len(BBOX_COLUMNS))})",
+    #         tuple(value),
+    #     )
+    #     self._commit(commit)
 
     def _commit(self, commit=True):
         if commit:

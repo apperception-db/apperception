@@ -1,19 +1,16 @@
 import torch
 from pathlib import Path
-from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List
 from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...cache import cache
-from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
-
     from ...payload import Payload
 
 
@@ -49,8 +46,8 @@ class StrongSORT(Tracking2D):
                     strongsort.model.warmup()
 
             assert len(detections) == len(images)
-            for idx, ((det, names), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-                # for idx, ((det, names), im0s) in enumerate(zip(detections, images)):
+            # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
+            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
                 if not payload.keep[idx] or len(det) == 0:
                     metadata.append({})
                     strongsort.increment_ages()
@@ -76,7 +73,7 @@ class StrongSORT(Tracking2D):
 
                 if len(output_) > 0:
                     labels: "Dict[int, Tracking2DResult]" = {}
-                    for i, (output, conf) in enumerate(zip(output_, confs)):
+                    for output, conf, did in zip(output_, confs, dids):
                         obj_id = int(output[4])
                         cls = int(output[5])
 
@@ -86,7 +83,7 @@ class StrongSORT(Tracking2D):
                         bbox_h = output[3] - output[1]
                         labels[obj_id] = Tracking2DResult(
                             idx,
-                            DetectionId(idx, i),
+                            did,
                             obj_id,
                             bbox_left,
                             bbox_top,

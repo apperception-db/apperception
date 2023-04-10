@@ -12,7 +12,7 @@ from ...payload import Payload
 from ...types import DetectionId
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
 from ..tracking_3d import tracking_3d
-from ..tracking_3d.from_2d_and_road import From2DAndRoad
+from ..tracking_3d.from_tracking_2d_and_road import FromTracking2DAndRoad
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
@@ -22,7 +22,7 @@ USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
 class FromTracking3D(SegmentTrajectory):
     def _run(self, payload: "Payload"):
 
-        t3d: "list[tracking_3d.Metadatum] | None" = From2DAndRoad.get(payload)
+        t3d: "list[tracking_3d.Metadatum] | None" = FromTracking2DAndRoad.get(payload)
         assert t3d is not None
 
         # Index object trajectories using their object id
@@ -64,8 +64,9 @@ class FromTracking3D(SegmentTrajectory):
         segment_map: "dict[DetectionId, SegmentMapping]" = {}
         for segment in segments:
             did = DetectionId(*segment[:2])
-            assert did not in segment_map
-            segment_map[did] = segment
+            if did not in segment_map:
+                # assert did not in segment_map
+                segment_map[did] = segment
 
         object_id_to_segmnt_map: "dict[int, list[SegmentPoint]]" = {}
         output: "list[SegmentTrajectoryMetadatum]" = [dict() for _ in t3d]
@@ -106,6 +107,7 @@ class FromTracking3D(SegmentTrajectory):
                             None
                         ),
                         oid,
+                        det.object_type,
                         None,
                         None,
                     )
@@ -118,7 +120,9 @@ class FromTracking3D(SegmentTrajectory):
                         None,
                         None,
                         None,
+                        None,
                         oid,
+                        det.object_type,
                         None,
                         None
                     )
@@ -172,6 +176,7 @@ def map_points_and_directions_to_segment(
     )
 
     out = psycopg2.sql.SQL("""
+    SET client_min_messages TO WARNING;
     DROP FUNCTION IF EXISTS _angle(double precision);
     CREATE OR REPLACE FUNCTION _angle(a double precision) RETURNS double precision AS
     $BODY$
