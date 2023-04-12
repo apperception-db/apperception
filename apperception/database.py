@@ -497,7 +497,7 @@ database = Database(
         dbname=environ.get("AP_DB", "mobilitydb"),
         user=environ.get("AP_USER", "docker"),
         host=environ.get("AP_HOST", "localhost"),
-        port="25432", # environ.get("AP_PORT", "25432"),
+        port="25432",  # environ.get("AP_PORT", "25432"),
         password=environ.get("AP_PASSWORD", "docker"),
     )
 )
