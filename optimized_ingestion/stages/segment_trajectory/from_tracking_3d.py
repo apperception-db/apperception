@@ -157,6 +157,8 @@ class SegmentMapping(NamedTuple):
     heading: "float"
 
 # TODO: should we try to map points to closest segment instead of just ignoring them?
+
+
 def map_points_and_directions_to_segment(
     annotations: "list[tuple[Tracking3DResult, tuple[float, float] | None]]",
     location: "str"
