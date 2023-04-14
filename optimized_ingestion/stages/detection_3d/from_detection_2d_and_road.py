@@ -16,11 +16,11 @@ TO_BOTTOM_LEFT = np.array([
     [0, 1, 0, 1],
 ])
 TO_BOTTOM_RIGHT = np.array([
-    [1, 0, 1, 0],
+    [0, 0, 1, 0],
     [0, 1, 0, 1],
 ])
 TO_BOTTOM_CENTER = np.array([
-    [1, 0, 0.5, 0],
+    [0.5, 0, 0.5, 0],
     [0, 1, 0, 1],
 ])
 

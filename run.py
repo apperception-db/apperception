@@ -80,6 +80,10 @@ from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 from optimized_ingestion.stages.detection_2d.object_type_filter import ObjectTypeFilter
 from optimized_ingestion.stages.detection_2d.ground_truth import GroundTruthDetection
 
+
+# In[7]:
+
+
 from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import FromDetection2DAndRoad
 from optimized_ingestion.stages.detection_3d.from_detection_2d_and_depth import FromDetection2DAndDepth
 
@@ -88,8 +92,27 @@ from optimized_ingestion.stages.depth_estimation import DepthEstimation
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.detection_estimation.segment_mapping import RoadPolygonInfo
 
+
+# In[8]:
+
+
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
+
+
+# In[9]:
+
+
 from optimized_ingestion.stages.tracking_2d.tracking_2d import Tracking2D, Tracking2DResult
+
+
+# In[ ]:
+
+
+
+
+
+# In[10]:
+
 
 from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import FromTracking2DAndRoad
 from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_depth import FromTracking2DAndDepth
@@ -100,20 +123,20 @@ from optimized_ingestion.stages.segment_trajectory.construct_segment_trajectory 
 from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import FromTracking3D
 
 
-# In[7]:
+# In[11]:
 
 
 from optimized_ingestion.cache import disable_cache
 disable_cache()
 
 
-# In[8]:
+# In[12]:
 
 
 NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
 
 
-# In[9]:
+# In[13]:
 
 
 class DataclassJSONEncoder(json.JSONEncoder):
@@ -177,14 +200,14 @@ class DataclassJSONEncoder(json.JSONEncoder):
         return super().default(o)
 
 
-# In[10]:
+# In[14]:
 
 
 print(NUSCENES_PROCESSED_DATA in os.environ)
 print(os.environ['NUSCENES_PROCESSED_DATA'])
 
 
-# In[11]:
+# In[15]:
 
 
 DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
@@ -192,14 +215,14 @@ with open(os.path.join(DATA_DIR, "videos", "frames.pkl"), "rb") as f:
     videos = pickle.load(f)
 
 
-# In[12]:
+# In[16]:
 
 
 with open(os.path.join(DATA_DIR, 'cities.pkl'), 'rb') as f:
     cities = pickle.load(f)
 
 
-# In[13]:
+# In[17]:
 
 
 def run_benchmark(pipeline, filename, ignore_error=False):
@@ -209,7 +232,8 @@ def run_benchmark(pipeline, filename, ignore_error=False):
     metadata_frame_id = {}
     failed_videos = []
 
-    names = cities['boston-seaport'][:200]
+    # names = cities['boston-seaport'][:200]
+    names = cities['boston-seaport']
     filtered_videos = [(n, v) for n, v in videos.items() if n[6:10] in names]
 
     for i, (name, video) in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
@@ -269,7 +293,7 @@ def run_benchmark(pipeline, filename, ignore_error=False):
             json.dump(performance, f, indent=2)
 
 
-# In[14]:
+# In[18]:
 
 
 def create_pipeline(
@@ -293,7 +317,9 @@ def create_pipeline(
 
     # 2D Detection
     if groundtruth_detection:
-        pass
+        with open(os.path.join(DATA_DIR, 'annotation_partitioned.pkl'), 'rb') as f:
+            df_annotations = pickle.load(f)
+        pipeline.add_filter(GroundTruthDetection(df_annotations))
     else:
         pipeline.add_filter(YoloDetection())
 
@@ -328,7 +354,7 @@ def create_pipeline(
     return pipeline
 
 
-# In[15]:
+# In[19]:
 
 
 predicate = None
@@ -389,6 +415,24 @@ p_optDe = lambda predicate: create_pipeline(
     detection_estimation=True
 )
 
+p_gtOpt = lambda predicate: create_pipeline(
+    predicate,
+    in_view=True,
+    object_filter=True,
+    groundtruth_detection=True,
+    geo_depth=True,
+    detection_estimation=False
+)
+
+p_gtOptDe = lambda predicate: create_pipeline(
+    predicate,
+    in_view=True,
+    object_filter=True,
+    groundtruth_detection=True,
+    geo_depth=True,
+    detection_estimation=True
+)
+
 pipelines = {
     "noopt": p_noOpt,
     "inview": p_inview,
@@ -397,14 +441,16 @@ pipelines = {
     "de": p_de,
     "opt": p_opt,
     "optde": p_optDe,
+    "gtopt": p_gtOpt,
+    "gtoptde": p_gtOptDe
 }
 
 
-# In[ ]:
+# In[20]:
 
 
-for i in range(10):
-    run_benchmark(pipelines[test](None), test + '_' + str(i), ignore_error=True)
+# test = 'gtopt'
+run_benchmark(pipelines[test](None), test, ignore_error=True)
 
 
 # In[ ]:
