@@ -131,9 +131,11 @@ class SamplePlan:
             if sample_action is not None:
                 self.add(priority, sample_action)
 
+
     def add(self, priority: float, sample_action: "Action", time_threshold: float = 0.5):
         assert sample_action is not None
         if sample_action.invalid_action:
+            # print("invalid action")
             return
         # assert not sample_action.invalid_action
 
@@ -159,6 +161,7 @@ class SamplePlan:
 
     def get_next_sample_frame_info(self):
         if self.action is None:
+            # print("sample plan action is None")
             return None
 
         nearest_index = None

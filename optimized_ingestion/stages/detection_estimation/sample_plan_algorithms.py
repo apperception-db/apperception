@@ -177,11 +177,11 @@ def opposite_direction_sample_action(detection_info: "DetectionInfo", view_dista
     if _ego_stop:
         return ego_stop_action
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
+    # logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
     car_exit_segment_action = car_exit_current_segment(detection_info)
-    logger.info(f'car_exit_segment_action {car_exit_segment_action}')
+    # logger.info(f'car_exit_segment_action {car_exit_segment_action}')
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
-    logger.info(f'meet_ego_action {meet_ego_action}')
+    # logger.info(f'meet_ego_action {meet_ego_action}')
     # return car_exit_segment_action
     actions = [ego_exit_segment_action, car_exit_segment_action]
     if meet_ego_action is not None:

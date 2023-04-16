@@ -19,7 +19,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -45,7 +45,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
-        logger.info("ego_speed: ", ego_speed)
+        logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
@@ -77,14 +77,14 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             det, _, dids = dets[i]
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
-            all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
+            all_detection_info_pruned, pruned_det = prune_detection(all_detection_info, det, self.predicates)
             # assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
-            if len(det) == 0:
+            if len(pruned_det) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info_pruned)
+            next_sample_plan = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info_pruned)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
@@ -100,13 +100,13 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
         # logger.info(np.array(times).sum(axis=0))
-        logger.info(f"sorted_ego_config_length {len(payload.video)}")
-        logger.info(f"number of skipped {len(skipped_frame_num)}")
+        # logger.info(f"sorted_ego_config_length {len(payload.video)}")
+        # logger.info(f"number of skipped {len(skipped_frame_num)}")
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
-        logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"total_detection_time {total_detection_time}")
-        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        # logger.info(f"total_run_time {total_run_time}")
+        # logger.info(f"total_detection_time {total_detection_time}")
+        # logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
         for f in skipped_frame_num:
             keep[f] = 0
@@ -145,12 +145,12 @@ def generate_sample_plan_once(
     assert all_detection_info is not None
     if all_detection_info:
         logger.info(all_detection_info[0].road_type)
+    # print(f"current frame num: {next_frame_num - 1}")
     next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
     # next_frame = None
     next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
     if next_sample_frame_info:
         next_sample_frame_name, next_sample_frame_num, _ = next_sample_frame_info
-        logger.info(f"next frame name {next_sample_frame_name}")
         logger.info(f"next frame num {next_sample_frame_num}")
         logger.info(f"Action {next_sample_plan.action}")
         # TODO: should not read next frame -> get the next frame from frames.pickle
@@ -158,7 +158,8 @@ def generate_sample_plan_once(
         # cv2.imshow("next_frame", next_frame)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-    return next_sample_plan, None
+        
+    return next_sample_plan
 
 
 def construct_estimated_all_detection_info(

@@ -42,14 +42,14 @@ def mph_to_mps(mph: 'float'):
 
 
 MAX_CAR_SPEED = {
-    'lane': 25.,
+    'lane': 12.,
     # TODO: if we decide to map to smallest polygon,
     # 'lanegroup' would mean street parking spots.
-    'lanegroup': 25.,
-    'road': 25.,
-    'lanesection': 25.,
-    'roadSection': 25.,
-    'intersection': 25.,
+    'lanegroup': 12.,
+    'road': 12.,
+    'lanesection': 12.,
+    'roadSection': 12.,
+    'intersection': 12.,
     'highway': 55.,
     'residential': 25.,
 }
@@ -428,10 +428,10 @@ def time_to_exit_current_segment(
         distance1 = compute_distance(car_loc, intersection[0])
         distance2 = compute_distance(car_loc, intersection[1])
         if relative_direction_1:
-            logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_polygon_info.road_type)}')
+            # logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_polygon_info.road_type)}')
             return time_elapse(current_time, distance1 / max_car_speed(current_polygon_info.road_type)), intersection[0]
         elif relative_direction_2:
-            logger.info(f'relative_direction_2 {distance2} {current_time}')
+            # logger.info(f'relative_direction_2 {distance2} {current_time}')
             return time_elapse(current_time, distance2 / max_car_speed(current_polygon_info.road_type)), intersection[1]
         else:
             logger.info("wrong car moving direction")
