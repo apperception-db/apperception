@@ -131,7 +131,6 @@ class SamplePlan:
             if sample_action is not None:
                 self.add(priority, sample_action)
 
-
     def add(self, priority: float, sample_action: "Action", time_threshold: float = 0.5):
         assert sample_action is not None
         if sample_action.invalid_action:

@@ -80,6 +80,7 @@ def _default_keep(video: "Video", keep: "bitarray | None" = None):
         raise Exception()
     return keep
 
+
 def _split_keep(keep: "bitarray", size: int = 64) -> "List[str]":
     out: "List[str]" = []
     i = 0

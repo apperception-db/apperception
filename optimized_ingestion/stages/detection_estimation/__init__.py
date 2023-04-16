@@ -158,7 +158,7 @@ def generate_sample_plan_once(
         # cv2.imshow("next_frame", next_frame)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        
+
     return next_sample_plan
 
 
