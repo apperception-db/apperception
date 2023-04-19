@@ -16,6 +16,7 @@ TODO:
 """
 
 import datetime
+import logging
 import os
 import shapely.geometry
 import sys
@@ -34,6 +35,8 @@ from .optimized_segment_mapping import (RoadPolygonInfo,
 from .sample_plan_algorithms import Action, get_sample_action_alg
 from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
                     get_segment_line, relative_direction_to_ego, trajectory_3d)
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -135,7 +138,6 @@ class SamplePlan:
     def add(self, priority: float, sample_action: "Action", time_threshold: float = 0.5):
         assert sample_action is not None
         if sample_action.invalid_action:
-            # print("invalid action")
             return
         # assert not sample_action.invalid_action
 
@@ -161,7 +163,6 @@ class SamplePlan:
 
     def get_next_sample_frame_info(self):
         if self.action is None:
-            # print("sample plan action is None")
             return None
 
         nearest_index = None
@@ -193,10 +194,10 @@ def construct_all_detection_info(
 ):
     all_detection_info: "List[DetectionInfo]" = []
     if len(all_detections) == 0:
-        return all_detection_info
+        return all_detection_info, 0, 0
 
-    ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
-    detections_polygon_mapping = get_detection_polygon_mapping(all_detections, ego_config)
+    ego_road_polygon_info, ego_query_time = get_largest_polygon_containing_point(ego_config)
+    detections_polygon_mapping, detection_query_time = get_detection_polygon_mapping(all_detections, ego_config)
     # assert len(all_detections) == len(detections_polygon_mapping)
     for detection in all_detections:
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
@@ -214,7 +215,7 @@ def construct_all_detection_info(
                                            ego_road_polygon_info)
             all_detection_info.append(detection_info)
 
-    return all_detection_info
+    return all_detection_info, ego_query_time, detection_query_time
 
 
 def generate_sample_plan(

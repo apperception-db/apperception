@@ -267,8 +267,9 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
         ego_translation=sql.Literal(point),
         location=sql.Literal(ego_config.location)
     )
-
+    start_query = time.time()
     results = database.execute(query)
+    ego_query_time = time.time() - start_query
     if len(results) > 1:
         for result in results:
             segmenttypes = result[2]
@@ -301,7 +302,7 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
         True,
         ego_config,
         fov_lines
-    )
+    ), ego_query_time
 
 
 def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "CameraConfig"):
@@ -372,17 +373,17 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         AND 'roadsection' != ALL(p.segmenttypes)
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
     """).format(_point=_point, location=sql.Literal(location))
-
+    start_query = time.time()
     result = database.execute(out)
-    return result
+    detection_query_time = time.time() - start_query
+    return result, detection_query_time
 
 
 def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config: "CameraConfig"):
     """
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
-    start_time = time.time()
-    results = map_detections_to_segments(detections, ego_config)
+    results, detection_query_time = map_detections_to_segments(detections, ego_config)
     assert all(r[6:] == (1, 1) for r in results)
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
     mapped_polygons = [*map(make_road_polygon_with_heading, mapped_polygons)]
@@ -432,7 +433,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
             if in_view(current_road_point, ego_config.ego_translation, fov_lines):
                 keep_road_polygon_points.append(current_road_point)
         if (len(keep_road_polygon_points) > 2
-                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 100):
+                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
             mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
                 shapely.geometry.Polygon(keep_road_polygon_points),
@@ -444,5 +445,4 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 fov_lines
             )
 
-    # logger.info(f'total mapping time: {time.time() - start_time}')
-    return mapped_road_polygon_info
+    return mapped_road_polygon_info, detection_query_time

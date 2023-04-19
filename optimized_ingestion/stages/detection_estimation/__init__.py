@@ -19,7 +19,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARN)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -54,6 +54,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         action_type_counts = {}
         start_time = time.time()
         total_detection_time = 0
+        total_ego_query_time = 0
+        total_detection_query_time = 0
         total_sample_plan_time = 0
         dets = Detection3D.get(payload)
         assert dets is not None, [*payload.metadata.keys()]
@@ -75,7 +77,9 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _, dids = dets[i]
-            all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
+            all_detection_info, ego_query_time, detection_query_time = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
+            total_ego_query_time += ego_query_time
+            total_detection_query_time += detection_query_time
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, pruned_det = prune_detection(all_detection_info, det, self.predicates)
             # assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
@@ -105,8 +109,10 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
         # logger.info(f"total_run_time {total_run_time}")
-        # logger.info(f"total_detection_time {total_detection_time}")
-        # logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        logger.info(f"total_detection_time {total_detection_time}")
+        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        logger.info(f"total_ego_query_time {total_ego_query_time}")
+        logger.info(f"total_detection_query_time {total_detection_query_time}")
 
         for f in skipped_frame_num:
             keep[f] = 0
@@ -143,16 +149,15 @@ def generate_sample_plan_once(
     all_detection_info: "List[DetectionInfo] | None" = None
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
-    if all_detection_info:
-        logger.info(all_detection_info[0].road_type)
-    # print(f"current frame num: {next_frame_num - 1}")
+    # if all_detection_info:
+    #     logger.info(all_detection_info[0].road_type)
     next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
     # next_frame = None
     next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
     if next_sample_frame_info:
         next_sample_frame_name, next_sample_frame_num, _ = next_sample_frame_info
-        logger.info(f"next frame num {next_sample_frame_num}")
-        logger.info(f"Action {next_sample_plan.action}")
+        # logger.info(f"next frame num {next_sample_frame_num}")
+        # logger.info(f"Action {next_sample_plan.action}")
         # TODO: should not read next frame -> get the next frame from frames.pickle
         # next_frame = cv2.imread(test_img_base_dir+next_sample_frame_name)
         # cv2.imshow("next_frame", next_frame)
@@ -192,5 +197,4 @@ def construct_estimated_all_detection_info(
             car_bbox2d)
         )
     # logger.info("all_detections", all_detections)
-    all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
-    return all_detection_info
+    return construct_all_detection_info(ego_config, ego_trajectory, all_detections)
