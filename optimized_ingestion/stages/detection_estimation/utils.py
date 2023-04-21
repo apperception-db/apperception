@@ -42,14 +42,14 @@ def mph_to_mps(mph: 'float'):
 
 
 MAX_CAR_SPEED = {
-    'lane': 25.,
+    'lane': 12.,
     # TODO: if we decide to map to smallest polygon,
     # 'lanegroup' would mean street parking spots.
-    'lanegroup': 25.,
-    'road': 25.,
-    'lanesection': 25.,
-    'roadSection': 25.,
-    'intersection': 25.,
+    'lanegroup': 12.,
+    'road': 12.,
+    'lanesection': 12.,
+    'roadSection': 12.,
+    'intersection': 12.,
     'highway': 55.,
     'residential': 25.,
 }
