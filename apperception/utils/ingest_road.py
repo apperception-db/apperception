@@ -622,7 +622,7 @@ def add_segment_type(database: "Database", road_types: "set[str]"):
         print("added type:", road_type)
 
     for road_type in road_types:
-        index('SegmentPolygon', f'__RoadType__{road_type}__')
+        index("SegmentPolygon", f"__RoadType__{road_type}__")
         print("index created:", road_type)
     database._commit()
 
