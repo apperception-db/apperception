@@ -33,7 +33,7 @@ class StrongSORT(Tracking2D):
         assert detections is not None
 
         sample_plans = DetectionEstimation.get(payload)
-        
+
         images = DecodeFrame.get(payload)
         assert images is not None
         metadata: "List[Dict[int, Tracking2DResult]]" = []
@@ -74,7 +74,6 @@ class StrongSORT(Tracking2D):
                 target_did = None
                 if sample_plan and sample_plan.action:
                     target_did = sample_plan.action.target_obj_id
-                        
 
                 # frame_benchmark.extend(_t)
                 # frame_benchmark.append(time.time())

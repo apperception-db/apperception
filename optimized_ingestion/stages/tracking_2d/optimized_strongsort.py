@@ -1,19 +1,16 @@
 import cv2
+import time
 import torch
-import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 from typing import TYPE_CHECKING, Dict, List
 from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
-import time
 
 from ...types import DetectionId
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
-from ..detection_estimation.__init__ import DetectionEstimation
-from ..detection_estimation.detection_estimation import DetectionInfo
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
@@ -35,7 +32,7 @@ def save_test_images(images, detections, output_path):
         for detection in detections[idx][0]:
             x1, y1, x2, y2, cnf, cls = detection.cpu().numpy().astype(int)
             cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(image, clss[cls]+'_'+str(obj_id), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(image, clss[cls] + '_' + str(obj_id), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             obj_id += 1
         cv2.imwrite(output_path + "/image_" + str(idx) + ".jpg", image)
 
@@ -50,34 +47,34 @@ def prematch_detection(last_frame_tracked, current_detection_infos):
     for obj_id in last_frame_tracked:
         for i in range(len(current_detection_infos)):
             detection = current_detection_infos[i]
-            if obj_id == i+1 and precompute_matching(last_frame_tracked[obj_id], detection):
-                matched_output.append(detection[:4]+[obj_id, detection[5]])
+            if obj_id == i + 1 and precompute_matching(last_frame_tracked[obj_id], detection):
+                matched_output.append(detection[:4] + [obj_id, detection[5]])
                 matched_confs.append(detection[4])
                 current_detection_infos.pop(i)
                 break
     unmatched_output = current_detection_infos
     return matched_output, matched_confs, unmatched_output
 
+
 class OptimizedStrongSORT(Tracking2D):
     def _run(self, payload: "Payload"):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        tracking_video = cv2.VideoWriter('test_tracking.avi',fourcc, 1, (1600, 900))
+        tracking_video = cv2.VideoWriter('test_tracking.avi', fourcc, 1, (1600, 900))
         start = time.time()
         total_prematch_time = 0
         total_img_process_time = 0
         # detection_info = DetectionEstimation.get(payload)
         # assert detection_info is not None
-        
 
         detections = Detection2D.get(payload)
         assert detections is not None
         # print("original detections", detections)
-        last_8_detections = detections[len(detections)*97//99:]
+        last_8_detections = detections[len(detections) * 97 // 99:]
         # matched_detections, unmatched_detections = prematch_detection(last_8_detections)
 
         images = DecodeFrame.get(payload)
         assert images is not None
-        last_8_images = images[len(images)*97//99:]
+        last_8_images = images[len(images) * 97 // 99:]
         # save_test_images(last_5s_images, last_5s_detections, "/data/apperception/apperception/optimized_sort_test_images")
         metadata: "List[Dict[int, Tracking2DResult]]" = []
         trajectories: "Dict[int, List[Tracking2DResult]]" = {}
@@ -151,9 +148,9 @@ class OptimizedStrongSORT(Tracking2D):
                         bbox_w = output[2] - output[0]
                         bbox_h = output[3] - output[1]
                         # write to video
-                        cv2.rectangle(curr_frame, (int(bbox_left), int(bbox_top)), (int(bbox_left+bbox_w), int(bbox_top+bbox_h)), (0, 255, 0), 2)
-                        cv2.putText(curr_frame, str(obj_id)+'_'+names[cls], (int(bbox_left), int(bbox_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        
+                        cv2.rectangle(curr_frame, (int(bbox_left), int(bbox_top)), (int(bbox_left + bbox_w), int(bbox_top + bbox_h)), (0, 255, 0), 2)
+                        cv2.putText(curr_frame, str(obj_id) + '_' + names[cls], (int(bbox_left), int(bbox_top)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
                         labels[obj_id] = Tracking2DResult(
                             idx,
                             DetectionId(idx, i),
@@ -180,7 +177,7 @@ class OptimizedStrongSORT(Tracking2D):
                 before.next = after
                 after.prev = before
         end = time.time()
-        print("total time taken", end-start)
+        print("total time taken", end - start)
         print("total prematch time", total_prematch_time)
         print("total img process time", total_img_process_time)
         return None, {self.classname(): metadata}
