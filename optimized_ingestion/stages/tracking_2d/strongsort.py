@@ -8,6 +8,7 @@ from yolo_tracker.yolov5.utils.torch_utils import select_device
 from ...cache import cache
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
+from ..detection_estimation import DetectionEstimation
 from .tracking_2d import Tracking2D, Tracking2DResult
 
 if TYPE_CHECKING:
@@ -31,6 +32,8 @@ class StrongSORT(Tracking2D):
         detections = Detection2D.get(payload)
         assert detections is not None
 
+        sample_plans = DetectionEstimation.get(payload)
+        
         images = DecodeFrame.get(payload)
         assert images is not None
         metadata: "List[Dict[int, Tracking2DResult]]" = []
@@ -39,15 +42,16 @@ class StrongSORT(Tracking2D):
         strongsort = create_tracker('strongsort', reid_weights, device, False)
         assert isinstance(strongsort, _StrongSORT)
         curr_frame, prev_frame = None, None
+        miss_track_count = 0
         with torch.no_grad():
             # ss_benchmark: "list[list[float]]" = []
             if hasattr(strongsort, 'model'):
                 if hasattr(strongsort.model, 'warmup'):
                     strongsort.model.warmup()
 
-            assert len(detections) == len(images)
+            assert len(detections) == len(images) == len(sample_plans)
             # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
+            for idx, ((det, names, dids), im0s, sample_plan) in enumerate(zip(detections, images, sample_plans)):
                 if not payload.keep[idx] or len(det) == 0:
                     metadata.append({})
                     strongsort.increment_ages()
@@ -67,6 +71,10 @@ class StrongSORT(Tracking2D):
 
                 confs = det[:, 4]
                 output_ = strongsort.update(det.cpu(), im0)
+                target_did = None
+                if sample_plan and sample_plan.action:
+                    target_did = sample_plan.action.target_obj_id
+                        
 
                 # frame_benchmark.extend(_t)
                 # frame_benchmark.append(time.time())
@@ -92,6 +100,11 @@ class StrongSORT(Tracking2D):
                             names[cls],
                             conf.item(),
                         )
+                        # if target_did and did == target_did:
+                        #     print("found target object", target_did)
+                        #     print("obj_id found:", obj_id in trajectories)
+                        if obj_id not in trajectories and target_did and did == target_did:
+                            miss_track_count += 1
                         if obj_id not in trajectories:
                             trajectories[obj_id] = []
                         trajectories[obj_id].append(labels[obj_id])
@@ -113,7 +126,12 @@ class StrongSORT(Tracking2D):
             # # for s in ss_benchmark:
             # #     print(s)
             # self.ss_benchmarks.append(ss_benchmark)
-
+        print("miss track count:", miss_track_count)
+        with open("./outputs/miss_count.txt", "r") as f:
+            total_miss_count = int(f.read().strip())
+            total_miss_count += miss_track_count
+        with open("./outputs/miss_count.txt", "w") as f:
+            f.write(str(total_miss_count))
         for trajectory in trajectories.values():
             for before, after in zip(trajectory[:-1], trajectory[1:]):
                 before.next = after

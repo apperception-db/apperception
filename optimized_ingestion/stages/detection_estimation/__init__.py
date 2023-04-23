@@ -47,7 +47,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         ego_speed = get_ego_avg_speed(ego_trajectory)
         logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
-            return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
+            return keep, {DetectionEstimation.classname(): [None] * len(keep)}
 
         skipped_frame_num = []
         next_frame_num = 0
@@ -72,7 +72,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             else:
                 if i != next_frame_num:
                     skipped_frame_num.append(i)
-                    metadata.append([])
+                    metadata.append(None)
                     continue
             next_frame_num = i + 1
             start_detection_time = time.time()
@@ -85,7 +85,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             # assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
             if len(pruned_det) == 0:
                 skipped_frame_num.append(i)
-                metadata.append([])
+                metadata.append(None)
                 continue
             start_generate_sample_plan = time.time()
             next_sample_plan = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info_pruned)
@@ -96,10 +96,10 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             else:
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
-            metadata.append(all_detection_info)
+            metadata.append(next_sample_plan)
 
         # TODO: ignore the last frame ->
-        metadata.append([])
+        metadata.append(None)
         skipped_frame_num.append(len(payload.video) - 1)
 
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
@@ -109,10 +109,10 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
         # logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"total_detection_time {total_detection_time}")
-        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
-        logger.info(f"total_ego_query_time {total_ego_query_time}")
-        logger.info(f"total_detection_query_time {total_detection_query_time}")
+        # logger.info(f"total_detection_time {total_detection_time}")
+        # logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        # logger.info(f"total_ego_query_time {total_ego_query_time}")
+        # logger.info(f"total_detection_query_time {total_detection_query_time}")
 
         for f in skipped_frame_num:
             keep[f] = 0
