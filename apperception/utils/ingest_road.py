@@ -615,7 +615,7 @@ def add_segment_type(database: "Database", road_types: "set[str]"):
     print("altered table")
 
     for road_type in road_types:
-        database.update(f"ALTER TABLE SegmentPolygon ADD __RoadType__{road_type}__;")
+        database.update(f"ALTER TABLE SegmentPolygon ADD __RoadType__{road_type}__ boolean;")
         database.update(
             f"""UPDATE SegmentPolygon
             SET __RoadType__{road_type}__ = EXISTS(
