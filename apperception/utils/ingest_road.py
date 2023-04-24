@@ -619,7 +619,8 @@ def add_segment_type(database: "Database", road_types: "set[str]"):
         database.update(
             f"""UPDATE SegmentPolygon
             SET __RoadType__{road_type}__ = EXISTS(
-                SELECT id from {road_type} = elementId
+                SELECT * from {road_type}
+                WHERE {road_type}.id = SegmentPolygon.elementId
             )"""
         )
         database.update(
