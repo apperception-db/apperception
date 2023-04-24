@@ -1,8 +1,8 @@
+import json
 import logging
 import random
 import time
 import torch
-import json
 from bitarray import bitarray
 from typing import Callable, List, Tuple
 
