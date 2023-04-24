@@ -32,7 +32,7 @@ SELECT
 FROM segmentpolygon
     LEFT OUTER JOIN segment
         ON segmentpolygon.elementid = segment.elementid
-WHERE segmentpolygon.elementid = \'{segment_id}\';
+WHERE segmentpolygon.elementid = '{segment_id}';
 """
 
 

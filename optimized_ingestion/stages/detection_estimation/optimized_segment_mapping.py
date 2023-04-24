@@ -63,8 +63,8 @@ max_contain AS (
 )
 SELECT
     p.elementid,
-    MIN(p.elementpolygon)::geometry,
-    MIN(p.segmenttypes),
+    p.elementpolygon::geometry,
+    p.segmenttypes,
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),
@@ -323,13 +323,16 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         SELECT *
         FROM SegmentPolygon
         WHERE location = {location}
+        AND SegmentPolygon.__RoadType__intersection__
+        AND SegmentPolygon.__RoadType__lane__
+        AND SegmentPolygon.__RoadType__lanegroup__
+        AND SegmentPolygon.__RoadType__lanesection__
     ),
     MaxPolygon AS (
         SELECT token, MAX(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
         JOIN AvailablePolygon AS Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
-            AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
         GROUP BY token
     ),
     MaxPolygonId AS (
@@ -339,7 +342,6 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         JOIN AvailablePolygon as Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
             AND ST_Area(Polygon.elementPolygon) = MaxPolygon.size
-            AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
         GROUP BY token
     ),
     PointPolygonSegment AS (
@@ -369,7 +371,7 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         LEFT OUTER JOIN segment AS s USING (elementid)
     JOIN MinDis USING (token)
     WHERE p.distance = MinDis.mindistance
-        AND 'roadsection' != ALL(p.segmenttypes)
+        AND NOT p.__RoadType__roadsection__
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
     """).format(_point=_point, location=sql.Literal(location))
 
