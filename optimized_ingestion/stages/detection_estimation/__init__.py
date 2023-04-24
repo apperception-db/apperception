@@ -2,6 +2,7 @@ import logging
 import random
 import time
 import torch
+import json
 from bitarray import bitarray
 from typing import Callable, List, Tuple
 
@@ -95,6 +96,16 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 action_type_counts[next_action_type] = 1
             else:
                 action_type_counts[next_action_type] += 1
+            with open("./outputs/action_type_count.json", "r") as f:
+                total_action_type_count_content = f.read()
+            total_action_type_count_json = json.loads(total_action_type_count_content)
+            for action_type in action_type_counts:
+                if action_type in total_action_type_count_json:
+                    total_action_type_count_json[action_type] += 1
+                else:
+                    total_action_type_count_json[action_type] = 0
+            with open("./outputs/action_type_count.json", "w") as f:
+                json.dump(total_action_type_count_json)
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
             metadata.append(next_sample_plan)
 
