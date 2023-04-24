@@ -202,8 +202,6 @@ def map_points_and_directions_to_segment(
     LANGUAGE 'plpgsql';
     """)
 
-    explain = psycopg2.sql.SQL(" EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) ")
-
     query = psycopg2.sql.SQL("""
     WITH
     Point AS (SELECT * FROM {_point}),
@@ -293,6 +291,7 @@ def map_points_and_directions_to_segment(
         AND PointPolygonSegment.anglediff = MinDisMinAngle.minangle
     """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
+    # explain = psycopg2.sql.SQL(" EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) ")
     # explains.append({
     #     'name': videofile,
     #     'analyze': database.execute(helper + explain + query)[0][0][0]
