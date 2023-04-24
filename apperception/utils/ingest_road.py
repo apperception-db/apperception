@@ -149,7 +149,7 @@ CREATE TABLE IF NOT EXISTS RoadSection_LaneSection(
     FOREIGN KEY (roadSectionId)
         REFERENCES RoadSection (id),
     FOREIGN KEY (laneSectionId)
-        REFERENCES LaneSection (id),
+        REFERENCES LaneSection (id)
 );
 """
 
