@@ -102,7 +102,7 @@ class InView(Stage):
         """).format(
             view_areas=sql.Literal(view_areas),
             indices=sql.Literal(indices),
-            segment_type=sql.SQL(" AND ").join(sql.Literal(f"__RoadType__{t}__") for t in self.segment_types)
+            segment_type=sql.SQL(" AND ".join(f"__roadtype__{t}__" for t in self.segment_types))
         ))
 
         keep = bitarray(len(payload.keep))
