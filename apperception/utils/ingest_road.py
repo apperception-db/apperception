@@ -218,18 +218,27 @@ def create_tables(database: "Database"):
     database.update(CREATE_SEGMENT_SQL, commit=False)
     index("Segment", "elementId")
 
+    database.update(CREATE_LANE_SQL, commit=False)
+    index("Lane", "id")
+
+    database.update(CREATE_ROAD_SQL, commit=False)
+    index("Road", "id")
+
+    database.update(CREATE_INTERSECTION_SQL, commit=False)
+    index("Intersection", "id")
+
     database.update(CREATE_LANESECTION_SQL, commit=False)
     index("LaneSection", "id")
 
-    database.update(CREATE_LANE_SQL, commit=False)
-    index("Lane", "id")
+    database.update(CREATE_ROADSECTION_SQL, commit=False)
+    index("RoadSection", "id")
+
+    database.update(CREATE_LANEGROUP_SQL, commit=False)
+    index("LaneGroup", "id")
 
     database.update(CREATE_LANE_LANESEC_SQL, commit=False)
     index("Lane_LaneSection", "laneId")
     index("Lane_LaneSection", "laneSectionId")
-
-    database.update(CREATE_LANEGROUP_SQL, commit=False)
-    index("LaneGroup", "id")
 
     database.update(CREATE_LANEGROUP_LANE_SQL, commit=False)
     index("LaneGroup_Lane", "laneId")
@@ -239,9 +248,6 @@ def create_tables(database: "Database"):
     index("Opposite_LaneGroup", "oppositeId")
     index("Opposite_LaneGroup", "laneGroupId")
 
-    database.update(CREATE_ROAD_SQL, commit=False)
-    index("Road", "id")
-
     database.update(CREATE_ROAD_LANEGROUP_SQL, commit=False)
     index("Road_LaneGroup", "roadId")
     index("Road_LaneGroup", "laneGroupId")
@@ -250,15 +256,9 @@ def create_tables(database: "Database"):
     index("Road_RoadSection", "roadId")
     index("Road_RoadSection", "roadSectionId")
 
-    database.update(CREATE_ROADSECTION_SQL, commit=False)
-    index("RoadSection", "id")
-
     database.update(CREATE_ROADSEC_LANESEC_SQL, commit=False)
     index("RoadSection_LaneSection", "laneSectionId")
     index("RoadSection_LaneSection", "roadSectionId")
-
-    database.update(CREATE_INTERSECTION_SQL, commit=False)
-    index("Intersection", "id")
 
     database._commit()
 
