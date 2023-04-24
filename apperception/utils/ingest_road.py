@@ -639,17 +639,14 @@ INSERT: "dict[str, Callable[[Database, list[dict]], None]]" = {
     # primitives
     "polygon": insert_polygon,
     "segment": insert_segment,
-
     # basics
     "lane": insert_lane,
     "road": insert_road,
     "laneGroup": insert_lanegroup,
-
     # sections
     "laneSection": insert_lanesection,
     "roadSection": insert_roadsection,
     "intersection": insert_intersection,
-
     # relations
     "lane_LaneSec": insert_lane_lanesec,
     "laneGroup_Lane": insert_lanegroup_lane,
