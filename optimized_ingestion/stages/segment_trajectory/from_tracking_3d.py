@@ -19,6 +19,8 @@ from .construct_segment_trajectory import SegmentPoint
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
 
 printed = False
+
+
 class FromTracking3D(SegmentTrajectory):
     def __init__(self):
         self.analyze = True
@@ -199,7 +201,7 @@ def map_points_and_directions_to_segment(
     $BODY$
     LANGUAGE 'plpgsql';
     """)
-    
+
     explain = psycopg2.sql.SQL(" EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) ")
 
     query = psycopg2.sql.SQL("""
