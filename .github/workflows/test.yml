@@ -87,7 +87,7 @@ jobs:
 
       - name: Install Dependencies
         # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --without dev
+        run: poetry install --no-interaction --without dev --with test
 
       - name: Check Python Version
         run: poetry run python --version
