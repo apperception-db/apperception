@@ -82,7 +82,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             else:
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
-            metadata.append(all_detection_info)
+            # metadata.append(all_detection_info)
+            metadata.append(next_sample_plan)
 
         # TODO: ignore the last frame ->
         metadata.append([])
