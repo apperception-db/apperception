@@ -636,20 +636,27 @@ def add_segment_type(database: "Database", road_types: "set[str]"):
 
 
 INSERT: "dict[str, Callable[[Database, list[dict]], None]]" = {
+    # primitives
     "polygon": insert_polygon,
     "segment": insert_segment,
-    "laneSection": insert_lanesection,
+
+    # basics
     "lane": insert_lane,
-    "lane_LaneSec": insert_lane_lanesec,
+    "road": insert_road,
     "laneGroup": insert_lanegroup,
+
+    # sections
+    "laneSection": insert_lanesection,
+    "roadSection": insert_roadsection,
+    "intersection": insert_intersection,
+
+    # relations
+    "lane_LaneSec": insert_lane_lanesec,
     "laneGroup_Lane": insert_lanegroup_lane,
     "laneGroup_opposite": insert_opposite_lanegroup,
-    "road": insert_road,
     "road_laneGroup": insert_road_lanegroup,
     "road_roadSec": insert_road_roadsec,
-    "roadSection": insert_roadsection,
     "roadSec_laneSec": insert_roadsec_lanesec,
-    "intersection": insert_intersection,
 }
 
 
