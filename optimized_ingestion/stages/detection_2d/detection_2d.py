@@ -14,8 +14,8 @@ class Metadatum(NamedTuple):
     Each column represents:
     - bbox_left
     - bbox_top
-    - bbox_w
-    - bbox_h
+    - bbox_right
+    - bbox_bottom
     - conf
     - class
 

@@ -1,18 +1,14 @@
 import torch
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List
 from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
 from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...cache import cache
+from ...payload import Payload
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from .tracking_2d import Tracking2D, Tracking2DResult
-
-if TYPE_CHECKING:
-    from ...payload import Payload
-
 
 FILE = Path(__file__).resolve()
 APPERCEPTION = FILE.parent.parent.parent.parent
@@ -23,7 +19,7 @@ reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 class StrongSORT(Tracking2D):
     def __init__(self, cache: "bool" = True) -> None:
         super().__init__()
-        self.cache: "bool" = cache
+        self.cache = cache
         # self.ss_benchmarks: "list[list[list[float]]]" = []
 
     @cache
@@ -33,8 +29,8 @@ class StrongSORT(Tracking2D):
 
         images = DecodeFrame.get(payload)
         assert images is not None
-        metadata: "List[Dict[int, Tracking2DResult]]" = []
-        trajectories: "Dict[int, List[Tracking2DResult]]" = {}
+        metadata: "list[dict[int, Tracking2DResult]]" = []
+        trajectories: "dict[int, list[Tracking2DResult]]" = {}
         device = select_device("")
         strongsort = create_tracker('strongsort', reid_weights, device, False)
         assert isinstance(strongsort, _StrongSORT)
@@ -72,7 +68,7 @@ class StrongSORT(Tracking2D):
                 # frame_benchmark.append(time.time())
 
                 if len(output_) > 0:
-                    labels: "Dict[int, Tracking2DResult]" = {}
+                    labels: "dict[int, Tracking2DResult]" = {}
                     for output, conf, did in zip(output_, confs, dids):
                         obj_id = int(output[4])
                         cls = int(output[5])
