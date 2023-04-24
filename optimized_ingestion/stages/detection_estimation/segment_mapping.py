@@ -55,7 +55,7 @@ WHERE ST_Contains(
         p.elementpolygon,
         {ego_translation}::geometry
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
@@ -76,7 +76,7 @@ WHERE ST_DWithin(
         {start_segment}::geometry,
         {view_distance}
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
