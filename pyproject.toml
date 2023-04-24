@@ -19,6 +19,7 @@ python-mobilitydb = "^0.1.2"
 postgis = "^1.0.4"
 shapely = "^1.8.5.post1"
 plpygis = "^0.2.0"
+jupyterlab-vim = "^0.16.0"
 
 [tool.poetry.group.test]
 optional = true

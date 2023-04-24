@@ -76,6 +76,7 @@ from optimized_ingestion.stages.in_view import InView
 
 from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
 
+from optimized_ingestion.stages.detection_2d.detection_2d import Detection2D
 from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 from optimized_ingestion.stages.detection_2d.object_type_filter import ObjectTypeFilter
 from optimized_ingestion.stages.detection_2d.ground_truth import GroundTruthDetection
@@ -225,14 +226,13 @@ with open(os.path.join(DATA_DIR, 'cities.pkl'), 'rb') as f:
 # In[17]:
 
 
-def run_benchmark(pipeline, filename, ignore_error=False):
+def run_benchmark(pipeline, filename, run=0, ignore_error=False):
     metadata_strongsort = {}
     metadata_3d = {}
     metadata_segment = {}
-    metadata_frame_id = {}
+    metadata_d2d = {}
     failed_videos = []
 
-    # names = cities['boston-seaport'][:200]
     names = cities['boston-seaport']
     filtered_videos = [(n, v) for n, v in videos.items() if n[6:10] in names]
 
@@ -249,10 +249,15 @@ def run_benchmark(pipeline, filename, ignore_error=False):
             )
 
             output = pipeline.run(Payload(frames))
+
             metadata_strongsort[name] = output[StrongSORT]
             metadata_3d[name] = output[Tracking3D]
             metadata_segment[name] = output[SegmentTrajectory]
-            # metadata_frame_id[name] = output[GetCameraConfigId]
+            metadata_d2d[name] = [
+                (d2ds, dids)
+                for d2ds, clss, dids
+                in output[Detection2D]
+            ]
         except Exception as e:
             if ignore_error:
                 message = str(traceback.format_exc())
@@ -266,31 +271,32 @@ def run_benchmark(pipeline, filename, ignore_error=False):
                 raise e
 
         # Save progress every video
-        with open(f"./outputs/sort--{filename}.json", "w") as f:
-            json.dump(metadata_strongsort, f, cls=DataclassJSONEncoder, indent=2)
+        with open(f"./outputs/sort--{filename}_{run}.json", "w") as f:
+            json.dump(metadata_strongsort, f, cls=DataclassJSONEncoder, indent=1)
 
-#         with open(f"./outputs/frame-id--{filename}.json", "w") as f:
-#             json.dump(metadata_frame_id, f, indent=2)
+        # with open(f"./outputs/tracking-3d--{filename}_{run}.json", "w") as f:
+        #     json.dump(metadata_3d, f, cls=DataclassJSONEncoder, indent=1)
 
-#         with open(f"./outputs/tracking-3d--{filename}.json", "w") as f:
-#             json.dump(metadata_3d, f, cls=DataclassJSONEncoder, indent=2)
+        with open(f"./outputs/segment-trajectory--{filename}_{run}.json", "w") as f:
+            json.dump(metadata_segment, f, cls=DataclassJSONEncoder, indent=1)
 
-        with open(f"./outputs/segment-trajectory--{filename}.json", "w") as f:
-            json.dump(metadata_segment, f, cls=DataclassJSONEncoder, indent=2)
+        with open(f"./outputs/failed_videos--{filename}_{run}.json", "w") as f:
+            json.dump(failed_videos, f, indent=1)
 
-        with open(f"./outputs/failed_videos--{filename}.json", "w") as f:
-            json.dump(failed_videos, f, indent=2)
+        with open(f"./outputs/detection-2d--{filename}_{run}.json", "w") as f:
+            json.dump(metadata_d2d, f, cls=DataclassJSONEncoder, indent=1)
 
-        with open(f"./outputs/perf--{filename}.json", "w") as f:
+        with open(f"./outputs/perf--{filename}_{run}.json", "w") as f:
             performance = [
                 {
                     "stage": stage.classname(),
                     "benchmark": stage.benchmark,
+                    **({'explain', stage.explain} if hasattr(stage, 'explain') else {})
                 }
                 for stage
                 in pipeline.stages
             ]
-            json.dump(performance, f, indent=2)
+            json.dump(performance, f, indent=1)
 
 
 # In[18]:
@@ -449,18 +455,20 @@ pipelines = {
 # In[20]:
 
 
-# test = 'gtopt'
-run_benchmark(pipelines[test](None), test, ignore_error=True)
+test = 'opt'
+for i in range(3):
+    run_benchmark(pipelines[test](None), test, run=i, ignore_error=True)
 
 
 # In[ ]:
 
 
-subprocess.Popen('shutdown -h now', shell=True)
+# subprocess.Popen('shutdown -h now', shell=True)
 
 
 # In[ ]:
 
 
-
-
+test = 'deopt'
+for i in range(3):
+    run_benchmark(pipelines[test](None), test, run=i, ignore_error=True)

@@ -18,8 +18,12 @@ from .construct_segment_trajectory import SegmentPoint
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
 
-
+printed = False
 class FromTracking3D(SegmentTrajectory):
+    def __init__(self):
+        self.analyze = True
+        self.explains = []
+
     def _run(self, payload: "Payload"):
 
         t3d: "list[Tracking3DMetadatum] | None" = Tracking3D.get(payload)
@@ -58,7 +62,12 @@ class FromTracking3D(SegmentTrajectory):
 
         # Map a segment to each detection
         # Note: Some detection might be missing due to not having any segment mapped
-        segments = map_points_and_directions_to_segment(points, location)
+        segments = map_points_and_directions_to_segment(
+            points,
+            location,
+            payload.video.videofile,
+            self.explains
+        )
 
         # Index segments using their detection id
         segment_map: "dict[DetectionId, SegmentMapping]" = {}
@@ -161,7 +170,9 @@ class SegmentMapping(NamedTuple):
 
 def map_points_and_directions_to_segment(
     annotations: "list[tuple[Tracking3DResult, tuple[float, float] | None]]",
-    location: "str"
+    location: "str",
+    videofile: 'str',
+    explains: 'list[dict]',
 ) -> "list[SegmentMapping]":
     if len(annotations) == 0:
         return []
@@ -177,7 +188,7 @@ def map_points_and_directions_to_segment(
         fields=psycopg2.sql.SQL(',').join(map(psycopg2.sql.Literal, [frame_indices, object_indices, txs, tys, dxs, dys]))
     )
 
-    out = psycopg2.sql.SQL("""
+    helper = psycopg2.sql.SQL("""
     SET client_min_messages TO WARNING;
     DROP FUNCTION IF EXISTS _angle(double precision);
     CREATE OR REPLACE FUNCTION _angle(a double precision) RETURNS double precision AS
@@ -187,7 +198,11 @@ def map_points_and_directions_to_segment(
     END
     $BODY$
     LANGUAGE 'plpgsql';
+    """)
+    
+    explain = psycopg2.sql.SQL(" EXPLAIN (ANALYZE, COSTS, VERBOSE, BUFFERS, FORMAT JSON) ")
 
+    query = psycopg2.sql.SQL("""
     WITH
     Point AS (SELECT * FROM {_point}),
     AvailablePolygon AS (
@@ -276,5 +291,10 @@ def map_points_and_directions_to_segment(
         AND PointPolygonSegment.anglediff = MinDisMinAngle.minangle
     """).format(_point=_point, location=psycopg2.sql.Literal(location))
 
-    result = database.execute(out)
+    # explains.append({
+    #     'name': videofile,
+    #     'analyze': database.execute(helper + explain + query)[0][0][0]
+    # })
+
+    result = database.execute(helper + query)
     return list(map(SegmentMapping._make, result))

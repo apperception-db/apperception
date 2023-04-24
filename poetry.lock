@@ -1579,6 +1579,18 @@ openapi = ["openapi-core (>=0.16.1,<0.17.0)", "ruamel-yaml"]
 test = ["hatch", "ipykernel", "jupyterlab-server[openapi]", "openapi-spec-validator (>=0.5.1,<0.6.0)", "pytest (>=7.0)", "pytest-console-scripts", "pytest-cov", "pytest-jupyter[server] (>=0.6.2)", "pytest-timeout", "requests-mock", "sphinxcontrib-spelling", "strict-rfc3339", "werkzeug"]
 
 [[package]]
+name = "jupyterlab-vim"
+version = "0.16.0"
+description = "Code cell vim bindings"
+category = "main"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "jupyterlab_vim-0.16.0-py3-none-any.whl", hash = "sha256:4341fe1b83a069c1dafae085c94df382ac65456decc983363953b44cea307034"},
+    {file = "jupyterlab_vim-0.16.0.tar.gz", hash = "sha256:5bca352a6cb03b3730b7c649de7f0dfd43e7763089d8da56b04fab27233c006b"},
+]
+
+[[package]]
 name = "jupyterlab-widgets"
 version = "3.0.7"
 description = "Jupyter interactive widgets for JupyterLab"
@@ -2189,12 +2201,12 @@ files = [
 [package.dependencies]
 numpy = [
     {version = ">=1.21.0", markers = "python_version <= \"3.9\" and platform_system == \"Darwin\" and platform_machine == \"arm64\""},
-    {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
-    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
-    {version = ">=1.22.0", markers = "python_version >= \"3.11\""},
     {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
     {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
     {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
+    {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
+    {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
+    {version = ">=1.22.0", markers = "python_version >= \"3.11\""},
 ]
 
 [[package]]
@@ -4036,4 +4048,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "f5dbda7676b021858ef10d0bb439c286b5a1307124a2a3c9a76f69ff1aab6a49"
+content-hash = "4984111bd7a1a338e3ccafc42bc1ccd16711960ca8bed6e9e2b99d817c134fcb"
