@@ -68,7 +68,10 @@ MinPolygon AS (
     JOIN SegmentPolygon AS Polygon
         ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
         AND Polygon.location = p.location
-        AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
+        AND Polygon.__RoadType__intersection__
+        AND Polygon.__RoadType__lane__
+        AND Polygon.__RoadType__lanegroup__
+        AND Polygon.__RoadType__lanesection__
     GROUP BY token
 ),
 MinPolygonId AS (
@@ -79,7 +82,10 @@ MinPolygonId AS (
         ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
         AND Polygon.location = p.location
         AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
-        AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
+        AND Polygon.__RoadType__intersection__
+        AND Polygon.__RoadType__lane__
+        AND Polygon.__RoadType__lanegroup__
+        AND Polygon.__RoadType__lanesection__
     GROUP BY token
 ),
 PointPolygonSegment AS (
@@ -96,7 +102,7 @@ PointPolygonSegment AS (
         OR
         angle(ACOS((p.dx * sd.dx) + (p.dy * sd.dy)) * 180 / PI()) > 270
         OR
-        'intersection' = Any(SegmentPolygon.segmenttypes)
+        SegmentPolygon.__RoadType__intersection__
 ),
 MinDis as (
     SELECT token, MIN(distance) as mindistance

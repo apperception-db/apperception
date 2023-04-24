@@ -611,6 +611,9 @@ ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lan
 def add_segment_type(database: "Database", road_types: "set[str]"):
     index = index_factory(database)
 
+    database.update("ALTER TABLE SegmentPolygon ADD segmentTypes text[];")
+    print("altered table")
+
     for road_type in road_types:
         database.update(f"ALTER TABLE SegmentPolygon ADD __RoadType__{road_type}__;")
         database.update(
@@ -618,6 +621,11 @@ def add_segment_type(database: "Database", road_types: "set[str]"):
             SET __RoadType__{road_type}__ = EXISTS(
                 SELECT id from {road_type} = elementId
             )"""
+        )
+        database.update(
+            f"""UPDATE SegmentPolygon
+            SET segmentTypes = ARRAY_APPEND(segmentTypes, '{road_type}')
+            WHERE elementId IN (SELECT id FROM {road_type});"""
         )
         print("added type:", road_type)
 

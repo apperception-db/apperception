@@ -63,8 +63,8 @@ max_contain AS (
 )
 SELECT
     p.elementid,
-    MIN(p.elementpolygon)::geometry,
-    MIN(p.segmenttypes),
+    p.elementpolygon::geometry,
+    p.segmenttypes,
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
     COUNT(DISTINCT p.elementpolygon),

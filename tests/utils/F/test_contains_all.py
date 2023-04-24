@@ -27,6 +27,10 @@ from common import *
             HAVING COUNT(point) = cardinality(timestamp)
         ))"""
     ),
+    (
+        contains_all('intersection', [c.time, o.trans]),
+        "test: TODO: add test result here"
+    )
 ])
 def test_contain_all(fn, sql):
     assert gen(fn) == sql
@@ -41,4 +45,4 @@ def test_contain_all(fn, sql):
 def test_exception(fn, msg):
     with pytest.raises(Exception) as e_info:
         gen(fn)
-    str(e_info.value) == msg
+    assert str(e_info.value) == msg, str(e_info.value)

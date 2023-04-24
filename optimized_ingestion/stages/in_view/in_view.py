@@ -15,7 +15,7 @@ class InView(Stage):
     def __init__(self, distance: float, segment_type: "str | list[str]"):
         super().__init__()
         self.distance = distance
-        self.segment_type = segment_type if isinstance(segment_type, list) else [segment_type]
+        self.segment_types = segment_type if isinstance(segment_type, list) else [segment_type]
 
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
         width, height = payload.video.dimension
@@ -98,11 +98,11 @@ class InView(Stage):
             {indices}::int[]
         ) AS ViewArea(points, index)
         JOIN SegmentPolygon ON ST_Intersects(ST_ConvexHull(points), elementPolygon)
-        WHERE segmentTypes && {segment_type}
+        WHERE {segment_type}
         """).format(
             view_areas=sql.Literal(view_areas),
             indices=sql.Literal(indices),
-            segment_type=sql.Literal(self.segment_type)
+            segment_type=sql.SQL(" AND ").join(sql.Literal(f"__RoadType__{t}__") for t in self.segment_types)
         ))
 
         keep = bitarray(len(payload.keep))

@@ -25,7 +25,7 @@ def contains_all(visitor: "GenSqlVisitor", args: "List[PredicateNode]"):
         return f"""(EXISTS(SELECT 1
             FROM SegmentPolygon
             WHERE
-                '{polygon_}' = Any(SegmentPolygon.segmentTypes) AND
+                SegmentPolygon.__RoadType__{polygon_}__ AND
                 {" AND ".join(f"ST_Covers(SegmentPolygon.elementPolygon, {visitor(point)})" for point in points.exprs)}
         ))"""
     else:

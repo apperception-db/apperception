@@ -214,7 +214,10 @@ def map_points_and_directions_to_segment(
         FROM Point AS p
         JOIN AvailablePolygon AS Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
-            AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
+            AND Polygon.__RoadType__intersection__
+            AND Polygon.__RoadType__lane__
+            AND Polygon.__RoadType__lanegroup__
+            AND Polygon.__RoadType__lanesection__
         GROUP BY fid, oid
     ),
     MinPolygonId AS (
@@ -224,7 +227,10 @@ def map_points_and_directions_to_segment(
         JOIN AvailablePolygon as Polygon
             ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
             AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
-            AND ARRAY ['intersection', 'lane', 'lanegroup', 'lanesection'] && Polygon.segmenttypes
+            AND Polygon.__RoadType__intersection__
+            AND Polygon.__RoadType__lane__
+            AND Polygon.__RoadType__lanegroup__
+            AND Polygon.__RoadType__lanesection__
         GROUP BY fid, oid
     ),
     PointPolygonSegment AS (
@@ -241,7 +247,7 @@ def map_points_and_directions_to_segment(
         JOIN AvailablePolygon USING (elementId)
         JOIN SegmentWithDirection AS sd USING (elementId)
         WHERE
-            'intersection' = Any(AvailablePolygon.segmenttypes)
+            AvailablePolygon.__RoadType__intersection__
             OR
             p.dx IS NULL
             OR
