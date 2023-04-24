@@ -218,9 +218,7 @@ class CallNode(PredicateNode):
 
 
 def call_node(fn: "Fn"):
-    def call_node_factory(
-        *args: "PredicateNode | str | int | float | bool | list"
-    ) -> "CallNode":
+    def call_node_factory(*args: "PredicateNode | str | int | float | bool | list") -> "CallNode":
         return CallNode(fn, [*map(wrap_literal, args)])
 
     return call_node_factory
