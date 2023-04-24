@@ -39,10 +39,10 @@ def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, benchmark
             [camera_config(name, *f[1:], 0) for f in video["frames"]],
             video["start"],
         )
-        # try:
-        process_pipeline(name, frames, pipeline, base)
-        # except BaseException:
-        #     print(f"error video: {name} with skip ratio {skip_ratio}")
+        try:
+            process_pipeline(name, frames, pipeline, base)
+        except BaseException:
+            print(f"error video: {name} with skip ratio {skip_ratio}")
         num_video += 1
 
     print("num_video: ", num_video)
