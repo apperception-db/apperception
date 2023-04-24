@@ -50,4 +50,4 @@ def test_contain_all(fn, sql):
 def test_exception(fn, msg):
     with pytest.raises(Exception) as e_info:
         gen(fn)
-    assert str(e_info.value) == msg, str(e_info.value)
+    assert str(e_info.value) == msg
