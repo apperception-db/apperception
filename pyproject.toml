@@ -55,17 +55,17 @@ expand-star-imports = true
 
 [tool.isort]
 profile = 'black'
-verbose = true
+verbose = false
 
 [tool.black]
 line-length = 100
-verbose = true
+verbose = false
 
 [tool.autopep8]
 in-place = true
 recursive = true
 aggressive = 3
-verbose = 2
+verbose = false
 
 [tool.mypy]
 exclude = [
