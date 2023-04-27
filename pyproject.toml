@@ -49,7 +49,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.autoflake]
 recursive = true
 in-place = true
-verbose = 2
 remove-all-unused-imports = true
 ignore-init-module-imports = true
 expand-star-imports = true
