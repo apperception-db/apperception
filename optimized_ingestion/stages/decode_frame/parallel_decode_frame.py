@@ -1,9 +1,10 @@
-import cv2
 import multiprocessing
 from functools import reduce
 from multiprocessing import Pool
-from tqdm import tqdm
 from typing import TYPE_CHECKING, List, Tuple
+
+import cv2
+from tqdm import tqdm
 
 from ...cache import cache
 from .decode_frame import DecodeFrame

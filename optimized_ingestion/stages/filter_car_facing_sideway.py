@@ -1,7 +1,8 @@
 import math
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+
 import numpy as np
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from .stage import Stage
 from .tracking_3d.tracking_3d import Tracking3D, Tracking3DResult

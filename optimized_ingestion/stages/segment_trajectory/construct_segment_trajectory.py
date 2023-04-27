@@ -1,26 +1,25 @@
-from apperception.database import database
-
 import datetime
 import math
+from dataclasses import dataclass
+from typing import List, Tuple
+
 import numpy as np
 import numpy.typing as npt
 import postgis
 import psycopg2
 import psycopg2.sql
-from dataclasses import dataclass
 from plpygis import Geometry
 from shapely.geometry import Point
 from shapely.ops import nearest_points
-from typing import List, Tuple
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
 from ...types import DetectionId, Float3
-from ..detection_estimation.detection_estimation import (DetectionInfo,
-                                                         trajectory_3d)
+from ..detection_estimation.detection_estimation import DetectionInfo, trajectory_3d
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
-from ..detection_estimation.utils import (get_segment_line,
-                                          project_point_onto_linestring)
+from ..detection_estimation.utils import get_segment_line, project_point_onto_linestring
 
 test_segment_query = """
 SELECT

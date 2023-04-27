@@ -1,14 +1,15 @@
-from apperception.database import database
-from apperception.utils import import_pickle
-
 import json
 import os
 import pickle
 import time
 
+from apperception.database import database
+from apperception.utils import import_pickle
 from optimized_ingestion.camera_config import camera_config
-from optimized_ingestion.utils.process_pipeline import (construct_pipeline,
-                                                        process_pipeline)
+from optimized_ingestion.utils.process_pipeline import (
+    construct_pipeline,
+    process_pipeline,
+)
 from optimized_ingestion.video import Video
 
 

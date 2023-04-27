@@ -3,9 +3,17 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Literal, Union
 
-from .utils import (OPPOSITE_DIRECTION, SAME_DIRECTION, Float2, Float3,
-                    ego_departure, meetup, time_to_exit_current_segment,
-                    time_to_exit_view, trajectory_3d)
+from .utils import (
+    OPPOSITE_DIRECTION,
+    SAME_DIRECTION,
+    Float2,
+    Float3,
+    ego_departure,
+    meetup,
+    time_to_exit_current_segment,
+    time_to_exit_view,
+    trajectory_3d,
+)
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig

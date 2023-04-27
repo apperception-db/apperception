@@ -1,7 +1,8 @@
+from typing import Dict, List
+
 import numpy as np
 import numpy.typing as npt
 from pyquaternion import Quaternion
-from typing import Dict, List
 
 from ...payload import Payload
 from ..tracking_2d.tracking_2d import Tracking2D, Tracking2DResult

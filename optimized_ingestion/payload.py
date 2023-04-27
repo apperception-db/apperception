@@ -1,6 +1,7 @@
-from bitarray import bitarray
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Dict, List
+
+from bitarray import bitarray
 
 if TYPE_CHECKING:
     from .stages.stage import Stage

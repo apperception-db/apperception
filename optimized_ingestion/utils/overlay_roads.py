@@ -1,15 +1,16 @@
-from apperception.database import Database
+from multiprocessing import Pool
+from os import environ
+from typing import TYPE_CHECKING, List, Tuple
 
 import cv2
 import numpy as np
 import numpy.typing as npt
 import postgis
 import psycopg2
-from multiprocessing import Pool
-from os import environ
 from psycopg2 import sql
 from tqdm import tqdm
-from typing import TYPE_CHECKING, List, Tuple
+
+from apperception.database import Database
 
 from ..camera_config import CameraConfig
 from ..stages.tracking_3d.from_tracking_2d_and_road import rotate

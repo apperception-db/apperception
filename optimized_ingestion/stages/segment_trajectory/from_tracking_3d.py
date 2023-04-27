@@ -1,4 +1,4 @@
-from apperception.database import database
+from typing import NamedTuple
 
 import numpy as np
 import postgis
@@ -6,7 +6,8 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-from typing import NamedTuple
+
+from apperception.database import database
 
 from ...payload import Payload
 from ...types import DetectionId
