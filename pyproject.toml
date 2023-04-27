@@ -56,7 +56,6 @@ expand-star-imports = true
 [tool.isort]
 profile = 'black'
 verbose = true
-builtin = true
 
 [tool.black]
 line-length = 100
