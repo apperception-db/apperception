@@ -29,8 +29,8 @@ pytest-cov = "^3.0.0"
 notebook = "^6.4.12"
 
 [tool.poetry.group.dev.dependencies]
-mypy = "^0.961"
 types-psycopg2 = "^2.9.16"
+mypy = "^0.961"
 pyright = "^1.1.253"
 flake8 = "^5.0.4"
 pre-commit = "^3.2.2"
@@ -52,6 +52,11 @@ in-place = true
 remove-all-unused-imports = true
 ignore-init-module-imports = true
 expand-star-imports = true
+
+[tool.isort]
+profile = 'black'
+verbose = true
+builtin = true
 
 [tool.black]
 line-length = 100
