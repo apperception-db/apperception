@@ -1,5 +1,6 @@
-from bitarray import bitarray
 from typing import TYPE_CHECKING, Dict, Optional, Tuple
+
+from bitarray import bitarray
 
 from .stage import Stage
 

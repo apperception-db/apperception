@@ -1,6 +1,7 @@
 import time
-from bitarray import bitarray
 from typing import TYPE_CHECKING, Generic, Type, TypeVar
+
+from bitarray import bitarray
 
 if TYPE_CHECKING:
     from ..payload import Payload

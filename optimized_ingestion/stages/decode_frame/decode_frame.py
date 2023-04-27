@@ -1,6 +1,7 @@
+from typing import TYPE_CHECKING
+
 import cv2
 import numpy as np
-from typing import TYPE_CHECKING
 
 from ...cache import cache
 from ..stage import Stage

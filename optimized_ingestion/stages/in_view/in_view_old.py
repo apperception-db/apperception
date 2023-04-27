@@ -1,7 +1,8 @@
-from apperception.database import database
+from typing import Dict, List, Optional, Tuple
 
 from bitarray import bitarray
-from typing import Dict, List, Optional, Tuple
+
+from apperception.database import database
 
 from ...camera_config import Float3
 from ...payload import Payload

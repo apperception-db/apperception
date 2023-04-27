@@ -10,22 +10,23 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from apperception.database import database
-
 import array
 import logging
 import math
+import os
+import time
+from typing import NamedTuple, Tuple
+
 import numpy as np
 import numpy.typing as npt
-import os
 import plpygis
 import postgis
 import psycopg2.sql as sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-import time
-from typing import NamedTuple, Tuple
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection

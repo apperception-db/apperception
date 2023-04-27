@@ -10,8 +10,8 @@ from .fetch_camera import fetch_camera
 from .fetch_camera_framenum import fetch_camera_framenum
 from .get_video_box import get_video_box
 from .get_video_roi import get_video_roi
-from .import_tables import import_tables
 from .import_pickle import import_pickle
+from .import_tables import import_tables
 from .ingest_road import ingest_road
 from .join import join
 from .overlay_bboxes import overlay_bboxes

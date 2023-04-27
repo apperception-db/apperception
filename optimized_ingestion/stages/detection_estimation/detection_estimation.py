@@ -17,10 +17,11 @@ TODO:
 
 import datetime
 import os
-import shapely.geometry
 import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, Tuple
+
+import shapely.geometry
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -28,12 +29,22 @@ sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
 from ...video import Video
-from .optimized_segment_mapping import (RoadPolygonInfo,
-                                        get_detection_polygon_mapping,
-                                        get_largest_polygon_containing_point)
+from .optimized_segment_mapping import (
+    RoadPolygonInfo,
+    get_detection_polygon_mapping,
+    get_largest_polygon_containing_point,
+)
 from .sample_plan_algorithms import Action, get_sample_action_alg
-from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
-                    get_segment_line, relative_direction_to_ego, trajectory_3d)
+from .utils import (
+    Float2,
+    Float3,
+    Float22,
+    compute_area,
+    compute_distance,
+    get_segment_line,
+    relative_direction_to_ego,
+    trajectory_3d,
+)
 
 
 @dataclass

@@ -1,11 +1,11 @@
-from apperception.database import database
-
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from postgis import MultiPoint
 from psycopg2 import sql
 from pyquaternion import Quaternion
+
+from apperception.database import database
 
 from ...payload import Payload
 from ..stage import Stage

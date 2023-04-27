@@ -1,5 +1,6 @@
-import torch
 from typing import NamedTuple
+
+import torch
 
 from ...types import DetectionId
 from ..stage import Stage

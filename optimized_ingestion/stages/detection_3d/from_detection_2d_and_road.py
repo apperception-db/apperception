@@ -1,8 +1,9 @@
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 import torch
 from pyquaternion import Quaternion
-from typing import TYPE_CHECKING
 
 from ..detection_2d.detection_2d import Detection2D
 from . import Detection3D, Metadatum
