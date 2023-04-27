@@ -19,7 +19,6 @@ python-mobilitydb = "^0.1.2"
 postgis = "^1.0.4"
 shapely = "^1.8.5.post1"
 plpygis = "^0.2.0"
-jupyterlab-vim = "^0.16.0"
 
 [tool.poetry.group.test]
 optional = true
@@ -34,16 +33,25 @@ mypy = "^0.961"
 types-psycopg2 = "^2.9.16"
 pyright = "^1.1.253"
 flake8 = "^5.0.4"
+pre-commit = "^3.2.2"
 
 jupyterlab = "^3.6.2"
+ipywidgets = "^8.0.6"
 jupyterlab-lsp = "^4.0.1"
 python-lsp-server = {extras = ["all"], version = "^1.7.1"}
+jupyterlab-vim = "^0.16.0"
 altair = "^4.2.2"
-ipywidgets = "^8.0.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.autoflake]
+recursive = true
+in-place = true
+remove-all-unused-imports = true
+ignore-init-module-imports = true
+expand-star-imports = true
 
 [tool.black]
 line-length = 100
