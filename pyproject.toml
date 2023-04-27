@@ -54,6 +54,7 @@ ignore-init-module-imports = true
 expand-star-imports = true
 
 [tool.isort]
+profile = "black"
 verbose = true
 
 [tool.black]
