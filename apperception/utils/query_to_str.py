@@ -1,4 +1,4 @@
-from pypika.dialects import QueryBuilder, Query
+from pypika.dialects import Query, QueryBuilder
 
 
 def query_to_str(query: "str | QueryBuilder | Query") -> str:

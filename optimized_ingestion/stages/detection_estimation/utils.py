@@ -1,12 +1,13 @@
-from apperception.database import database
-
 import datetime
 import logging
 import math
+from typing import TYPE_CHECKING, List, NamedTuple, Tuple
+
 import numpy as np
 import numpy.typing as npt
 import shapely.geometry
-from typing import TYPE_CHECKING, List, NamedTuple, Tuple
+
+from apperception.database import database
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig

@@ -1,8 +1,9 @@
 import datetime
-import numpy as np
-import numpy.typing as npt
 from dataclasses import dataclass
 from typing import Dict, Tuple
+
+import numpy as np
+import numpy.typing as npt
 
 from ...types import DetectionId
 from ..stage import Stage

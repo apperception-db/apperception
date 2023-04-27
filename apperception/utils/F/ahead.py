@@ -1,6 +1,12 @@
 from typing import List
 
-from apperception.predicate import BinOpNode, GenSqlVisitor, PredicateNode, TableAttrNode, call_node
+from apperception.predicate import (
+    BinOpNode,
+    GenSqlVisitor,
+    PredicateNode,
+    TableAttrNode,
+    call_node,
+)
 
 from .common import get_heading_at_time
 

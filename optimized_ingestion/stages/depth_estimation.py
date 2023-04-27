@@ -1,6 +1,7 @@
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+
 import numpy.typing as npt
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from ..monodepth import monodepth
 from .decode_frame.decode_frame import DecodeFrame

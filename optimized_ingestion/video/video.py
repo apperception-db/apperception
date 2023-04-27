@@ -1,8 +1,9 @@
 import collections
 import collections.abc
-import cv2
 from datetime import datetime
 from typing import Iterable
+
+import cv2
 
 from ..camera_config import CameraConfig
 
