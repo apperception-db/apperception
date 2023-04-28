@@ -67,7 +67,7 @@ class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
                 "id": o.id,
                 "polygon": str(o.polygon),
                 # "polygon_wkb": o.polygon.wkb_hex,
-                "segment_lines": [str(l) for l in o.segment_lines],
+                "segment_lines": [*map(str, o.segment_lines)],
                 "road_type": o.road_type,
                 "segment_headings": o.segment_headings,
                 "contains_ego": o.contains_ego,
