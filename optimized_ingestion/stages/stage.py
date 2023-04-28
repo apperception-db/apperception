@@ -1,5 +1,5 @@
 import time
-from typing import TYPE_CHECKING, Generic, Type, TypeVar
+from typing import TYPE_CHECKING, Any, Generic, Type, TypeVar
 
 from bitarray import bitarray
 
@@ -57,6 +57,10 @@ class Stage(Generic[T]):
         for k, v in reversed(d.items()):
             if k.startswith(classname):
                 return v
+        return None
+
+    @classmethod
+    def encode_json(cls, o: "Any") -> "Any":
         return None
 
 

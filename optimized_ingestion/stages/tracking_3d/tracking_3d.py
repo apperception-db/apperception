@@ -1,6 +1,6 @@
 import datetime
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -30,4 +30,19 @@ Metadatum = Dict[int, Tracking3DResult]
 
 
 class Tracking3D(Stage[Metadatum]):
-    pass
+    @classmethod
+    def encode_json(cls, o: "Any"):
+        if isinstance(o, Tracking3DResult):
+            return {
+                "frame_idx": o.frame_idx,
+                "detection_id": tuple(o.detection_id),
+                "object_id": o.object_id,
+                "point_from_camera": o.point_from_camera,
+                "point": o.point.tolist(),
+                "bbox_left": o.bbox_left,
+                "bbox_top": o.bbox_top,
+                "bbox_w": o.bbox_w,
+                "bbox_h": o.bbox_h,
+                "object_type": o.object_type,
+                "timestamp": str(o.timestamp),
+            }
