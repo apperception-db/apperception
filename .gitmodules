@@ -1,6 +1,6 @@
 [submodule "monodepth2"]
 	path = submodules/monodepth2
-	url = git@github.com:PW22-SBN-01/monodepth2.git
+	url = git@github.com:apperception-db/monodepth2.git
 	branch = pip-module
 [submodule "yolo_tracker"]
 	path = submodules/yolo_tracker
