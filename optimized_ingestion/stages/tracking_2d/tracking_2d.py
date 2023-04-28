@@ -24,4 +24,17 @@ Metadatum = Dict[int, Tracking2DResult]
 
 
 class Tracking2D(Stage[Metadatum]):
-    pass
+    @classmethod
+    def encode_json(cls, o: "Metadatum"):
+        if isinstance(o, Tracking2DResult):
+            return {
+                "frame_idx": o.frame_idx,
+                "detection_id": tuple(o.detection_id),
+                "object_id": o.object_id,
+                "bbox_left": o.bbox_left,
+                "bbox_top": o.bbox_top,
+                "bbox_w": o.bbox_w,
+                "bbox_h": o.bbox_h,
+                "object_type": o.object_type,
+                "confidence": o.confidence
+            }

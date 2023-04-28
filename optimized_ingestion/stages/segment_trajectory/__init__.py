@@ -1,10 +1,11 @@
-from typing import Dict, Tuple
+from typing import Any, Dict, Tuple
 
 from ...payload import Payload
 from ...types import DetectionId
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_estimation import DetectionEstimation
 from ..detection_estimation.detection_estimation import DetectionInfo
+from ..detection_estimation.optimized_segment_mapping import RoadPolygonInfo
 from ..detection_estimation.utils import trajectory_3d
 from ..stage import Stage
 from ..tracking_2d.strongsort import StrongSORT
@@ -44,6 +45,35 @@ class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
                 metadata[idx][oid] = t
 
         return None, {self.classname(): metadata}
+    
+    @classmethod
+    def encode_json(cls, o: "Any"):
+        if isinstance(o, SegmentPoint):
+            return {
+                "detection_id": tuple(o.detection_id),
+                "car_loc3d": o.car_loc3d,
+                "timestamp": str(o.timestamp),
+                "segment_line": None if o.segment_line is None else o.segment_line.to_ewkb(),
+                # "segment_line_wkb": o.segment_line.wkb_hex,
+                "segment_heading": o.segment_heading,
+                "road_polygon_info": o.road_polygon_info,
+                "obj_id": o.obj_id,
+                "type": o.type,
+                "next": None if o.next is None else tuple(o.next.detection_id),
+                "prev": None if o.prev is None else tuple(o.prev.detection_id),
+            }
+        if isinstance(o, RoadPolygonInfo):
+            return {
+                "id": o.id,
+                "polygon": str(o.polygon),
+                # "polygon_wkb": o.polygon.wkb_hex,
+                "segment_lines": [str(l) for l in o.segment_lines],
+                "road_type": o.road_type,
+                "segment_headings": o.segment_headings,
+                "contains_ego": o.contains_ego,
+                "ego_config": o.ego_config,
+                "fov_lines": o.fov_lines
+            }
 
 
 def construct_trajectory(source: "Payload"):
