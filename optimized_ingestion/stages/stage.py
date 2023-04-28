@@ -58,7 +58,7 @@ class Stage(Generic[T]):
             if k.startswith(classname):
                 return v
         return None
-    
+
     @classmethod
     def encode_json(cls, o: "Any") -> "Any":
         return None

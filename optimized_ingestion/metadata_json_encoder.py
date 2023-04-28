@@ -1,9 +1,11 @@
 import json
 from typing import Any, Type
+
 import numpy as np
 import torch
 
 from .stages.stage import Stage
+
 
 class MetadataJSONEncoder(json.JSONEncoder):
     def default(self, o: "Any") -> "Any":

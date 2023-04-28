@@ -45,7 +45,7 @@ class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
                 metadata[idx][oid] = t
 
         return None, {self.classname(): metadata}
-    
+
     @classmethod
     def encode_json(cls, o: "Any"):
         if isinstance(o, SegmentPoint):
