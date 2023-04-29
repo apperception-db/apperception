@@ -35,12 +35,14 @@ class StrongSORT(Tracking2D):
         device = select_device("")
         strongsort = create_tracker('strongsort', reid_weights, device, False)
         assert isinstance(strongsort, _StrongSORT)
+        assert hasattr(strongsort, 'tracker')
+        assert hasattr(strongsort.tracker, 'camera_update')
+        assert hasattr(strongsort, 'model')
+        assert hasattr(strongsort.model, 'warmup')
         curr_frame, prev_frame = None, None
         with torch.no_grad():
             # ss_benchmark: "list[list[float]]" = []
-            if hasattr(strongsort, 'model'):
-                if hasattr(strongsort.model, 'warmup'):
-                    strongsort.model.warmup()
+            strongsort.model.warmup()
 
             assert len(detections) == len(images)
             # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
@@ -57,9 +59,8 @@ class StrongSORT(Tracking2D):
                 curr_frame = im0
                 # frame_benchmark.append(time.time())
 
-                if hasattr(strongsort, 'tracker') and hasattr(strongsort.tracker, 'camera_update'):
-                    if prev_frame is not None and curr_frame is not None:
-                        strongsort.tracker.camera_update(prev_frame, curr_frame, cache=self.cache)
+                if prev_frame is not None and curr_frame is not None:
+                    strongsort.tracker.camera_update(prev_frame, curr_frame, cache=self.cache)
                 # frame_benchmark.append(time.time())
 
                 confs = det[:, 4]
@@ -68,33 +69,44 @@ class StrongSORT(Tracking2D):
                 # frame_benchmark.extend(_t)
                 # frame_benchmark.append(time.time())
 
-                if len(output_) > 0:
-                    labels: "dict[int, Tracking2DResult]" = {}
-                    for output, conf, did in zip(output_, confs, dids):
-                        obj_id = int(output[4])
-                        cls = int(output[5])
+                labels: "dict[int, Tracking2DResult]" = {}
+                for output in output_:
+                    obj_id = int(output[4])
+                    cls = int(output[5])
+                    det_idx = int(output[7])
+                    frame_idx_offset = int(output[8])
 
-                        bbox_left = output[0]
-                        bbox_top = output[1]
-                        bbox_w = output[2] - output[0]
-                        bbox_h = output[3] - output[1]
-                        labels[obj_id] = Tracking2DResult(
-                            idx,
-                            did,
-                            obj_id,
-                            bbox_left,
-                            bbox_top,
-                            bbox_w,
-                            bbox_h,
-                            names[cls],
-                            conf.item(),
-                        )
-                        if obj_id not in trajectories:
-                            trajectories[obj_id] = []
-                        trajectories[obj_id].append(labels[obj_id])
-                    metadata.append(labels)
-                else:
-                    metadata.append({})
+                    if frame_idx_offset == 0:
+                        did = dids[det_idx]
+                        conf = confs[det_idx].item()
+                    else:
+                        # We have to access detection id from previous frames.
+                        # When a track is initialized, it is not in the output of strongsort.update right away.
+                        # Instead if the track is confirmed, it will be in the output of strongsort.update in the next frame.
+                        did = detections[idx - frame_idx_offset][2][det_idx]
+                        # TODO: this is a hack.
+                        # When we need to use conf, we will have to store conf from previous frames.
+                        conf = -1.
+
+                    bbox_left = output[0]
+                    bbox_top = output[1]
+                    bbox_w = output[2] - output[0]
+                    bbox_h = output[3] - output[1]
+                    labels[obj_id] = Tracking2DResult(
+                        idx,
+                        did,
+                        obj_id,
+                        bbox_left,
+                        bbox_top,
+                        bbox_w,
+                        bbox_h,
+                        names[cls],
+                        conf,
+                    )
+                    if obj_id not in trajectories:
+                        trajectories[obj_id] = []
+                    trajectories[obj_id].append(labels[obj_id])
+                metadata.append(labels)
 
                 # frame_benchmark.append(time.time())
                 prev_frame = curr_frame
