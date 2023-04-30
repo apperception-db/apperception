@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import List
 
 import numpy as np
 import numpy.typing as npt
@@ -30,7 +30,7 @@ class FromTracking2DAndRoad(Tracking3D):
                 metadata.append({})
                 continue
 
-            trackings3d: "Dict[int, Tracking3DResult]" = {}
+            trackings3d: "dict[int, Tracking3DResult]" = {}
             [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
             rotation = frame.camera_rotation
             timestamp = frame.timestamp

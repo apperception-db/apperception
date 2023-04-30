@@ -68,10 +68,10 @@ MinPolygon AS (
     JOIN SegmentPolygon AS Polygon
         ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
         AND Polygon.location = p.location
-        AND Polygon.__RoadType__intersection__
-        AND Polygon.__RoadType__lane__
-        AND Polygon.__RoadType__lanegroup__
-        AND Polygon.__RoadType__lanesection__
+        AND (Polygon.__RoadType__intersection__
+        OR Polygon.__RoadType__lane__
+        OR Polygon.__RoadType__lanegroup__
+        OR Polygon.__RoadType__lanesection__)
     GROUP BY token
 ),
 MinPolygonId AS (
@@ -82,10 +82,10 @@ MinPolygonId AS (
         ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
         AND Polygon.location = p.location
         AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
-        AND Polygon.__RoadType__intersection__
-        AND Polygon.__RoadType__lane__
-        AND Polygon.__RoadType__lanegroup__
-        AND Polygon.__RoadType__lanesection__
+        AND (Polygon.__RoadType__intersection__
+        OR Polygon.__RoadType__lane__
+        OR Polygon.__RoadType__lanegroup__
+        OR Polygon.__RoadType__lanesection__)
     GROUP BY token
 ),
 PointPolygonSegment AS (

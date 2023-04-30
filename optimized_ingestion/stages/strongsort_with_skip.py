@@ -1,89 +1,107 @@
+import copy
 from pathlib import Path
 
+import numpy.typing as npt
 import torch
-from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
-from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
+from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT, create_tracker
 from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ..payload import Payload
 from .decode_frame.decode_frame import DecodeFrame
-from .detection_2d.detection_2d import Detection2D
+from .detection_2d.detection_2d import Detection2D, Metadatum
 from .stage import Stage
-from .tracking_2d.tracking_2d import Tracking2DResult
 
 FILE = Path(__file__).resolve()
-APPERCEPTION = FILE.parent.parent.parent.parent
+APPERCEPTION = FILE.parent.parent.parent
 WEIGHTS = APPERCEPTION / "weights"
 reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 
 
-class StrongSORT(Stage["list[tuple[int, DetectionId]]"]):
-    def __init__(self, cache: "bool" = True) -> None:
-        super().__init__()
-        self.cache = cache
-        self.skip
-        # self.ss_benchmarks: "list[list[list[float]]]" = []
+class StrongSORTWithSkip(Stage["list[ dict[str, list[int]]]"]):
+    def __init__(self, skip: int = 35):
+        self.skip = skip
 
     def _run(self, payload: "Payload"):
-        for start in range(len(payload.video)):
-            detections = Detection2D.get(payload)
-            assert detections is not None
+        detections = Detection2D.get(payload)
+        assert detections is not None
 
-            images = DecodeFrame.get(payload)
-            assert images is not None
-            metadata: "list[dict[int, Tracking2DResult]]" = []
-            device = select_device("")
-            strongsort = create_tracker('strongsort', reid_weights, device, False)
-            assert isinstance(strongsort, _StrongSORT)
-            curr_frame, prev_frame = None, None
-            with torch.no_grad():
-                if hasattr(strongsort, 'model'):
-                    if hasattr(strongsort.model, 'warmup'):
-                        strongsort.model.warmup()
+        images = DecodeFrame.get(payload)
+        assert images is not None
 
-                assert len(detections) == len(images)
-                for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
-                    if not payload.keep[idx] or len(det) == 0:
-                        metadata.append({})
-                        strongsort.increment_ages()
-                        prev_frame = im0s.copy()
-                        continue
+        device = select_device("")
+        strongsort = create_tracker('strongsort', reid_weights, device, False)
+        assert isinstance(strongsort, StrongSORT)
+        assert hasattr(strongsort, 'tracker')
+        assert hasattr(strongsort.tracker, 'camera_update')
 
-                    im0 = im0s.copy()
-                    curr_frame = im0
+        trackings: "list[list[ dict[str, list[int]]]]" = []
+        prev_frame = None
+        with torch.no_grad():
+            if hasattr(strongsort, 'model') and hasattr(strongsort.model, 'warmup'):
+                strongsort.model.warmup()
 
-                    if hasattr(strongsort, 'tracker') and hasattr(strongsort.tracker, 'camera_update'):
-                        if prev_frame is not None and curr_frame is not None:
-                            strongsort.tracker.camera_update(prev_frame, curr_frame, cache=self.cache)
+            assert len(detections) == len(images)
+            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
+                # print(idx)
+                _trackings: "list[dict[str, list[int]]]" = []
+                prev_frame = process_one_frame(strongsort, detections, _trackings, idx, Metadatum(det, names, dids), im0s, prev_frame)
+                if idx % 10 == 0:
+                    _strongsort = copy.deepcopy(strongsort)
+                    _prev_frame = None
+                    if prev_frame is not None:
+                        _prev_frame = prev_frame.copy()
+                    next_idx = idx + 1
+                    for _idx, (_det, _names, _dids), _im0s in zip(
+                        range(next_idx, next_idx + self.skip),
+                        detections[next_idx:][:self.skip],
+                        images[next_idx:][:self.skip]
+                    ):
+                        # print("  ", _idx)
+                        __strongsort = copy.deepcopy(_strongsort)
+                        process_one_frame(__strongsort, detections, _trackings, _idx, Metadatum(_det, _names, _dids), _im0s, _prev_frame)
 
-                    confs = det[:, 4]
-                    output_ = strongsort.update(det.cpu(), im0)
+                        _curr_frame = _im0s.copy()
+                        if _prev_frame is not None and _curr_frame is not None:
+                            _strongsort.tracker.camera_update(_prev_frame, _curr_frame, cache=True)
+                        _strongsort.increment_ages()
 
-                    if len(output_) > 0:
-                        labels: "dict[int, Tracking2DResult]" = {}
-                        for output, conf, did in zip(output_, confs, dids):
-                            obj_id = int(output[4])
-                            cls = int(output[5])
+                        _prev_frame = _curr_frame
 
-                            bbox_left = output[0]
-                            bbox_top = output[1]
-                            bbox_w = output[2] - output[0]
-                            bbox_h = output[3] - output[1]
-                            labels[obj_id] = Tracking2DResult(
-                                idx,
-                                did,
-                                obj_id,
-                                bbox_left,
-                                bbox_top,
-                                bbox_w,
-                                bbox_h,
-                                names[cls],
-                                conf.item(),
-                            )
-                        metadata.append(labels)
-                    else:
-                        metadata.append({})
+                trackings.append(_trackings)
 
-                    prev_frame = curr_frame
+        return None, {self.classname(): trackings}
 
-        return None, {self.classname(): metadata}
+
+def process_one_frame(
+    ss: "StrongSORT",
+    detections: "list[Metadatum]",
+    _trackings: "list[dict[str, list[int]]]",
+    idx: int,
+    detection: "Metadatum",
+    im0s: "npt.NDArray",
+    prev_frame: "npt.NDArray | None",
+) -> "npt.NDArray":
+    det, _, dids = detection
+    im0 = im0s.copy()
+    curr_frame = im0
+
+    if prev_frame is not None and curr_frame is not None:
+        ss.tracker.camera_update(prev_frame, curr_frame, cache=True)
+
+    output_ = ss.update(det.cpu(), im0)
+
+    t2ds: "dict[str, list[int]]" = {}
+    for output in output_:
+        det_idx = int(output[7])
+        frame_idx_offset = int(output[8])
+        if frame_idx_offset == 0:
+            did = dids[det_idx]
+        else:
+            did = detections[idx - frame_idx_offset][2][det_idx]
+        assert repr(did) not in t2ds, (did, t2ds, output_)
+        t2ds[repr(did)] = output.tolist()
+
+    _trackings.append(t2ds)
+    prev_frame = curr_frame
+
+    return prev_frame

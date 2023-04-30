@@ -6,6 +6,7 @@ from ..detection_2d.detection_2d import Detection2D
 from ..detection_estimation import DetectionEstimation
 from ..detection_estimation.detection_estimation import DetectionInfo
 from ..detection_estimation.optimized_segment_mapping import RoadPolygonInfo
+from ..detection_estimation.segment_mapping import RoadPolygonInfo as RoadPolygonInfo_
 from ..detection_estimation.utils import trajectory_3d
 from ..stage import Stage
 from ..tracking_2d.strongsort import StrongSORT
@@ -62,7 +63,7 @@ class SegmentTrajectory(Stage[SegmentTrajectoryMetadatum]):
                 "next": None if o.next is None else tuple(o.next.detection_id),
                 "prev": None if o.prev is None else tuple(o.prev.detection_id),
             }
-        if isinstance(o, RoadPolygonInfo):
+        if isinstance(o, (RoadPolygonInfo, RoadPolygonInfo_)):
             return {
                 "id": o.id,
                 "polygon": str(o.polygon),
