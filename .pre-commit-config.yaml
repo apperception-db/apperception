@@ -5,7 +5,6 @@ repos:
         name: notebook-clear-output
         files: \.ipynb$
         exclude: benchmarks\/.*\.ipynb$
-        stages: [pre-commit]
         language: system
         entry: jupyter nbconvert --clear-output --inplace
   - repo: https://github.com/PyCQA/autoflake

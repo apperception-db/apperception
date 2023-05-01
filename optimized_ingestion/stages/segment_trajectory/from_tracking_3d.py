@@ -1,3 +1,4 @@
+import datetime
 from typing import NamedTuple
 
 import numpy as np
@@ -6,14 +7,17 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
+import torch
 
 from apperception.database import database
 
 from ...payload import Payload
 from ...types import DetectionId
+from ..detection_3d import Detection3D
+from ..detection_3d import Metadatum as Detection3DMetadatum
 from ..detection_estimation.segment_mapping import RoadPolygonInfo
-from ..tracking_3d.tracking_3d import Metadatum as Tracking3DMetadatum
-from ..tracking_3d.tracking_3d import Tracking3D, Tracking3DResult
+from ..tracking.tracking import Metadatum as TrackingMetadatum
+from ..tracking.tracking import Tracking
 from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
@@ -29,22 +33,48 @@ class FromTracking3D(SegmentTrajectory):
 
     def _run(self, payload: "Payload"):
 
-        t3d: "list[Tracking3DMetadatum] | None" = Tracking3D.get(payload)
-        assert t3d is not None
+        d3d: "list[Detection3DMetadatum] | None" = Detection3D.get(payload)
+        assert d3d is not None
+
+        tracking: "list[TrackingMetadatum] | None" = Tracking.get(payload)
+        assert tracking is not None
+
+        class_map: "list[str]" = d3d[0].class_map
+
+        # Index detections using their detection id
+        detection_map: "dict[DetectionId, tuple[int, int]]" = dict()
+        for fidx, (_, names, dids) in enumerate(d3d):
+            for oidx, did in enumerate(dids):
+                assert did not in detection_map
+                detection_map[did] = (fidx, oidx)
+
+        object_map: "dict[int, dict[DetectionId, torch.Tensor]]" = dict()
+        for fidx, frame in enumerate(tracking):
+            for tracking_result in frame:
+                did = tracking_result.detection_id
+                oid = tracking_result.object_id
+                if oid not in object_map:
+                    object_map[oid] = {}
+                if did in object_map[oid]:
+                    continue
+                fidx, oidx = detection_map[did]
+                detections, *_ = d3d[fidx]
+                object_map[oid][did] = detections[oidx]
 
         # Index object trajectories using their object id
-        object_map: "dict[int, list[Tracking3DResult]]" = dict()
-        for frame in t3d:
-            for oid, t in frame.items():
-                if oid not in object_map:
-                    object_map[oid] = []
+        # object_map: "dict[int, list[Tracking3DResult]]" = dict()
+        # for frame in t3d:
+        #     for oid, t in frame.items():
+        #         if oid not in object_map:
+        #             object_map[oid] = []
 
-                object_map[oid].append(t)
+        #         object_map[oid].append(t)
 
         # Create a list of detection points with each of its corresponding direction
-        points: "list[tuple[Tracking3DResult, tuple[float, float] | None]]" = []
-        for traj in object_map.values():
-            traj.sort(key=lambda t: t.timestamp)
+        points: "list[tuple[tuple[DetectionId, torch.Tensor], tuple[float, float] | None]]" = []
+        for traj_dict in object_map.values():
+            traj = [*traj_dict.items()]
+            traj.sort(key=lambda t: t[0].frame_idx)
 
             if len(traj) <= 1:
                 points.extend((t, None) for t in traj)
@@ -81,68 +111,39 @@ class FromTracking3D(SegmentTrajectory):
                 segment_map[did] = segment
 
         object_id_to_segmnt_map: "dict[int, list[SegmentPoint]]" = {}
-        output: "list[SegmentTrajectoryMetadatum]" = [dict() for _ in t3d]
+        output: "list[SegmentTrajectoryMetadatum]" = [dict() for _ in range(len(payload.video))]
         for oid, obj in object_map.items():
             segment_trajectory: "list[SegmentPoint]" = []
             object_id_to_segmnt_map[oid] = segment_trajectory
 
-            for det in obj:
-                did = det.detection_id
+            for did, det in obj.items():
+                # did = det.detection_id
+                timestamp = payload.video.interpolated_frames[did.frame_idx].timestamp
+                args = did, timestamp, det, oid, class_map
                 if did in segment_map:
                     # Detection that can be mapped to a segment
                     segment = segment_map[did]
-                    _fid, _oid, polygonid, polygon, segmentid, segmenttypes, segmentline, segmentheading = segment
+                    _fid, _oid, polygonid, polygon, segmentid, types, line, heading = segment
                     assert did.frame_idx == _fid
                     assert did.obj_order == _oid
 
-                    shapely_polygon = shapely.wkb.loads(polygon.to_ewkb(), hex=True)
-                    assert isinstance(shapely_polygon, shapely.geometry.Polygon)
+                    polygon = shapely.wkb.loads(polygon.to_ewkb(), hex=True)
+                    assert isinstance(polygon, shapely.geometry.Polygon)
 
-                    segmenttype = next((t for t in segmenttypes if t in USEFUL_TYPES), segmenttypes[-1])
+                    type_ = next((t for t in types if t in USEFUL_TYPES), types[-1])
 
-                    segment_point = SegmentPoint(
-                        did,
-                        tuple(det.point.tolist()),
-                        det.timestamp,
-                        segmenttype,
-                        segmentline,
-                        segmentheading,
-                        # A place-holder for Polygon that only contain polygon id and polygon
-                        RoadPolygonInfo(
-                            polygonid,
-                            shapely_polygon,
-                            [],
-                            None,
-                            [],
-                            None,
-                            None,
-                            None
-                        ),
-                        oid,
-                        det.object_type,
-                        None,
-                        None,
-                    )
+                    segment_point = valid_segment_point(*args, type_, line, heading, polygonid, polygon)
                 else:
                     # Detection that cannot be mapped to any segment
-                    segment_point = SegmentPoint(
-                        did,
-                        tuple(det.point.tolist()),
-                        det.timestamp,
-                        None,
-                        None,
-                        None,
-                        None,
-                        oid,
-                        det.object_type,
-                        None,
-                        None
-                    )
+                    segment_point = invalid_segment_point(*args)
 
                 segment_trajectory.append(segment_point)
 
                 metadatum = output[did.frame_idx]
-                assert oid not in metadatum
+                if oid in metadatum:
+                    assert metadatum[oid].detection_id == segment_point.detection_id
+                    if metadatum[oid].timestamp > segment_point.timestamp:
+                        metadatum[oid] = segment_point
                 metadatum[oid] = segment_point
 
             for prv, nxt in zip(segment_trajectory[:-1], segment_trajectory[1:]):
@@ -152,10 +153,72 @@ class FromTracking3D(SegmentTrajectory):
         return None, {self.classname(): output}
 
 
-def _get_direction_2d(p1: "Tracking3DResult", p2: "Tracking3DResult") -> "tuple[float, float]":
-    diff = (p2.point - p1.point)[:2]
+def invalid_segment_point(
+    did: "DetectionId",
+    timestamp: "datetime.datetime",
+    det: "torch.Tensor",
+    oid: "int",
+    class_map: "list[str]",
+):
+    return SegmentPoint(
+        did,
+        tuple(((det[6:9] + det[9:12]) / 2).tolist()),
+        timestamp,
+        None,
+        None,
+        None,
+        None,
+        oid,
+        class_map[int(det[5])],
+        None,
+        None
+    )
+
+
+def valid_segment_point(
+    did: "DetectionId",
+    timestamp: "datetime.datetime",
+    det: "torch.Tensor",
+    oid: "int",
+    class_map: "list[str]",
+    segmenttype: "str",
+    segmentline: "postgis.LineString",
+    segmentheading: "float",
+    polygonid: "str",
+    shapely_polygon: "shapely.geometry.Polygon",
+):
+    return SegmentPoint(
+        did,
+        tuple(((det[6:9] + det[9:12]) / 2).tolist()),
+        timestamp,
+        segmenttype,
+        segmentline,
+        segmentheading,
+        # A place-holder for Polygon that only contain polygon id and polygon
+        RoadPolygonInfo(
+            polygonid,
+            shapely_polygon,
+            [],
+            None,
+            [],
+            None,
+            None,
+            None
+        ),
+        oid,
+        class_map[int(det[5])],
+        None,
+        None,
+    )
+
+
+# def _get_direction_2d(p1: "Tracking3DResult", p2: "Tracking3DResult") -> "tuple[float, float]":
+def _get_direction_2d(p1: "tuple[DetectionId, torch.Tensor]", p2: "tuple[DetectionId, torch.Tensor]") -> "tuple[float, float]":
+    _p1 = (p1[1][6:9] + p1[1][9:12]) / 2
+    _p2 = (p2[1][6:9] + p2[1][9:12]) / 2
+    diff = (_p2 - _p1)[:2]
     udiff = diff / np.linalg.norm(diff)
-    return tuple(udiff)
+    return tuple(udiff.numpy())
 
 
 class SegmentMapping(NamedTuple):
@@ -172,7 +235,8 @@ class SegmentMapping(NamedTuple):
 
 
 def map_points_and_directions_to_segment(
-    annotations: "list[tuple[Tracking3DResult, tuple[float, float] | None]]",
+    annotations: "list[tuple[tuple[DetectionId, torch.Tensor], tuple[float, float] | None]]",
+    # annotations: "list[tuple[Tracking3DResult, tuple[float, float] | None]]",
     location: "str",
     videofile: 'str',
     explains: 'list[dict]',
@@ -180,10 +244,11 @@ def map_points_and_directions_to_segment(
     if len(annotations) == 0:
         return []
 
-    frame_indices = [a.detection_id.frame_idx for a, _ in annotations]
-    object_indices = [a.detection_id.obj_order for a, _ in annotations]
-    txs = [a.point[0] for a, _ in annotations]
-    tys = [a.point[1] for a, _ in annotations]
+    frame_indices = [a[0].frame_idx for a, _ in annotations]
+    object_indices = [a[0].obj_order for a, _ in annotations]
+    points = [(a[1][6:9] + a[1][9:12]) / 2 for a, _ in annotations]
+    txs = [float(p[0].item()) for p in points]
+    tys = [float(p[1].item()) for p in points]
     dxs = [d and d[0] for _, d in annotations]
     dys = [d and d[1] for _, d in annotations]
 
@@ -210,10 +275,10 @@ def map_points_and_directions_to_segment(
         SELECT *
         FROM SegmentPolygon
         WHERE location = {location}
-        AND SegmentPolygon.__RoadType__intersection__
-        AND SegmentPolygon.__RoadType__lane__
-        AND SegmentPolygon.__RoadType__lanegroup__
-        AND SegmentPolygon.__RoadType__lanesection__
+        AND (SegmentPolygon.__RoadType__intersection__
+        OR SegmentPolygon.__RoadType__lane__
+        OR SegmentPolygon.__RoadType__lanegroup__
+        OR SegmentPolygon.__RoadType__lanesection__)
     ),
     _SegmentWithDirection AS (
         SELECT
