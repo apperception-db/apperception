@@ -19,8 +19,7 @@ class DecodeFrame(Stage[np.ndarray]):
 
         video = cv2.VideoCapture(payload.video.videofile)
         n_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        # for _ in tqdm(range(n_frames)):
-        for _ in range(n_frames):
+        for _ in DecodeFrame.tqdm(range(n_frames)):
             if not video.isOpened():
                 break
             frame = video.read()[1]

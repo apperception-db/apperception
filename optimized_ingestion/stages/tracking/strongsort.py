@@ -43,8 +43,7 @@ class StrongSORT(Tracking):
             strongsort.model.warmup()
 
             assert len(detections) == len(images)
-            # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
+            for idx, ((det, names, dids), im0s) in enumerate(StrongSORT.tqdm(zip(detections, images))):
                 im0 = im0s.copy()
                 curr_frame = im0
 
