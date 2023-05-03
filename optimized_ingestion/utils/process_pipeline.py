@@ -29,9 +29,9 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=YoloDetection())
 
     pipeline.add_filter(filter=FromDetection2DAndRoad())
-    pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
-    pipeline.add_filter(filter=From2DAndRoad_3d())
-    pipeline.add_filter(filter=FromTracking3D())
+    # pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
+    # pipeline.add_filter(filter=From2DAndRoad_3d())
+    # pipeline.add_filter(filter=FromTracking3D())
 
     return pipeline
 

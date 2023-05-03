@@ -29,6 +29,8 @@ def preprocess(world, data_dir, video_names=[], base=True, insert_traj=True, ben
     for name, video in videos.items():
         if video['location'] != 'boston-seaport':
             continue
+        if 'FRONT' not in name:
+            continue
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(
             os.path.join(data_dir, "videos", video["filename"]),
