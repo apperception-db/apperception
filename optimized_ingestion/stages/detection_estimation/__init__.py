@@ -20,7 +20,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -96,16 +96,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 action_type_counts[next_action_type] = 1
             else:
                 action_type_counts[next_action_type] += 1
-            with open("./outputs/action_type_count.json", "r") as f:
-                total_action_type_count_content = f.read()
-            total_action_type_count_json = json.loads(total_action_type_count_content)
-            for action_type in action_type_counts:
-                if action_type in total_action_type_count_json:
-                    total_action_type_count_json[action_type] += 1
-                else:
-                    total_action_type_count_json[action_type] = 0
-            with open("./outputs/action_type_count.json", "w") as f:
-                json.dump(total_action_type_count_json)
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
             metadata.append(next_sample_plan)
 
@@ -123,7 +113,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         # logger.info(f"total_detection_time {total_detection_time}")
         # logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
         # logger.info(f"total_ego_query_time {total_ego_query_time}")
-        # logger.info(f"total_detection_query_time {total_detection_query_time}")
+        logger.info(f"total_detection_query_time {total_detection_query_time}")
 
         for f in skipped_frame_num:
             keep[f] = 0
