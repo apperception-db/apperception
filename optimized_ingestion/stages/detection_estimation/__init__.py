@@ -23,7 +23,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -47,7 +47,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
-        logger.info("ego_speed: ", ego_speed)
+        logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
@@ -101,6 +101,11 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         total_run_time = time.time() - start_time
         logger.info(f"total_run_time {total_run_time}")
         logger.info(f"total_detection_time {total_detection_time}")
+        with open("./outputs/total_detection_time_mini_index.txt", "r") as f:
+            all_detection_time = float(f.read().strip())
+            all_detection_time += total_detection_time
+        with open("./outputs/total_detection_time_mini_index.txt", "w") as f:
+            f.write(str(all_detection_time))
         logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
 
         for f in skipped_frame_num:
@@ -145,9 +150,9 @@ def generate_sample_plan_once(
     next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
     if next_sample_frame_info:
         next_sample_frame_name, next_sample_frame_num, _ = next_sample_frame_info
-        logger.info(f"next frame name {next_sample_frame_name}")
-        logger.info(f"next frame num {next_sample_frame_num}")
-        logger.info(f"Action {next_sample_plan.action}")
+        # logger.info(f"next frame name {next_sample_frame_name}")
+        # logger.info(f"next frame num {next_sample_frame_num}")
+        # logger.info(f"Action {next_sample_plan.action}")
         # TODO: should not read next frame -> get the next frame from frames.pickle
         # next_frame = cv2.imread(test_img_base_dir+next_sample_frame_name)
         # cv2.imshow("next_frame", next_frame)

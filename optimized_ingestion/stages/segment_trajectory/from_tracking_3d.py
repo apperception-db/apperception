@@ -1,5 +1,6 @@
 import datetime
 from typing import NamedTuple
+import logging
 
 import numpy as np
 import postgis
@@ -22,6 +23,7 @@ from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
+logger = logging.getLogger(__name__)
 
 printed = False
 
@@ -50,7 +52,7 @@ class FromTracking3D(SegmentTrajectory):
 
         object_map: "dict[int, dict[DetectionId, torch.Tensor]]" = dict()
         for fidx, frame in enumerate(tracking):
-            for tracking_result in frame:
+            for tracking_result in frame.values():
                 did = tracking_result.detection_id
                 oid = tracking_result.object_id
                 if oid not in object_map:
