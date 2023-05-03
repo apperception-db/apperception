@@ -96,7 +96,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 action_type_counts[next_action_type] = 1
             else:
                 action_type_counts[next_action_type] += 1
-            next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+            # next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
             metadata.append(next_sample_plan)
 
         # TODO: ignore the last frame ->
@@ -111,9 +111,14 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         total_run_time = time.time() - start_time
         # logger.info(f"total_run_time {total_run_time}")
         # logger.info(f"total_detection_time {total_detection_time}")
+        with open("./outputs/total_detection_time_mini_old.txt", "r") as f:
+            all_detection_time = float(f.read().strip())
+            all_detection_time += total_detection_time
+        with open("./outputs/total_detection_time_mini_old.txt", "w") as f:
+            f.write(str(all_detection_time))
         # logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
         # logger.info(f"total_ego_query_time {total_ego_query_time}")
-        logger.info(f"total_detection_query_time {total_detection_query_time}")
+        # logger.info(f"total_detection_query_time {total_detection_query_time}")
 
         for f in skipped_frame_num:
             keep[f] = 0

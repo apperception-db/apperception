@@ -12,7 +12,7 @@ from optimized_ingestion.utils.process_pipeline import (construct_pipeline,
 from optimized_ingestion.video import Video
 
 
-def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, benchmark_path=None, skip_ratio=0):
+def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, insert_traj=True, benchmark_path=None, skip_ratio=0):
     pipeline = construct_pipeline(world, base=base, skip_ratio=skip_ratio)
 
     video_path = os.path.join(data_dir, "videos/")
@@ -40,7 +40,7 @@ def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, benchmark
             video["start"],
         )
         # try:
-        process_pipeline(name, frames, pipeline, base)
+        process_pipeline(name, frames, pipeline, base, insert_traj)
         # except BaseException:
         #     print(f"error video: {name} with skip ratio {skip_ratio}")
         num_video += 1

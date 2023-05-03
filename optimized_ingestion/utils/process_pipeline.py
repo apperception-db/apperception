@@ -27,9 +27,9 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=YoloDetection())
 
     pipeline.add_filter(filter=FromDetection2DAndRoad())
-    pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
-    pipeline.add_filter(filter=From2DAndRoad_3d())
-    pipeline.add_filter(filter=FromTracking3D())
+    # pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
+    # pipeline.add_filter(filter=From2DAndRoad_3d())
+    # pipeline.add_filter(filter=FromTracking3D())
 
     return pipeline
 
@@ -173,19 +173,20 @@ def insert_trajectory(
     database._commit()
 
 
-def process_pipeline(video_name, frames, pipeline, base):
+def process_pipeline(video_name, frames, pipeline, base, insert_traj):
     output = pipeline.run(Payload(frames)).__dict__
-    metadata = output['metadata']
-    ego_meta = frames.interpolated_frames
-    sortmeta = metadata['Tracking3D.FromTracking2DAndRoad']
-    segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
-    tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, base)
-    start = time.time()
-    for obj_id, track in tracks.items():
-        trajectory = format_trajectory(video_name, obj_id, track, base)
+    if insert_traj:
+        metadata = output['metadata']
+        ego_meta = frames.interpolated_frames
+        sortmeta = metadata['Tracking3D.FromTracking2DAndRoad']
+        segment_trajectory_mapping = metadata['SegmentTrajectory.FromTracking3D']
+        tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, base)
+        start = time.time()
+        for obj_id, track in tracks.items():
+            trajectory = format_trajectory(video_name, obj_id, track, base)
 
-        if trajectory:
-            # print("Inserting trajectory")
-            insert_trajectory(database, *trajectory)
-    trajectory_ingestion_time = time.time() - start
-    print("Time taken to insert trajectories:", trajectory_ingestion_time)
+            if trajectory:
+                # print("Inserting trajectory")
+                insert_trajectory(database, *trajectory)
+        trajectory_ingestion_time = time.time() - start
+        print("Time taken to insert trajectories:", trajectory_ingestion_time)
