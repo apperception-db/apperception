@@ -29,9 +29,9 @@ def construct_base_pipeline():
     pipeline.add_filter(filter=YoloDetection())
 
     pipeline.add_filter(filter=FromDetection2DAndRoad())
-    # pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
-    # pipeline.add_filter(filter=From2DAndRoad_3d())
-    # pipeline.add_filter(filter=FromTracking3D())
+    pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
+    pipeline.add_filter(filter=From2DAndRoad_3d())
+    pipeline.add_filter(filter=FromTracking3D())
 
     return pipeline
 
@@ -53,12 +53,8 @@ def associate_detection_info(tracking_result, detection_info_meta):
 
 
 def associate_segment_mapping(tracking_result, segment_mapping_meta):
-    try:
-        return segment_mapping_meta[tracking_result.frame_idx][tracking_result.object_id]
-    except:
-        print(f"frame idx {tracking_result.frame_idx}")
-        print(segment_mapping_meta[tracking_result.frame_idx].keys())
-        raise ValueError
+    return segment_mapping_meta[tracking_result.frame_idx].get(tracking_result.object_id)
+
 
 
 def get_tracks(sortmeta, ego_meta, segment_mapping_meta, base):
@@ -105,7 +101,7 @@ def format_trajectory(video_name, obj_id, track, base):
             object_type = tracking_result_3d.object_type
             timestamps.append(ego_info.timestamp)
             pairs.append(tracking_result_3d.point)
-            if (segment_mapping.segment_type == 'intersection'):
+            if not segment_mapping or (segment_mapping.segment_type == 'intersection'):
                 itemHeadings.append(None)
             else:
                 itemHeadings.append(segment_mapping.segment_heading)
