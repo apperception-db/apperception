@@ -56,7 +56,6 @@ def associate_segment_mapping(tracking_result, segment_mapping_meta):
     return segment_mapping_meta[tracking_result.frame_idx].get(tracking_result.object_id)
 
 
-
 def get_tracks(sortmeta, ego_meta, segment_mapping_meta, base):
     trajectories = {}
     for i in range(len(sortmeta)):

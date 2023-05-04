@@ -1,6 +1,6 @@
 import datetime
-from typing import NamedTuple
 import logging
+from typing import NamedTuple
 
 import numpy as np
 import postgis
