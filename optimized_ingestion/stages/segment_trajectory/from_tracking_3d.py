@@ -1,6 +1,5 @@
 import datetime
 from typing import NamedTuple
-import logging
 
 import numpy as np
 import postgis
@@ -23,7 +22,6 @@ from . import SegmentTrajectory, SegmentTrajectoryMetadatum
 from .construct_segment_trajectory import SegmentPoint
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
-logger = logging.getLogger(__name__)
 
 printed = False
 
