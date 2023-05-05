@@ -1,5 +1,3 @@
-import sys
-
 import torch
 
 if torch.cuda.is_available():
@@ -9,7 +7,3 @@ if torch.cuda.is_available():
         print(f" {'>' if current_device == i else ' '} {i}: {torch.cuda.get_device_name(i)}")
 else:
     print("CUDA is not available.")
-
-
-if "./submodules" not in sys.path:
-    sys.path.append("./submodules")

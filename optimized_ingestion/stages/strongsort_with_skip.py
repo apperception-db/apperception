@@ -3,9 +3,9 @@ from pathlib import Path
 
 import numpy.typing as npt
 import torch
-from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT, create_tracker
-from yolo_tracker.yolov5.utils.torch_utils import select_device
 
+from ..modules.yolo_tracker.trackers.multi_tracker_zoo import StrongSORT, create_tracker
+from ..modules.yolo_tracker.yolov5.utils.torch_utils import select_device
 from ..payload import Payload
 from .decode_frame.decode_frame import DecodeFrame
 from .detection_2d.detection_2d import Detection2D, Metadatum
@@ -17,7 +17,7 @@ WEIGHTS = APPERCEPTION / "weights"
 reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 
 
-class StrongSORTWithSkip(Stage["list[ dict[str, list[int]]]"]):
+class StrongSORTWithSkip(Stage["list[dict[str, list[int]]]"]):
     def __init__(self, skip: int = 35):
         self.skip = skip
 
@@ -34,7 +34,7 @@ class StrongSORTWithSkip(Stage["list[ dict[str, list[int]]]"]):
         assert hasattr(strongsort, 'tracker')
         assert hasattr(strongsort.tracker, 'camera_update')
 
-        trackings: "list[list[ dict[str, list[int]]]]" = []
+        trackings: "list[list[dict[str, list[int]]]]" = []
         prev_frame = None
         with torch.no_grad():
             if hasattr(strongsort, 'model') and hasattr(strongsort.model, 'warmup'):
@@ -58,7 +58,11 @@ class StrongSORTWithSkip(Stage["list[ dict[str, list[int]]]"]):
                     ):
                         # print("  ", _idx)
                         __strongsort = copy.deepcopy(_strongsort)
+                        __trackings: "list[dict[str, list[int]]]" = []
+                        for __idx in range(5):
+                            process_one_frame(__strongsort, detections, __trackings, _idx + __idx, Metadatum())
                         process_one_frame(__strongsort, detections, _trackings, _idx, Metadatum(_det, _names, _dids), _im0s, _prev_frame)
+                        # TODO: process nother 5 frames
 
                         _curr_frame = _im0s.copy()
                         if _prev_frame is not None and _curr_frame is not None:

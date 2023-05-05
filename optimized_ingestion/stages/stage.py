@@ -6,6 +6,8 @@ from bitarray import bitarray
 
 def is_notebook() -> bool:
     try:
+        # if TYPE_CHECKING:
+        #     return False
         shell = get_ipython().__class__.__name__
         if shell == 'ZMQInteractiveShell':
             # Jupyter notebook or qtconsole

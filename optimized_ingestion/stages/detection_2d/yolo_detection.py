@@ -13,22 +13,21 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-from yolo_tracker.yolov5.utils.augmentations import letterbox
-from yolo_tracker.yolov5.utils.general import (
+
+from ...cache import cache
+from ...modules.yolo_tracker.yolov5.utils.augmentations import letterbox
+from ...modules.yolo_tracker.yolov5.utils.general import (
     check_img_size,
     non_max_suppression,
     scale_boxes,
 )
-from yolo_tracker.yolov5.utils.torch_utils import select_device
-
-from ...cache import cache
+from ...modules.yolo_tracker.yolov5.utils.torch_utils import select_device
 from ...stages.decode_frame.decode_frame import DecodeFrame
 from ...types import DetectionId
 from .detection_2d import Detection2D, Metadatum
 
 if TYPE_CHECKING:
-    from yolo_tracker.yolov5.models.common import DetectMultiBackend
-
+    from ...modules.yolo_tracker.yolov5.models.common import DetectMultiBackend
     from ...payload import Payload
 
 
