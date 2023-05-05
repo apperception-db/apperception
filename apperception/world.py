@@ -6,8 +6,6 @@ import uuid
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from pypika import Table
-from pypika.dialects import SnowflakeQuery
 
 from apperception.data_types import Camera, FetchCameraTuple
 from apperception.database import database
@@ -256,7 +254,7 @@ class World:
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
-        query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
+        query = "SELECT * FROM item_general_trajectory"
 
         # collect all the nodes til the root
         while curr:
