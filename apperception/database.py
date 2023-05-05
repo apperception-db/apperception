@@ -318,19 +318,6 @@ class Database:
     def timestamp_to_framenum(self, scene_name: str, timestamps: List[str]):
         return timestamp_to_framenum(self.connection, scene_name, timestamps)
 
-    def get_len(self, query: "psql.Composable | str"):
-        """
-        Execute sql command rapidly
-        """
-
-        # hack
-        q = psql.SQL(
-            "SELECT ratio, ST_X(origin), ST_Y(origin), "
-            "ST_Z(origin), fov, skev_factor "
-            "FROM ({query}) AS final"
-        ).format(query=query)
-        return self.execute(q)
-
     def insert_bbox_traj(self, camera: "Camera", annotation):
         tracking_results = recognize(camera.configs, annotation)
         add_recognized_objects(self.connection, tracking_results, camera.id)
@@ -401,40 +388,6 @@ class Database:
         print("get_id_time_camId_filename", _query)
         return self.execute(_query)
 
-    def get_traj_attr(self, query: "psql.Composable | str", attr: str):
-        _query = psql.SQL("SELECT {attr} FROM ({query}) as final").format(attr=attr, query=query)
-        print("get_traj_attr:", attr, _query.as_string(self.cursor))
-        return self.execute(_query)
-
-    def get_bbox_geo(self, query: "psql.Composable | str"):
-        return self.execute(
-            psql.SQL(
-                "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
-                "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox) "
-                "FROM ({query})"
-            ).format(query=create_sql(query))
-        )
-
-    def get_time(self, query: "psql.Composable | str"):
-        return self.execute(
-            psql.SQL("SELECT Tmin(trajBbox) FROM ({query})").format(query=create_sql(query))
-        )
-
-    def get_distance(self, query: "psql.Composable | str", start: str, end: str):
-        return self.execute(
-            psql.SQL(
-                "SELECT cumulativeLength(atPeriodSet(trajCentroids, {[{start}, {end})})) "
-                "FROM ({query})"
-            ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end))
-        )
-
-    def get_speed(self, query, start, end):
-        return self.execute(
-            psql.SQL(
-                "SELECT speed(atPeriodSet(trajCentroids, {[{start}, {end})})) " "FROM ({query})"
-            ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end))
-        )
-
     def get_video(self, query, cams, boxed):
         query = psql.SQL(
             "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
@@ -449,6 +402,53 @@ class Database:
 
     def sql(self, query: str) -> pd.DataFrame:
         return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
+
+    # def get_len(self, query: "psql.Composable | str"):
+    #     """
+    #     Execute sql command rapidly
+    #     """
+
+    #     # hack
+    #     q = psql.SQL(
+    #         "SELECT ratio, ST_X(origin), ST_Y(origin), "
+    #         "ST_Z(origin), fov, skev_factor "
+    #         "FROM ({query}) AS final"
+    #     ).format(query=query)
+    #     return self.execute(q)
+
+    # def get_traj_attr(self, query: "psql.Composable | str", attr: str):
+    #     _query = psql.SQL("SELECT {attr} FROM ({query}) as final").format(attr=attr, query=query)
+    #     print("get_traj_attr:", attr, _query.as_string(self.cursor))
+    #     return self.execute(_query)
+
+    # def get_bbox_geo(self, query: "psql.Composable | str"):
+    #     return self.execute(
+    #         psql.SQL(
+    #             "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
+    #             "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox) "
+    #             "FROM ({query})"
+    #         ).format(query=create_sql(query))
+    #     )
+
+    # def get_time(self, query: "psql.Composable | str"):
+    #     return self.execute(
+    #         psql.SQL("SELECT Tmin(trajBbox) FROM ({query})").format(query=create_sql(query))
+    #     )
+
+    # def get_distance(self, query: "psql.Composable | str", start: str, end: str):
+    #     return self.execute(
+    #         psql.SQL(
+    #             "SELECT cumulativeLength(atPeriodSet(trajCentroids, {[{start}, {end})})) "
+    #             "FROM ({query})"
+    #         ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end))
+    #     )
+
+    # def get_speed(self, query, start, end):
+    #     return self.execute(
+    #         psql.SQL(
+    #             "SELECT speed(atPeriodSet(trajCentroids, {[{start}, {end})})) " "FROM ({query})"
+    #         ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end))
+    #     )
 
 
 database = Database(
