@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import subprocess
@@ -15,11 +15,11 @@ import socket
 import numpy as np
 import torch
 
-
+subprocess.Popen('nvidia-smi', shell=True).wait()
 process = subprocess.Popen('docker container start mobilitydb', shell=True)
 
 
-# In[2]:
+# In[ ]:
 
 
 hostname = socket.gethostname()
@@ -27,7 +27,7 @@ test = hostname.split("-")[-1]
 print("test", test)
 
 
-# In[3]:
+# In[ ]:
 
 
 def is_notebook() -> bool:
@@ -50,17 +50,19 @@ def is_notebook() -> bool:
 if is_notebook():
     get_ipython().run_line_magic('cd', '..')
     from tqdm.notebook import tqdm
+    from nbutils.report_progress import report_progress
 else:
     from tqdm import tqdm
+    from playground.nbutils.report_progress import report_progress
 
 
-# In[4]:
+# In[ ]:
 
 
 process.wait()
 
 
-# In[5]:
+# In[ ]:
 
 
 from optimized_ingestion.camera_config import camera_config
@@ -68,9 +70,10 @@ from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
 from optimized_ingestion.video import Video
 from optimized_ingestion.metadata_json_encoder import MetadataJSONEncoder
+from optimized_ingestion.stages.stage import Stage
 
 
-# In[6]:
+# In[ ]:
 
 
 # Stages
@@ -80,20 +83,20 @@ from optimized_ingestion.stages.detection_2d.detection_2d import Detection2D
 from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 
 
-# In[7]:
+# In[ ]:
 
 
-from optimized_ingestion.stages.strongsort_with_skip import StrongSORTWithSkip
+from optimized_ingestion.stages.strongsort_cache_benchmark import StrongSORTCacheBenchmark
 
 
-# In[8]:
+# In[ ]:
 
 
 from optimized_ingestion.cache import disable_cache
 disable_cache()
 
 
-# In[9]:
+# In[ ]:
 
 
 NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
@@ -101,7 +104,7 @@ print(NUSCENES_PROCESSED_DATA in os.environ)
 print(os.environ['NUSCENES_PROCESSED_DATA'])
 
 
-# In[10]:
+# In[ ]:
 
 
 DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
@@ -109,24 +112,24 @@ with open(os.path.join(DATA_DIR, "videos", "frames.pkl"), "rb") as f:
     videos = pickle.load(f)
 
 
-# In[11]:
+# In[ ]:
 
 
 with open(os.path.join(DATA_DIR, 'cities.pkl'), 'rb') as f:
     cities = pickle.load(f)
 
 
-# In[12]:
+# In[ ]:
 
 
-BENCHMARK_DIR = "./outputs/ablation-performance-run"
+BENCHMARK_DIR = "./outputs/run"
 
 
 def bm_dir(*args: "str"):
     return os.path.join(BENCHMARK_DIR, *args)
 
 
-# In[13]:
+# In[ ]:
 
 
 def run_benchmark(pipeline, filename, run=0, ignore_error=False):
@@ -136,7 +139,8 @@ def run_benchmark(pipeline, filename, run=0, ignore_error=False):
     all_metadata = {
         'sort': metadata_strongsort,
     }
-    names = cities['boston-seaport'][int(test) * 20:(int(test) + 1) * 20]
+
+    names = cities['boston-seaport']
     filtered_videos = [(n, v) for n, v in videos.items() if n[6:10] in names]
 
     for pre in all_metadata.keys():
@@ -146,6 +150,9 @@ def run_benchmark(pipeline, filename, run=0, ignore_error=False):
         os.makedirs(p)
 
     for i, (name, video) in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
+    # for i, (name, video) in enumerate(filtered_videos):
+        if i % int(len(filtered_videos) / 200) == 0:
+            report_progress(i, len(filtered_videos), '')
         try:
             video_filename = video['filename']
             if not video_filename.startswith('boston') or 'FRONT' not in name:
@@ -158,7 +165,7 @@ def run_benchmark(pipeline, filename, run=0, ignore_error=False):
 
             output = pipeline.run(Payload(frames))
 
-            metadata_strongsort[name] = output[StrongSORTWithSkip]
+            metadata_strongsort[name] = output[StrongSORTCacheBenchmark]
 
             for pre, metadata in all_metadata.items():
                 p = bm_dir(f"{pre}--{filename}_{run}", f"{name}.json")
@@ -198,8 +205,17 @@ def run_benchmark(pipeline, filename, run=0, ignore_error=False):
                 json.dump(performance, f, indent=1)
 
 
-# In[14]:
+# In[ ]:
 
+
+# Stage.enable_progress()
+
+
+# In[ ]:
+
+
+if test == 'dev':
+    test = 'true'
 
 pipeline = Pipeline()
 
@@ -208,10 +224,10 @@ pipeline.add_filter(DecodeFrame())
 # 2D Detection
 pipeline.add_filter(YoloDetection())
 # Tracking
-pipeline.add_filter(StrongSORTWithSkip())
+pipeline.add_filter(StrongSORTCacheBenchmark(cache=json.loads(test)))
 
-for i in range(3):
-    run_benchmark(pipeline, 'ss-skip-benchmark', run=i, ignore_error=True)
+for i in range(1):
+    run_benchmark(pipeline, 'ss-cache-' + test, run=i, ignore_error=True)
 
 
 # In[ ]:
@@ -219,4 +235,10 @@ for i in range(3):
 
 if not is_notebook():
     subprocess.Popen('sudo shutdown -h now', shell=True)
+
+
+# In[ ]:
+
+
+
 

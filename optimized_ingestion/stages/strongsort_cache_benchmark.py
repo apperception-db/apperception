@@ -43,27 +43,23 @@ class StrongSORTCacheBenchmark(Stage["dict[str, list[int]]"]):
                     strongsort.model.warmup()
 
             assert len(detections) == len(images)
-            for idx, ((det, _, dids), im0s) in StrongSORTCacheBenchmark.tqdm(enumerate(zip(detections, images)), total=len(detections)):
+            for (det, _, dids), im0s in StrongSORTCacheBenchmark.tqdm(zip(detections, images), total=len(detections)):
                 im0 = im0s.copy()
                 curr_frame = im0
 
                 if prev_frame is not None and curr_frame is not None:
                     strongsort.tracker.camera_update(prev_frame, curr_frame, cache=self.cache)
 
-                output_ = strongsort.update(det.cpu(), im0)
+                output_, dids_ = strongsort.update(det.cpu(), dids, im0)
 
                 t2ds: "dict[str, list[int]]" = {}
-                for output in output_:
-                    det_idx = int(output[7])
-                    frame_idx_offset = int(output[8])
-                    if frame_idx_offset == 0:
-                        did = dids[det_idx]
-                    else:
-                        did = detections[idx - frame_idx_offset][2][det_idx]
+                for output, did in zip(output_, dids_):
                     assert repr(did) not in t2ds, (did, t2ds, output_)
                     t2ds[repr(did)] = output.tolist()
 
                 trackings.append(t2ds)
                 prev_frame = curr_frame
+
+            _tracksings: "list[dict[str, list[int]]]" = [{} for _ in range(len(trackings))]
 
         return None, {self.classname(): trackings}

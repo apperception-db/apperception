@@ -59,9 +59,10 @@ class StrongSORTWithSkip(Stage["list[dict[str, list[int]]]"]):
                         # print("  ", _idx)
                         __strongsort = copy.deepcopy(_strongsort)
                         __trackings: "list[dict[str, list[int]]]" = []
+                        __prev_frame = _prev_frame
                         for __idx in range(5):
-                            process_one_frame(__strongsort, detections, __trackings, _idx + __idx, Metadatum())
-                        process_one_frame(__strongsort, detections, _trackings, _idx, Metadatum(_det, _names, _dids), _im0s, _prev_frame)
+                            __prev_frame = process_one_frame(__strongsort, __trackings, detections[_idx + __idx], images[_idx + __idx], __prev_frame)
+                        process_one_frame(__strongsort, _trackings, Metadatum(_det, _names, _dids), _im0s, _prev_frame)
                         # TODO: process nother 5 frames
 
                         _curr_frame = _im0s.copy()
@@ -78,9 +79,7 @@ class StrongSORTWithSkip(Stage["list[dict[str, list[int]]]"]):
 
 def process_one_frame(
     ss: "StrongSORT",
-    detections: "list[Metadatum]",
     _trackings: "list[dict[str, list[int]]]",
-    idx: int,
     detection: "Metadatum",
     im0s: "npt.NDArray",
     prev_frame: "npt.NDArray | None",
@@ -92,16 +91,10 @@ def process_one_frame(
     if prev_frame is not None and curr_frame is not None:
         ss.tracker.camera_update(prev_frame, curr_frame, cache=True)
 
-    output_ = ss.update(det.cpu(), im0)
+    output_, dids_ = ss.update(det.cpu(), dids, im0)
 
     t2ds: "dict[str, list[int]]" = {}
-    for output in output_:
-        det_idx = int(output[7])
-        frame_idx_offset = int(output[8])
-        if frame_idx_offset == 0:
-            did = dids[det_idx]
-        else:
-            did = detections[idx - frame_idx_offset][2][det_idx]
+    for output, did in zip(output_, dids_):
         assert repr(did) not in t2ds, (did, t2ds, output_)
         t2ds[repr(did)] = output.tolist()
 
