@@ -1,9 +1,9 @@
 from pathlib import Path
 
 import torch
-from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT, create_tracker
-from yolo_tracker.yolov5.utils.torch_utils import select_device
 
+from ..modules.yolo_tracker.trackers.multi_tracker_zoo import StrongSORT, create_tracker
+from ..modules.yolo_tracker.yolov5.utils.torch_utils import select_device
 from ..payload import Payload
 from .decode_frame.decode_frame import DecodeFrame
 from .detection_2d.detection_2d import Detection2D
@@ -28,6 +28,8 @@ class StrongSORTCacheBenchmark(Stage["dict[str, list[int]]"]):
         assert images is not None
 
         device = select_device("")
+        if StrongSORTCacheBenchmark.progress:
+            print(device)
         strongsort = create_tracker('strongsort', reid_weights, device, False)
         assert isinstance(strongsort, StrongSORT)
         assert hasattr(strongsort, 'tracker')
@@ -41,7 +43,7 @@ class StrongSORTCacheBenchmark(Stage["dict[str, list[int]]"]):
                     strongsort.model.warmup()
 
             assert len(detections) == len(images)
-            for idx, ((det, _, dids), im0s) in enumerate(zip(detections, images)):
+            for idx, ((det, _, dids), im0s) in StrongSORTCacheBenchmark.tqdm(enumerate(zip(detections, images)), total=len(detections)):
                 im0 = im0s.copy()
                 curr_frame = im0
 

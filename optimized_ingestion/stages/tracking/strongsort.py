@@ -1,11 +1,11 @@
 from pathlib import Path
 
 import torch
-from yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
-from yolo_tracker.trackers.multi_tracker_zoo import create_tracker
-from yolo_tracker.yolov5.utils.torch_utils import select_device
 
 from ...cache import cache
+from ...modules.yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
+from ...modules.yolo_tracker.trackers.multi_tracker_zoo import create_tracker
+from ...modules.yolo_tracker.yolov5.utils.torch_utils import select_device
 from ...payload import Payload
 from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
@@ -43,8 +43,7 @@ class StrongSORT(Tracking):
             strongsort.model.warmup()
 
             assert len(detections) == len(images)
-            # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
+            for idx, ((det, _, dids), im0s) in enumerate(StrongSORT.tqdm(zip(detections, images))):
                 im0 = im0s.copy()
                 curr_frame = im0
 

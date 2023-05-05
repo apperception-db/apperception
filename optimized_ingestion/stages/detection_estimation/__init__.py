@@ -61,7 +61,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        for i in range(len(payload.video) - 1):
+        for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
                 skipped_frame_num.append(i)
