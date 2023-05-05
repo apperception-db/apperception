@@ -22,10 +22,12 @@ def import_tables(database: "Database", data_path: str):
     database.reset(False)
 
     for _, row in df_Cameras.iterrows():
-        database._insert_into_camera(tuple(row.items()), False)
+        values = tuple(row.values)
+        database._insert_into_camera(values, False)
 
     for _, row in df_Item_General_Trajectory.iterrows():
-        database._insert_into_item_general_trajectory(tuple(row.items()), False)
+        values = tuple(row.values)
+        database._insert_into_item_general_trajectory(values, False)
 
     # for _, row in df_General_Bbox.iterrows():
     #     database._insert_into_general_bbox(row, False)
