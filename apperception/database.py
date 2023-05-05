@@ -236,17 +236,17 @@ class Database:
         """
 
         q = self._select_cam_with_camera_id(camera_id)
-        return (
-            psql.SQL('({}) UNION ({})').format(create_sql(query), q)
-            if query
-            else q
-        ).as_string(self.cursor)  # UNION
+        return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(
+            self.cursor
+        )  # UNION
 
     def _select_cam_with_camera_id(self, camera_id: str):
         """
         Select cams with certain world id
         """
-        return psql.SQL("SELECT * FROM Cameras WHERE cameraId = {camera_id}").format(camera_id=camera_id)
+        return psql.SQL("SELECT * FROM Cameras WHERE cameraId = {camera_id}").format(
+            camera_id=camera_id
+        )
 
     def filter(self, query: "psql.Composable | str", predicate: "PredicateNode"):
         tables, camera = FindAllTablesVisitor()(predicate)
@@ -336,12 +336,20 @@ class Database:
         add_recognized_objects(self.connection, tracking_results, camera.id)
 
     def retrieve_bbox(self, query: "psql.Composable | str | None" = None, camera_id: str = ""):
-        q = psql.SQL("SELECT * FROM General_Bbox WHERE cameraId = {camera_id}").format(camera_id=camera_id)
-        return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(self.cursor)
+        q = psql.SQL("SELECT * FROM General_Bbox WHERE cameraId = {camera_id}").format(
+            camera_id=camera_id
+        )
+        return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(
+            self.cursor
+        )
 
     def retrieve_traj(self, query: "psql.Composable | str | None" = None, camera_id: str = ""):
-        q = psql.SQL("SELECT * FROM Item_General_Trajectory WHERE cameraId = {camera_id}").format(camera_id=camera_id)
-        return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(self.cursor)
+        q = psql.SQL("SELECT * FROM Item_General_Trajectory WHERE cameraId = {camera_id}").format(
+            camera_id=camera_id
+        )
+        return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(
+            self.cursor
+        )
 
     def road_direction(self, x: float, y: float, default_dir: float):
         return self.execute(f"SELECT roadDirection({x}, {y}, {default_dir});")
@@ -356,8 +364,7 @@ class Database:
     def get_traj(self, query: "psql.Composable | str") -> List[List[Trajectory]]:
         # hack
         _query = psql.SQL(
-            "SELECT asMFJSON(trajCentroids)::json->'sequences'"
-            "FROM ({query}) as final"
+            "SELECT asMFJSON(trajCentroids)::json->'sequences'" "FROM ({query}) as final"
         ).format(query=query)
 
         print("get_traj", _query.as_string(self.cursor))
@@ -385,8 +392,10 @@ class Database:
         timestamp = "cameras.timestamp"
         camId = "cameras.cameraId"
         filename = "cameras.filename"
-        _query = create_sql(query).as_string(self.cursor).replace(
-            "SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1
+        _query = (
+            create_sql(query)
+            .as_string(self.cursor)
+            .replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1)
         )
 
         print("get_id_time_camId_filename", _query)
@@ -398,26 +407,33 @@ class Database:
         return self.execute(_query)
 
     def get_bbox_geo(self, query: "psql.Composable | str"):
-        return self.execute(psql.SQL(
-            "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
-            "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox) "
-            "FROM ({query})"
-        ).format(query=create_sql(query)))
+        return self.execute(
+            psql.SQL(
+                "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
+                "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox) "
+                "FROM ({query})"
+            ).format(query=create_sql(query))
+        )
 
     def get_time(self, query: "psql.Composable | str"):
-        return self.execute(psql.SQL("SELECT Tmin(trajBbox) FROM ({query})").format(query=create_sql(query)))
+        return self.execute(
+            psql.SQL("SELECT Tmin(trajBbox) FROM ({query})").format(query=create_sql(query))
+        )
 
     def get_distance(self, query: "psql.Composable | str", start: str, end: str):
-        return self.execute(psql.SQL(
-            "SELECT cumulativeLength(atPeriodSet(trajCentroids, {[{start}, {end})})) "
-            "FROM ({query})"
-        ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end)))
+        return self.execute(
+            psql.SQL(
+                "SELECT cumulativeLength(atPeriodSet(trajCentroids, {[{start}, {end})})) "
+                "FROM ({query})"
+            ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end))
+        )
 
     def get_speed(self, query, start, end):
-        return self.execute(psql.SQL(
-            "SELECT speed(atPeriodSet(trajCentroids, {[{start}, {end})})) "
-            "FROM ({query})"
-        ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end)))
+        return self.execute(
+            psql.SQL(
+                "SELECT speed(atPeriodSet(trajCentroids, {[{start}, {end})})) " "FROM ({query})"
+            ).format(query=create_sql(query), start=psql.Literal(start), end=psql.Literal(end))
+        )
 
     def get_video(self, query, cams, boxed):
         query = psql.SQL(
