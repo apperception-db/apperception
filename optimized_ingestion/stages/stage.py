@@ -5,9 +5,9 @@ from bitarray import bitarray
 
 
 def is_notebook() -> bool:
+    # if TYPE_CHECKING:
+    #     return False
     try:
-        # if TYPE_CHECKING:
-        #     return False
         shell = get_ipython().__class__.__name__
         if shell == 'ZMQInteractiveShell':
             # Jupyter notebook or qtconsole
@@ -96,7 +96,7 @@ class Stage(Generic[T]):
     _T2 = TypeVar('_T2')
 
     @classmethod
-    def tqdm(cls, iterable: "Iterable[_T2]", *args, **kwargs) -> "tqdm[_T2] | Iterable[_T2]":
+    def tqdm(cls, iterable: "Iterable[_T2]", *args, **kwargs) -> "Iterable[_T2]":
         if Stage.progress:
             return tqdm(iterable, desc=cls.classname(), *args, **kwargs)
         else:
