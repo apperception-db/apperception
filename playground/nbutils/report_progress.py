@@ -2,7 +2,7 @@ import socket
 import subprocess
 
 
-def report_progress(progress: int, total: int, message: str = ""):
+def report_progress(progress: int, total: int, tag: str, message: str = ""):
     host = socket.gethostname()
 
     subprocess.run(
@@ -12,7 +12,7 @@ def report_progress(progress: int, total: int, message: str = ""):
             "-o UserKnownHostsFile=/dev/null",
             "chanwutk@freddie.millennium.berkeley.edu",
             "-t",
-            f"touch ~/gcp-dashboard/progress__{host} && echo {progress} {total} {message} > ~/gcp-dashboard/progress__{host}",
+            f"touch ~/gcp-dashboard/progress__{host}.{tag} && echo {progress} {total} {message} > ~/gcp-dashboard/progress__{host}.{tag}",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL

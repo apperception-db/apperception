@@ -2,7 +2,8 @@
 
 ![Tests and Type Checks](https://github.com/apperception-db/apperception/actions/workflows/test-and-check.yml/badge.svg?branch=dev)
 
-Apperception ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
+Apperception ingests video data from many perspectives and makes them queryable as a single multidimensional visual object.
+It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
 
 ## Require
 ```
@@ -113,4 +114,5 @@ pip3 install -r requirements.txt
 In the docker:  
 `jupyter notebook --ip 172.19.0.2 --port 8890 --allow-root &`
 Directly open the jupyter url
-The demo notebook first constructs the world. Then it queries for the trajectory and videos of the cars that appeared once in an area of interests within some time interval.
+The demo notebook first constructs the world.
+Then it queries for the trajectory and videos of the cars that appeared once in an area of interests within some time interval.

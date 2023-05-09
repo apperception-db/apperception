@@ -5,8 +5,8 @@ from bitarray import bitarray
 
 
 def is_notebook() -> bool:
-    # if TYPE_CHECKING:
-    #     return False
+    if TYPE_CHECKING:
+        return False
     try:
         shell = get_ipython().__class__.__name__
         if shell == 'ZMQInteractiveShell':
@@ -98,7 +98,10 @@ class Stage(Generic[T]):
     @classmethod
     def tqdm(cls, iterable: "Iterable[_T2]", *args, **kwargs) -> "Iterable[_T2]":
         if Stage.progress:
-            return tqdm(iterable, desc=cls.classname(), *args, **kwargs)
+            desc = cls.classname()
+            if 'desc' in kwargs:
+                desc += f" {kwargs['desc']}"
+            return tqdm(iterable, *args, **{**kwargs, 'desc': desc})
         else:
             return iterable
 
