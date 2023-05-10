@@ -55,6 +55,7 @@ class StrongSORT(Tracking):
             init_end = time.time()
 
             update_time = 0
+            skip_time = 0
             tracking_start = time.time()
             assert len(detections) == len(images)
             for idx, ((det, _, dids), im0s) in enumerate(StrongSORT.tqdm(zip(detections, images))):
@@ -68,17 +69,19 @@ class StrongSORT(Tracking):
                 prev_frame = curr_frame
                 update_time += time.time() - update_start
 
-                # Skip if no detections or filtered frame
-                if not payload.keep[idx] or len(det) == 0:
-                    if self.method == 'increment-ages':
-                        strongsort.increment_ages()
-                    elif self.method == 'update-empty':
-                        strongsort.update(torch.Tensor(0, 6), [], im0)
-                    else:
-                        raise Exception(f'method {self.method} is not supported')
+                if payload.keep[idx] and len(det) != 0:
+                    strongsort.update(det.cpu(), dids, im0)
                     continue
 
-                strongsort.update(det.cpu(), dids, im0)
+                # Skip if no detections or filtered frame
+                skip_start = time.time()
+                if self.method == 'increment-ages':
+                    strongsort.increment_ages()
+                elif self.method == 'update-empty':
+                    strongsort.update(torch.Tensor(0, 6), [], im0)
+                else:
+                    raise Exception(f'method {self.method} is not supported')
+                skip_time += time.time() - skip_start
             tracking_end = time.time()
 
             postprocess_start = time.time()
@@ -109,6 +112,7 @@ class StrongSORT(Tracking):
             'load_data': load_data_end - load_data_start,
             'init': init_end - init_start,
             'tracking': tracking_end - tracking_start,
+            'skip': skip_time,
             'update_camera': update_time,
             'postprocess': postprocess_end - postprocess_start,
         })
