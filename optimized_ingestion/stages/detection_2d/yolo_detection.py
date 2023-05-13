@@ -13,22 +13,21 @@ import cv2
 import numpy as np
 import numpy.typing as npt
 import torch
-from yolo_tracker.yolov5.utils.augmentations import letterbox
-from yolo_tracker.yolov5.utils.general import (
+
+from ...cache import cache
+from ...modules.yolo_tracker.yolov5.utils.augmentations import letterbox
+from ...modules.yolo_tracker.yolov5.utils.general import (
     check_img_size,
     non_max_suppression,
     scale_boxes,
 )
-from yolo_tracker.yolov5.utils.torch_utils import select_device
-
-from ...cache import cache
+from ...modules.yolo_tracker.yolov5.utils.torch_utils import select_device
 from ...stages.decode_frame.decode_frame import DecodeFrame
 from ...types import DetectionId
 from .detection_2d import Detection2D, Metadatum
 
 if TYPE_CHECKING:
-    from yolo_tracker.yolov5.models.common import DetectMultiBackend
-
+    from ...modules.yolo_tracker.yolov5.models.common import DetectMultiBackend
     from ...payload import Payload
 
 
@@ -56,8 +55,11 @@ class YoloDetection(Detection2D):
         except BaseException:
             model = torch.hub.load('ultralytics/yolov5', 'yolov5s', verbose=False, _verbose=False, force_reload=True)
             self.model: "DetectMultiBackend" = model.model.to(self.device)
-        stride, self.pt = self.model.stride, self.model.pt
-        self.imgsz = check_img_size((640, 640), s=stride)
+        stride, pt = self.model.stride, self.model.pt
+        assert isinstance(stride, int), type(stride)
+        assert isinstance(pt, bool), type(pt)
+        self.pt = pt
+        self.imgsz = check_img_size((640, 640), s=int(stride))
         self.half = half
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres
@@ -68,18 +70,20 @@ class YoloDetection(Detection2D):
 
     @cache
     def _run(self, payload: "Payload"):
+        if YoloDetection.progress:
+            print(self.device)
         with torch.no_grad():
             _names = self.model.names
             assert isinstance(_names, dict), type(_names)
             names: "list[str]" = class_mapping_to_list(_names)
             dataset = LoadImages(payload, img_size=self.imgsz, auto=self.pt)
             self.model.eval()
+            assert isinstance(self.imgsz, list), type(self.imgsz)
             self.model.warmup(imgsz=(1, 3, *self.imgsz))  # warmup
             metadata: "list[Metadatum]" = []
-            # for frame_idx, im, im0s in tqdm(dataset):
-            for frame_idx, im, im0s in dataset:
+            for frame_idx, im, im0s in YoloDetection.tqdm(dataset):
                 if not payload.keep[frame_idx]:
-                    metadata.append(Metadatum(torch.Tensor([]), names, []))
+                    metadata.append(Metadatum(torch.Tensor([]), None, []))
                     continue
                 # t1 = time_sync()
                 im = torch.from_numpy(im).to(self.device)
@@ -107,7 +111,9 @@ class YoloDetection(Detection2D):
                 det = pred[0]
                 assert isinstance(det, torch.Tensor), type(det)
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0s.shape).round()
-                metadata.append(Metadatum(det, names, [DetectionId(frame_idx, order) for order in range(len(det))]))
+                metadata.append(Metadatum(det, None, [DetectionId(frame_idx, order) for order in range(len(det))]))
+        m0 = metadata[0]
+        metadata[0] = Metadatum(m0.detections, names, m0.detection_ids)
         return None, {self.classname(): metadata}
 
 
@@ -129,7 +135,7 @@ class ImageOutput(NamedTuple):
 
 class LoadImages(Iterator[ImageOutput], Iterable[ImageOutput]):
     # YOLOv5 image/video dataloader, i.e. `python detect.py --source image.jpg/vid.mp4`
-    def __init__(self, payload: "Payload", img_size=640, stride=32, auto=True, transforms=None, vid_stride=1):
+    def __init__(self, payload: "Payload", img_size: "int | list[int]" = 640, stride=32, auto=True, transforms=None, vid_stride=1):
 
         self.img_size = img_size
         self.stride = stride

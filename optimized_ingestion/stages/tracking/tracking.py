@@ -24,5 +24,5 @@ class Tracking(Stage[Metadatum]):
             return {
                 "detection_id": tuple(o.detection_id),
                 "object_id": o.object_id,
-                "confidence": o.confidence,
+                "confidence": float(o.confidence),
             }
