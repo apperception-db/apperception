@@ -47,7 +47,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
-        logger.info("ego_speed: ", ego_speed)
+        logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
