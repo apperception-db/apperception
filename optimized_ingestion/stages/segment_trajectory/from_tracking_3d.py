@@ -50,7 +50,7 @@ class FromTracking3D(SegmentTrajectory):
 
         object_map: "dict[int, dict[DetectionId, torch.Tensor]]" = dict()
         for fidx, frame in enumerate(tracking):
-            for tracking_result in frame.values():
+            for tracking_result in frame:
                 did = tracking_result.detection_id
                 oid = tracking_result.object_id
                 if oid not in object_map:
