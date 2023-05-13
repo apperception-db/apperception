@@ -119,7 +119,6 @@ class StrongSORTWithSkip(Stage["list[tuple[int, DetectionId, DetectionId | None]
                 for did_from, did_to, skip_failed in threshold:
                     fid = did_from.frame_idx
                     skippable[fid].append((track_id, did_from, did_to, skip_failed))
-                break
 
         return None, {self.classname(): skippable}
 

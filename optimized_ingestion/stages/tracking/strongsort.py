@@ -1,4 +1,4 @@
-import time
+# import time
 from pathlib import Path
 from typing import Literal
 
@@ -22,25 +22,25 @@ reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 class StrongSORT(Tracking):
     def __init__(
         self,
-        method: "Literal['increment-ages', 'update-empty']" = 'increment-ages',
+        method: "Literal['increment-ages', 'update-empty']" = 'update-empty',
         cache: "bool" = True
     ) -> None:
         super().__init__()
         self.cache = cache
         self.method: "Literal['increment-ages', 'update-empty']" = method
-        self.ss_benchmark = []
+        # self.ss_benchmark = []
 
     @cache
     def _run(self, payload: "Payload"):
-        load_data_start = time.time()
+        # load_data_start = time.time()
         detections = Detection2D.get(payload)
         assert detections is not None
 
         images = DecodeFrame.get(payload)
         assert images is not None
-        load_data_end = time.time()
+        # load_data_end = time.time()
 
-        init_start = time.time()
+        # init_start = time.time()
         metadata: "list[list[TrackingResult]]" = [[] for _ in range(len(payload.video))]
         device = select_device("")
         strongsort = create_tracker('strongsort', reid_weights, device, False)
@@ -52,39 +52,39 @@ class StrongSORT(Tracking):
         curr_frame, prev_frame = None, None
         with torch.no_grad():
             strongsort.model.warmup()
-            init_end = time.time()
+            # init_end = time.time()
 
-            update_time = 0
-            skip_time = 0
-            tracking_start = time.time()
+            # update_time = 0
+            # skip_time = 0
+            # tracking_start = time.time()
             assert len(detections) == len(images)
             for idx, ((det, _, dids), im0s) in enumerate(StrongSORT.tqdm(zip(detections, images))):
                 im0 = im0s.copy()
                 curr_frame = im0
 
-                update_start = time.time()
+                # update_start = time.time()
                 # Always do camera update
                 if prev_frame is not None and curr_frame is not None:
                     strongsort.tracker.camera_update(prev_frame, curr_frame, cache=self.cache)
                 prev_frame = curr_frame
-                update_time += time.time() - update_start
+                # update_time += time.time() - update_start
 
                 if payload.keep[idx] and len(det) != 0:
                     strongsort.update(det.cpu(), dids, im0)
                     continue
 
                 # Skip if no detections or filtered frame
-                skip_start = time.time()
+                # skip_start = time.time()
                 if self.method == 'increment-ages':
                     strongsort.increment_ages()
                 elif self.method == 'update-empty':
                     strongsort.update(torch.Tensor(0, 6), [], im0)
                 else:
                     raise Exception(f'method {self.method} is not supported')
-                skip_time += time.time() - skip_start
-            tracking_end = time.time()
+                # skip_time += time.time() - skip_start
+            # tracking_end = time.time()
 
-            postprocess_start = time.time()
+            # postprocess_start = time.time()
             for track in strongsort.tracker.tracks + strongsort.tracker.deleted_tracks:
                 track_id = track.track_id
                 assert isinstance(track_id, int), type(track_id)
@@ -105,16 +105,16 @@ class StrongSORT(Tracking):
                 for tr in _track:
                     fid = tr.detection_id.frame_idx
                     metadata[fid].append(tr)
-            postprocess_end = time.time()
+            # postprocess_end = time.time()
 
-        self.ss_benchmark.append({
-            'file': payload.video.videofile,
-            'load_data': load_data_end - load_data_start,
-            'init': init_end - init_start,
-            'tracking': tracking_end - tracking_start,
-            'skip': skip_time,
-            'update_camera': update_time,
-            'postprocess': postprocess_end - postprocess_start,
-        })
+        # self.ss_benchmark.append({
+        #     'file': payload.video.videofile,
+        #     'load_data': load_data_end - load_data_start,
+        #     'init': init_end - init_start,
+        #     'tracking': tracking_end - tracking_start,
+        #     'skip': skip_time,
+        #     'update_camera': update_time,
+        #     'postprocess': postprocess_end - postprocess_start,
+        # })
 
         return None, {self.classname(): metadata}

@@ -83,7 +83,7 @@ class YoloDetection(Detection2D):
             metadata: "list[Metadatum]" = []
             for frame_idx, im, im0s in YoloDetection.tqdm(dataset):
                 if not payload.keep[frame_idx]:
-                    metadata.append(Metadatum(torch.Tensor([]), names, []))
+                    metadata.append(Metadatum(torch.Tensor([]), None, []))
                     continue
                 # t1 = time_sync()
                 im = torch.from_numpy(im).to(self.device)
@@ -111,7 +111,9 @@ class YoloDetection(Detection2D):
                 det = pred[0]
                 assert isinstance(det, torch.Tensor), type(det)
                 det[:, :4] = scale_boxes(im.shape[2:], det[:, :4], im0s.shape).round()
-                metadata.append(Metadatum(det, names, [DetectionId(frame_idx, order) for order in range(len(det))]))
+                metadata.append(Metadatum(det, None, [DetectionId(frame_idx, order) for order in range(len(det))]))
+        m0 = metadata[0]
+        metadata[0] = Metadatum(m0.detections, names, m0.detection_ids)
         return None, {self.classname(): metadata}
 
 
