@@ -65,4 +65,4 @@ jobs:
       
       - name: Analyze the code with flake8
         if: always()
-        run: python -m flake8 apperception optimized_ingestion
+        run: python -m flake8 apperception optimized_ingestion --statistics
