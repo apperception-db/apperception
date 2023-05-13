@@ -23,7 +23,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
