@@ -1,5 +1,6 @@
 import socket
 import subprocess
+import os
 
 
 def report_progress(progress: int, total: int, tag: str, message: str = ""):
@@ -10,22 +11,9 @@ def report_progress(progress: int, total: int, tag: str, message: str = ""):
             "ssh",
             "-o StrictHostKeyChecking=no",
             "-o UserKnownHostsFile=/dev/null",
-            "chanwutk@freddie.millennium.berkeley.edu",
+            "chanwutk@" + os.environ["REPORT_IP"],
             "-t",
-            f"touch ~/gcp-dashboard/progress__{host}.{tag} && echo {progress} {total} {message} > ~/gcp-dashboard/progress__{host}.{tag}",
-        ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
-
-    subprocess.run(
-        [
-            "ssh",
-            "-o StrictHostKeyChecking=no",
-            "-o UserKnownHostsFile=/dev/null",
-            "chanwutk@freddie.millennium.berkeley.edu",
-            "-t",
-            f"cd ~/gcp-dashboard && python3 update.py",
+            f"touch ~/dashboard/progress__{host}.{tag} && echo {progress} {total} {message} > ~/dashboard/progress__{host}.{tag} && cd ~/dashboard && python3 update.py",
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL

@@ -39,7 +39,8 @@ class FromTracking3D(SegmentTrajectory):
         tracking: "list[TrackingMetadatum] | None" = Tracking.get(payload)
         assert tracking is not None
 
-        class_map: "list[str]" = d3d[0].class_map
+        class_map: "list[str] | None" = d3d[0].class_map
+        assert class_map is not None
 
         # Index detections using their detection id
         detection_map: "dict[DetectionId, tuple[int, int]]" = dict()
