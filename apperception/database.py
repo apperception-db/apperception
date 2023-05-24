@@ -7,7 +7,7 @@ import psycopg2.errors
 import psycopg2.sql as psql
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
-
+from datetime import datetime
 from apperception.data_types import Trajectory
 from apperception.predicate import (
     FindAllTablesVisitor,
@@ -200,7 +200,7 @@ class Database:
         except psycopg2.errors.DatabaseError as error:
             self.connection.rollback()
             raise error
-
+    
     def insert_cam(self, camera: "Camera"):
         values = [
             f"""(
@@ -213,7 +213,7 @@ class Database:
                 ARRAY{config.camera_intrinsic}::real[][],
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY[{','.join(map(str, config.ego_rotation))}]::real[],
-                '{config.timestamp}',
+                '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
                 {config.cameraHeading},
                 {config.egoHeading}
             )"""
@@ -244,7 +244,7 @@ class Database:
         """
         Select cams with certain world id
         """
-        return psql.SQL("SELECT * FROM Cameras WHERE cameraId = {camera_id}").format(
+        return psql.SQL(f"SELECT * FROM Cameras WHERE cameraId = {camera_id}").format(
             camera_id=camera_id
         )
 
