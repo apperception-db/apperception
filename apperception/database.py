@@ -247,7 +247,7 @@ class Database:
         """
         Select cams with certain world id
         """
-        return psql.SQL(f"SELECT * FROM Cameras WHERE cameraId = \'{camera_id}\'").format(
+        return psql.SQL(f"SELECT * FROM Cameras WHERE cameraId = '{camera_id}'").format(
             camera_id=camera_id
         )
 
