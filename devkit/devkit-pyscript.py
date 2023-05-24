@@ -3,14 +3,15 @@ import numpy as np
 
 from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.map_expansion import arcline_path_utils
+import time
 
 from pyquaternion import Quaternion
 import math
 from nuscenes.utils.geometry_utils import BoxVisibility
 
-nusc_map = NuScenesMap(dataroot='/work/apperception/data/raw/nuScenes/Map-expansion', map_name='boston-seaport')
+nusc_map = NuScenesMap(dataroot='/data/raw/map-expansion', map_name='boston-seaport')
 
-nusc = NuScenes(version='v1.0-trainval', dataroot='/work/apperception/data/raw/nuScenes/full-dataset-v1.0/Trainval', verbose=True)
+nusc = NuScenes(version='v1.0-trainval', dataroot='/data/raw/full-dataset/trainval', verbose=True)
 
 
 class Instance():
@@ -121,6 +122,8 @@ def convert_camera(cam_position, cam_heading, obj_point):
  
 ## Get all possible pedestrian + ego instances
 print("Figure 12")
+start_fig12 = time.time()
+
 instances = []
 for sample in nusc.sample:
   scene = nusc.get('scene', sample['scene_token'])
@@ -212,6 +215,8 @@ for instance in instances:
 instances = new_instances
 len(instances)
 
+end_fig12 = time.time()
+print("Figure 12 time: ", format(end_fig12-start_fig12))
  
 results = {}
 for instance in instances:
@@ -259,6 +264,8 @@ with open('fig12_results.txt', 'w') as f:
  
 ## Get all possible car1 + car2 instances
 print("Figure 13")
+start_fig13 = time.time()
+
 instances = []
 for sample in nusc.sample:
   scene = nusc.get('scene', sample['scene_token'])
@@ -366,6 +373,8 @@ for instance in instances:
 instances = new_instances
 len(instances)
 
+end_fig13 = time.time()
+print("Figure 13 time: ", format(end_fig13-start_fig13))
  
 results = {}
 for instance in instances:
@@ -406,6 +415,8 @@ with open('fig13_results.txt', 'w') as f:
  
 ## Get all possible car + ego instances
 print("Figure 14")
+start_fig14 = time.time()
+
 instances = []
 for sample in nusc.sample:
   scene = nusc.get('scene', sample['scene_token'])
@@ -486,6 +497,8 @@ for instance in instances:
 instances = new_instances
 len(instances)
 
+end_fig14 = time.time()
+print("Figure 14 time: ", format(end_fig14-start_fig14))
  
 results = {}
 for instance in instances:
@@ -538,6 +551,8 @@ with open('fig14_results.txt', 'w') as f:
  
 ## Get all possible car + car + car + ego instances
 print("Figure 15")
+start_fig15 = time.time()
+
 instances = []
 for sample in nusc.sample:
   scene = nusc.get('scene', sample['scene_token'])
@@ -732,6 +747,8 @@ for instance in instances:
   if camera_data['filename'] == "samples/CAM_FRONT/n008-2018-07-26-12-13-50-0400__CAM_FRONT__1532621915112404.jpg":
     print(distance1, distance2)
 
+end_fig15 = time.time()
+print("Figure 15 time: ", format(end_fig15-start_fig15))
  
 results = {}
 for instance in instances:
