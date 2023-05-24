@@ -1,3 +1,4 @@
+from datetime import datetime
 from os import environ
 from typing import TYPE_CHECKING, Callable, List, Tuple
 
@@ -7,7 +8,7 @@ import psycopg2.errors
 import psycopg2.sql as psql
 from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
-from datetime import datetime
+
 from apperception.data_types import Trajectory
 from apperception.predicate import (
     FindAllTablesVisitor,
@@ -200,7 +201,7 @@ class Database:
         except psycopg2.errors.DatabaseError as error:
             self.connection.rollback()
             raise error
-    
+
     def insert_cam(self, camera: "Camera"):
         values = [
             f"""(
