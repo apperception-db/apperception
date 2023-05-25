@@ -97,7 +97,7 @@ class World:
     def sym_diff(self, other: World) -> World:
         return self.union(other).exclude(self.intersect(other))
 
-    def __lshift__(self, camera: Union["Camera", Tuple["Camera", "pd.DataFrame"]]):
+    def __lshift__(self, camera: "Camera | tuple[Camera, pd.DataFrame]"):
         """add a camera or add a camera and recognize"""
         if isinstance(camera, Camera):
             return self.add_camera(camera)
