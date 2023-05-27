@@ -25,6 +25,9 @@ ingest_road(database, road_data)
 from apperception.world import empty_world
 import os
 import pickle
+import time
+
+start = time.time()
 
 # %%
 world = empty_world("w")
@@ -36,7 +39,7 @@ world = empty_world("w")
 if 'NUSCENES_PROCESSED_DATA' in os.environ:
     base_dir = os.environ['NUSCENES_PROCESSED_DATA']
 else:
-    base_dir = '/data/processed/full-dataset/mini/'
+    base_dir = '/data/processed/full-dataset/trainval/'
 #     base_dir = '/work/apperception/data/nuScenes/full-dataset-v1.0/Trainval'
 base_dir
 
@@ -47,15 +50,16 @@ with open(os.path.join(base_dir, f'sample_data{suffix}.pkl'), "rb") as f:
 with open(os.path.join(base_dir, f'annotation{suffix}.pkl'), "rb") as f:
     df_annotation = pickle.loads(f.read())
 
+# Road network only contains boston seaport data
+df_sample_data = df_sample_data[df_sample_data["location"] == "boston-seaport"]
+
 # %%
 scenes = df_sample_data['scene_name'].drop_duplicates().values.tolist()
 
 # %%
-str(df_sample_data['ego_translation'][0])
-
-# %%
 from apperception.utils import df_to_camera_config
 from apperception.data_types import Camera
+
 database.reset()
 for scene in scenes:
     print(scene, scenes[-1])
@@ -64,7 +68,13 @@ for scene in scenes:
     world <<= (camera, df_annotation)
 
 # %%
-world.get_traj_key()
+try:
+    world.get_traj_key()
+except Exception:
+    pass
+
+end = time.time()
+print("Ingest Data Time: ", format(end-start))
 
 # %%
 from apperception.utils import export_tables
