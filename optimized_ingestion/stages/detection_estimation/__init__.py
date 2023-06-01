@@ -23,7 +23,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -185,6 +185,5 @@ def construct_estimated_all_detection_info(
             car_bbox3d,
             car_bbox2d)
         )
-    # logger.info("all_detections", all_detections)
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     return all_detection_info

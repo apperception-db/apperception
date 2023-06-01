@@ -247,6 +247,7 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         AND NOT p.__RoadType__roadsection__
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
     """).format(_point=_point, location=sql.Literal(location))
+    logging.info(out.as_string(database.cursor))
 
     result = database.execute(out)
     return result
@@ -319,5 +320,5 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 fov_lines
             )
 
-    logger.info(f'total mapping time: {time.time() - start_time}')
+    # logger.info(f'total mapping time: {time.time() - start_time}')
     return mapped_road_polygon_info
