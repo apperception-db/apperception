@@ -17,12 +17,14 @@ import os
 import time
 from typing import NamedTuple, Tuple
 
+import numpy as np
 import plpygis
 import postgis
 import psycopg2.sql as sql
 import shapely
 import shapely.geometry
 import shapely.wkb
+from scipy.spatial import ConvexHull
 
 from apperception.database import database
 
@@ -179,33 +181,37 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
 def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "CameraConfig"):
     tokens = [*map(lambda x: x.detection_id.obj_order, detections)]
-    txs = [*map(lambda x: x.car_loc3d[0], detections)]
-    tys = [*map(lambda x: x.car_loc3d[1], detections)]
-    tzs = [*map(lambda x: x.car_loc3d[2], detections)]
+    points = [postgis.Point(d.car_loc3d[0], d.car_loc3d[1]) for d in detections]
 
     location = ego_config.location
 
-    _point = sql.SQL("UNNEST({fields}) AS _point (token, tx, ty, tz)").format(
-        fields=sql.SQL(',').join(map(sql.Literal, [tokens, txs, tys, tzs]))
-    )
+    _points = np.array([[d.car_loc3d[0], d.car_loc3d[1]] for d in detections])
+    hull = ConvexHull(_points)
 
     out = sql.SQL("""
     WITH
-    Point AS (SELECT * FROM {_point}),
+    Point AS (
+        SELECT *
+        FROM UNNEST(
+            {tokens},
+            {points}::geometry(Point)[]
+        ) AS _point (token, point)
+    ),
     AvailablePolygon AS (
         SELECT *
         FROM SegmentPolygon
         WHERE location = {location}
-        AND SegmentPolygon.__RoadType__intersection__
-        AND SegmentPolygon.__RoadType__lane__
-        AND SegmentPolygon.__RoadType__lanegroup__
-        AND SegmentPolygon.__RoadType__lanesection__
+        AND ST_Intersects(SegmentPolygon.elementPolygon, {convex}::geometry(MultiPoint))
+        AND (SegmentPolygon.__RoadType__intersection__
+        OR SegmentPolygon.__RoadType__lane__
+        OR SegmentPolygon.__RoadType__lanegroup__
+        OR SegmentPolygon.__RoadType__lanesection__)
     ),
     MaxPolygon AS (
         SELECT token, MAX(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
         JOIN AvailablePolygon AS Polygon
-            ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
+            ON ST_Contains(Polygon.elementPolygon, p.point)
         GROUP BY token
     ),
     MaxPolygonId AS (
@@ -213,14 +219,14 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         FROM Point AS p
         JOIN MaxPolygon USING (token)
         JOIN AvailablePolygon as Polygon
-            ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
+            ON ST_Contains(Polygon.elementPolygon, p.point)
             AND ST_Area(Polygon.elementPolygon) = MaxPolygon.size
         GROUP BY token
     ),
     PointPolygonSegment AS (
         SELECT
             *,
-            ST_Distance(ST_Point(tx, ty), ST_MakeLine(startPoint, endPoint)) AS distance
+            ST_Distance(p.point, segmentLine) AS distance
         FROM Point AS p
         JOIN MaxPolygonId USING (token)
         JOIN AvailablePolygon USING (elementId)
@@ -246,7 +252,12 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
     WHERE p.distance = MinDis.mindistance
         AND NOT p.__RoadType__roadsection__
     GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
-    """).format(_point=_point, location=sql.Literal(location))
+    """).format(
+        tokens=sql.Literal(tokens),
+        points=sql.Literal(points),
+        convex=sql.Literal(postgis.MultiPoint([(p[0], p[1]) for p in _points[[*hull.vertices, hull.vertices[0]]]])),
+        location=sql.Literal(location),
+    )
 
     result = database.execute(out)
     return result
