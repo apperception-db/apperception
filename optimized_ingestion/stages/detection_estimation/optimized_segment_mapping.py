@@ -186,7 +186,11 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
     location = ego_config.location
 
     _points = np.array([[d.car_loc3d[0], d.car_loc3d[1]] for d in detections])
-    hull = ConvexHull(_points)
+    if len(detections) >= 3:
+        ch = ConvexHull(_points)
+        convex = _points[[*ch.vertices, ch.vertices[0]]]
+    else:
+        convex = _points
 
     out = sql.SQL("""
     WITH
@@ -255,7 +259,7 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
     """).format(
         tokens=sql.Literal(tokens),
         points=sql.Literal(points),
-        convex=sql.Literal(postgis.MultiPoint([(p[0], p[1]) for p in _points[[*hull.vertices, hull.vertices[0]]]])),
+        convex=sql.Literal(postgis.MultiPoint(map(tuple, convex))),
         location=sql.Literal(location),
     )
 
