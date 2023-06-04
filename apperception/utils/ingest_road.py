@@ -700,7 +700,7 @@ def ingest_road(database: "Database", directory: str):
     add_segment_type(database, ROAD_TYPES)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
 
     from apperception.database import database
