@@ -121,6 +121,7 @@ class RoadPolygonInfo(NamedTuple):
     """
     id: str
     polygon: "shapely.geometry.Polygon"
+    polygon2d: "shapely.geometry.Polygon"
     segment_lines: "list[shapely.geometry.LineString]"
     road_type: str
     segment_headings: "list[float]"
@@ -154,7 +155,7 @@ def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[S
         i, polygon, types, lines, headings = x
         type = types[-1]
         for t in types:
-            if t in USEFUL_TYPES:
+            if t in USEFUL_TYPES and t != 'intersection':
                 type = t
                 break
         return Segment(
@@ -291,10 +292,12 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
     polygon = shapely.wkb.loads(roadpolygon.to_ewkb(), hex=True)
     assert isinstance(polygon, shapely.geometry.Polygon)
-
+    XYs: "Tuple[array.array[float], array.array[float]]" = polygon.exterior.coords.xy
+    polygon_points = list(zip(*XYs))
     return RoadPolygonInfo(
         polygonid,
         polygon,
+        list(map(world2pixel_factory(ego_config), polygon_points)),
         segmentlines,
         roadtype,
         segmentheadings,
@@ -428,14 +431,18 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         intersection_points = intersection(fov_lines, roadpolygon)
         decoded_road_polygon_points += intersection_points
         keep_road_polygon_points: "list[Float2]" = []
-        for current_road_point in decoded_road_polygon_points:
+        keep_cam_points: "list[Float2]" = []
+        deduced_cam_points = list(map(world2pixel_factory(ego_config), decoded_road_polygon_points))
+        for current_cam_point, current_road_point in zip(deduced_cam_points, decoded_road_polygon_points):
             if in_view(current_road_point, ego_config.ego_translation, fov_lines):
+                keep_cam_points.append(current_cam_point)
                 keep_road_polygon_points.append(current_road_point)
         if (len(keep_road_polygon_points) > 2
                 and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
             mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
                 shapely.geometry.Polygon(keep_road_polygon_points),
+                shapely.geometry.Polygon(keep_cam_points),
                 segmentlines,
                 roadtype,
                 segmentheadings,
@@ -444,5 +451,5 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 fov_lines
             )
 
-    logger.info(f'total mapping time: {time.time() - start_time}')
+    # logger.info(f'total mapping time: {time.time() - start_time}')
     return mapped_road_polygon_info

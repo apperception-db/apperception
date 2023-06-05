@@ -47,6 +47,8 @@ class Payload:
             assert metadata_l == len(keep), f"{filter.classname()} -- metadata: {metadata_l}, keep: {len(keep)}"
 
         metadata = {**self.metadata, **metadata}
+        print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
+        # print("\n".join(_split_keep(keep, 100)))
         return Payload(self.video, keep, metadata)
 
     def __getitem__(self, stage) -> "list[Any] | None":
