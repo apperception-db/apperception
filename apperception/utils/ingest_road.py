@@ -217,6 +217,10 @@ def create_tables(database: "Database"):
 
     database.update(CREATE_SEGMENT_SQL, commit=False)
     index("Segment", "elementId")
+    index("Segment", "startPoint")
+    index("Segment", "endPoint")
+    index("Segment", "segmentLine")
+    index("Segment", "heading")
 
     database.update(CREATE_LANE_SQL, commit=False)
     index("Lane", "id")
@@ -694,3 +698,11 @@ def ingest_road(database: "Database", directory: str):
 
     print("adding segment types")
     add_segment_type(database, ROAD_TYPES)
+
+
+if __name__ == "__main__":
+    import sys
+
+    from apperception.database import database
+
+    ingest_road(database, sys.argv[1])
