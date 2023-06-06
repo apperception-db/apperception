@@ -14,16 +14,13 @@ TODO:
     2. ssave the detection and tracking result in the sample plan object
 
 """
-import math
-
 import datetime
+import math
 import os
 import shapely.geometry
 import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, Tuple
-
-import cv2
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -35,16 +32,9 @@ from .optimized_segment_mapping import (RoadPolygonInfo,
                                         get_detection_polygon_mapping,
                                         get_largest_polygon_containing_point)
 from .sample_plan_algorithms import Action, get_sample_action_alg
-from .utils import (
-    Float2,
-    Float3,
-    Float22,
-    compute_area,
-    compute_distance,
-    get_segment_line,
-    relative_direction_to_ego,
-    trajectory_3d,
-)
+from .utils import (Float2, Float3, Float22, compute_area, compute_distance,
+                    get_segment_line, relative_direction_to_ego, trajectory_3d)
+
 
 @dataclass
 class DetectionInfo:
@@ -74,8 +64,6 @@ class DetectionInfo:
 
         self.compute_geo_info()
         self.compute_priority()
-        
-        
 
     def compute_geo_info(self):
         if self.ego_config is None:
@@ -107,11 +95,12 @@ class DetectionInfo:
             ego_heading
         )
         if self.detection_id.frame_idx == 55 and self.road_type != 'intersection':
-            print([self.detection_id.obj_order, self.car_bbox2d],',')
+            print([self.detection_id.obj_order, self.car_bbox2d], ',')
             relative_heading = abs(self.segment_heading - ego_heading) % 360
         # print(self.detection_id)
         # print(self.road_type)
             print(math.cos(math.radians(relative_heading)))
+
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance
 

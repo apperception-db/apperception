@@ -83,7 +83,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             else:
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
-            investigation_frame_nums.append([next_frame_num,next_action_type])
+            investigation_frame_nums.append([next_frame_num, next_action_type])
             if next_action_type:
                 investigation_frame_nums[-1].extend([next_sample_plan.action.target_obj_bbox])
             else:
@@ -187,11 +187,11 @@ def construct_estimated_all_detection_info(
             car_bbox2d)
         )
     # logger.info("all_detections", all_detections)
-    
+
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     for di in all_detection_info:
         if di.detection_id.frame_idx == 55 and di.detection_id.obj_order == 0:
-            x,y = di.car_bbox2d[0]
+            x, y = di.car_bbox2d[0]
             x_w, y_h = di.car_bbox2d[1]
             check_detections.append([di.detection_id.obj_order, x, y, x_w, y_h,
                                      di.road_type, di.road_polygon_info.polygon2d.exterior.coords.xy])

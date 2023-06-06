@@ -542,7 +542,7 @@ def relative_direction_to_ego(obj_heading: float, ego_heading: float):
 
     relative_heading = abs(obj_heading - ego_heading) % 360
     # print(math.cos(math.radians(relative_heading)))
-    if math.cos(math.radians(relative_heading)) < 1 and math.cos(math.radians(relative_heading)) > math.pi/6:
+    if math.cos(math.radians(relative_heading)) < 1 and math.cos(math.radians(relative_heading)) > math.pi / 6:
         return SAME_DIRECTION
-    elif math.cos(math.radians(relative_heading)) > -1 and math.cos(math.radians(relative_heading)) < -math.pi/6:
+    elif math.cos(math.radians(relative_heading)) > -1 and math.cos(math.radians(relative_heading)) < -math.pi / 6:
         return OPPOSITE_DIRECTION
