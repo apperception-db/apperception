@@ -1,6 +1,7 @@
+import os
+
 import cv2
 import numpy as np
-import os
 
 from ..payload import Payload
 from ..stages.decode_frame.decode_frame import DecodeFrame

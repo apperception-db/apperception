@@ -2,9 +2,10 @@ import json
 import logging
 import random
 import time
+from typing import Callable, List, Tuple
+
 import torch
 from bitarray import bitarray
-from typing import Callable, List, Tuple
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -13,9 +14,13 @@ from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_3d import Detection3D
 from ..stage import Stage
-from .detection_estimation import (DetectionInfo, SamplePlan,
-                                   construct_all_detection_info,
-                                   generate_sample_plan, obj_detection)
+from .detection_estimation import (
+    DetectionInfo,
+    SamplePlan,
+    construct_all_detection_info,
+    generate_sample_plan,
+    obj_detection,
+)
 from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
@@ -62,7 +67,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        for i in range(len(payload.video) - 1):
+        for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if self.skip_ratio != 0:
                 random_number = random.random()

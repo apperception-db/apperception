@@ -10,14 +10,16 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from apperception.database import database
-
 import array
 import logging
 import math
+import os
+import time
+from dataclasses import dataclass
+from typing import NamedTuple, Tuple
+
 import numpy as np
 import numpy.typing as npt
-import os
 import plpygis
 import postgis
 import psycopg2
@@ -25,9 +27,8 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-import time
-from dataclasses import dataclass
-from typing import NamedTuple, Tuple
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
 from .utils import Float2, Float3, Float22, line_to_polygon_intersection
@@ -55,7 +56,7 @@ WHERE ST_Contains(
         p.elementpolygon,
         {ego_translation}::geometry
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
@@ -76,7 +77,7 @@ WHERE ST_DWithin(
         {start_segment}::geometry,
         {view_distance}
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)

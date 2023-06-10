@@ -1,8 +1,9 @@
+from typing import TYPE_CHECKING
+
 import numpy as np
 import numpy.typing as npt
 import torch
 from pyquaternion import Quaternion
-from typing import TYPE_CHECKING
 
 from ..detection_2d.detection_2d import Detection2D
 from . import Detection3D, Metadatum
@@ -16,11 +17,11 @@ TO_BOTTOM_LEFT = np.array([
     [0, 1, 0, 1],
 ])
 TO_BOTTOM_RIGHT = np.array([
-    [1, 0, 1, 0],
+    [0, 0, 1, 0],
     [0, 1, 0, 1],
 ])
 TO_BOTTOM_CENTER = np.array([
-    [1, 0, 0.5, 0],
+    [0.5, 0, 0.5, 0],
     [0, 1, 0, 1],
 ])
 

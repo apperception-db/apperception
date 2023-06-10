@@ -1,23 +1,25 @@
-from apperception.database import database
-from apperception.utils import join
-
 import math
 import time
 
+from apperception.database import database
+from apperception.utils import join
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
-from optimized_ingestion.stages.decode_frame.parallel_decode_frame import \
-    ParallelDecodeFrame
-from optimized_ingestion.stages.detection_2d.yolo_detection import \
-    YoloDetection
-from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import \
-    FromDetection2DAndRoad
+from optimized_ingestion.stages.decode_frame.parallel_decode_frame import (
+    ParallelDecodeFrame,
+)
+from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
+from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import (
+    FromDetection2DAndRoad,
+)
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
-from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import \
-    FromTracking3D
+from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import (
+    FromTracking3D,
+)
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
-from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import \
-    FromTracking2DAndRoad as From2DAndRoad_3d
+from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import (
+    FromTracking2DAndRoad as From2DAndRoad_3d,
+)
 from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 
@@ -51,7 +53,7 @@ def associate_detection_info(tracking_result, detection_info_meta):
 
 
 def associate_segment_mapping(tracking_result, segment_mapping_meta):
-    return segment_mapping_meta[tracking_result.frame_idx][tracking_result.object_id]
+    return segment_mapping_meta[tracking_result.frame_idx].get(tracking_result.object_id)
 
 
 def get_tracks(sortmeta, ego_meta, segment_mapping_meta, base):
@@ -98,7 +100,7 @@ def format_trajectory(video_name, obj_id, track, base):
             object_type = tracking_result_3d.object_type
             timestamps.append(ego_info.timestamp)
             pairs.append(tracking_result_3d.point)
-            if (segment_mapping.segment_type == 'intersection'):
+            if not segment_mapping or (segment_mapping.segment_type == 'intersection'):
                 itemHeadings.append(None)
             else:
                 itemHeadings.append(segment_mapping.segment_heading)
@@ -173,7 +175,7 @@ def insert_trajectory(
     database._commit()
 
 
-def process_pipeline(video_name, frames, pipeline, base, insert_traj):
+def process_pipeline(video_name, frames, pipeline, base, insert_traj=True):
     output = pipeline.run(Payload(frames)).__dict__
     if insert_traj:
         metadata = output['metadata']

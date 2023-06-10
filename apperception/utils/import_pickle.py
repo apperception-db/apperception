@@ -1,8 +1,8 @@
 import os
 import pickle
 
-from apperception.database import Database
 from apperception.data_types import Camera, CameraConfig
+from apperception.database import Database
 
 
 def import_pickle(database: "Database", data_path: str):

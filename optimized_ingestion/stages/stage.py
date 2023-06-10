@@ -1,6 +1,32 @@
 import time
+from typing import TYPE_CHECKING, Any, Generic, Iterable, Type, TypeVar
+
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Generic, Type, TypeVar
+
+
+def is_notebook() -> bool:
+    if TYPE_CHECKING:
+        return False
+    try:
+        shell = get_ipython().__class__.__name__
+        if shell == 'ZMQInteractiveShell':
+            # Jupyter notebook or qtconsole
+            return True
+        elif shell == 'TerminalInteractiveShell':
+            # Terminal running IPython
+            return False
+        else:
+            # Other type (?)
+            return False
+    except NameError:
+        # Probably standard Python interpreter
+        return False
+
+
+if is_notebook():
+    from tqdm.notebook import tqdm
+else:
+    from tqdm import tqdm
 
 if TYPE_CHECKING:
     from ..payload import Payload
@@ -10,6 +36,7 @@ T = TypeVar('T')
 
 
 class Stage(Generic[T]):
+    progress: "bool" = False
     benchmark: "list[dict]"
     keeps: "list[tuple[int, int]]"
 
@@ -57,6 +84,26 @@ class Stage(Generic[T]):
             if k.startswith(classname):
                 return v
         return None
+
+    @classmethod
+    def encode_json(cls, o: "Any") -> "Any":
+        return None
+
+    @classmethod
+    def enable_progress(cls, progress: "bool" = True):
+        cls.progress = progress
+
+    _T2 = TypeVar('_T2')
+
+    @classmethod
+    def tqdm(cls, iterable: "Iterable[_T2]", *args, **kwargs) -> "Iterable[_T2]":
+        if Stage.progress:
+            desc = cls.classname()
+            if 'desc' in kwargs:
+                desc += f" {kwargs['desc']}"
+            return tqdm(iterable, *args, **{**kwargs, 'desc': desc})
+        else:
+            return iterable
 
 
 def _get_classnames(cls: "type") -> "list[str]":

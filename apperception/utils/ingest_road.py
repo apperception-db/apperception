@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS Segment(
     endPoint geometry,
     segmentLine geometry,
     heading real,
+    PRIMARY KEY (segmentId),
     FOREIGN KEY(elementId)
         REFERENCES SegmentPolygon(elementId)
 );
@@ -58,7 +59,11 @@ CREATE TABLE IF NOT EXISTS Lane(
 CREATE_LANE_LANESEC_SQL = """
 CREATE TABLE IF NOT EXISTS Lane_LaneSection(
     laneId TEXT,
-    laneSectionId TEXT
+    laneSectionId TEXT,
+    FOREIGN KEY (laneId)
+        REFERENCES Lane (id),
+    FOREIGN KEY (laneSectionId)
+        REFERENCES LaneSection (id)
 );
 """
 
@@ -74,14 +79,22 @@ CREATE TABLE IF NOT EXISTS LaneGroup(
 CREATE_LANEGROUP_LANE_SQL = """
 CREATE TABLE IF NOT EXISTS LaneGroup_Lane(
     laneGroupId TEXT,
-    laneId TEXT
+    laneId TEXT,
+    FOREIGN KEY (laneGroupId)
+        REFERENCES LaneGroup (id),
+    FOREIGN KEY (laneId)
+        REFERENCES Lane (id)
 );
 """
 
 CREATE_OPPOSITE_LANEGROUP_SQL = """
 CREATE TABLE IF NOT EXISTS Opposite_LaneGroup(
     laneGroupId TEXT,
-    oppositeId TEXT
+    oppositeId TEXT,
+    FOREIGN KEY (laneGroupId)
+        REFERENCES LaneGroup (id),
+    FOREIGN KEY (oppositeId)
+        REFERENCES LaneGroup (id)
 );
 """
 
@@ -99,14 +112,22 @@ CREATE TABLE IF NOT EXISTS Road(
 CREATE_ROAD_LANEGROUP_SQL = """
 CREATE TABLE IF NOT EXISTS Road_LaneGroup(
     roadId TEXT,
-    laneGroupId TEXT
+    laneGroupId TEXT,
+    FOREIGN KEY (roadId)
+        REFERENCES Road (id),
+    FOREIGN KEY (laneGroupId)
+        REFERENCES LaneGroup (id)
 );
 """
 
 CREATE_ROAD_ROADSECTION_SQL = """
 CREATE TABLE IF NOT EXISTS Road_RoadSection(
     roadId TEXT,
-    roadSectionId TEXT
+    roadSectionId TEXT,
+    FOREIGN KEY (roadId)
+        REFERENCES Road (id),
+    FOREIGN KEY (roadSectionId)
+        REFERENCES RoadSection (id)
 );
 """
 
@@ -115,6 +136,7 @@ CREATE TABLE IF NOT EXISTS RoadSection(
     id TEXT,
     forwardLanes text[],
     backwardLanes text[],
+    PRIMARY KEY (id),
     FOREIGN KEY(id)
         REFERENCES SegmentPolygon(elementId)
 );
@@ -123,7 +145,11 @@ CREATE TABLE IF NOT EXISTS RoadSection(
 CREATE_ROADSEC_LANESEC_SQL = """
 CREATE TABLE IF NOT EXISTS RoadSection_LaneSection(
     roadSectionId TEXT,
-    laneSectionId TEXT
+    laneSectionId TEXT,
+    FOREIGN KEY (roadSectionId)
+        REFERENCES RoadSection (id),
+    FOREIGN KEY (laneSectionId)
+        REFERENCES LaneSection (id)
 );
 """
 
@@ -191,19 +217,32 @@ def create_tables(database: "Database"):
 
     database.update(CREATE_SEGMENT_SQL, commit=False)
     index("Segment", "elementId")
-
-    database.update(CREATE_LANESECTION_SQL, commit=False)
-    index("LaneSection", "id")
+    index("Segment", "startPoint")
+    index("Segment", "endPoint")
+    index("Segment", "segmentLine")
+    index("Segment", "heading")
 
     database.update(CREATE_LANE_SQL, commit=False)
     index("Lane", "id")
 
-    database.update(CREATE_LANE_LANESEC_SQL, commit=False)
-    index("Lane_LaneSection", "laneId")
-    index("Lane_LaneSection", "laneSectionId")
+    database.update(CREATE_ROAD_SQL, commit=False)
+    index("Road", "id")
+
+    database.update(CREATE_INTERSECTION_SQL, commit=False)
+    index("Intersection", "id")
+
+    database.update(CREATE_LANESECTION_SQL, commit=False)
+    index("LaneSection", "id")
+
+    database.update(CREATE_ROADSECTION_SQL, commit=False)
+    index("RoadSection", "id")
 
     database.update(CREATE_LANEGROUP_SQL, commit=False)
     index("LaneGroup", "id")
+
+    database.update(CREATE_LANE_LANESEC_SQL, commit=False)
+    index("Lane_LaneSection", "laneId")
+    index("Lane_LaneSection", "laneSectionId")
 
     database.update(CREATE_LANEGROUP_LANE_SQL, commit=False)
     index("LaneGroup_Lane", "laneId")
@@ -213,9 +252,6 @@ def create_tables(database: "Database"):
     index("Opposite_LaneGroup", "oppositeId")
     index("Opposite_LaneGroup", "laneGroupId")
 
-    database.update(CREATE_ROAD_SQL, commit=False)
-    index("Road", "id")
-
     database.update(CREATE_ROAD_LANEGROUP_SQL, commit=False)
     index("Road_LaneGroup", "roadId")
     index("Road_LaneGroup", "laneGroupId")
@@ -224,15 +260,9 @@ def create_tables(database: "Database"):
     index("Road_RoadSection", "roadId")
     index("Road_RoadSection", "roadSectionId")
 
-    database.update(CREATE_ROADSECTION_SQL, commit=False)
-    index("RoadSection", "id")
-
     database.update(CREATE_ROADSEC_LANESEC_SQL, commit=False)
     index("RoadSection_LaneSection", "laneSectionId")
     index("RoadSection_LaneSection", "roadSectionId")
-
-    database.update(CREATE_INTERSECTION_SQL, commit=False)
-    index("Intersection", "id")
 
     database._commit()
 
@@ -582,33 +612,53 @@ def insert_intersection(database: "Database", intersections: "list[dict]"):
 ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"}
 
 
-def add_segment_type(database: "Database"):
+def add_segment_type(database: "Database", road_types: "set[str]"):
+    index = index_factory(database)
+
     database.update("ALTER TABLE SegmentPolygon ADD segmentTypes text[];")
     print("altered table")
-    for road_type in ROAD_TYPES:
-        # Add road type to all polygons of that type
-        query = f"""UPDATE SegmentPolygon
-                SET segmentTypes = ARRAY_APPEND(segmentTypes, '{road_type}')
-                WHERE elementId IN (SELECT id FROM {road_type});"""
-        database.update(query)
+
+    for road_type in road_types:
+        database.update(f"ALTER TABLE SegmentPolygon ADD __RoadType__{road_type}__ boolean;")
+        database.update(
+            f"""UPDATE SegmentPolygon
+            SET __RoadType__{road_type}__ = EXISTS(
+                SELECT * from {road_type}
+                WHERE {road_type}.id = SegmentPolygon.elementId
+            )"""
+        )
+        database.update(
+            f"""UPDATE SegmentPolygon
+            SET segmentTypes = ARRAY_APPEND(segmentTypes, '{road_type}')
+            WHERE elementId IN (SELECT id FROM {road_type});"""
+        )
         print("added type:", road_type)
+
+    for road_type in road_types:
+        index("SegmentPolygon", f"__RoadType__{road_type}__")
+        print("index created:", road_type)
+    database._commit()
 
 
 INSERT: "dict[str, Callable[[Database, list[dict]], None]]" = {
+    # primitives
     "polygon": insert_polygon,
     "segment": insert_segment,
-    "laneSection": insert_lanesection,
+    # basics
     "lane": insert_lane,
-    "lane_LaneSec": insert_lane_lanesec,
+    "road": insert_road,
     "laneGroup": insert_lanegroup,
+    # sections
+    "laneSection": insert_lanesection,
+    "roadSection": insert_roadsection,
+    "intersection": insert_intersection,
+    # relations
+    "lane_LaneSec": insert_lane_lanesec,
     "laneGroup_Lane": insert_lanegroup_lane,
     "laneGroup_opposite": insert_opposite_lanegroup,
-    "road": insert_road,
     "road_laneGroup": insert_road_lanegroup,
     "road_roadSec": insert_road_roadsec,
-    "roadSection": insert_roadsection,
     "roadSec_laneSec": insert_roadsec_lanesec,
-    "intersection": insert_intersection,
 }
 
 
@@ -647,4 +697,12 @@ def ingest_road(database: "Database", directory: str):
         ingest_location(database, directory, "boston-seaport")
 
     print("adding segment types")
-    add_segment_type(database)
+    add_segment_type(database, ROAD_TYPES)
+
+
+if __name__ == "__main__":
+    import sys
+
+    from apperception.database import database
+
+    ingest_road(database, sys.argv[1])

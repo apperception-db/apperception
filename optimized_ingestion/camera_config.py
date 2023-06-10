@@ -1,9 +1,10 @@
 import itertools
+from datetime import datetime
+from typing import Optional, Tuple
+
 import numpy as np
 import numpy.typing as npt
-from datetime import datetime
 from pyquaternion import Quaternion
-from typing import Optional, Tuple
 
 Float3 = Tuple[float, float, float]
 Float4 = Tuple[float, float, float, float]

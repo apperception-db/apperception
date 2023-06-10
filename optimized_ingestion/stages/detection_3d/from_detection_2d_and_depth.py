@@ -24,13 +24,13 @@ class FromDetection2DAndDepth(Detection3D):
 
             d3ds = []
             for detection in detections:
-                bbox_left, bbox_top, bbox_w, bbox_h = detection[:4]
+                bbox_left, bbox_top, bbox_right, bbox_bottom = detection[:4]
 
-                xc = int(bbox_left + (bbox_w / 2))
-                yc = int(bbox_top + (bbox_h / 2))
+                xc = int((bbox_left + bbox_right) / 2)
+                yc = int((bbox_top + bbox_bottom) / 2)
 
                 xl = int(bbox_left)
-                xr = int(bbox_left + bbox_w)
+                xr = int(bbox_right)
 
                 height, width = depth.shape
 

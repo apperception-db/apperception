@@ -1,14 +1,15 @@
-from apperception.database import database
-from apperception.utils import import_pickle
-
 import json
 import os
 import pickle
 import time
 
+from apperception.database import database
+from apperception.utils import import_pickle
 from optimized_ingestion.camera_config import camera_config
-from optimized_ingestion.utils.process_pipeline import (construct_pipeline,
-                                                        process_pipeline)
+from optimized_ingestion.utils.process_pipeline import (
+    construct_pipeline,
+    process_pipeline,
+)
 from optimized_ingestion.video import Video
 
 
@@ -28,9 +29,6 @@ def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, insert_tr
     for name, video in videos.items():
         if video['location'] != 'boston-seaport':
             continue
-        if scenes:
-            if name.split('-')[1] not in scenes:
-                continue
         if 'FRONT' not in name:
             continue
         print(name, '--------------------------------------------------------------------------------')
@@ -39,10 +37,8 @@ def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, insert_tr
             [camera_config(name, *f[1:], 0) for f in video["frames"]],
             video["start"],
         )
-        # try:
+
         process_pipeline(name, frames, pipeline, base, insert_traj)
-        # except BaseException:
-        #     print(f"error video: {name} with skip ratio {skip_ratio}")
         num_video += 1
 
     print("num_video: ", num_video)

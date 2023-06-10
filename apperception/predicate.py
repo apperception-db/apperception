@@ -1,4 +1,15 @@
-from typing import Any, Callable, Dict, Generic, List, Literal, Optional, Set, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+)
 
 BinOp = Literal["add", "sub", "mul", "div", "matmul"]
 BoolOp = Literal["and", "or"]
@@ -218,10 +229,8 @@ class CallNode(PredicateNode):
 
 
 def call_node(fn: "Fn"):
-    def call_node_factory(*args: "PredicateNode") -> "CallNode":
-        return CallNode(
-            fn, [arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True) for arg in args]
-        )
+    def call_node_factory(*args: "PredicateNode | str | int | float | bool | list") -> "CallNode":
+        return CallNode(fn, [*map(wrap_literal, args)])
 
     return call_node_factory
 

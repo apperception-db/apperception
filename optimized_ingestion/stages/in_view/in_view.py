@@ -1,11 +1,11 @@
-from apperception.database import database
-
 import numpy as np
 import numpy.typing as npt
 from bitarray import bitarray
 from postgis import MultiPoint
 from psycopg2 import sql
 from pyquaternion import Quaternion
+
+from apperception.database import database
 
 from ...payload import Payload
 from ..stage import Stage
@@ -15,7 +15,7 @@ class InView(Stage):
     def __init__(self, distance: float, segment_type: "str | list[str]"):
         super().__init__()
         self.distance = distance
-        self.segment_type = segment_type if isinstance(segment_type, list) else [segment_type]
+        self.segment_types = segment_type if isinstance(segment_type, list) else [segment_type]
 
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
         width, height = payload.video.dimension
@@ -98,11 +98,11 @@ class InView(Stage):
             {indices}::int[]
         ) AS ViewArea(points, index)
         JOIN SegmentPolygon ON ST_Intersects(ST_ConvexHull(points), elementPolygon)
-        WHERE segmentTypes && {segment_type}
+        WHERE {segment_type}
         """).format(
             view_areas=sql.Literal(view_areas),
             indices=sql.Literal(indices),
-            segment_type=sql.Literal(self.segment_type)
+            segment_type=sql.SQL(" AND ".join(map(roadtype, self.segment_types)))
         ))
 
         keep = bitarray(len(payload.keep))
@@ -111,3 +111,7 @@ class InView(Stage):
             keep[index] = 1
 
         return keep, None
+
+
+def roadtype(t: "str"):
+    return f"__roadtype__{t}__"
