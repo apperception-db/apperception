@@ -43,9 +43,6 @@ mamba activate apperception
 
 # install python dependencies
 poetry install
-
-# install yolo's + strongsort's dependencies
-pip install -r ./optimized_ingestion/modules/yolo_tracker/requirements.txt
 ```
 
 ### [Deprecated] Downloading Official YOLOv4 Pre-trained in the repo
