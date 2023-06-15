@@ -20,7 +20,15 @@ plpygis = "^0.2.0"
 psycopg2-binary = "^2.9.3"
 postgis = "^1.0.4"
 python-mobilitydb = "^0.1.2"
-nbdime = "^3.2.1"
+
+# Yolo + StrongSORT
+torch = "^1.13.0"
+torchvision = "^0.14.0"
+scipy = "^1.4.1"
+easydict = "^1.10"
+gdown = "^4.7.1"
+cython-bbox = {git = "https://github.com/apperception-db/cython_bbox.git"}
+ultralytics = "^8.0.117"
 
 [tool.poetry.group.test]
 optional = true
@@ -43,6 +51,7 @@ ipywidgets = "^8.0.6"
 jupyterlab-lsp = "^4.0.1"
 python-lsp-server = {extras = ["all"], version = "^1.7.1"}
 jupyterlab-vim = "^0.16.0"
+nbdime = "^3.2.1"
 altair = "^4.2.2"
 
 [build-system]
