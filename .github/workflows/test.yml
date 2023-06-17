@@ -68,19 +68,12 @@ jobs:
           token: ${{ secrets.GH_PAT || github.token }}
           submodules: recursive
 
-      # - name: Set up Python
-      #   uses: actions/setup-python@v4
-      #   with:
-      #     python-version: "3.10.6"
       - name: Setup Micromamba
         uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: environment.yml
           init-shell: none
-      # - uses: conda-incubator/setup-miniconda@v2
-      #   with:
-      #     # auto-activate-base: true
-      #     activate-environment: "apperception"
+
       - name: Check Python Versions
         shell: micromamba-shell {0}
         run: |
@@ -92,26 +85,8 @@ jobs:
           which pip3
           which poetry
 
-      # - name: Install Conda Environment
-      #   run: conda env update --file environment.yml --prune
-
-      # - name: Install and configure Poetry
-      #   uses: snok/install-poetry@v1
-      #   with:
-      #     virtualenvs-create: true
-      #     virtualenvs-in-project: true
-      #     installer-parallel: true
-
-      # - name: Cache Poetry virtualenv
-      #   uses: actions/cache@v3
-      #   id: cached-poetry-dependencies 
-      #   with:
-      #     path: .venv
-      #     key: poetry-venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
-
       - name: Install Dependencies
         shell: micromamba-shell {0}
-        # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --without dev --with test
       
       - name: Install lap (Hack)
