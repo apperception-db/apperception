@@ -7,6 +7,4 @@ dependencies:
   - python=3.10
   - pip
   - pip:
-    - numpy  # needed for installing lap
-    - lap    # does not work in poetry for some reason
     - poetry

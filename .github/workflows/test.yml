@@ -114,16 +114,11 @@ jobs:
         # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --without dev --with test
       
-      # - name: Install lap (Hack)
-      #   shell: micromamba-shell {0}
-      #   run: |
-      #     pip install --upgrade pip
-      #     pip install lap
-      #     # git clone https://github.com/gatagat/lap.git
-      #     # pushd lap
-      #     #   python3 setup.py build
-      #     #   python3 setup.py install
-      #     # popd
+      - name: Install lap (Hack)
+        shell: micromamba-shell {0}
+        run: |
+          pip install --upgrade pip
+          pip install lap
       
       - name: Check Installed Packages
         shell: micromamba-shell {0}
