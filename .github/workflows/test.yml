@@ -62,7 +62,8 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT || github.token }}
           submodules: recursive
@@ -71,7 +72,8 @@ jobs:
       #   uses: actions/setup-python@v4
       #   with:
       #     python-version: "3.10.6"
-      - uses: mamba-org/setup-micromamba@v1
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
         with:
           environment-file: environment.yml
           init-shell: none
@@ -79,13 +81,13 @@ jobs:
       #   with:
       #     # auto-activate-base: true
       #     activate-environment: "apperception"
-      - name: Print python
+      - name: Check Python Versions
         shell: micromamba-shell {0}
         run: |
-          which python
           python --version
-          which python3
           python3 --version
+          which python
+          which python3
           which pip
           which pip3
           which poetry
@@ -112,20 +114,16 @@ jobs:
         # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --without dev --with test
       
-      - name: Install lap (Hack)
-        shell: micromamba-shell {0}
-        run: |
-          pip install --upgrade pip
-          pip install lap
-          # git clone https://github.com/gatagat/lap.git
-          # pushd lap
-          #   python3 setup.py build
-          #   python3 setup.py install
-          # popd
-
-      - name: Check Python Version
-        shell: micromamba-shell {0}
-        run: python --version
+      # - name: Install lap (Hack)
+      #   shell: micromamba-shell {0}
+      #   run: |
+      #     pip install --upgrade pip
+      #     pip install lap
+      #     # git clone https://github.com/gatagat/lap.git
+      #     # pushd lap
+      #     #   python3 setup.py build
+      #     #   python3 setup.py install
+      #     # popd
       
       - name: Check Installed Packages
         shell: micromamba-shell {0}
@@ -135,7 +133,7 @@ jobs:
         shell: micromamba-shell {0}
         run: |
           pushd pg_extender
-          python ./scripts/generate_pg_extender.py
+          python ../scripts/generate_pg_extender.py
           cat install.sql
           psql -h localhost -p 25440 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
           psql -h localhost -p 25441 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
