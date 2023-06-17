@@ -10,7 +10,7 @@ jobs:
       mobilitydb:
         image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25440:5432
+          - 25432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -61,7 +61,7 @@ jobs:
           pushd pg_extender
           python ../scripts/generate_pg_extender.py
           cat install.sql
-          psql -h localhost -p 25440 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25432 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
           popd
         env:
           PGPASSWORD: docker
@@ -70,7 +70,7 @@ jobs:
         shell: micromamba-shell {0}
         run: python ./scripts/ingest_road.py
         env:
-          AP_PORT: 25440
+          AP_PORT: 25432
       
       - name: Generate Image data
         shell: micromamba-shell {0}
