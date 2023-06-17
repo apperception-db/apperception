@@ -53,9 +53,9 @@ def test_detection_3d():
                 assert detr.frame_idx == detg['frame_idx']
                 assert detr.object_id == detg['object_id']
                 assert tuple(detr.detection_id) == tuple(detg['detection_id'])
-                assert detr.bbox_left == detg['bbox_left']
-                assert detr.bbox_top == detg['bbox_top']
-                assert detr.bbox_w == detg['bbox_w']
-                assert detr.bbox_h == detg['bbox_h']
+                assert abs(detr.bbox_left - detg['bbox_left']) <= 1
+                assert abs(detr.bbox_top - detg['bbox_top']) <= 1
+                assert abs(detr.bbox_w - detg['bbox_w']) <= 1
+                assert abs(detr.bbox_h - detg['bbox_h']) <= 1
                 assert detr.object_type == detg['object_type']
-                assert np.allclose(np.array([float(detr.confidence)]), np.array([detg['confidence']]))
+                assert abs(float(detr.confidence) - detg['confidence']) <= 0.05

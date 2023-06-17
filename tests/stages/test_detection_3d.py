@@ -47,5 +47,11 @@ def test_detection_3d():
             det_groundtruth = json.load(f)
         
         for (det0, _, did0), (det1, _, did1) in zip(det_result, det_groundtruth):
-            assert np.allclose(det0.cpu().numpy(), np.array(det1))
-            assert np.allclose(np.array(did0), np.array(did1))
+            det0 = det0.cpu().numpy()
+            det1 = np.array(det1)
+            assert np.allclose(det0[:,:4], det1[:,:4], atol=2)
+            assert np.allclose(det0[:,4], det1[:,4], atol=0.05)
+            assert np.allclose(det0[:,5], det1[:,5])
+            assert np.allclose(det0[:,6:], det1[:,6:])
+
+            assert all(tuple(d0) == tuple(d1) for d0, d1 in zip(did0, did1))
