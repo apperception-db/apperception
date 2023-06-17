@@ -75,16 +75,19 @@ jobs:
         with:
           # auto-activate-base: true
           activate-environment: "apperception"
+
+      - name: Install Conda Environment
+        run: conda env update --file environment.yml --prune
       
-      - name: Install lap (Hack)
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install lap
-          # git clone https://github.com/gatagat/lap.git
-          # pushd lap
-          #   python3 setup.py build
-          #   python3 setup.py install
-          # popd
+#       - name: Install lap (Hack)
+#         run: |
+#           python3 -m pip install --upgrade pip
+#           python3 -m pip install lap
+#           # git clone https://github.com/gatagat/lap.git
+#           # pushd lap
+#           #   python3 setup.py build
+#           #   python3 setup.py install
+#           # popd
 
       # - name: Install and configure Poetry
       #   uses: snok/install-poetry@v1
