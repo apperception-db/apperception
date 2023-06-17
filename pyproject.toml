@@ -21,7 +21,7 @@ psycopg2-binary = "^2.9.3"
 postgis = "^1.0.4"
 python-mobilitydb = "^0.1.2"
 
-# Yolo + StrongSORT
+[tool.poetry.group.cv.dependencies]
 torch = "^1.13.0"
 torchvision = "^0.14.0"
 scipy = "^1.4.1"

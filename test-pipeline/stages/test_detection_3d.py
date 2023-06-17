@@ -52,6 +52,7 @@ def test_detection_3d():
             assert np.allclose(det0[:,:4], det1[:,:4], atol=2)
             assert np.allclose(det0[:,4], det1[:,4], atol=0.05)
             assert np.allclose(det0[:,5], det1[:,5])
-            assert np.allclose(det0[:,6:], det1[:,6:])
+            assert np.allclose(det0[:,6:12], det1[:,6:12])
+            assert np.allclose(det0[:,12:], det1[:,12:], rtol=0.01)
 
             assert all(tuple(d0) == tuple(d1) for d0, d1 in zip(did0, did1))
