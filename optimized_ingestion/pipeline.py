@@ -10,8 +10,11 @@ if TYPE_CHECKING:
 class Pipeline:
     stages: "list[Stage]" = field(default_factory=list)
 
-    def __init__(self) -> None:
-        self.stages = []
+    def __init__(self, stages: "list[Stage] | None" = None) -> None:
+        if stages is None:
+            self.stages = []
+        else:
+            self.stages = [*stages]
 
     def add_filter(self, filter: "Stage") -> "Pipeline":
         self.stages.append(filter)

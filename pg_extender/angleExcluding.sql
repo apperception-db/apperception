@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "angleExcluding"
-\echo ""
-
 CREATE OR REPLACE FUNCTION angleExcluding(angle real, angle_from real, angle_to real) RETURNS boolean AS
 $BODY$
 BEGIN

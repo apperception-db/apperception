@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "operators"
-\echo ""
-
 CREATE OR REPLACE FUNCTION greaterThan(a geometry, b geometry) RETURNS boolean AS
 $BODY$
 BEGIN
@@ -20,7 +14,7 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP OPERATOR > (geometry, real[]);
+DROP OPERATOR IF EXISTS > (geometry, real[]);
 CREATE OPERATOR  > (
   LEFTARG = geometry,
   RIGHTARG = real[],
@@ -45,7 +39,7 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP OPERATOR < (geometry, real[]);
+DROP OPERATOR IF EXISTS < (geometry, real[]);
 CREATE OPERATOR < (
   LEFTARG = geometry,
   RIGHTARG = real[],
@@ -70,7 +64,7 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP OPERATOR >= (geometry, real[]);
+DROP OPERATOR IF EXISTS >= (geometry, real[]);
 CREATE OPERATOR >= (
   LEFTARG = geometry,
   RIGHTARG = real[],
@@ -95,7 +89,7 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP OPERATOR <= (geometry, real[]);
+DROP OPERATOR IF EXISTS <= (geometry, real[]);
 CREATE OPERATOR <= (
   LEFTARG = geometry,
   RIGHTARG = real[],
@@ -120,7 +114,7 @@ END
 $BODY$
 LANGUAGE 'plpgsql' ;
 
-DROP OPERATOR == (geometry, real[]);
+DROP OPERATOR IF EXISTS == (geometry, real[]);
 CREATE OPERATOR == (
   LEFTARG = geometry,
   RIGHTARG = real[],

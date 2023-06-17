@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "overlap"
-\echo ""
-
 DROP FUNCTION IF EXISTS overlap(stbox, stbox);
 CREATE OR REPLACE FUNCTION overlap(bbox1 stbox, bbox2 stbox) RETURNS boolean AS
 $BODY$

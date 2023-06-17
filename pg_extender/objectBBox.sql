@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "objectBBox"
-\echo ""
-
 DROP FUNCTION IF EXISTS objectBBox(text, timestamptz);
 CREATE OR REPLACE FUNCTION objectBBox(id text, t timestamptz) RETURNS stbox AS
 $BODY$
