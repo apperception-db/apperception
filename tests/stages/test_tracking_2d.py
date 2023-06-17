@@ -7,13 +7,12 @@ from optimized_ingestion.pipeline import Pipeline
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.video import Video
 from optimized_ingestion.camera_config import camera_config
-from optimized_ingestion.metadata_json_encoder import MetadataJSONEncoder
 
 from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
 
-OUTPUT_DIR = './data/pipeline/outputs'
+OUTPUT_DIR = './data/pipeline/test-results'
 VIDEO_DIR =  './data/pipeline/videos'
 
 def test_detection_3d():

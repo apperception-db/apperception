@@ -12,7 +12,7 @@ from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import FromDetection2DAndRoad
 
-OUTPUT_DIR = './data/pipeline/outputs'
+OUTPUT_DIR = './data/pipeline/test-results'
 VIDEO_DIR =  './data/pipeline/videos'
 
 def test_detection_3d():
