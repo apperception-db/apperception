@@ -3,8 +3,8 @@ on:
   push:
 
 jobs:
-  test:
-    name: Test
+  test-pipeline:
+    name: Test Pipeline
     runs-on: ubuntu-latest
     services:
       mobilitydb:
