@@ -88,20 +88,10 @@ jobs:
           python3 --version
           which pip
           which pip3
+          which poetry
 
       # - name: Install Conda Environment
       #   run: conda env update --file environment.yml --prune
-      
-      - name: Install lap (Hack)
-        shell: micromamba-shell {0}
-        run: |
-          pip install --upgrade pip
-          pip install lap
-          # git clone https://github.com/gatagat/lap.git
-          # pushd lap
-          #   python3 setup.py build
-          #   python3 setup.py install
-          # popd
 
       # - name: Install and configure Poetry
       #   uses: snok/install-poetry@v1
@@ -121,6 +111,17 @@ jobs:
         shell: micromamba-shell {0}
         # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
         run: poetry install --no-interaction --without dev --with test
+      
+      - name: Install lap (Hack)
+        shell: micromamba-shell {0}
+        run: |
+          pip install --upgrade pip
+          pip install lap
+          # git clone https://github.com/gatagat/lap.git
+          # pushd lap
+          #   python3 setup.py build
+          #   python3 setup.py install
+          # popd
 
       - name: Check Python Version
         shell: micromamba-shell {0}
