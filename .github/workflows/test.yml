@@ -93,6 +93,9 @@ jobs:
       - name: Check Python Version
         run: poetry run python --version
       
+      - name: Install lap (Hack)
+        run: pip install lap
+      
       - name: Check Installed Packages
         run: poetry run pip list
 
