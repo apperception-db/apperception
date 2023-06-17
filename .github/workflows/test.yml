@@ -78,7 +78,7 @@ jobs:
           init-shell: >-
             bash
           # cache-environment: true
-          # post-cleanup: 'all'
+          post-cleanup: 'all'
       # - uses: conda-incubator/setup-miniconda@v2
       #   with:
       #     # auto-activate-base: true
@@ -89,16 +89,16 @@ jobs:
           python --version
           which python3
           python3 --version
-          mamba run -n apperception python2 --version
-          mamba run -n apperception python3 --version
+          micromamba run -n apperception python2 --version
+          micromamba run -n apperception python3 --version
 
       # - name: Install Conda Environment
       #   run: conda env update --file environment.yml --prune
       
       - name: Install lap (Hack)
         run: |
-          mamba run -n apperception python3 -m pip install --upgrade pip
-          mamba run -n apperception python3 -m pip install lap
+          micromamba run -n apperception python3 -m pip install --upgrade pip
+          micromamba run -n apperception python3 -m pip install lap
           # git clone https://github.com/gatagat/lap.git
           # pushd lap
           #   python3 setup.py build
@@ -121,18 +121,18 @@ jobs:
 
       - name: Install Dependencies
         # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: mamba run -n apperception poetry install --no-interaction --without dev --with test
+        run: micromamba run -n apperception poetry install --no-interaction --without dev --with test
 
       - name: Check Python Version
-        run: mamba run -n apperception poetry run python --version
+        run: micromamba run -n apperception poetry run python --version
       
       - name: Check Installed Packages
-        run: mamba run -n apperception poetry run pip list
+        run: micromamba run -n apperception poetry run pip list
 
       - name: Extend MobilityDB with User-Defined functions
         run: |
           pushd pg_extender
-          mamba run -n apperception poetry run python ./scripts/generate_pg_extender.py
+          micromamba run -n apperception poetry run python ./scripts/generate_pg_extender.py
           cat install.sql
           psql -h localhost -p 25440 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
           psql -h localhost -p 25441 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
@@ -145,18 +145,18 @@ jobs:
       
       - name: Ingest data
         run: |
-          mamba run -n apperception poetry run python ./scripts/ingest_road.py
-          mamba run -n apperception poetry run python ./scripts/import_tables.py
-          mamba run -n apperception poetry run jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
+          micromamba run -n apperception poetry run python ./scripts/ingest_road.py
+          micromamba run -n apperception poetry run python ./scripts/import_tables.py
+          micromamba run -n apperception poetry run jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
         env:
           AP_PORT: 25440
       
       - name: Generate Image data
         run: |
-          mamba run -n apperception poetry run python scripts/fake-images.py
+          micromamba run -n apperception poetry run python scripts/fake-images.py
       
       - name: Unit Test
-        run: mamba run -n apperception poetry run pytest --cov=apperception --cov-report=xml tests
+        run: micromamba run -n apperception poetry run pytest --cov=apperception --cov-report=xml tests
         env:
           AP_PORT: 25440
           AP_PORT_ROAD_1: 25441
