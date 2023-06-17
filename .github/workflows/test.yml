@@ -98,7 +98,8 @@ jobs:
       - name: Extend MobilityDB with User-Defined functions
         run: |
           pushd pg_extender
-          poetry run python -c "import os; f = open('./install.sql', 'w'); f.write('\n'.join(map(lambda x: f'\i {x};', os.listdir('.')))); f.close()"
+          poetry run python -c "import os; f = open('./install.sql', 'w'); f.write('\n'.join(map(lambda x: f'\i {x};', filter(lambda x: x.endswith('sql') and x != 'install.sql', os.listdir('.'))))); f.close()"
+          cat install.sql
           psql -h localhost -p 25440 -d mobilitydb -U docker -c "\i install.sql;"
           psql -h localhost -p 25441 -d mobilitydb -U docker -c "\i install.sql;"
           psql -h localhost -p 25442 -d mobilitydb -U docker -c "\i install.sql;"
