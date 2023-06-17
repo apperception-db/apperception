@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "minDistance"
-\echo ""
-
 DROP FUNCTION IF EXISTS minDistance(geometry, geometry[]);
 CREATE OR REPLACE FUNCTION minDistance(p geometry, geoms geometry[]) RETURNS real AS
 $BODY$

@@ -82,8 +82,8 @@ def tracking_result(d2d: "torch.Tensor", t: "TrackingResult", names: "list[str]"
         oid,
         bl,
         bt,
-        bl - br,
-        bt - bb,
+        br - bl,
+        bb - bt,
         names[cls],
         t.confidence,
     )

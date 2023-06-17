@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "ahead"
-\echo ""
-
 DROP FUNCTION IF EXISTS ahead(geometry, geometry, real);
 CREATE OR REPLACE FUNCTION ahead(obj1_loc geometry, obj2_loc geometry, obj2_heading real) RETURNS boolean AS
 $BODY$

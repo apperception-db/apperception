@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "headingAtTimestamp"
-\echo ""
-
 /* Used when a stepwise interplotation is used to define headings */
 DROP FUNCTION IF EXISTS headingAtTimestamp(tfloat, timestamptz); 
 CREATE OR REPLACE FUNCTION headingAtTimestamp(headings tfloat, t timestamptz) RETURNS float AS
