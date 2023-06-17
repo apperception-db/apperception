@@ -73,6 +73,7 @@ jobs:
         with:
           environment-file: environment.yml
           init-shell: none
+          cache-downloads: true
 
       - name: Check Python Versions
         shell: micromamba-shell {0}
