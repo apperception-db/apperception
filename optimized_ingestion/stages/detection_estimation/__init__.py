@@ -79,7 +79,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                     left3d, right3d = bbox3d[:3], bbox3d[3:]
                     car_loc3d = tuple(map(float, (left3d + right3d) / 2))
                     all_3d_points.append(car_loc3d)
-                print(f'all_3d_points {all_3d_points}')
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
@@ -202,12 +201,12 @@ def construct_estimated_all_detection_info(
         )
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     for di in all_detection_info:
-        if di.detection_id.frame_idx == 35:
-            print(di.road_polygon_info.id)
-            # x, y = di.car_bbox2d[0]
-            # x_w, y_h = di.car_bbox2d[1]
-            # check_detections.append([di.detection_id.obj_order, x, y, x_w, y_h,
-            #                          di.road_type, di.road_polygon_info.polygon2d.exterior.coords.xy, di.ego_config.filename])
+        if di.detection_id.frame_idx == 207:
+            # print(di.road_polygon_info.id)
+            x, y = di.car_bbox2d[0]
+            x_w, y_h = di.car_bbox2d[1]
+            check_detections.append([di.detection_id.obj_order, x, y, x_w, y_h,
+                                     di.road_type, di.road_polygon_info.polygon2d.exterior.coords.xy, di.ego_config.filename])
     if len(check_detections) > 0:
         print(f"check_detections {check_detections}")
     return all_detection_info
