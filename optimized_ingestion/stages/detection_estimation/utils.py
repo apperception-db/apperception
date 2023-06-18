@@ -43,14 +43,14 @@ def mph_to_mps(mph: 'float'):
 
 
 MAX_CAR_SPEED = {
-    'lane': 12.,
+    'lane': 20.,
     # TODO: if we decide to map to smallest polygon,
     # 'lanegroup' would mean street parking spots.
-    'lanegroup': 12.,
-    'road': 12.,
-    'lanesection': 12.,
-    'roadSection': 12.,
-    'intersection': 12.,
+    'lanegroup': 20.,
+    'road': 20.,
+    'lanesection': 20.,
+    'roadSection': 20.,
+    'intersection': 20.,
     'highway': 55.,
     'residential': 25.,
 }
@@ -542,7 +542,7 @@ def relative_direction_to_ego(obj_heading: float, ego_heading: float):
     assert obj_heading is not None
 
     relative_heading = abs(obj_heading - ego_heading) % 360
-    if math.cos(math.radians(relative_heading)) > 0:
+    if math.cos(math.radians(relative_heading)) < 1 and math.cos(math.radians(relative_heading)) > math.pi / 6:
         return SAME_DIRECTION
-    else:
+    elif math.cos(math.radians(relative_heading)) > -1 and math.cos(math.radians(relative_heading)) < -math.pi / 6:
         return OPPOSITE_DIRECTION
