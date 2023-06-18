@@ -12,17 +12,18 @@ if TYPE_CHECKING:
     from ...payload import Payload
 
 
+# TODO: not xywh -> ltrb
 TO_BOTTOM_LEFT = np.array([
     [1, 0, 0, 0],
-    [0, 1, 0, 1],
+    [0, 0, 0, 1],
 ])
 TO_BOTTOM_RIGHT = np.array([
     [0, 0, 1, 0],
-    [0, 1, 0, 1],
+    [0, 0, 0, 1],
 ])
 TO_BOTTOM_CENTER = np.array([
     [0.5, 0, 0.5, 0],
-    [0, 1, 0, 1],
+    [0, 0, 0, 1],
 ])
 
 
@@ -40,7 +41,7 @@ class FromDetection2DAndRoad(Detection3D):
 
                 device = d2d.device
 
-                [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
+                [[fx, s, x0], [_, fy, y0], [_, _, _]] = frame.camera_intrinsic
                 rotation = frame.camera_rotation
                 translation = np.array(frame.camera_translation)
 
@@ -59,9 +60,15 @@ class FromDetection2DAndRoad(Detection3D):
                 ], axis=1)
                 assert ((2, N * 2) == bottoms.shape), ((2, N * 2), bottoms.shape)
 
+                # iintrinsic = np.array([
+                #     [1/fx, -s/(fx*fy), (s * y0 - fy * x0) / (fx * fy)],
+                #     [0   , 1 / fy    , -y0 / fy                      ],
+                #     [0   , 0         , 1                             ],
+                # ])
+                # TODO: use matrix multiplication with K^-1
                 directions = np.stack((
-                    (s * bottoms[0] - x0) / fx,
-                    (s * bottoms[1] - y0) / fy,
+                    (bottoms[0] / fx) - (s * bottoms[1] / (fx * fy)) + ((s * y0) / (fx * fy)) - (x0 / fx),
+                    (bottoms[1] - y0) / fy,
                     np.ones(N * 2),
                 ))
                 assert ((3, N * 2) == directions.shape), ((3, N * 2), directions.shape)

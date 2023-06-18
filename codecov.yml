@@ -1,3 +1,4 @@
 ignore:
   - "apperception/legacy"
+  - "optimized_ingestion"
   - "**/__init__.py"

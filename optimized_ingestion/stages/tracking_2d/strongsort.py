@@ -5,7 +5,6 @@ import torch
 
 from ...payload import Payload
 from ...types import DetectionId
-from ..decode_frame.decode_frame import DecodeFrame
 from ..detection_2d.detection_2d import Detection2D
 from ..tracking.strongsort import StrongSORT as Tracking
 from ..tracking.tracking import TrackingResult
@@ -37,8 +36,6 @@ class StrongSORT(Tracking2D):
         detections = Detection2D.get(payload)
         assert detections is not None
 
-        images = DecodeFrame.get(payload)
-        assert images is not None
         metadata: "list[dict[int, Tracking2DResult]]" = []
         trajectories: "dict[int, list[Tracking2DResult]]" = {}
 
@@ -82,8 +79,8 @@ def tracking_result(d2d: "torch.Tensor", t: "TrackingResult", names: "list[str]"
         oid,
         bl,
         bt,
-        bl - br,
-        bt - bb,
+        br - bl,
+        bb - bt,
         names[cls],
         t.confidence,
     )

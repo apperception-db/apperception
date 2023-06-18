@@ -18,20 +18,33 @@ class InView(Stage):
         self.segment_types = segment_type if isinstance(segment_type, list) else [segment_type]
 
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
-        width, height = payload.video.dimension
+        w, h = payload.video.dimension
         Z = self.distance
-        point_2ds = Z * np.array([
+        view_vertices_2d = np.array([
             # 4 corners of the image frame
-            (width, height, 1),
-            (width, 0, 1),
-            (0, height, 1),
+            (w, h, 1),
+            (w, 0, 1),
+            (0, h, 1),
             (0, 0, 1),
             # camera position
             (0, 0, 0),
         ]).T
-        assert point_2ds.shape == (3, 5), point_2ds.shape
+        assert view_vertices_2d.shape == (3, 5), view_vertices_2d.shape
 
-        pixel2worlds: "list[npt.NDArray]" = []
+        [[fx, s, x0], [_, fy, y0], [_, _, _]] = payload.video.interpolated_frames[0].camera_intrinsic
+
+        # 3x3 matrix to convert points from pixel-coordinate to camera-coordinate
+        pixel2camera = Z * np.array([
+            [1 / fx, -s / (fx * fy), (s * y0 / (fx * fy)) - (x0 / fx)],
+            [0, 1 / fy, -y0 / fy],
+            [0, 0, 1]
+        ])
+        assert pixel2camera.shape == (3, 3), pixel2camera.shape
+
+        view_vertices_from_camera = pixel2camera @ view_vertices_2d
+        assert view_vertices_from_camera.shape == (3, 5), view_vertices_from_camera.shape
+
+        extrinsics: "list[npt.NDArray]" = []
         indices: "list[int]" = []
         for i, (k, f) in enumerate(zip(payload.keep, payload.video.interpolated_frames)):
             if not k:
@@ -41,38 +54,27 @@ class InView(Stage):
             rotation_matrix = rotation.unit.rotation_matrix
             assert rotation_matrix.shape == (3, 3), rotation_matrix.shape
 
-            [[fx, _, x0], [_, fy, y0], [_, _, s]] = f.camera_intrinsic
-            # 3x3 matrix to convert points from pixel-coordinate to camera-coordinate
-            pixel2camera = np.array([
-                [s / fx, 0, -x0 / fx],
-                [0, s / fy, -y0 / fy],
-                [0, 0, 1]
-            ])
-            assert pixel2camera.shape == (3, 3), pixel2camera.shape
-
-            # 3x3 matrix to convert points from pixel-coordinate to world-coordinate from the camera position
-            pixel2world = rotation_matrix @ pixel2camera
-            assert pixel2world.shape == (3, 3), pixel2world.shape
-
-            # 3x4 matrix to convert points from pixel-coordinate to world-coordinate
+            # 3x4 matrix to convert points from camera-coordinate to world-coordinate
             translation = np.array(f.camera_translation)[np.newaxis].T
-            pixel2world = np.hstack((pixel2world, translation))
-            assert pixel2world.shape == (3, 4), pixel2world.shape
+            extrinsic = np.hstack((rotation_matrix, translation))
+            assert extrinsic.shape == (3, 4), extrinsic.shape
 
-            pixel2worlds.append(pixel2world)
+            extrinsics.append(extrinsic)
             indices.append(i)
 
-        N = len(pixel2worlds)
+        N = len(extrinsics)
 
         # add 1 to the last row
-        _point_2ds = np.concatenate((point_2ds, np.ones_like(point_2ds[:1])))
-        assert _point_2ds.shape == (4, 5), _point_2ds.shape
+        view_vertices_from_camera = np.concatenate((
+            view_vertices_from_camera,
+            np.ones_like(view_vertices_from_camera[:1]),
+        ))
 
-        _pixel2worlds = np.stack(pixel2worlds)
-        assert _pixel2worlds.shape == (N, 3, 4), _pixel2worlds.shape
+        _extrinsics = np.stack(extrinsics)
+        assert _extrinsics.shape == (N, 3, 4), _extrinsics.shape
 
         # convert 4 corner points from pixel-coordinate to world-coordinate
-        view_area_3ds = _pixel2worlds @ _point_2ds
+        view_area_3ds = _extrinsics @ view_vertices_from_camera
         assert view_area_3ds.shape == (N, 3, 5), view_area_3ds.shape
 
         # project view_area to 2D from top-down view
@@ -102,7 +104,7 @@ class InView(Stage):
         """).format(
             view_areas=sql.Literal(view_areas),
             indices=sql.Literal(indices),
-            segment_type=sql.SQL(" AND ".join(map(roadtype, self.segment_types)))
+            segment_type=sql.SQL(" OR ".join(map(roadtype, self.segment_types)))
         ))
 
         keep = bitarray(len(payload.keep))

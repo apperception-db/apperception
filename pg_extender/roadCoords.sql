@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "roadCoords"
-\echo ""
-
 DROP FUNCTION IF EXISTS roadCoords(x real, y real);
 CREATE OR REPLACE FUNCTION roadCoords(x real, y real) RETURNS real[] AS
 $BODY$
