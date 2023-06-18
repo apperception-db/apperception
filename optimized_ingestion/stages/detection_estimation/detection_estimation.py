@@ -16,8 +16,8 @@ TODO:
 """
 
 import datetime
-import os
 import math
+import os
 import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, Tuple
@@ -46,7 +46,7 @@ from .utils import (
     relative_direction_to_ego,
     trajectory_3d,
 )
-import logging
+
 
 @dataclass
 class DetectionInfo:
@@ -112,7 +112,6 @@ class DetectionInfo:
         # print(self.detection_id)
         # print(self.road_type)
             print(math.cos(math.radians(relative_heading)))
-
 
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance
