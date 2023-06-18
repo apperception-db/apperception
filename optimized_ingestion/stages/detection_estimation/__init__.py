@@ -61,6 +61,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
+        investigation_frame_nums = []
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
@@ -70,6 +71,15 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _, dids = dets[i]
+            if i == 35:
+                all_3d_points = []
+                for de, di in zip(det, dids):
+                    bbox = de[:4]
+                    bbox3d = de[6:12]
+                    left3d, right3d = bbox3d[:3], bbox3d[3:]
+                    car_loc3d = tuple(map(float, (left3d + right3d) / 2))
+                    all_3d_points.append(car_loc3d)
+                print(f'all_3d_points {all_3d_points}')
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
@@ -87,6 +97,11 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             else:
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+            investigation_frame_nums.append([next_frame_num, next_action_type])
+            if next_action_type:
+                investigation_frame_nums[-1].extend([next_sample_plan.action.target_obj_bbox])
+            else:
+                investigation_frame_nums[-1].extend([None])
             metadata.append(all_detection_info)
 
         # TODO: ignore the last frame ->
@@ -96,6 +111,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
         # logger.info(np.array(times).sum(axis=0))
         logger.info(f"sorted_ego_config_length {len(payload.video)}")
+        logger.info(f"investigation_frame_nums {investigation_frame_nums}")
         logger.info(f"number of skipped {len(skipped_frame_num)}")
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
@@ -138,8 +154,6 @@ def generate_sample_plan_once(
     all_detection_info: "List[DetectionInfo] | None" = None
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
-    if all_detection_info:
-        logger.info(all_detection_info[0].road_type)
     next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
     # next_frame = None
     next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
@@ -163,6 +177,7 @@ def construct_estimated_all_detection_info(
     ego_trajectory: "list[trajectory_3d]",
 ) -> "list[DetectionInfo]":
     all_detections = []
+    check_detections = []
     for det, did in zip(detections, detection_ids):
         bbox = det[:4]
         # conf = det[4]
@@ -173,7 +188,7 @@ def construct_estimated_all_detection_info(
         w = x2 - x
         h = y2 - y
         car_loc2d = (x + w // 2, y + h // 2)
-        car_bbox2d = ((x - w // 2, y - h // 2), (x + w // 2, y + h // 2))
+        car_bbox2d = ((x, y), (x2, y2))
         left3d, right3d = bbox3d[:3], bbox3d[3:]
         car_loc3d = tuple(map(float, (left3d + right3d) / 2))
         assert len(car_loc3d) == 3
@@ -186,4 +201,13 @@ def construct_estimated_all_detection_info(
             car_bbox2d)
         )
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
+    for di in all_detection_info:
+        if di.detection_id.frame_idx == 35:
+            print(di.road_polygon_info.id)
+            # x, y = di.car_bbox2d[0]
+            # x_w, y_h = di.car_bbox2d[1]
+            # check_detections.append([di.detection_id.obj_order, x, y, x_w, y_h,
+            #                          di.road_type, di.road_polygon_info.polygon2d.exterior.coords.xy, di.ego_config.filename])
+    if len(check_detections) > 0:
+        print(f"check_detections {check_detections}")
     return all_detection_info

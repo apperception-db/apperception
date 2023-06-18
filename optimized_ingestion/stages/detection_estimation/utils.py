@@ -429,10 +429,10 @@ def time_to_exit_current_segment(
         distance1 = compute_distance(car_loc, intersection[0])
         distance2 = compute_distance(car_loc, intersection[1])
         if relative_direction_1:
-            logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_polygon_info.road_type)}')
+            # logger.info(f'relative_dierction_1 {distance1} {current_time} {max_car_speed(current_polygon_info.road_type)}')
             return time_elapse(current_time, distance1 / max_car_speed(current_polygon_info.road_type)), intersection[0]
         elif relative_direction_2:
-            logger.info(f'relative_direction_2 {distance2} {current_time}')
+            # logger.info(f'relative_direction_2 {distance2} {current_time}')
             return time_elapse(current_time, distance2 / max_car_speed(current_polygon_info.road_type)), intersection[1]
         else:
             logger.info("wrong car moving direction")
@@ -542,7 +542,7 @@ def relative_direction_to_ego(obj_heading: float, ego_heading: float):
     assert obj_heading is not None
 
     relative_heading = abs(obj_heading - ego_heading) % 360
-    if math.cos(math.radians(relative_heading)) > 0:
+    if math.cos(math.radians(relative_heading)) < 1 and math.cos(math.radians(relative_heading)) > math.pi / 6:
         return SAME_DIRECTION
-    else:
+    elif math.cos(math.radians(relative_heading)) > -1 and math.cos(math.radians(relative_heading)) < -math.pi / 6:
         return OPPOSITE_DIRECTION
