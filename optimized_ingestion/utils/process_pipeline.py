@@ -5,13 +5,8 @@ from apperception.database import database
 from apperception.utils import join
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
-from optimized_ingestion.stages.decode_frame.parallel_decode_frame import (
-    DecodeFrame,
-)
+from optimized_ingestion.stages.decode_frame.parallel_decode_frame import DecodeFrame
 from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
-from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import (
-    FromDetection2DAndRoad,
-)
 from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import (
     FromTracking3D,
