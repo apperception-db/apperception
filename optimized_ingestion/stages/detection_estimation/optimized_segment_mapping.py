@@ -263,6 +263,7 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         convex=sql.Literal(postgis.MultiPoint(map(tuple, convex))),
         location=sql.Literal(location),
     )
+    start_query = time.time()
 
     result = database.execute(out)
     detection_query_time = time.time() - start_query

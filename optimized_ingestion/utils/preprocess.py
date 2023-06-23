@@ -29,6 +29,9 @@ def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, insert_tr
     for name, video in videos.items():
         if video['location'] != 'boston-seaport':
             continue
+        if scenes:
+            if name.split('-')[1] not in scenes:
+                continue
         if 'FRONT' not in name:
             continue
         print(name, '--------------------------------------------------------------------------------')
@@ -38,7 +41,11 @@ def preprocess(world, data_dir, video_names=[], scenes=[] , base=True, insert_tr
             video["start"],
         )
 
-        process_pipeline(name, frames, pipeline, base, insert_traj)
+        try:
+            process_pipeline(name, frames, pipeline, base, insert_traj)
+        except BaseException:
+            print(f"error video: {name} with skip ratio {skip_ratio}")
+        # process_pipeline(name, frames, pipeline, base, insert_traj)
         num_video += 1
 
     print("num_video: ", num_video)

@@ -25,7 +25,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARN)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -116,11 +116,11 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         total_run_time = time.time() - start_time
         # logger.info(f"total_run_time {total_run_time}")
         # logger.info(f"total_detection_time {total_detection_time}")
-        with open("./outputs/total_detection_time_mini_old.txt", "r") as f:
-            all_detection_time = float(f.read().strip())
-            all_detection_time += total_detection_time
-        with open("./outputs/total_detection_time_mini_old.txt", "w") as f:
-            f.write(str(all_detection_time))
+        # with open("./outputs/total_detection_time_mini_old.txt", "r") as f:
+        #     all_detection_time = float(f.read().strip())
+        #     all_detection_time += total_detection_time
+        # with open("./outputs/total_detection_time_mini_old.txt", "w") as f:
+        #     f.write(str(all_detection_time))
         # logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
         # logger.info(f"total_ego_query_time {total_ego_query_time}")
         # logger.info(f"total_detection_query_time {total_detection_query_time}")

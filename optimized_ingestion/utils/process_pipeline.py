@@ -6,7 +6,7 @@ from apperception.utils import join
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
 from optimized_ingestion.stages.decode_frame.parallel_decode_frame import (
-    ParallelDecodeFrame,
+    DecodeFrame,
 )
 from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import (
@@ -25,13 +25,13 @@ from optimized_ingestion.utils.query_analyzer import PipelineConstructor
 
 def construct_base_pipeline():
     pipeline = Pipeline()
-    pipeline.add_filter(filter=ParallelDecodeFrame())
+    pipeline.add_filter(filter=DecodeFrame())
     pipeline.add_filter(filter=YoloDetection())
 
-    pipeline.add_filter(filter=FromDetection2DAndRoad())
-    # pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
-    # pipeline.add_filter(filter=From2DAndRoad_3d())
-    # pipeline.add_filter(filter=FromTracking3D())
+    # pipeline.add_filter(filter=FromDetection2DAndRoad())
+    pipeline.add_filter(filter=StrongSORT())  # 2 Frame p Second
+    pipeline.add_filter(filter=From2DAndRoad_3d())
+    pipeline.add_filter(filter=FromTracking3D())
 
     return pipeline
 
