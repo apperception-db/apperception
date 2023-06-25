@@ -1,11 +1,14 @@
-from apperception.predicate import GenSqlVisitor, PredicateNode, call_node
+from apperception.predicate import GenSqlVisitor, LiteralNode, PredicateNode, call_node
 
 ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"}
 
 
 @call_node
 def is_other_roadtype(visitor: "GenSqlVisitor", args: "list[PredicateNode]"):
-    raise Exception('Should not be used')
+    (param,) = args
+    assert isinstance(param, LiteralNode)
+    return f'is_other_roadtype({param.value})'
+    # raise Exception('Should not be used')
     # (roadtype,) = args
     # assert isinstance(roadtype, LiteralNode)
 

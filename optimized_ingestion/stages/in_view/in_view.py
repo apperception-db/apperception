@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -24,6 +24,7 @@ from apperception.predicate import (
     TableNode,
     UnaryOpNode,
     Visitor,
+    lit,
 )
 from apperception.utils import F
 
@@ -146,6 +147,16 @@ def roadtype(t: "str"):
     return f"__roadtype__{t}__"
 
 
+ANNIHILATORS: "dict[Literal['and', 'or'], bool]" = {
+    'and': False,
+    'or': True,
+}
+
+IS_ROADTYPE = F.is_roadtype().fn
+IS_OTHER_ROADTYPE = F.is_other_roadtype().fn
+IGNORE_ROADTYPE = F.ignore_roadtype().fn
+
+
 class KeepOnlyRoadTypePredicates(BaseTransformer):
     def visit_ArrayNode(self, node: ArrayNode):
         return F.ignore_roadtype()
@@ -158,23 +169,30 @@ class KeepOnlyRoadTypePredicates(BaseTransformer):
 
     def visit_BoolOpNode(self, node: BoolOpNode):
         visited = super().visit_BoolOpNode(node)
-        value = (node.op == 'or')
-        if any(isinstance(e, LiteralNode) and e.value == value for e in visited.exprs):
-            return LiteralNode(value)
+        annihilator = ANNIHILATORS[node.op]
+        # print(visited.op, annihilator)
+        # print(visited)
+        if any(isinstance(e, LiteralNode) and e.value == annihilator for e in visited.exprs):
+            # print('annihilated', visited)
+            return lit(annihilator)
         if all(isinstance(e, LiteralNode) for e in visited.exprs):
             assert len({e.value for e in visited.exprs}) == 1
-            return LiteralNode(value)
-        return BoolOpNode(node.op, [e for e in visited.exprs if not isinstance(e, LiteralNode)])
+            # print('all', visited)
+            return lit(visited.exprs[0].value)
+        exprs = [e for e in visited.exprs if not isinstance(e, LiteralNode)]
+        return BoolOpNode(visited.op, exprs) if len(exprs) > 1 else exprs[0]
 
     def visit_UnaryOpNode(self, node: UnaryOpNode):
         visited = super().visit_UnaryOpNode(node)
+        # print(node.op, visited)
 
-        if node.op == 'invert':
+        if node.op == 'neg':
             return visited.expr
 
         if isinstance(visited.expr, LiteralNode):
             assert isinstance(visited.expr.value, bool), visited.expr
-            return LiteralNode(not visited.expr.value)
+            # print('inverted', visited)
+            return lit(not visited.expr.value)
 
         return visited
 
@@ -187,8 +205,10 @@ class KeepOnlyRoadTypePredicates(BaseTransformer):
         return F.ignore_roadtype()
 
     def visit_CallNode(self, node: CallNode):
-        if node.fn == F.contains_all or node.fn == F.contained:
-            assert (len(node.params) == 1)
+        # print('call', node, node.fn, F.contained)
+        if node.fn == F.contains_all().fn or node.fn == F.contained().fn:
+            # print('contains')
+            assert (len(node.params) >= 1)
             assert isinstance(node.params[0], LiteralNode), node.params[0]
             assert isinstance(node.params[0].value, str), node.params[0]
             return F.is_roadtype(node.params[0])
@@ -207,7 +227,7 @@ class KeepOnlyRoadTypePredicates(BaseTransformer):
         return self(node.expr)
 
 
-class PushNagationInForRoadTypePredicates(BaseTransformer):
+class PushInversionInForRoadTypePredicates(BaseTransformer):
     def visit_ArrayNode(self, node: ArrayNode):
         raise Exception('Invalid Node Type')
 
@@ -219,25 +239,27 @@ class PushNagationInForRoadTypePredicates(BaseTransformer):
 
     def visit_BoolOpNode(self, node: BoolOpNode):
         assert all(isinstance(e, (BoolOpNode, CallNode, UnaryOpNode)) for e in node.exprs), node.exprs
-        return node
+        return super().visit_BoolOpNode(node)
 
     def visit_UnaryOpNode(self, node: UnaryOpNode):
-        assert node.op == 'not'
+        assert node.op == 'invert'
 
         visited = super().visit_UnaryOpNode(node)
         expr = visited.expr
 
         assert isinstance(expr, (BoolOpNode, CallNode)), expr
+        print('invert---')
         if isinstance(expr, BoolOpNode):
             if expr.op == 'and':
                 return self(BoolOpNode('or', [~e for e in expr.exprs]))
             else:
                 return self(BoolOpNode('and', [~e for e in expr.exprs]))
         else:
-            assert expr.fn in [F.is_roadtype, F.is_other_roadtype, F.ignore_roadtype], expr.fn
-            if expr.fn == F.is_roadtype:
+            print('invert', expr)
+            assert expr.fn in [IS_ROADTYPE, IS_OTHER_ROADTYPE, IGNORE_ROADTYPE], expr.fn
+            if expr.fn == IS_ROADTYPE:
                 return F.is_other_roadtype(expr.params[0])
-            elif expr.fn == F.is_other_roadtype:
+            elif expr.fn == IS_OTHER_ROADTYPE:
                 return F.is_roadtype(expr.params[0])
             return expr
 
@@ -248,7 +270,7 @@ class PushNagationInForRoadTypePredicates(BaseTransformer):
         raise Exception('Invalid Node Type')
 
     def visit_CallNode(self, node: CallNode):
-        assert node.fn in (F.is_roadtype, F.is_other_roadtype, F.ignore_roadtype), node.fn
+        assert node.fn in (IS_ROADTYPE, IS_OTHER_ROADTYPE, IGNORE_ROADTYPE), node.fn
         return node
 
     def visit_TableNode(self, node: TableNode):
@@ -264,7 +286,7 @@ class PushNagationInForRoadTypePredicates(BaseTransformer):
         raise Exception('Invalid Node Type')
 
 
-class NormalizeNagationAndFlattenRoadTypePredicates(BaseTransformer):
+class NormalizeInversionAndFlattenRoadTypePredicates(BaseTransformer):
     def visit_ArrayNode(self, node: ArrayNode):
         raise Exception('Invalid Node Type')
 
@@ -286,28 +308,28 @@ class NormalizeNagationAndFlattenRoadTypePredicates(BaseTransformer):
 
         # Cleanup Ignore RoadType
         if node.op == 'and':
-            if all(isinstance(e, CallNode) and e.fn == F.ignore_roadtype for e in _exprs):
+            if all(isinstance(e, CallNode) and e.fn == IGNORE_ROADTYPE for e in _exprs):
                 return F.ignore_roadtype()
             # Remove Ignore RoadType
-            _exprs = [e for e in _exprs if not isinstance(e, CallNode) or e.fn != F.ignore_roadtype]
+            _exprs = [e for e in _exprs if not isinstance(e, CallNode) or e.fn != IGNORE_ROADTYPE]
         else:
-            if any(isinstance(e, CallNode) and e.fn == F.ignore_roadtype for e in exprs):
+            if any(isinstance(e, CallNode) and e.fn == IGNORE_ROADTYPE for e in exprs):
                 return F.ignore_roadtype()
 
         # Boolean Absorption
         is_roadtypes = [
             e.params[0].value.lower()
             for e in _exprs
-            if isinstance(e, CallNode) and e.fn == F.is_roadtype
+            if isinstance(e, CallNode) and e.fn == IS_ROADTYPE
         ]
         nested_exprs = [e for e in _exprs if isinstance(e, BoolOpNode) and e.op != node.op]
-        assert len(is_roadtypes) + len(nested_exprs) == len(_exprs)
+        assert len(is_roadtypes) + len(nested_exprs) == len(_exprs), (len(is_roadtypes), len(nested_exprs), len(_exprs), _exprs)
 
         is_roadtypes: "set[str]" = set(is_roadtypes)
 
         def is_absorbed(e: "CallNode | BoolOpNode"):
             if isinstance(e, CallNode):
-                assert e.fn == F.is_roadtype, e.fn
+                assert e.fn == IS_ROADTYPE, e.fn
 
                 rt = e.params[0]
                 assert isinstance(rt, LiteralNode), rt
@@ -316,7 +338,7 @@ class NormalizeNagationAndFlattenRoadTypePredicates(BaseTransformer):
                 return rt in is_roadtypes
             else:
                 assert e.op == node.op, (node.op, e.op)
-                all_roadtype = all(isinstance(e, CallNode) and e.fn == F.is_roadtype for e in e.exprs)
+                all_roadtype = all(isinstance(e, CallNode) and e.fn == IS_ROADTYPE for e in e.exprs)
                 return all_roadtype and {ee.params[0].value.lower() for ee in e.exprs}.issubset(is_roadtypes)
 
         nested_exprs = [
@@ -324,7 +346,7 @@ class NormalizeNagationAndFlattenRoadTypePredicates(BaseTransformer):
             if not any(map(is_absorbed, e.exprs))
         ]
 
-        _exprs = [*map(F.is_roadtype, is_roadtypes), *nested_exprs]
+        _exprs = [*map(F.is_roadtype, sorted(is_roadtypes)), *nested_exprs]
         if len(_exprs) == 1:
             return _exprs[0]
         return BoolOpNode(node.op, _exprs)
@@ -339,8 +361,8 @@ class NormalizeNagationAndFlattenRoadTypePredicates(BaseTransformer):
         raise Exception('Invalid Node Type')
 
     def visit_CallNode(self, node: CallNode):
-        assert node.fn in (F.is_roadtype, F.is_other_roadtype, F.ignore_roadtype), node.fn
-        if node.fn == F.is_other_roadtype:
+        assert node.fn in (IS_ROADTYPE, IS_OTHER_ROADTYPE, IGNORE_ROADTYPE), node.fn
+        if node.fn == IS_OTHER_ROADTYPE:
             rt = node.params[0]
             assert isinstance(rt, LiteralNode)
 
@@ -385,7 +407,7 @@ class FindRoadTypes(Visitor["set[str]"]):
         raise Exception('Invalid Node Type')
 
     def visit_CallNode(self, node: "CallNode") -> "set[str]":
-        assert node.fn == F.is_roadtype, node.fn
+        assert node.fn == IS_ROADTYPE, node.fn
         return {node.params[0].value.lower()}
 
     def visit_TableNode(self, node: "TableNode") -> "set[str]":
@@ -427,7 +449,7 @@ class InViewPredicate(Visitor[str]):
         raise Exception('Invalid Node Type')
 
     def visit_CallNode(self, node: "CallNode") -> "str":
-        assert node.fn == F.is_roadtype, node.fn
+        assert node.fn == IS_ROADTYPE, node.fn
 
         rt = node.params[0]
         assert isinstance(rt, LiteralNode), rt
@@ -458,8 +480,8 @@ def create_inview_predicate(
         assert isinstance(node.value, bool), node.value
         return [], node.value
 
-    node = PushNagationInForRoadTypePredicates()(node)
-    node = NormalizeNagationAndFlattenRoadTypePredicates()(node)
+    node = PushInversionInForRoadTypePredicates()(node)
+    node = NormalizeInversionAndFlattenRoadTypePredicates()(node)
     # Note F.ignore_roadtype will either disappear from all the predicates or propagate to the top
     if isinstance(node, CallNode) and node.fn == F.ignore_roadtype:
         return [], True
