@@ -452,16 +452,12 @@ class Database:
     #     )
 
 
-try:
-    database = Database(
-        psycopg2.connect(
-            dbname=environ.get("AP_DB", "mobilitydb"),
-            user=environ.get("AP_USER", "docker"),
-            host=environ.get("AP_HOST", "localhost"),
-            port=environ.get("AP_PORT", "25432"),
-            password=environ.get("AP_PASSWORD", "docker"),
-        )
+database = Database(
+    psycopg2.connect(
+        dbname=environ.get("AP_DB", "mobilitydb"),
+        user=environ.get("AP_USER", "docker"),
+        host=environ.get("AP_HOST", "localhost"),
+        port=environ.get("AP_PORT", "25432"),
+        password=environ.get("AP_PASSWORD", "docker"),
     )
-except psycopg2.OperationalError:
-    print("Database connection failed: default database is None")
-    database = None
+)
