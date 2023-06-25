@@ -30,8 +30,6 @@ gdown = "^4.7.1"
 cython-bbox = {git = "https://github.com/apperception-db/cython_bbox.git"}
 ultralytics = "^8.0.117"
 
-[tool.poetry.group.test]
-optional = true
 [tool.poetry.group.test.dependencies]
 pytest = "^7.1.2"
 coverage = "^6.4.1"

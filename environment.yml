@@ -7,4 +7,4 @@ dependencies:
   - python=3.10
   - pip
   - pip:
-    - poetry
+    - poetry==1.5.1
