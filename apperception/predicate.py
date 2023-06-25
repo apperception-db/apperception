@@ -79,17 +79,23 @@ class PredicateNode:
 
     def __and__(self, other):
         other = wrap_literal(other)
-        return BoolOpNode("and", [
-            *PredicateNode.__expand_exprs('and', self),
-            *PredicateNode.__expand_exprs('and', other),
-        ])
+        return BoolOpNode(
+            "and",
+            [
+                *PredicateNode.__expand_exprs("and", self),
+                *PredicateNode.__expand_exprs("and", other),
+            ],
+        )
 
     def __or__(self, other):
         other = wrap_literal(other)
-        return BoolOpNode("or", [
-            *PredicateNode.__expand_exprs('or', self),
-            *PredicateNode.__expand_exprs('or', other),
-        ])
+        return BoolOpNode(
+            "or",
+            [
+                *PredicateNode.__expand_exprs("or", self),
+                *PredicateNode.__expand_exprs("or", other),
+            ],
+        )
 
     def __eq__(self, other):
         other = wrap_literal(other)

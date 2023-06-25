@@ -7,7 +7,7 @@ ROAD_TYPES = {"road", "lane", "lanesection", "roadsection", "intersection", "lan
 def is_other_roadtype(visitor: "GenSqlVisitor", args: "list[PredicateNode]"):
     (param,) = args
     assert isinstance(param, LiteralNode)
-    return f'is_other_roadtype({param.value})'
+    return f"is_other_roadtype({param.value})"
     # raise Exception('Should not be used')
     # (roadtype,) = args
     # assert isinstance(roadtype, LiteralNode)
