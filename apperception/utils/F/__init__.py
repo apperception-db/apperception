@@ -8,6 +8,9 @@ from .convert_camera import convert_camera
 from .distance import distance
 from .facing_relative import facing_relative
 from .get_ import get_
+from .ignore_roadtype import ignore_roadtype
+from .is_other_roadtype import is_other_roadtype
+from .is_roadtype import is_roadtype
 from .like import like
 from .min_distance import min_distance
 from .road_direction import road_direction
@@ -38,4 +41,7 @@ __all__ = [
     "ahead",
     "contains_all",
     "min_distance",
+    "is_roadtype",
+    "is_other_roadtype",
+    "ignore_roadtype",
 ]
