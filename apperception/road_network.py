@@ -8,4 +8,4 @@ class RoadNetwork:
         self.road_network_dir = road_network_dir
 
     def ingest(self, database: "Database"):
-        ingest_location(self.location, self.road_network_dir, database)
+        ingest_location(database, self.road_network_dir, self.location)
