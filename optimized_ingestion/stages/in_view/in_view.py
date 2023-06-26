@@ -40,14 +40,14 @@ OTHER_ROAD_TYPES = {
 
 
 class InView(Stage):
-    def __init__(self, distance: float, roadtype: "str | list[str] | None" = None, predicate: "PredicateNode | None" = None):
+    def __init__(self, distance: float, roadtypes: "str | list[str] | None" = None, predicate: "PredicateNode | None" = None):
         super().__init__()
         self.distance = distance
-        assert (roadtype is None) != (predicate is None), 'Can only except either segment_type or predicate'
+        assert (roadtypes is None) != (predicate is None), 'Can only except either segment_type or predicate'
         self.roadtypes: "list[str] | None" = None
         self.predicate: "PredicateNode | None" = None
-        if roadtype is not None:
-            self.roadtypes = roadtype if isinstance(roadtype, list) else [roadtype]
+        if roadtypes is not None:
+            self.roadtypes = roadtypes if isinstance(roadtypes, list) else [roadtypes]
         if predicate is not None:
             self.roadtypes, self.predicate = create_inview_predicate(predicate)
 
