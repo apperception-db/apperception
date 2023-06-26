@@ -145,10 +145,10 @@ class InView(Stage):
             keep.setall(0)
             for (index, ) in results:
                 keep[index] = 1
-        elif self.predicate == False:
+        elif self.predicate is False:
             keep = bitarray(len(payload.keep))
             keep.setall(0)
-        elif self.predicate != True:
+        elif self.predicate is not True:
             exists = sql.SQL("""
             EXISTS (
                 SELECT *
