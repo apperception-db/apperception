@@ -79,4 +79,4 @@ jobs:
         run: python examples/inference_pipeline.py
 
       - name: Commit generated examples
-        run: ./scripts/commit-and-push.sh "[CI] generate video examples"
+        run: ./scripts/commit-and-push-if-latest.sh "[CI] generate video examples"
