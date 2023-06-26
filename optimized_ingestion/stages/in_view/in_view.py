@@ -166,7 +166,7 @@ class InView(Stage):
             """).format(
                 view_areas=sql.Literal(view_areas),
                 indices=sql.Literal(indices),
-                exists=sql.SQL(",").join(exists.format(rt=roadtype(st)) for st in self.roadtypes),
+                exists=sql.SQL(",").join(exists.format(rt=sql.Identifier(roadtype(st))) for st in self.roadtypes),
             ))
 
             keep = bitarray(len(payload.keep))

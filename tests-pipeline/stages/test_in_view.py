@@ -177,24 +177,25 @@ def test_detection_2d():
     with open(os.path.join(VIDEO_DIR, 'frames.pkl'), 'rb') as f:
         videos = pickle.load(f)
     
-    pipeline1 = Pipeline([InView(roadtypes='intersection')])
-    pipeline2 = Pipeline([InView(predicate=(
-        ((o1.type == 'car') | (o1.type == 'truck')) &
-        F.contains_all('intersection', [o1.trans]@c.time) &
-        ~F.contains_all('lanesection', [o1.trans]@c.time) &
-        (F.min_distance(c.ego, 'intersection') < 10))
-    )])
+    for distance in [10, 20, 30, 40, 50]:
+        pipeline1 = Pipeline([InView(distance, roadtypes='intersection')])
+        pipeline2 = Pipeline([InView(distance, predicate=(
+            ((o1.type == 'car') | (o1.type == 'truck')) &
+            F.contains_all('intersection', [o1.trans]@c.time) &
+            ~F.contains_all('lanesection', [o1.trans]@c.time) &
+            (F.min_distance(c.ego, 'intersection') < 10))
+        )])
 
-    for name, video in videos.items():
-        if video['filename'] not in files:
-            continue
-        
-        frames = Video(
-            os.path.join(VIDEO_DIR, video["filename"]),
-            [camera_config(*f, 0) for f in video["frames"]],
-        )
+        for name, video in videos.items():
+            if video['filename'] not in files:
+                continue
+            
+            frames = Video(
+                os.path.join(VIDEO_DIR, video["filename"]),
+                [camera_config(*f, 0) for f in video["frames"]],
+            )
 
-        output1 = pipeline1.run(Payload(frames))
-        output2 = pipeline2.run(Payload(frames))
+            output1 = pipeline1.run(Payload(frames))
+            output2 = pipeline2.run(Payload(frames))
 
-        assert output1.keep == output2.keep, (name, output1.keep, output2.keep)
+            assert output1.keep == output2.keep, (name, output1.keep, output2.keep)
