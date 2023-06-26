@@ -40,10 +40,16 @@ OTHER_ROAD_TYPES = {
 
 
 class InView(Stage):
-    def __init__(self, distance: float, segment_type: "str | list[str]"):
+    def __init__(self, distance: float, roadtypes: "str | list[str] | None" = None, predicate: "PredicateNode | None" = None):
         super().__init__()
         self.distance = distance
-        self.segment_types = segment_type if isinstance(segment_type, list) else [segment_type]
+        assert (roadtypes is None) != (predicate is None), 'Can only except either segment_type or predicate'
+        self.roadtypes: "list[str] | None" = None
+        self.predicate: "PredicateNode | None" = None
+        if roadtypes is not None:
+            self.roadtypes = roadtypes if isinstance(roadtypes, list) else [roadtypes]
+        if predicate is not None:
+            self.roadtypes, self.predicate = create_inview_predicate(predicate)
 
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
         w, h = payload.video.dimension
@@ -120,25 +126,59 @@ class InView(Stage):
             view_area = MultiPoint(view_area_2d.tolist())
             view_areas.append(view_area)
 
-        # TODO: where clause should depends on query predicate
-        results = database.execute(sql.SQL("""
-        SELECT index
-        FROM UNNEST (
-            {view_areas},
-            {indices}::int[]
-        ) AS ViewArea(points, index)
-        JOIN SegmentPolygon ON ST_Intersects(ST_ConvexHull(points), elementPolygon)
-        WHERE {segment_type}
-        """).format(
-            view_areas=sql.Literal(view_areas),
-            indices=sql.Literal(indices),
-            segment_type=sql.SQL(" OR ".join(map(roadtype, self.segment_types)))
-        ))
+        if self.predicate is None:
+            results = database.execute(sql.SQL("""
+            SELECT index
+            FROM UNNEST (
+                {view_areas},
+                {indices}::int[]
+            ) AS ViewArea(points, index)
+            JOIN SegmentPolygon ON ST_Intersects(ST_ConvexHull(points), elementPolygon)
+            WHERE {segment_type}
+            """).format(
+                view_areas=sql.Literal(view_areas),
+                indices=sql.Literal(indices),
+                segment_type=sql.SQL(" OR ".join(map(roadtype, self.roadtypes)))
+            ))
 
-        keep = bitarray(len(payload.keep))
-        keep.setall(0)
-        for (index, ) in results:
-            keep[index] = 1
+            keep = bitarray(len(payload.keep))
+            keep.setall(0)
+            for (index, ) in results:
+                keep[index] = 1
+        elif self.predicate is False:
+            keep = bitarray(len(payload.keep))
+            keep.setall(0)
+        elif self.predicate is not True:
+            exists = sql.SQL("""
+            EXISTS (
+                SELECT *
+                FROM SegmentPolygon
+                WHERE ST_Intersects(ST_ConvexHull(points), elementPolygon)
+                AND {rt}
+            )
+            """)
+            results = database.execute(sql.SQL("""
+            SELECT index, {exists}
+            FROM UNNEST (
+                {view_areas},
+                {indices}::int[]
+            ) AS ViewArea(points, index)
+            """).format(
+                view_areas=sql.Literal(view_areas),
+                indices=sql.Literal(indices),
+                exists=sql.SQL(",").join(exists.format(rt=sql.Identifier(roadtype(st))) for st in self.roadtypes),
+            ))
+
+            keep = bitarray(len(payload.keep))
+            keep.setall(0)
+            for (index, *encoded_segment_types) in results:
+                segment_types = {
+                    st for st, encoded
+                    in zip(self.roadtypes, encoded_segment_types)
+                    if encoded
+                }
+                if self.predicate(segment_types):
+                    keep[index] = 1
 
         return keep, None
 
