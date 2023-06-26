@@ -1,7 +1,20 @@
+import json
+import os
+import pickle
 import pytest
+import numpy as np
+
 from apperception.predicate import *
 from apperception.utils import F
-from optimized_ingestion.stages.in_view.in_view import FindRoadTypes, InViewPredicate, KeepOnlyRoadTypePredicates, NormalizeInversionAndFlattenRoadTypePredicates, PushInversionInForRoadTypePredicates
+
+from optimized_ingestion.stages.in_view.in_view import FindRoadTypes, InViewPredicate, KeepOnlyRoadTypePredicates, NormalizeInversionAndFlattenRoadTypePredicates, PushInversionInForRoadTypePredicates, InView
+from optimized_ingestion.pipeline import Pipeline
+from optimized_ingestion.payload import Payload
+from optimized_ingestion.video import Video
+from optimized_ingestion.camera_config import camera_config
+
+from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
+from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 
 # Test Strategies
 # - Real use case -- simple predicates from the query
@@ -154,3 +167,34 @@ def test_predicates(fn, sqls):
 # ])
 # def test_find_all_tables(fn, tables, camera):
 #     assert FindAllTablesVisitor()(normalize(fn)) == (tables, camera)
+
+OUTPUT_DIR = './data/pipeline/test-results'
+VIDEO_DIR =  './data/pipeline/videos'
+
+def test_detection_2d():
+    files = os.listdir(VIDEO_DIR)
+
+    with open(os.path.join(VIDEO_DIR, 'frames.pkl'), 'rb') as f:
+        videos = pickle.load(f)
+    
+    pipeline1 = Pipeline([InView(roadtypes='intersection')])
+    pipeline2 = Pipeline([InView(predicate=(
+        ((o1.type == 'car') | (o1.type == 'truck')) &
+        F.contains_all('intersection', [o1.trans]@c.time) &
+        ~F.contains_all('lanesection', [o1.trans]@c.time) &
+        (F.min_distance(c.ego, 'intersection') < 10))
+    )])
+
+    for name, video in videos.items():
+        if video['filename'] not in files:
+            continue
+        
+        frames = Video(
+            os.path.join(VIDEO_DIR, video["filename"]),
+            [camera_config(*f, 0) for f in video["frames"]],
+        )
+
+        output1 = pipeline1.run(Payload(frames))
+        output2 = pipeline2.run(Payload(frames))
+
+        assert output1.keep == output2.keep, (name, output1.keep, output2.keep)
