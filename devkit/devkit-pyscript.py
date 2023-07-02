@@ -9,6 +9,8 @@ from pyquaternion import Quaternion
 import math
 from nuscenes.utils.geometry_utils import BoxVisibility
 
+import os, psutil
+
 nusc_map = NuScenesMap(dataroot='/data/raw/map-expansion', map_name='boston-seaport')
 
 nusc = NuScenes(version='v1.0-trainval', dataroot='/data/raw/full-dataset/trainval', verbose=True)
@@ -86,6 +88,11 @@ def convert_camera(cam_position, cam_heading, obj_point):
 
     return res_x, res_y
 
+# Used to debug why fig15 killed
+def print_mem_usage():
+  process = psutil.Process(os.getpid())
+  print(process.memory_info().rss, end="\r", flush=True) 
+
 
 ####################### Figure 12 #######################
 # world = world.filter(
@@ -122,10 +129,13 @@ def convert_camera(cam_position, cam_heading, obj_point):
  
 ## Get all possible pedestrian + ego instances
 print("Figure 12")
+print("Figure 12")
+
 start_fig12 = time.time()
 
 instances = []
 for sample in nusc.sample:
+  print_mem_usage()
   scene = nusc.get('scene', sample['scene_token'])
   log = nusc.get('log', scene['log_token'])
   if log['location'] == 'boston-seaport':
@@ -142,6 +152,7 @@ len(instances)
 ## Filter for pedestrians that are within 50 meters of the ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -158,6 +169,7 @@ len(instances)
 ## Filter so that pedestrian is visible from ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ped_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token)
   if ped_visible:
     new_instances.append(instance)
@@ -168,6 +180,7 @@ len(instances)
 ## Filter so that for pedestrians that are on a road
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -183,6 +196,7 @@ len(instances)
 ## Filter for egos whos heading is aligned with the road direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -202,6 +216,7 @@ len(instances)
 ## require abs(relative heading of ped from ego) > 70 deg
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -210,7 +225,7 @@ for instance in instances:
   
   ego_heading = get_heading(ego_pose['rotation'])
   ped_heading = get_heading(annotation['rotation'])
-  if abs(ego_heading - ped_heading) > math.radians(70):
+  if abs(normalizeAngle(ego_heading - ped_heading)) > math.radians(70):
     new_instances.append(instance)
 instances = new_instances
 len(instances)
@@ -220,6 +235,7 @@ print("Figure 12 time: ", format(end_fig12-start_fig12))
  
 results = {}
 for instance in instances:
+  print_mem_usage()
   camera_token = instance.sample_record['data']['CAM_FRONT']
   camera_data = nusc.get('sample_data', camera_token)
   results[camera_data['token']] = camera_data['filename']
@@ -264,10 +280,13 @@ with open('fig12_results.txt', 'w') as f:
  
 ## Get all possible car1 + car2 instances
 print("Figure 13")
+print("Figure 13")
+
 start_fig13 = time.time()
 
 instances = []
 for sample in nusc.sample:
+  print_mem_usage()
   scene = nusc.get('scene', sample['scene_token'])
   log = nusc.get('log', scene['log_token'])
   if log['location'] == 'boston-seaport':
@@ -288,6 +307,7 @@ len(instances)
 ## Filter for cars  that are within 50 meters of the ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation1 = nusc.get('sample_annotation', instance.annotation_token)
   annotation2 = nusc.get('sample_annotation', instance.annotation_token2)
@@ -307,6 +327,7 @@ len(instances)
 ## Filter so that cars are visible from ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   car1_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token)
   car2_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token2)
   if car1_visible and car2_visible:
@@ -318,6 +339,7 @@ len(instances)
 ## Filter for relative headings wrt to ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation1 = nusc.get('sample_annotation', instance.annotation_token)
   annotation2 = nusc.get('sample_annotation', instance.annotation_token2)
@@ -332,7 +354,7 @@ for instance in instances:
   
   if math.radians(50) < car1_diff and car1_diff < math.radians(135):
     if math.radians(-135) < car2_diff and car2_diff < math.radians(-50):
-      if abs(car1_heading - car2_heading) > math.radians(100):
+      if abs(normalizeAngle(car1_heading - car2_heading)) > math.radians(100):
         new_instances.append(instance)
 instances = new_instances
 len(instances)
@@ -341,6 +363,7 @@ len(instances)
 ## Filter so that for cars that are in an intersection
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation1 = nusc.get('sample_annotation', instance.annotation_token)
   annotation2 = nusc.get('sample_annotation', instance.annotation_token2)
@@ -358,6 +381,7 @@ len(instances)
 ## Filter for egos whos heading is aligned with the road direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -378,6 +402,7 @@ print("Figure 13 time: ", format(end_fig13-start_fig13))
  
 results = {}
 for instance in instances:
+  print_mem_usage()
   camera_token = instance.sample_record['data']['CAM_FRONT']
   camera_data = nusc.get('sample_data', camera_token)
   results[camera_data['token']] = camera_data['filename'] # .split('/')[2]
@@ -415,10 +440,13 @@ with open('fig13_results.txt', 'w') as f:
  
 ## Get all possible car + ego instances
 print("Figure 14")
+print("Figure 14")
+
 start_fig14 = time.time()
 
 instances = []
 for sample in nusc.sample:
+  print_mem_usage()
   scene = nusc.get('scene', sample['scene_token'])
   log = nusc.get('log', scene['log_token'])
   if log['location'] == 'boston-seaport':
@@ -435,6 +463,7 @@ len(instances)
 ## Filter for cars  that are within 10 meters of the ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation1 = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -451,6 +480,7 @@ len(instances)
 ## Filter so that cars are visible from ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   car1_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token)
   if car1_visible:
     new_instances.append(instance)
@@ -461,6 +491,7 @@ len(instances)
 ## Filter for cars whos heading is aligned with the road direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -481,6 +512,7 @@ len(instances)
 ## Filter for egos who are moving in opposite direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
   
@@ -502,6 +534,7 @@ print("Figure 14 time: ", format(end_fig14-start_fig14))
  
 results = {}
 for instance in instances:
+  print_mem_usage()
   camera_token = instance.sample_record['data']['CAM_FRONT']
   camera_data = nusc.get('sample_data', camera_token)
   results[camera_data['token']] = camera_data['filename'] #.split('/')[2]
@@ -551,10 +584,13 @@ with open('fig14_results.txt', 'w') as f:
  
 ## Get all possible car + car + car + ego instances
 print("Figure 15")
+print("Figure 15")
+
 start_fig15 = time.time()
 
 instances = []
 for sample in nusc.sample:
+  print_mem_usage()
   scene = nusc.get('scene', sample['scene_token'])
   log = nusc.get('log', scene['log_token'])
   if log['location'] == 'boston-seaport':
@@ -578,6 +614,7 @@ len(instances)
 ## Filter for distances
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation1 = nusc.get('sample_annotation', instance.annotation_token)
   annotation2 = nusc.get('sample_annotation', instance.annotation_token2)
@@ -599,6 +636,7 @@ len(instances)
 ## Filter so that car 1s are visible from ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   car1_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token)
   car2_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token2)
   car3_visible = is_visible(sample_record=instance.sample_record, annotation_token=instance.annotation_token3)
@@ -612,6 +650,7 @@ len(instances)
 ## Filter so that car1s that are ahead of ego
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   # convert_camera(cam_position, cam_heading, obj_point)
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation1 = nusc.get('sample_annotation', instance.annotation_token)
@@ -629,6 +668,7 @@ len(instances)
 ## Filter so that car2s that are ahead of opposite_car
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   # convert_camera(cam_position, cam_heading, obj_point)
   annotation2 = nusc.get('sample_annotation', instance.annotation_token2)
   annotation3 = nusc.get('sample_annotation', instance.annotation_token3)
@@ -646,6 +686,7 @@ len(instances)
 ## Filter for convertCameras
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   # convert_camera(cam_position, cam_heading, obj_point)
   annotation3 = nusc.get('sample_annotation', instance.annotation_token3)
 
@@ -666,6 +707,7 @@ len(instances)
 ## Filter for egos whos heading is aligned with the road direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
@@ -685,6 +727,7 @@ len(instances)
 ## Filter for car1 heading is aligned with the road direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   annotation = nusc.get('sample_annotation', instance.annotation_token)
 
   car_trans = np.array(annotation['translation'])
@@ -702,6 +745,7 @@ len(instances)
 ## Filter for car2 heading is aligned with the road direction
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   annotation2 = nusc.get('sample_annotation', instance.annotation_token2)
 
   car_trans = np.array(annotation2['translation'])
@@ -719,6 +763,7 @@ len(instances)
 ## Filter for ego and opposite car headings
 new_instances = []
 for instance in instances:
+  print_mem_usage()
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
   annotation3 = nusc.get('sample_annotation', instance.annotation_token3)
   
@@ -731,6 +776,7 @@ len(instances)
 
  
 for instance in instances:
+  print_mem_usage()
   camera_token = instance.sample_record['data']['CAM_FRONT']
   camera_data = nusc.get('sample_data', camera_token) 
   ego_pose = nusc.get('ego_pose', instance.ego_pose_token)
@@ -752,6 +798,7 @@ print("Figure 15 time: ", format(end_fig15-start_fig15))
  
 results = {}
 for instance in instances:
+  print_mem_usage()
   camera_token = instance.sample_record['data']['CAM_FRONT']
   camera_data = nusc.get('sample_data', camera_token)
   results[camera_data['token']] = camera_data['filename'] #.split('/')[2]
