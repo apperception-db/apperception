@@ -149,11 +149,13 @@ class monodepth:
         output: "List[npt.NDArray | None]" = []
         with torch.no_grad():
             # for im in tqdm(input_images):
-            for im in input_images:
+            for im in input_images[1:]:
                 if im is None:
                     output.append(None)
                     continue
                 # Load image and preprocess
+                print(im)
+                print("yaa")
                 input_image = pil.fromarray(im[:, :, [2, 1, 0]])
                 original_width, original_height = input_image.size
                 input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
