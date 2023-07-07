@@ -4,6 +4,7 @@ sys.path.append("/home/youse/apperception")
 import os
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+import pandas as pd
 import numpy.typing as npt
 import PIL.Image as pil
 import torch
@@ -20,6 +21,8 @@ from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
 from optimized_ingestion.stages.stage import Stage
 from evadb.udfs.abstract.abstract_udf import AbstractUDF
 from evadb.udfs.decorators.decorators import forward, setup
+from evadb.udfs.decorators.io_descriptors.data_types import PandasDataframe
+from evadb.catalog.catalog_type import NdArrayType
 
 
 class MonodepthDetection(AbstractUDF):
@@ -32,23 +35,20 @@ class MonodepthDetection(AbstractUDF):
 
     @forward(
         input_signatures=[
-            # PyTorchTensor(
-            #     name="input_col",
-            #     is_nullable=False,
-            #     type=NdArrayType.FLOAT32,
-            #     dimensions=(1, 3, 540, 960),
-            # )
+            PandasDataframe(
+                columns=["data"],
+                column_types=[NdArrayType.FLOAT32],
+                column_shapes=[(None, None, 3)],
+            )
         ],
         output_signatures=[
-            # PandasDataframe(
-            #     columns=["labels", "bboxes", "scores"],
-            #     column_types=[
-            #         NdArrayType.STR,
-            #         NdArrayType.FLOAT32,
-            #         NdArrayType.FLOAT32,
-            #     ],
-            #     column_shapes=[(None,), (None,), (None,)],
-            # )
+            PandasDataframe(
+                columns=["depth"],
+                column_types=[
+                    NdArrayType.FLOAT32,
+                ],
+                column_shapes=[(None, None)],
+            )
         ],
     )
     def forward(self, frames):
@@ -146,16 +146,15 @@ class monodepth:
         return disp_resized_np
 
     def eval_all(self, input_images: "List[npt.NDArray | None]"):
-        output: "List[npt.NDArray | None]" = []
+        output = []
         with torch.no_grad():
             # for im in tqdm(input_images):
-            for im in input_images[1:]:
+            for index, row in input_images.iterrows():
+                im = row["objectdetectionvideos.data"]
                 if im is None:
                     output.append(None)
                     continue
                 # Load image and preprocess
-                print(im)
-                print("yaa")
                 input_image = pil.fromarray(im[:, :, [2, 1, 0]])
                 original_width, original_height = input_image.size
                 input_image = input_image.resize((self.feed_width, self.feed_height), pil.LANCZOS)
@@ -172,6 +171,8 @@ class monodepth:
                 depth_resized = torch.nn.functional.interpolate(
                     depth, (original_height, original_width), mode="bilinear", align_corners=False
                 )
-
-                output.append(depth_resized.squeeze().cpu().detach().numpy() * 5.4)
-        return output
+                depthnp = depth_resized.squeeze().cpu().detach().numpy() * 5.4
+                current = {"depth": [depthnp.tolist()]}
+                output.append(current)
+        print(pd.DataFrame(output, columns=["depth"]))
+        return pd.DataFrame(output, columns=["depth"])

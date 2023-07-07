@@ -3,6 +3,7 @@ from evadb.udfs.decorators.decorators import forward, setup
 
 import numpy as np
 import torch
+from pyquaternion import Quaternion
 
 class LocationDetection(AbstractUDF):
     @setup(cacheable=True, udf_type="object_detection", batchable=True)
@@ -13,14 +14,14 @@ class LocationDetection(AbstractUDF):
         input_signatures=[],
         output_signatures=[],
     )
-    def forward(self, detections, depths, camera_configs):
+    def forward(self, detections, depths, cameraTranslations, cameraRotations, cameraIntrinsics):
         assert depths is not None
 
         d2ds = detections
         assert d2ds is not None
 
         metadata: "list[Metadatum]" = []
-        for depth, (detections, classes, dids), frame in zip(depths, d2ds, camera_configs):
+        for depth, (detections, classes, dids, cameraTranslation, cameraRotation, cameraIntrinsic), frame in zip(depths, d2ds, cameraTranslations, cameraRotations, cameraIntrinsics):
             if len(dids) == 0 or depth is None:
                 metadata.append((torch.tensor([], device=detections.device), classes, []))
                 continue
@@ -41,19 +42,18 @@ class LocationDetection(AbstractUDF):
                     max(0, min(yc, height - 1)),
                     max(0, min(xc, width - 1)),
                 ]
-                intrinsic = frame.camera_intrinsic
-
-                point_from_camera_l = depth_to_3d(xl, yc, d, intrinsic)
-                rotated_offset_l = frame.camera_rotation.rotate(
+                cameraRotationQuat = Quaternion(cameraRotation)
+                point_from_camera_l = depth_to_3d(xl, yc, d, cameraIntrinsic)
+                rotated_offset_l = cameraRotationQuat.rotate(
                     np.array(point_from_camera_l)
                 )
-                point_l = np.array(frame.camera_translation) + rotated_offset_l
+                point_l = np.array(cameraTranslation) + rotated_offset_l
 
-                point_from_camera_r = depth_to_3d(xr, yc, d, intrinsic)
-                rotated_offset_r = frame.camera_rotation.rotate(
+                point_from_camera_r = depth_to_3d(xr, yc, d, cameraIntrinsic)
+                rotated_offset_r = cameraRotationQuat.rotate(
                     np.array(point_from_camera_r)
                 )
-                point_r = np.array(frame.camera_translation) + rotated_offset_r
+                point_r = np.array(cameraTranslation) + rotated_offset_r
 
                 d3d = [*detection, *point_l, *point_r, *point_from_camera_l, *point_from_camera_r]
                 d3ds.append(d3d)
@@ -70,15 +70,14 @@ from math import sqrt
 import numpy as np
 import numpy.typing as npt
 
-from ..types import Float3, Float33
 
 
 def depth_to_3d(
     x: float,
     y: float,
     depth: float,
-    intrinsic: "npt.NDArray[np.float32] | Float33",
-) -> "Float3":
+    intrinsic: "npt.NDArray[np.float32]",
+):
     [[fx, _, x0], [_, fy, y0], [_, _, s]] = intrinsic
 
     unit_x: float = (s * x - x0) / fx

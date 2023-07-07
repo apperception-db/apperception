@@ -11,10 +11,9 @@ class IntersectionQuery(AbstractUDF):
         input_signatures=[],
         output_signatures=[],
     )
-    def forward(self, frames):
-        metadata = self.md.eval_all(frames)
-
-        return metadata
+    def forward(self, locations):
+        print("hi", locations)
+        return True
 
     def name(self):
         return "IntersectionQuery"
