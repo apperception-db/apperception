@@ -1,6 +1,8 @@
 from evadb.udfs.abstract.abstract_udf import AbstractUDF
 from evadb.udfs.decorators.decorators import forward, setup
 
+import numpy as np
+import torch
 
 class LocationDetection(AbstractUDF):
     @setup(cacheable=True, udf_type="object_detection", batchable=True)
@@ -11,16 +13,16 @@ class LocationDetection(AbstractUDF):
         input_signatures=[],
         output_signatures=[],
     )
-    def forward(self, detections, depths, camera_config):
+    def forward(self, detections, depths, camera_configs):
         assert depths is not None
 
         d2ds = detections
         assert d2ds is not None
 
         metadata: "list[Metadatum]" = []
-        for depth, (detections, classes, dids), frame in zip(depths, d2ds, payload.video):
-            if not k or len(dids) == 0 or depth is None:
-                metadata.append(Metadatum(torch.tensor([], device=detections.device), classes, []))
+        for depth, (detections, classes, dids), frame in zip(depths, d2ds, camera_configs):
+            if len(dids) == 0 or depth is None:
+                metadata.append((torch.tensor([], device=detections.device), classes, []))
                 continue
 
             d3ds = []
@@ -55,7 +57,7 @@ class LocationDetection(AbstractUDF):
 
                 d3d = [*detection, *point_l, *point_r, *point_from_camera_l, *point_from_camera_r]
                 d3ds.append(d3d)
-            metadata.append(Metadatum(torch.tensor(d3ds, device=detections.device), classes, dids))
+            metadata.append((torch.tensor(d3ds, device=detections.device), classes, dids))
 
         return None, {self.classname(): metadata}
 
