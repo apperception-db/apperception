@@ -2,8 +2,16 @@ from evadb.udfs.abstract.abstract_udf import AbstractUDF
 from evadb.udfs.decorators.decorators import forward, setup
 
 import numpy as np
+import pandas as pd
 import torch
 from pyquaternion import Quaternion
+from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
+from optimized_ingestion.stages.stage import Stage
+from evadb.udfs.abstract.abstract_udf import AbstractUDF
+from evadb.udfs.decorators.decorators import forward, setup
+from evadb.udfs.decorators.io_descriptors.data_types import PandasDataframe
+from evadb.catalog.catalog_type import NdArrayType
+from evadb.udfs.gpu_compatible import GPUCompatible
 
 class LocationDetection(AbstractUDF):
     @setup(cacheable=True, udf_type="object_detection", batchable=True)
@@ -11,21 +19,30 @@ class LocationDetection(AbstractUDF):
         pass
     
     @forward(
-        input_signatures=[],
-        output_signatures=[],
+        input_signatures=[
+            PandasDataframe(
+                columns=["detections", "depths", "cameraTranslations", "cameraRotations", "cameraIntrinsics"],
+                column_types=[NdArrayType.FLOAT32, NdArrayType.FLOAT32, NdArrayType.FLOAT32, NdArrayType.FLOAT32, NdArrayType.FLOAT32],
+                column_shapes=[(None,), (None,), (None,), (None,), (None,)],
+            )
+        ],
+        output_signatures=[
+            PandasDataframe(
+                columns=["locations"],
+                column_types=[
+                    NdArrayType.FLOAT32,
+                ],
+                column_shapes=[(None)],
+            )
+        ],
     )
-    def forward(self, detections, depths, cameraTranslations, cameraRotations, cameraIntrinsics):
-        assert depths is not None
+    def forward(self, df): 
+        def _forward(row):
+            detections, depth, cameraTranslation, _, cameraIntrinsic = [np.array(x) for x in row.iloc]
+            cameraRotation = row.iloc[3]
+            cameraRotation = np.fromstring(cameraRotation[1:-1], sep=', ')
 
-        d2ds = detections
-        assert d2ds is not None
-
-        metadata: "list[Metadatum]" = []
-        for depth, (detections, classes, dids, cameraTranslation, cameraRotation, cameraIntrinsic), frame in zip(depths, d2ds, cameraTranslations, cameraRotations, cameraIntrinsics):
-            if len(dids) == 0 or depth is None:
-                metadata.append((torch.tensor([], device=detections.device), classes, []))
-                continue
-
+            depth = depth[0]
             d3ds = []
             for detection in detections:
                 bbox_left, bbox_top, bbox_right, bbox_bottom = detection[:4]
@@ -56,10 +73,13 @@ class LocationDetection(AbstractUDF):
                 point_r = np.array(cameraTranslation) + rotated_offset_r
 
                 d3d = [*detection, *point_l, *point_r, *point_from_camera_l, *point_from_camera_r]
-                d3ds.append(d3d)
-            metadata.append((torch.tensor(d3ds, device=detections.device), classes, dids))
+                print(d3d)
+                d3ds.append(point_l)
+            return d3ds
 
-        return None, {self.classname(): metadata}
+        ret = pd.DataFrame()
+        ret["locations"] = df.apply(_forward, axis=1)
+        return ret
 
     def name(self):
         return "LocationDetection"

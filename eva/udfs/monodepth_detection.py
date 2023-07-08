@@ -23,9 +23,10 @@ from evadb.udfs.abstract.abstract_udf import AbstractUDF
 from evadb.udfs.decorators.decorators import forward, setup
 from evadb.udfs.decorators.io_descriptors.data_types import PandasDataframe
 from evadb.catalog.catalog_type import NdArrayType
+from evadb.udfs.gpu_compatible import GPUCompatible
 
 
-class MonodepthDetection(AbstractUDF):
+class MonodepthDetection(AbstractUDF, GPUCompatible):
     @setup(cacheable=True, udf_type="object_detection", batchable=True)
     def setup(self):
         self.md = monodepth()
@@ -55,10 +56,14 @@ class MonodepthDetection(AbstractUDF):
         metadata = self.md.eval_all(frames)
 
         return metadata
-
+    
+    @property
     def name(self):
         return "MonodepthDetection"
 
+    def to_device(self, device: str):
+        self.device = device
+        return self
 
 
 MODEL_NAMES = [
@@ -174,5 +179,4 @@ class monodepth:
                 depthnp = depth_resized.squeeze().cpu().detach().numpy() * 5.4
                 current = {"depth": [depthnp.tolist()]}
                 output.append(current)
-        print(pd.DataFrame(output, columns=["depth"]))
         return pd.DataFrame(output, columns=["depth"])
