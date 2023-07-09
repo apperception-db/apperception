@@ -16,55 +16,36 @@ from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.map_expansion import arcline_path_utils
 from nuscenes.map_expansion.bitmap import BitMap
 
-class IntersectionQuery(AbstractUDF):
+class SameVideo(AbstractUDF):
     @setup(cacheable=True, udf_type="object_detection", batchable=True)
     def setup(self):
-        self.nusc_map = NuScenesMap(dataroot='/data/raw/map-expansion', map_name='boston-seaport')
-    
+       pass 
+
     @forward(
         input_signatures=[
             PandasDataframe(
-                columns=["locations"],
-                column_types=[NdArrayType.ANYTYPE],
-                column_shapes=[(None,)],
+                columns=["videofile", "cameraid"],
+                column_types=[NdArrayType.ANYTYPE, NdArrayType.ANYTYPE],
+                column_shapes=[(None,), (None,)],
             )
         ],
         output_signatures=[
             PandasDataframe(
-                columns=["queryresult"],
+                columns=["issame"],
                 column_types=[NdArrayType.ANYTYPE],
                 column_shapes=[(None)],
             )
         ],
     )
     def forward(self, df):
-        objClasses = ["car", "truck", "bus"]
         def _forward(row):
-            locations = [np.array(x) for x in row.iloc][0]
-            for object in locations:
-                x, y, z, objClass, conf = object
-                loc = [float(x) for x in (x, y, z)]
-
-                if objClass not in objClasses:
-                   continue
-                   
-                if is_contained_intersection(self.nusc_map, loc):
-                   return True
-            return False
+            videofile, cameraid = row.iloc
+            return cameraid in videofile
 
         ret = pd.DataFrame()
-        ret["queryresult"] = df.apply(_forward, axis=1)
+        ret["issame"] = df.apply(_forward, axis=1)
         return ret
 
 
     def name(self):
-        return "IntersectionQuery"
-
-def is_contained_intersection(nusc_map, position):
-  x, y, z = position
-  road_segment_token = nusc_map.layers_on_point(x, y)['road_segment']
-  if road_segment_token != '':
-    road_segment = nusc_map.get('road_segment', road_segment_token)
-    return road_segment["is_intersection"]
-  else:
-    return False
+        return "SameVideo"

@@ -38,13 +38,16 @@ class LocationDetection(AbstractUDF):
     )
     def forward(self, df): 
         def _forward(row):
-            detections, depth, cameraTranslation, _, cameraIntrinsic = [np.array(x) for x in row.iloc]
-            cameraRotation = row.iloc[3]
-            cameraRotation = np.fromstring(cameraRotation[1:-1], sep=', ')
+            classes, detections, confs, depth, cameraTranslation, _, cameraIntrinsic = [np.array(x) for x in row.iloc]
+            cameraRotation = row.iloc[5]
 
+            try:
+                cameraRotation = np.fromstring(cameraRotation[1:-1], sep=', ')
+            except Exception:
+                print(row)
             depth = depth[0]
             d3ds = []
-            for detection in detections:
+            for (detection, objClass, conf) in zip(detections, classes, confs):
                 bbox_left, bbox_top, bbox_right, bbox_bottom = detection[:4]
 
                 xc = int((bbox_left + bbox_right) / 2)
@@ -72,9 +75,20 @@ class LocationDetection(AbstractUDF):
                 )
                 point_r = np.array(cameraTranslation) + rotated_offset_r
 
-                d3d = [*detection, *point_l, *point_r, *point_from_camera_l, *point_from_camera_r]
-                print(d3d)
-                d3ds.append(point_l)
+                point_from_camera_c = depth_to_3d(xc, yc, d, cameraIntrinsic)
+                rotated_offset_c = cameraRotationQuat.rotate(
+                    np.array(point_from_camera_c)
+                )
+                point_c = np.array(cameraTranslation) + rotated_offset_c
+                # if objClass == "car" or objClass == "truck":
+                #     print("a", rotated_offset_c)
+                #     print(point_c)
+                #     print(point_l)
+                #     print(cameraTranslation)
+                # d3d = [*detection, *point_l, *point_r, *point_from_camera_l, *point_from_camera_r]
+                # print(d3d)
+                d3d = [*point_c, objClass, conf]
+                d3ds.append(d3d)
             return d3ds
 
         ret = pd.DataFrame()
