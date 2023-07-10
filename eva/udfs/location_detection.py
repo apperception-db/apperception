@@ -38,12 +38,21 @@ class LocationDetection(AbstractUDF):
     )
     def forward(self, df): 
         def _forward(row):
-            classes, detections, confs, depth, cameraTranslation, _, cameraIntrinsic = [np.array(x) for x in row.iloc]
+            classes, detections, confs, depth, cameraTranslation, _, cameraIntrinsic = [np.array(x) for x in row.iloc]  
+            ## Inner joins do not work in eva, so if encounter rows that are not supposed to be there
+            # return dummy data that will be filtered out by query
+            if np.isnan(cameraTranslation).any():
+                d3ds = [[-1, -1, -1, "dummy", 0]]
+                return d3ds
+                
+                
             cameraRotation = row.iloc[5]
 
+            # Try block not necassary, was just debugging some stuff
             try:
                 cameraRotation = np.fromstring(cameraRotation[1:-1], sep=', ')
             except Exception:
+                print(cameraTranslation, type(cameraTranslation))
                 print(row)
             depth = depth[0]
             d3ds = []
