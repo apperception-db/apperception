@@ -11,9 +11,12 @@ import pickle
 import traceback
 import shutil
 import socket
+import time
+from os import environ
 
 import numpy as np
 import torch
+import psycopg2
 
 subprocess.Popen('nvidia-smi', shell=True).wait()
 process = subprocess.Popen('docker container start mobilitydb', shell=True)
@@ -127,27 +130,47 @@ disable_cache()
 # In[11]:
 
 
-NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
-print(NUSCENES_PROCESSED_DATA in os.environ)
-print(os.environ['NUSCENES_PROCESSED_DATA'])
+from optimized_ingestion.utils.process_pipeline import format_trajectory, insert_trajectory, get_tracks
+from optimized_ingestion.actions.tracking2d_overlay import tracking2d_overlay
 
 
 # In[12]:
 
 
-DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
-with open(os.path.join(DATA_DIR, "videos", "frames.pkl"), "rb") as f:
-    videos = pickle.load(f)
+from apperception.utils.ingest_road import ingest_road
+from apperception.database import database, Database
+from apperception.world import empty_world
+from apperception.utils import F
+from apperception.predicate import camera, objects, lit
 
 
 # In[13]:
 
 
-with open(os.path.join(DATA_DIR, 'cities.pkl'), 'rb') as f:
-    cities = pickle.load(f)
+NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
+print(NUSCENES_PROCESSED_DATA in os.environ)
+print(os.environ['NUSCENES_PROCESSED_DATA'])
 
 
 # In[14]:
+
+
+DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
+# with open(os.path.join(DATA_DIR, "videos", "frames.pkl"), "rb") as f:
+#     videos = pickle.load(f)
+with open(os.path.join(DATA_DIR, 'videos', 'videos.json'), 'r') as f:
+    videos = json.load(f)
+
+
+# In[15]:
+
+
+with open('./data/evaluation/video-samples/boston-seaport.txt', 'r') as f:
+    sampled_scenes = f.read().split('\n')
+print(sampled_scenes[0], sampled_scenes[-1], len(sampled_scenes))
+
+
+# In[16]:
 
 
 BENCHMARK_DIR = "./outputs/run"
@@ -157,98 +180,143 @@ def bm_dir(*args: "str"):
     return os.path.join(BENCHMARK_DIR, *args)
 
 
-# In[15]:
+# In[17]:
 
 
-def run_benchmark(pipeline, filename, run=0, ignore_error=False):
-    metadata_strongsort = {}
-    metadata_d2d = {}
-    failed_videos = []
+def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
+    print(filename)
+    try:
+        metadata_strongsort = {}
+        metadata_d2d = {}
+        failed_videos = []
+        runtime_input = []
+        runtime_query = []
+        runtime_video = []
 
-    all_metadata = {
-        'detection': metadata_d2d,
-        'sort': metadata_strongsort,
-    }
+        all_metadata = {
+            'detection': metadata_d2d,
+            'sort': metadata_strongsort,
+        }
 
-    names = cities['boston-seaport']
-    filtered_videos = [
-        (n, v)
-        for n, v in videos.items()
-        if n[6:10] in names and v['filename'].startswith('boston') and 'FRONT' in n
-    ]
+        names = set(sampled_scenes[:100])
+        filtered_videos = [
+            n for n in videos
+            if n[6:10] in names and n.endswith('FRONT')
+        ]
+        print('# of total    videos:', len(videos))
+        print('# of filtered videos:', len(filtered_videos))
+        # ingest_road(database, './data/scenic/road-network/boston-seaport')
 
-    for pre in all_metadata.keys():
-        p = os.path.join(BENCHMARK_DIR, f"{pre}--{filename}_{run}")
-        if os.path.exists(p):
-            shutil.rmtree(p)
-        os.makedirs(p)
+        for pre in all_metadata.keys():
+            p = os.path.join(BENCHMARK_DIR, f"{pre}--{filename}_{run}")
+            if os.path.exists(p):
+                shutil.rmtree(p)
+            os.makedirs(p)
 
-    def save_perf():
-        with open(bm_dir(f"failed_videos--{filename}_{run}.json"), "w") as f:
-            json.dump(failed_videos, f, indent=1)
+        def save_perf():
+            with open(bm_dir(f"failed_videos--{filename}_{run}.json"), "w") as f:
+                json.dump(failed_videos, f, indent=1)
 
-        with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
-            performance = [
-                {
-                    "stage": stage.classname(),
-                    "benchmark": stage.benchmark,
-                    **(
-                        {'explains': stage.explains}
-                        if hasattr(stage, 'explains')
-                        else {}
-                    ),
-                    **(
-                        {"ss-benchmark": stage.ss_benchmark}
-                        if hasattr(stage, 'ss_benchmark')
-                        else {}
-                    )
-                }
-                for stage
-                in pipeline.stages
-            ]
-            json.dump(performance, f, indent=1)
+            with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
+                performance = [
+                    {
+                        "stage": stage.classname(),
+                        "benchmark": stage.benchmark,
+                        **(
+                            {'explains': stage.explains}
+                            if hasattr(stage, 'explains')
+                            else {}
+                        ),
+                        **(
+                            {"ss-benchmark": stage.ss_benchmark}
+                            if hasattr(stage, 'ss_benchmark')
+                            else {}
+                        )
+                    }
+                    for stage
+                    in pipeline.stages
+                ]
+                json.dump(performance, f, indent=1)
+            with open(bm_dir(f"perfexec--{filename}_{run}.json"), 'w') as f:
+                json.dump({
+                    'ingest': 2.2629338979721068,
+                    'input': runtime_input,
+                    'query': runtime_query,
+                    'save': runtime_video
+                }, f, indent=1)
 
-    for i, (name, video) in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
-        if i % int(len(filtered_videos) / 200) == 0:
-            report_progress(i, len(filtered_videos), filename, str(run))
-        try:
-            video_filename = video['filename']
-            if not video_filename.startswith('boston') or 'FRONT' not in name:
-                continue
+        for i, name in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
+            # if i % int(len(filtered_videos) / 200) == 0:
+            #     report_progress(i, len(filtered_videos), filename, str(run))
+            try:
+                start_input = time.time()
+                with open(os.path.join(DATA_DIR, 'videos', 'boston-seaport-' + name + '.pkl'), 'rb') as f:
+                    video = pickle.load(f)
+                video_filename = video['filename']
+                # if not video_filename.startswith('boston') or 'FRONT' not in name:
+                #     continue
 
-            frames = Video(
-                os.path.join(DATA_DIR, "videos", video["filename"]),
-                [camera_config(*f, 0) for f in video["frames"]],
-            )
+                frames = Video(
+                    os.path.join(DATA_DIR, "videos", video["filename"]),
+                    [camera_config(*f, 0) for f in video["frames"]],
+                )
+                time_input = time.time() - start_input
+                runtime_input.append({'name': name, 'runtime': time_input})
 
-            output = pipeline.run(Payload(frames))
+                output = pipeline.run(Payload(frames))
 
-            metadata_strongsort[name] = output[StrongSORT2D]
-            metadata_d2d[name] = output[Detection2D]
+                metadata_strongsort[name] = output[StrongSORT2D]
+                metadata_d2d[name] = output[Detection2D]
 
-            for pre, metadata in all_metadata.items():
-                p = bm_dir(f"{pre}--{filename}_{run}", f"{name}.json")
-                with open(p, "w") as f:
-                    json.dump(metadata[name], f, cls=MetadataJSONEncoder, indent=1)
-        except Exception as e:
-            if ignore_error:
-                message = str(traceback.format_exc())
-                failed_videos.append((name, message))
-                print(video_filename)
-                print(e)
-                print(message)
-                print("------------------------------------------------------------------------------------")
-                print()
-                print()
-            else:
-                raise e
+                for pre, metadata in all_metadata.items():
+                    p = bm_dir(f"{pre}--{filename}_{run}", f"{name}.json")
+                    with open(p, "w") as f:
+                        json.dump(metadata[name], f, cls=MetadataJSONEncoder, indent=1)
 
-        if len(metadata_d2d) % 10 == 0:
-            save_perf()
+                for i, (predicate, n_objects) in enumerate(predicates):
+                    start_rquery = time.time()
+                    database.reset(True)
+                    ego_meta = frames.interpolated_frames
+                    sortmeta = FromTracking2DAndRoad.get(output)
+                    segment_trajectory_mapping = FromTracking3D.get(output)
+                    tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, True)
+                    for obj_id, track in tracks.items():
+                        trajectory = format_trajectory(name, obj_id, track, True)
+                        if trajectory:
+                            insert_trajectory(database, *trajectory)
+
+                    world = empty_world()
+                    world = world.filter(predicate)
+                    _ = world.get_id_time_camId_filename(num_joined_tables=n_objects)
+                    time_rquery = time.time() - start_rquery
+                    runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
+
+                # save video
+                start_video = time.time()
+                tracking2d_overlay(output, './tmp.mp4')
+                time_video = time.time() - start_video
+                runtime_video.append({'name': name, 'runtime': time_video})
+            except Exception as e:
+                if ignore_error:
+                    message = str(traceback.format_exc())
+                    failed_videos.append((name, message))
+                    print(video_filename)
+                    print(e)
+                    print(message)
+                    print("------------------------------------------------------------------------------------")
+                    print()
+                    print()
+                else:
+                    raise e
+
+            if len(metadata_d2d) % 10 == 0:
+                save_perf()
+    except KeyboardInterrupt:
+        print('keyboard inturrupted')
     save_perf()
 
 
-# In[16]:
+# In[18]:
 
 
 def create_pipeline(
@@ -266,7 +334,7 @@ def create_pipeline(
     # In-View Filter
     if in_view:
         # TODO: view angle and road type should depends on the predicate
-        pipeline.add_filter(InView(50, 'intersection'))
+        pipeline.add_filter(InView(50, predicate=predicate))
 
     # Decode
     pipeline.add_filter(DecodeFrame())
@@ -281,8 +349,10 @@ def create_pipeline(
 
     # Object Filter
     if object_filter:
+        # if isinstance(object_filter, bool):
+        #     object_filter = ['car', 'truck']
         # TODO: filter objects based on predicate
-        pipeline.add_filter(ObjectTypeFilter(['car']))
+        pipeline.add_filter(ObjectTypeFilter(predicate=predicate))
 
     # 3D Detection
     if geo_depth:
@@ -297,17 +367,20 @@ def create_pipeline(
 
     # Tracking
     pipeline.add_filter(StrongSORT2D(
-        method='update-empty' if ss_update_when_skip else 'increment-ages',
+        # method='update-empty' if ss_update_when_skip else 'increment-ages',
+        method='update-empty',
         cache=True
     ))
 
+    pipeline.add_filter(FromTracking2DAndRoad())
+
     # Segment Trajectory
-    # pipeline.add_filter(FromTracking3D())
+    pipeline.add_filter(FromTracking3D())
 
     return pipeline
 
 
-# In[17]:
+# In[19]:
 
 
 predicate = None
@@ -430,18 +503,116 @@ pipelines = {
 }
 
 
-# In[18]:
+# In[20]:
 
 
 if test == 'dev':
     test = 'optde'
 
-RUN = 1
-for i in range(RUN):
-    run_benchmark(pipelines[test](None), test, run=i, ignore_error=True)
+
+# In[27]:
 
 
-# In[ ]:
+def run(test):
+    o = objects[0]
+    c = camera
+    pred1 = (
+        (o.type == 'person') &
+        # F.contained(c.ego, 'intersection') &
+        (F.contained(o.bbox@c.time, F.road_segment('intersection')) | F.contained(o.trans@c.time, 'intersection')) &
+        F.angle_excluding(F.facing_relative(o.traj@c.time, c.ego), lit(-70), lit(70)) &
+        # F.angle_between(F.facing_relative(c.ego, c.roadDirection), lit(-15), lit(15)) &
+        (F.distance(c.cam, o.traj@c.time) < lit(50)) # &
+        # (F.view_angle(o.trans@c.time, c.camAbs) < lit(35))
+    )
+
+    obj1 = objects[0]
+    obj2 = objects[1]
+    cam = camera
+    pred2 = (
+        (obj1.id != obj2.id) &
+        ((obj1.type == 'car') | (obj1.type == 'truck')) &
+        ((obj2.type == 'car') | (obj2.type == 'truck')) &
+        # F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego)), -15, 15) &
+        (F.distance(cam.ego, obj1.trans@cam.time) < 50) &
+        # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2.0) &
+        (F.distance(cam.ego, obj2.trans@cam.time) < 50) &
+        # (F.view_angle(obj2.trans@cam.time, cam.ego) < 70 / 2.0) &
+        F.contains_all('intersection', [obj1.trans, obj2.trans]@cam.time) &
+        F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 40, 135) &
+        F.angle_between(F.facing_relative(obj2.trans@cam.time, cam.ego), -135, -50) &
+        # (F.min_distance(cam.ego, 'intersection') < 10) &
+        F.angle_between(F.facing_relative(obj1.trans@cam.time, obj2.trans@cam.time), 100, -100)
+    )
+
+    obj1 = objects[0]
+    cam = camera
+    pred3 = (
+        ((obj1.type == 'car') | (obj1.type == 'truck')) &
+        (F.distance(cam.ego, obj1.trans@cam.timestamp) < 50) &
+        # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2) &
+        # F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -180, -90) &
+        F.contained(cam.ego, F.road_segment('road')) &
+        F.contained(obj1.trans@cam.time, F.road_segment('road')) &
+        # F.angle_between(F.facing_relative(obj1.trans@cam.time, F.road_direction(obj1.traj@cam.time, cam.ego)), -15, 15) &
+        F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 135, 225) &
+        (F.distance(cam.ego, obj1.trans@cam.time) < 10)
+    )
+
+    cam = camera
+    car1 = objects[0]
+    opposite_car = objects[1]
+    car2 = objects[2]
+
+    pred4 = (
+        ((car1.type == 'car') | (car1.type == 'truck')) &
+        ((car2.type == 'car') | (car2.type == 'truck')) &
+        ((opposite_car.type == 'car') | (opposite_car.type == 'truck')) &
+        (opposite_car.id != car2.id) &
+        (car1.id != car2.id) &
+        (car1.id != opposite_car.id) &
+
+        # F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
+        # (F.view_angle(car1.traj@cam.time, cam.ego) < 70 / 2) &
+        (F.distance(cam.ego, car1.traj@cam.time) < 40) &
+        F.angle_between(F.facing_relative(car1.traj@cam.time, cam.ego), -15, 15) &
+        # F.angle_between(F.facing_relative(car1.traj@cam.time, F.road_direction(car1.traj@cam.time, cam.ego)), -15, 15) &
+        F.ahead(car1.traj@cam.time, cam.ego) &
+        # F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
+        (F.convert_camera(opposite_car.traj@cam.time, cam.ego) > [-10, 0]) &
+        (F.convert_camera(opposite_car.traj@cam.time, cam.ego) < [-1, 50]) &
+        F.angle_between(F.facing_relative(opposite_car.traj@cam.time, cam.ego), 140, 180) &
+        (F.distance(opposite_car@cam.time, car2@cam.time) < 40) &
+        # F.angle_between(F.facing_relative(car2.traj@cam.time, F.road_direction(car2.traj@cam.time, cam.ego)), -15, 15) &
+        F.ahead(car2.traj@cam.time, opposite_car.traj@cam.time)
+    )
+
+    p1 = pipelines[test](pred1)
+    p2 = pipelines[test](pred2)
+    p34 = pipelines[test](pred3)
+
+    if test != 'optde' and test != 'de':
+        run_benchmark(p1, 'q1-' + test, [(pred1, 1)], run=1, ignore_error=True)
+
+    run_benchmark(p2, 'q2-' + test, [(pred2, 2)], run=1, ignore_error=True)
+
+    run_benchmark(p34, 'q34-' + test, [(pred3, 1), (pred4, 3)], run=1, ignore_error=True)
+
+
+# In[28]:
+
+
+run('opt')
+
+
+# In[23]:
+
+
+if test == 'opt':
+    run('optde')
+
+
+# In[24]:
 
 
 if not is_notebook():

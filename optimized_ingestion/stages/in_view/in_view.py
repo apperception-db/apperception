@@ -257,8 +257,8 @@ class KeepOnlyRoadTypePredicates(BaseTransformer):
             assert (len(node.params) >= 1)
             segment = node.params[1]
             if isinstance(segment, LiteralNode):
-                assert isinstance(node.params[1].value, str), node.params[1]
-                return F.is_roadtype(node.params[1])
+                assert isinstance(segment.value, str), (segment, node.fn)
+                return F.is_roadtype(segment)
             else:
                 assert isinstance(segment, CallNode), segment
                 assert segment == F.same_region(), segment
