@@ -185,137 +185,134 @@ def bm_dir(*args: "str"):
 
 def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     print(filename)
-    try:
-        metadata_strongsort = {}
-        metadata_d2d = {}
-        failed_videos = []
-        runtime_input = []
-        runtime_query = []
-        runtime_video = []
+    metadata_strongsort = {}
+    metadata_d2d = {}
+    failed_videos = []
+    runtime_input = []
+    runtime_query = []
+    runtime_video = []
 
-        all_metadata = {
-            'detection': metadata_d2d,
-            'sort': metadata_strongsort,
-        }
+    all_metadata = {
+        'detection': metadata_d2d,
+        'sort': metadata_strongsort,
+    }
 
-        names = set(sampled_scenes[:100])
-        filtered_videos = [
-            n for n in videos
-            if n[6:10] in names and n.endswith('FRONT')
-        ]
-        print('# of total    videos:', len(videos))
-        print('# of filtered videos:', len(filtered_videos))
-        # ingest_road(database, './data/scenic/road-network/boston-seaport')
+    names = set(sampled_scenes[:100])
+    filtered_videos = [
+        n for n in videos
+        if n[6:10] in names and n.endswith('FRONT')
+    ]
+    print('# of total    videos:', len(videos))
+    print('# of filtered videos:', len(filtered_videos))
+    # ingest_road(database, './data/scenic/road-network/boston-seaport')
 
-        for pre in all_metadata.keys():
-            p = os.path.join(BENCHMARK_DIR, f"{pre}--{filename}_{run}")
-            if os.path.exists(p):
-                shutil.rmtree(p)
-            os.makedirs(p)
+    for pre in [*all_metadata.keys(), 'qresult']:
+        p = os.path.join(BENCHMARK_DIR, f"{pre}--{filename}_{run}")
+        if os.path.exists(p):
+            shutil.rmtree(p)
+        os.makedirs(p)
 
-        def save_perf():
-            with open(bm_dir(f"failed_videos--{filename}_{run}.json"), "w") as f:
-                json.dump(failed_videos, f, indent=1)
+    def save_perf():
+        with open(bm_dir(f"failed_videos--{filename}_{run}.json"), "w") as f:
+            json.dump(failed_videos, f, indent=1)
 
-            with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
-                performance = [
-                    {
-                        "stage": stage.classname(),
-                        "benchmark": stage.benchmark,
-                        **(
-                            {'explains': stage.explains}
-                            if hasattr(stage, 'explains')
-                            else {}
-                        ),
-                        **(
-                            {"ss-benchmark": stage.ss_benchmark}
-                            if hasattr(stage, 'ss_benchmark')
-                            else {}
-                        )
-                    }
-                    for stage
-                    in pipeline.stages
-                ]
-                json.dump(performance, f, indent=1)
-            with open(bm_dir(f"perfexec--{filename}_{run}.json"), 'w') as f:
-                json.dump({
-                    'ingest': 2.2629338979721068,
-                    'input': runtime_input,
-                    'query': runtime_query,
-                    'save': runtime_video
-                }, f, indent=1)
+        with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
+            performance = [
+                {
+                    "stage": stage.classname(),
+                    "benchmark": stage.benchmark,
+                    **(
+                        {'explains': stage.explains}
+                        if hasattr(stage, 'explains')
+                        else {}
+                    ),
+                    **(
+                        {"ss-benchmark": stage.ss_benchmark}
+                        if hasattr(stage, 'ss_benchmark')
+                        else {}
+                    )
+                }
+                for stage
+                in pipeline.stages
+            ]
+            json.dump(performance, f, indent=1)
+        with open(bm_dir(f"perfexec--{filename}_{run}.json"), 'w') as f:
+            json.dump({
+                'ingest': 2.2629338979721068,
+                'input': runtime_input,
+                'query': runtime_query,
+                'save': runtime_video
+            }, f, indent=1)
 
-        for i, name in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
-            # if i % int(len(filtered_videos) / 200) == 0:
-            #     report_progress(i, len(filtered_videos), filename, str(run))
-            try:
-                start_input = time.time()
-                with open(os.path.join(DATA_DIR, 'videos', 'boston-seaport-' + name + '.pkl'), 'rb') as f:
-                    video = pickle.load(f)
-                video_filename = video['filename']
-                # if not video_filename.startswith('boston') or 'FRONT' not in name:
-                #     continue
+    for i, name in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
+        # if i % int(len(filtered_videos) / 200) == 0:
+        #     report_progress(i, len(filtered_videos), filename, str(run))
+        try:
+            start_input = time.time()
+            with open(os.path.join(DATA_DIR, 'videos', 'boston-seaport-' + name + '.pkl'), 'rb') as f:
+                video = pickle.load(f)
+            video_filename = video['filename']
+            # if not video_filename.startswith('boston') or 'FRONT' not in name:
+            #     continue
 
-                frames = Video(
-                    os.path.join(DATA_DIR, "videos", video["filename"]),
-                    [camera_config(*f, 0) for f in video["frames"]],
-                )
-                time_input = time.time() - start_input
-                runtime_input.append({'name': name, 'runtime': time_input})
+            frames = Video(
+                os.path.join(DATA_DIR, "videos", video["filename"]),
+                [camera_config(*f, 0) for f in video["frames"]],
+            )
+            time_input = time.time() - start_input
+            runtime_input.append({'name': name, 'runtime': time_input})
 
-                output = pipeline.run(Payload(frames))
+            output = pipeline.run(Payload(frames))
 
-                metadata_strongsort[name] = output[StrongSORT2D]
-                metadata_d2d[name] = output[Detection2D]
+            metadata_strongsort[name] = output[StrongSORT2D]
+            metadata_d2d[name] = output[Detection2D]
 
-                for pre, metadata in all_metadata.items():
-                    p = bm_dir(f"{pre}--{filename}_{run}", f"{name}.json")
-                    with open(p, "w") as f:
-                        json.dump(metadata[name], f, cls=MetadataJSONEncoder, indent=1)
+            for pre, metadata in all_metadata.items():
+                p = bm_dir(f"{pre}--{filename}_{run}", f"{name}.json")
+                with open(p, "w") as f:
+                    json.dump(metadata[name], f, cls=MetadataJSONEncoder, indent=1)
 
-                for i, (predicate, n_objects) in enumerate(predicates):
-                    start_rquery = time.time()
-                    database.reset(True)
-                    ego_meta = frames.interpolated_frames
-                    sortmeta = FromTracking2DAndRoad.get(output)
-                    segment_trajectory_mapping = FromTracking3D.get(output)
-                    tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, True)
-                    for obj_id, track in tracks.items():
-                        trajectory = format_trajectory(name, obj_id, track, True)
-                        if trajectory:
-                            insert_trajectory(database, *trajectory)
+            for i, (predicate, n_objects) in enumerate(predicates):
+                start_rquery = time.time()
+                database.reset(True)
+                ego_meta = frames.interpolated_frames
+                sortmeta = FromTracking2DAndRoad.get(output)
+                segment_trajectory_mapping = FromTracking3D.get(output)
+                tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, True)
+                for obj_id, track in tracks.items():
+                    trajectory = format_trajectory(name, obj_id, track, True)
+                    if trajectory:
+                        insert_trajectory(database, *trajectory)
 
-                    world = empty_world()
-                    world = world.filter(predicate)
-                    qresult = world.get_id_time_camId_filename(num_joined_tables=n_objects)
-                    p = bm_dir(f"qresult-{i}--{filename}_{run}", f"{name}.json")
-                    with open(p, 'w') as f:
-                        json.dump(qresult, f, indent=1)
-                    time_rquery = time.time() - start_rquery
-                    runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
+                world = empty_world()
+                world = world.filter(predicate)
+                qresult = world.get_id_time_camId_filename(num_joined_tables=n_objects)
+                p = bm_dir(f"qresult--{filename}_{run}", f"{name}-{i}.json")
+                with open(p, 'w') as f:
+                    json.dump(qresult, f, indent=1)
+                time_rquery = time.time() - start_rquery
+                runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
 
-                # save video
-                start_video = time.time()
-                tracking2d_overlay(output, './tmp.mp4')
-                time_video = time.time() - start_video
-                runtime_video.append({'name': name, 'runtime': time_video})
-            except Exception as e:
-                if ignore_error:
-                    message = str(traceback.format_exc())
-                    failed_videos.append((name, message))
-                    print(video_filename)
-                    print(e)
-                    print(message)
-                    print("------------------------------------------------------------------------------------")
-                    print()
-                    print()
-                else:
-                    raise e
+            # save video
+            start_video = time.time()
+            tracking2d_overlay(output, './tmp.mp4')
+            time_video = time.time() - start_video
+            runtime_video.append({'name': name, 'runtime': time_video})
+        except Exception as e:
+            if ignore_error:
+                message = str(traceback.format_exc())
+                failed_videos.append((name, message))
+                print(video_filename)
+                print(e)
+                print(message)
+                print("------------------------------------------------------------------------------------")
+                print()
+                print()
+            else:
+                raise e
 
-            if len(metadata_d2d) % 10 == 0:
-                save_perf()
-    except KeyboardInterrupt:
-        print('keyboard inturrupted')
+        if len(metadata_d2d) % 10 == 0:
+            save_perf()
     save_perf()
 
 
@@ -600,6 +597,12 @@ def run(test):
     run_benchmark(p2, 'q2-' + test, [(pred2, 2)], run=1, ignore_error=True)
 
     run_benchmark(p34, 'q34-' + test, [(pred3, 1), (pred4, 3)], run=1, ignore_error=True)
+
+
+# In[ ]:
+
+
+shutdown = True
 
 
 # In[ ]:
