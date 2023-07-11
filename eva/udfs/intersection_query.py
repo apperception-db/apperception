@@ -38,7 +38,7 @@ class IntersectionQuery(AbstractUDF):
         ],
     )
     def forward(self, df):
-        objClasses = ["car", "truck", "bus"]
+        objClasses = ["car", "truck"]
         def _forward(row):
             locations = [np.array(x) for x in row.iloc][0]
             for object in locations:
