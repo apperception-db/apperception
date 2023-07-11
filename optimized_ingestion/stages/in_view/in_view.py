@@ -246,12 +246,26 @@ class KeepOnlyRoadTypePredicates(BaseTransformer):
 
     def visit_CallNode(self, node: CallNode):
         # print('call', node, node.fn, F.contained)
-        if node.fn == F.contains_all().fn or node.fn == F.contained().fn:
+        if node.fn == F.contains_all().fn:
             # print('contains')
             assert (len(node.params) >= 1)
             assert isinstance(node.params[0], LiteralNode), node.params[0]
             assert isinstance(node.params[0].value, str), node.params[0]
             return F.is_roadtype(node.params[0])
+        elif node.fn == F.contained().fn:
+            # print('contains')
+            assert (len(node.params) >= 1)
+            segment = node.params[1]
+            if isinstance(segment, LiteralNode):
+                assert isinstance(node.params[1].value, str), node.params[1]
+                return F.is_roadtype(node.params[1])
+            else:
+                assert isinstance(segment, CallNode), segment
+                assert segment == F.same_region(), segment
+                assert len(segment.params) == 1, segment.param
+                assert isinstance(segment.params[0], LiteralNode), segment.params[0]
+                assert isinstance(segment.params[0].value, str), segment.params[0]
+                return F.is_roadtype(segment.params[0])
         return F.ignore_roadtype()
 
     def visit_TableNode(self, node: TableNode):
@@ -518,14 +532,19 @@ def create_inview_predicate(
     # Note True/False will either disappear from all the predicates or propagate to the top
     if isinstance(node, LiteralNode):
         assert isinstance(node.value, bool), node.value
+        print('value', node.value)
         return [], node.value
 
     node = PushInversionInForRoadTypePredicates()(node)
     node = NormalizeInversionAndFlattenRoadTypePredicates()(node)
     # Note F.ignore_roadtype will either disappear from all the predicates or propagate to the top
-    if isinstance(node, CallNode) and node.fn == F.ignore_roadtype:
+    if isinstance(node, CallNode) and node.fn == IGNORE_ROADTYPE:
+        print('ignore type')
         return [], True
 
     param_name = 'roadtypes'
     predicate_str = InViewPredicate(param_name)(node)
-    return list(FindRoadTypes()(node)), eval(f"lambda {param_name}: {predicate_str}")
+    roadtypes = FindRoadTypes()(node)
+    print(predicate_str)
+    print(roadtypes)
+    return list(roadtypes), eval(f"lambda {param_name}: {predicate_str}")

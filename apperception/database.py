@@ -99,10 +99,16 @@ class Database:
         self.cursor = self.connection.cursor()
 
     def reset(self, commit=False):
+        self.reset_cursor()
         self._create_camera_table(commit)
         self._create_item_general_trajectory_table(commit)
         # self._create_general_bbox_table(False)
         self._create_index(commit)
+
+    def reset_cursor(self):
+        self.cursor.close()
+        assert self.cursor.closed
+        self.cursor = self.connection.cursor()
 
     def _create_camera_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Cameras CASCADE;")
@@ -386,7 +392,7 @@ class Database:
             .replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1)
         )
 
-        print("get_id_time_camId_filename", _query)
+        # print("get_id_time_camId_filename", _query)
         return self.execute(_query)
 
     def get_video(self, query, cams, boxed):

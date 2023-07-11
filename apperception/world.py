@@ -231,20 +231,20 @@ class World:
                 continue
 
             if node.fn == database.insert_cam or node.fn == database.insert_bbox_traj:
-                print("execute:", node.fn.__name__)
+                # print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
             # treat update method differently
             else:
-                print("execute:", node.fn.__name__)
+                # print("execute:", node.fn.__name__)
                 # print(query)
                 query = node._execute(query=query, **node.kwargs)
-        print("done execute node")
+        # print("done execute node")
 
         res = query
-        if isinstance(query, list):
-            print("Result length:", len(query))
+        # if isinstance(query, list):
+        #     print("Result length:", len(query))
         return res
 
     def _execute(self, **kwargs):
