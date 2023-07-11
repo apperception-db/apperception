@@ -14,7 +14,7 @@ from evadb.catalog.catalog_type import NdArrayType
 from evadb.udfs.gpu_compatible import GPUCompatible
 
 class LocationDetection(AbstractUDF):
-    @setup(cacheable=True, udf_type="object_detection", batchable=True)
+    @setup(cacheable=True, udf_type="FeatureExtraction", batchable=True)
     def setup(self):
         pass
     

@@ -38,17 +38,19 @@ class IntersectionQuery(AbstractUDF):
         ],
     )
     def forward(self, df):
-        objClasses = ["car", "truck", "bus"]
+        objClasses = ["bus"]
         def _forward(row):
-            locations = [np.array(x) for x in row.iloc][0]
+            locations, egoTranslation, egoHeading = [np.array(x) for x in row.iloc]
             for object in locations:
                 x, y, z, objClass, conf = object
                 loc = [float(x) for x in (x, y, z)]
 
                 if objClass not in objClasses:
                    continue
-                   
-                if is_contained_intersection(self.nusc_map, loc):
+                
+                convX, convY = convert_camera([np.float(x) for x in egoTranslation], np.float(egoHeading), loc)
+
+                if -10 < convX < -1 and 0 < convY < 50:
                    return True
             return False
 
@@ -58,13 +60,18 @@ class IntersectionQuery(AbstractUDF):
 
 
     def name(self):
-        return "IntersectionQuery"
+        return "RelativePositionQuery"
 
-def is_contained_intersection(nusc_map, position):
-  x, y, z = position
-  road_segment_token = nusc_map.layers_on_point(x, y)['road_segment']
-  if road_segment_token != '':
-    road_segment = nusc_map.get('road_segment', road_segment_token)
-    return road_segment["is_intersection"]
-  else:
-    return False
+def convert_camera(cam_position, cam_heading, obj_point):
+    cam_x, cam_y, _ = cam_position
+    obj_x, obj_y, _ = obj_point
+    
+    subtract_x = obj_x - cam_x
+    subtract_y = obj_y - cam_y
+
+    subtract_mag = np.sqrt(subtract_x**2 + subtract_y**2)
+
+    res_x = subtract_mag * np.cos(-cam_heading + np.arctan2(subtract_y, subtract_x))
+    res_y = subtract_mag * np.sin(-cam_heading + np.arctan2(subtract_y, subtract_x))
+
+    return res_x, res_y
