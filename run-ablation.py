@@ -287,7 +287,10 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
 
                     world = empty_world()
                     world = world.filter(predicate)
-                    _ = world.get_id_time_camId_filename(num_joined_tables=n_objects)
+                    qresult = world.get_id_time_camId_filename(num_joined_tables=n_objects)
+                    p = bm_dir(f"qresult-{i}--{filename}_{run}", f"{name}.json")
+                    with open(p, 'w') as f:
+                        json.dump(qresult, f, indent=1)
                     time_rquery = time.time() - start_rquery
                     runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
 
