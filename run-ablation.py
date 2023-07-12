@@ -12,6 +12,8 @@ import traceback
 import shutil
 import socket
 import time
+import random
+
 from os import environ
 
 import numpy as np
@@ -718,6 +720,8 @@ def run(test):
 
 
 tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+random.shuffle(tests)
+
 for test in tests:
     assert isinstance(pipelines[test](lit(True)), Pipeline)
 
