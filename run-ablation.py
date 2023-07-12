@@ -410,7 +410,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                         'runtime': time_rquery
                     }
                 })
-            p = bm_dir(f'performance--{filename}_run', f'{name}.json')
+            p = bm_dir(f'performance--{filename}_{run}', f'{name}.json')
             with open(p, "w") as f:
                 json.dump(perf, f, indent=1)
         except Exception as e:
