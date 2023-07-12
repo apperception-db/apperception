@@ -258,7 +258,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     print('# of sliced   videos:', len(filtered_videos))
     # ingest_road(database, './data/scenic/road-network/boston-seaport')
 
-    for pre in [*all_metadata.keys(), 'qresult']:
+    for pre in [*all_metadata.keys(), 'qresult', 'performance']:
         p = os.path.join(BENCHMARK_DIR, f"{pre}--{filename}_{run}")
         if os.path.exists(p):
             shutil.rmtree(p)
