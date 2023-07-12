@@ -30,6 +30,9 @@ class ObjectTypeFilter(Detection2D):
             self.types = types
         print(self.types)
 
+    def __repr__(self) -> str:
+        return f'ObjectTypeFilter(types={self.types})'
+
     def add_type(self, type: "str"):
         self.types.append(type)
 

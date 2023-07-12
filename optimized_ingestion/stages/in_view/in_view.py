@@ -49,7 +49,11 @@ class InView(Stage):
         if roadtypes is not None:
             self.roadtypes = roadtypes if isinstance(roadtypes, list) else [roadtypes]
         if predicate is not None:
-            self.roadtypes, self.predicate = create_inview_predicate(predicate)
+            self.roadtypes, self.predicate_str = create_inview_predicate(predicate)
+            self.predicate = eval(self.predicate_str)
+
+    def __repr__(self) -> str:
+        return f'InView(distance={self.distance}, roadtype={self.roadtypes}, predicate={self.predicate_str})'
 
     def _run(self, payload: "Payload") -> "tuple[bitarray, None]":
         w, h = payload.video.dimension
@@ -532,19 +536,15 @@ def create_inview_predicate(
     # Note True/False will either disappear from all the predicates or propagate to the top
     if isinstance(node, LiteralNode):
         assert isinstance(node.value, bool), node.value
-        print('value', node.value)
-        return [], node.value
+        return [], str(node.value)
 
     node = PushInversionInForRoadTypePredicates()(node)
     node = NormalizeInversionAndFlattenRoadTypePredicates()(node)
     # Note F.ignore_roadtype will either disappear from all the predicates or propagate to the top
     if isinstance(node, CallNode) and node.fn == IGNORE_ROADTYPE:
-        print('ignore type')
-        return [], True
+        return [], str(True)
 
     param_name = 'roadtypes'
     predicate_str = InViewPredicate(param_name)(node)
     roadtypes = FindRoadTypes()(node)
-    print(predicate_str)
-    print(roadtypes)
-    return list(roadtypes), eval(f"lambda {param_name}: {predicate_str}")
+    return list(roadtypes), f"lambda {param_name}: {predicate_str}"

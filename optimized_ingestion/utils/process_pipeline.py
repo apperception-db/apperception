@@ -1,7 +1,7 @@
 import math
 import time
 
-from apperception.database import database
+from apperception.database import Database, database
 from apperception.utils import join
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
@@ -121,7 +121,7 @@ from typing import List, Tuple
 
 
 def insert_trajectory(
-    database,
+    database: "Database",
     item_id: str,
     camera_id: str,
     object_type: str,
