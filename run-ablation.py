@@ -212,6 +212,22 @@ def get_sql(predicate: "PredicateNode"):
 # In[ ]:
 
 
+slices = {
+    "noopt": (0, 15),
+    "inview": (15, 30),
+    "objectfilter": (30, 45),
+    "geo": (45, 60),
+    "de": (60, 75),
+    "opt": (75, 90),
+    "optde": (90, 105),
+    'mick-dev': (0, 15),
+    'freddie': (15, 30),
+}
+
+
+# In[ ]:
+
+
 def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     print(filename)
     metadata_strongsort = {}
@@ -225,15 +241,19 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
         'detection': metadata_d2d,
         'sort': metadata_strongsort,
     }
+    print('# of total    videos:', len(videos))
 
-    names = set(sampled_scenes[:100]).union({'0655', '0757'})
+    names = set(sampled_scenes[:35])
     # names = {'0655'}
     filtered_videos = [
         n for n in videos
-        if n[6:10] in names and n.endswith('FRONT')
+        if n[6:10] in names and 'FRONT' in n
     ]
-    print('# of total    videos:', len(videos))
     print('# of filtered videos:', len(filtered_videos))
+
+    s_from, s_to = slices[test]
+    filtered_videos = filtered_videos[s_from:s_to]
+    print('# of sliced   videos:', len(filtered_videos))
     # ingest_road(database, './data/scenic/road-network/boston-seaport')
 
     for pre in [*all_metadata.keys(), 'qresult']:
@@ -300,6 +320,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                 with open(p, "w") as f:
                     json.dump(metadata[name], f, cls=MetadataJSONEncoder, indent=1)
 
+            times_rquery = []
             for i, predicate in enumerate(predicates):
                 start_rquery = time.time()
                 database.reset(True)
@@ -335,24 +356,61 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                 database.insert_cam(camera)
 
                 query = get_sql(predicate)
-                t0 = time.time()
+                # t0 = time.time()
                 qresult = database.execute(query)
-                print('query', time.time() - t0)
-                print('result length', len(qresult))
+                # print('query', time.time() - t0)
+                # print('result length', len(qresult))
                 # print(qresult)
 
                 p = bm_dir(f"qresult--{filename}_{run}", f"{name}-{i}.json")
                 with open(p, 'w') as f:
                     json.dump(qresult, f, indent=1)
                 time_rquery = time.time() - start_rquery
+                times_rquery.append(time_rquery)
                 runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
-                print()
+                # print()
 
             # save video
             start_video = time.time()
             tracking2d_overlay(output, './tmp.mp4')
             time_video = time.time() - start_video
             runtime_video.append({'name': name, 'runtime': time_video})
+
+            perf = []
+            for stage in pipeline.stages:
+                benchmarks = [*filter(lambda x: video['filename'] in x['name'], stage.benchmark)]
+                assert len(benchmarks) == 1
+                perf.append({
+                    'stage': stage.classname(),
+                    'benchmark': benchmarks[0]
+                })
+
+            perf.append({
+                'stage': 'ingest',
+                'benchmark': {
+                    'name': name,
+                    'runtime': time_input
+                }
+            })
+            perf.append({
+                'stage': 'save',
+                'benchmark': {
+                    'name': name,
+                    'runtime': time_video
+                }
+            })
+            for i, time_rquery in enumerate(times_rquery):
+                perf.append({
+                    'stage': 'query',
+                    'benchmark': {
+                        'name': name,
+                        'predicate': i,
+                        'runtime': time_rquery
+                    }
+                })
+            p = bm_dir(f'performance--{filename}_run', f'{name}.json')
+            with open(p, "w") as f:
+                json.dump(perf, f, indent=1)
         except Exception as e:
             if ignore_error:
                 message = str(traceback.format_exc())
@@ -547,14 +605,14 @@ pipelines = {
     "objectfilter": p_objectFilter,
     "geo": p_geo,
     "de": p_de,
-    "deincr": p_deIncr,
+    # "deincr": p_deIncr,
     "opt": p_opt,
-    "optincr": p_optIncr,
+    # "optincr": p_optIncr,
     "optde": p_optDe,
-    "optdeincr": p_optDeIncr,
+    # "optdeincr": p_optDeIncr,
 
-    "gtopt": p_gtOpt,
-    "gtoptde": p_gtOptDe
+    # "gtopt": p_gtOpt,
+    # "gtoptde": p_gtOptDe
 }
 
 
@@ -576,7 +634,7 @@ def run(test):
         # F.contained(c.ego, 'intersection') r
         F.contained(o.trans@c.time, 'intersection') &
         # F.angle_excluding(F.facing_relative(o.traj@c.time, c.ego), lit(-70), lit(70)) &
-        F.angle_between(F.facing_relative(c.ego, F.road_direction(c.ego)), lit(-15), lit(15)) &
+        F.angle_between(F.facing_relative(c.cam, F.road_direction(c.ego)), lit(-15), lit(15)) &
         (F.distance(c.cam, o.traj@c.time) < lit(50)) # &
         # (F.view_angle(o.trans@c.time, c.camAbs) < lit(35))
     )
@@ -588,10 +646,10 @@ def run(test):
         (obj1.id != obj2.id) &
         ((obj1.type == 'car') | (obj1.type == 'truck')) &
         ((obj2.type == 'car') | (obj2.type == 'truck')) &
-        F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego)), -15, 15) &
-        (F.distance(cam.ego, obj1.trans@cam.time) < 50) &
+        F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.cam)), -15, 15) &
+        (F.distance(cam.cam, obj1.trans@cam.time) < 50) &
         # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2.0) &
-        (F.distance(cam.ego, obj2.trans@cam.time) < 50) &
+        (F.distance(cam.cam, obj2.trans@cam.time) < 50) &
         # (F.view_angle(obj2.trans@cam.time, cam.ego) < 70 / 2.0) &
         F.contains_all('intersection', [obj1.trans, obj2.trans]@cam.time)# &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 40, 135) &
@@ -604,14 +662,14 @@ def run(test):
     cam = camera
     pred3 = (
         ((obj1.type == 'car') | (obj1.type == 'truck')) &
-        (F.distance(cam.ego, obj1.trans@cam.timestamp) < 50) &
+        (F.distance(cam.cam, obj1.trans@cam.timestamp) < 50) &
         # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2) &
-        F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -180, -90) &
-        F.contained(cam.ego, F.road_segment('road')) &
+        F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.cam, cam.cam)), -180, -90) &
+        F.contained(cam.cam, F.road_segment('road')) &
         F.contained(obj1.trans@cam.time, F.road_segment('road')) &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, F.road_direction(obj1.traj@cam.time, cam.ego)), -15, 15) &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 135, 225) &
-        (F.distance(cam.ego, obj1.trans@cam.time) < 10)
+        (F.distance(cam.cam, obj1.trans@cam.time) < 10)
     )
 
     cam = camera
@@ -627,12 +685,12 @@ def run(test):
         (car1.id != car2.id) &
         (car1.id != opposite_car.id) &
 
-        F.angle_between(F.facing_relative(cam.ego, F.road_direction(cam.ego, cam.ego)), -15, 15) &
+        F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.cam, cam.cam)), -15, 15) &
         # (F.view_angle(car1.traj@cam.time, cam.ego) < 70 / 2) &
-        (F.distance(cam.ego, car1.traj@cam.time) < 40) &
+        (F.distance(cam.cam, car1.traj@cam.time) < 40) &
         # F.angle_between(F.facing_relative(car1.traj@cam.time, cam.ego), -15, 15) &
         # F.angle_between(F.facing_relative(car1.traj@cam.time, F.road_direction(car1.traj@cam.time, cam.ego)), -15, 15) &
-        F.ahead(car1.traj@cam.time, cam.ego) &
+        F.ahead(car1.traj@cam.time, cam.cam) &
         # (F.convert_camera(opposite_car.traj@cam.time, cam.ego) > [-10, 0]) &
         # (F.convert_camera(opposite_car.traj@cam.time, cam.ego) < [-1, 50]) &
         # F.angle_between(F.facing_relative(opposite_car.traj@cam.time, cam.ego), 140, 180) &
@@ -659,14 +717,25 @@ def run(test):
 # In[ ]:
 
 
-run(test)
+tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+for test in tests:
+    assert isinstance(pipelines[test](lit(True)), Pipeline)
+
+for test in tests:
+    run(test)
 
 
 # In[ ]:
 
 
-if test == 'opt':
-    run('optde')
+# run(test)
+
+
+# In[ ]:
+
+
+# if test == 'opt':
+#     run('optde')
 
 
 # In[ ]:
