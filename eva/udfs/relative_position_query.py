@@ -3,6 +3,7 @@ from evadb.udfs.decorators.decorators import forward, setup
 import numpy as np
 import pandas as pd
 import torch
+import math
 from pyquaternion import Quaternion
 from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
 from optimized_ingestion.stages.stage import Stage
@@ -48,7 +49,7 @@ class IntersectionQuery(AbstractUDF):
                 if objClass not in objClasses:
                    continue
                 
-                convX, convY = convert_camera([np.float(x) for x in egoTranslation], np.float(egoHeading), loc)
+                convX, convY = convert_camera([np.float(x) for x in egoTranslation], math.radians(np.float(egoHeading)), loc)
 
                 if -10 < convX < -1 and 0 < convY < 50:
                    return True
