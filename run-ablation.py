@@ -249,7 +249,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
         if n[6:10] in names and 'FRONT' in n
     ]
     N = len(filtered_videos)
-    print('# of filtered videos:', len(N))
+    print('# of filtered videos:', N)
 
     s_from, s_to = slices[test]
     STEP = N // 6
