@@ -215,15 +215,15 @@ def get_sql(predicate: "PredicateNode"):
 
 
 slices = {
-    "noopt": (0, 15),
-    "inview": (15, 30),
-    "objectfilter": (30, 45),
-    "geo": (45, 60),
-    "de": (60, 75),
-    "opt": (75, 90),
-    "optde": (90, 105),
-    'mick-dev': (0, 15),
-    'freddie': (15, 30),
+    "noopt": (0, 1),
+    "inview": (1, 2),
+    "objectfilter": (2, 3),
+    "geo": (3, 4),
+    "de": (4, 5),
+    "opt": (5, 6),
+    # "optde": (6, 7),
+    'mick-dev': (0, 1),
+    'freddie': (1, 2),
 }
 
 
@@ -235,9 +235,6 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     metadata_strongsort = {}
     metadata_d2d = {}
     failed_videos = []
-    runtime_input = []
-    runtime_query = []
-    runtime_video = []
 
     all_metadata = {
         'detection': metadata_d2d,
@@ -251,22 +248,26 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
         n for n in videos
         if n[6:10] in names and 'FRONT' in n
     ]
-    print('# of filtered videos:', len(filtered_videos))
+    N = len(filtered_videos)
+    print('# of filtered videos:', len(N))
 
     s_from, s_to = slices[test]
-    filtered_videos = filtered_videos[s_from:s_to]
+    STEP = N // 6
+    filtered_videos = filtered_videos[s_from*STEP:s_to*STEP]
     print('# of sliced   videos:', len(filtered_videos))
     # ingest_road(database, './data/scenic/road-network/boston-seaport')
 
-    for pre in [*all_metadata.keys(), 'qresult', 'performance']:
+    for pre in [*all_metadata.keys(), 'qresult', 'performance', 'failedvideos']:
         p = os.path.join(BENCHMARK_DIR, f"{pre}--{filename}_{run}")
         if os.path.exists(p):
             shutil.rmtree(p)
         os.makedirs(p)
 
     def save_perf():
-        with open(bm_dir(f"failed_videos--{filename}_{run}.json"), "w") as f:
-            json.dump(failed_videos, f, indent=1)
+        for n, message in failed_videos:
+            p = bm_dir(f'failedvideos--{filename}_{run}', f'{n}.txt')
+            with open(p, "w") as f:
+                f.write(message)
 
         with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
             performance = [
@@ -288,13 +289,13 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                 in pipeline.stages
             ]
             json.dump(performance, f, indent=1)
-        with open(bm_dir(f"perfexec--{filename}_{run}.json"), 'w') as f:
-            json.dump({
-                'ingest': 2.2629338979721068,
-                'input': runtime_input,
-                'query': runtime_query,
-                'save': runtime_video
-            }, f, indent=1)
+        # with open(bm_dir(f"perfexec--{filename}_{run}.json"), 'w') as f:
+        #     json.dump({
+        #         'ingest': 2.2629338979721068,
+        #         'input': runtime_input,
+        #         'query': runtime_query,
+        #         'save': runtime_video
+        #     }, f, indent=1)
 
     for i, name in tqdm(enumerate(filtered_videos), total=len(filtered_videos)):
         # if i % int(len(filtered_videos) / 200) == 0:
@@ -310,7 +311,6 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                 [camera_config(*f, 0) for f in video["frames"]],
             )
             time_input = time.time() - start_input
-            runtime_input.append({'name': name, 'runtime': time_input})
 
             output = pipeline.run(Payload(frames))
 
@@ -358,29 +358,27 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                 database.insert_cam(camera)
 
                 query = get_sql(predicate)
-                # t0 = time.time()
                 qresult = database.execute(query)
-                # print('query', time.time() - t0)
-                # print('result length', len(qresult))
-                # print(qresult)
 
                 p = bm_dir(f"qresult--{filename}_{run}", f"{name}-{i}.json")
                 with open(p, 'w') as f:
                     json.dump(qresult, f, indent=1)
                 time_rquery = time.time() - start_rquery
                 times_rquery.append(time_rquery)
-                runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
-                # print()
+                # runtime_query.append({'name': name, 'predicate': i, 'runtime': time_rquery})
 
             # save video
             start_video = time.time()
             tracking2d_overlay(output, './tmp.mp4')
             time_video = time.time() - start_video
-            runtime_video.append({'name': name, 'runtime': time_video})
+            # runtime_video.append({'name': name, 'runtime': time_video})
 
             perf = []
             for stage in pipeline.stages:
-                benchmarks = [*filter(lambda x: video['filename'] in x['name'], stage.benchmark)]
+                benchmarks = [*filter(
+                    lambda x: video['filename'] in x['name'],
+                    stage.benchmark
+                )]
                 assert len(benchmarks) == 1
                 perf.append({
                     'stage': stage.classname(),
@@ -497,8 +495,6 @@ def create_pipeline(
 
 # In[ ]:
 
-
-predicate = None
 
 p_noOpt = lambda predicate: create_pipeline(
     predicate,
@@ -650,6 +646,7 @@ def run(test):
         ((obj2.type == 'car') | (obj2.type == 'truck')) &
         F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.cam)), -15, 15) &
         (F.distance(cam.cam, obj1.trans@cam.time) < 50) &
+
         # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2.0) &
         (F.distance(cam.cam, obj2.trans@cam.time) < 50) &
         # (F.view_angle(obj2.trans@cam.time, cam.ego) < 70 / 2.0) &
