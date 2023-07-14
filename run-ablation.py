@@ -342,10 +342,10 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
 
                 # Ingest Camera
                 accs: 'ACameraConfig' = []
-                for i, cc in enumerate(frames.interpolated_frames):
+                for idx, cc in enumerate(frames.interpolated_frames):
                     acc = ACameraConfig(
                         frame_id=cc.frame_id,
-                        frame_num=i,
+                        frame_num=idx,
                         filename=cc.filename,
                         camera_translation=cc.camera_translation,
                         camera_rotation=cc.camera_rotation,
@@ -705,15 +705,15 @@ def run(__test):
     p2 = pipelines[__test](pred2)
     p34 = pipelines[__test](pred3)
 
-    print(p2)
-    run_benchmark(p2, 'q2-' + __test, [pred2], run=1, ignore_error=True)
+    # print(p2)
+    # run_benchmark(p2, 'q2-' + __test, [pred2], run=1, ignore_error=True)
 
     print(p34)
     run_benchmark(p34, 'q34-' + __test, [pred3, pred4], run=1, ignore_error=True)
 
-    if __test != 'optde' and __test != 'de':
-        print(p1)
-        run_benchmark(p1, 'q1-' + __test, [pred1], run=1, ignore_error=True)
+    # if __test != 'optde' and __test != 'de':
+    #     print(p1)
+    #     run_benchmark(p1, 'q1-' + __test, [pred1], run=1, ignore_error=True)
 
 
 # In[ ]:
