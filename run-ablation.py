@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import subprocess
@@ -24,7 +24,7 @@ subprocess.Popen('nvidia-smi', shell=True).wait()
 process = subprocess.Popen('docker container start mobilitydb', shell=True)
 
 
-# In[2]:
+# In[ ]:
 
 
 hostname = socket.gethostname()
@@ -32,7 +32,7 @@ test = hostname.split("-")[-1]
 print("test", test)
 
 
-# In[3]:
+# In[ ]:
 
 
 def is_notebook() -> bool:
@@ -61,13 +61,13 @@ else:
     from playground.nbutils.report_progress import report_progress
 
 
-# In[4]:
+# In[ ]:
 
 
 process.wait()
 
 
-# In[5]:
+# In[ ]:
 
 
 from optimized_ingestion.camera_config import camera_config
@@ -77,7 +77,7 @@ from optimized_ingestion.video import Video
 from optimized_ingestion.metadata_json_encoder import MetadataJSONEncoder
 
 
-# In[6]:
+# In[ ]:
 
 
 # Stages
@@ -91,7 +91,7 @@ from optimized_ingestion.stages.detection_2d.object_type_filter import ObjectTyp
 from optimized_ingestion.stages.detection_2d.ground_truth import GroundTruthDetection
 
 
-# In[7]:
+# In[ ]:
 
 
 from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import FromDetection2DAndRoad
@@ -103,14 +103,14 @@ from optimized_ingestion.stages.detection_estimation import DetectionEstimation
 from optimized_ingestion.stages.detection_estimation.segment_mapping import RoadPolygonInfo
 
 
-# In[8]:
+# In[ ]:
 
 
 from optimized_ingestion.stages.tracking.strongsort import StrongSORT
 from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT as StrongSORT2D
 
 
-# In[9]:
+# In[ ]:
 
 
 from optimized_ingestion.stages.tracking_3d.from_tracking_2d_and_road import FromTracking2DAndRoad
@@ -122,21 +122,21 @@ from optimized_ingestion.stages.segment_trajectory.construct_segment_trajectory 
 from optimized_ingestion.stages.segment_trajectory.from_tracking_3d import FromTracking3D
 
 
-# In[10]:
+# In[ ]:
 
 
 from optimized_ingestion.cache import disable_cache
 disable_cache()
 
 
-# In[11]:
+# In[ ]:
 
 
 from optimized_ingestion.utils.process_pipeline import format_trajectory, insert_trajectory, get_tracks
 from optimized_ingestion.actions.tracking2d_overlay import tracking2d_overlay
 
 
-# In[12]:
+# In[ ]:
 
 
 from apperception.utils.ingest_road import ingest_road
@@ -148,7 +148,7 @@ from apperception.data_types.camera import Camera as ACamera
 from apperception.data_types.camera_config import CameraConfig as ACameraConfig
 
 
-# In[13]:
+# In[ ]:
 
 
 NUSCENES_PROCESSED_DATA = "NUSCENES_PROCESSED_DATA"
@@ -156,7 +156,7 @@ print(NUSCENES_PROCESSED_DATA in os.environ)
 print(os.environ['NUSCENES_PROCESSED_DATA'])
 
 
-# In[14]:
+# In[ ]:
 
 
 DATA_DIR = os.environ[NUSCENES_PROCESSED_DATA]
@@ -166,7 +166,7 @@ with open(os.path.join(DATA_DIR, 'videos', 'videos.json'), 'r') as f:
     videos = json.load(f)
 
 
-# In[15]:
+# In[ ]:
 
 
 with open('./data/evaluation/video-samples/boston-seaport.txt', 'r') as f:
@@ -174,7 +174,7 @@ with open('./data/evaluation/video-samples/boston-seaport.txt', 'r') as f:
 print(sampled_scenes[0], sampled_scenes[-1], len(sampled_scenes))
 
 
-# In[16]:
+# In[ ]:
 
 
 BENCHMARK_DIR = "./outputs/run"
@@ -184,7 +184,7 @@ def bm_dir(*args: "str"):
     return os.path.join(BENCHMARK_DIR, *args)
 
 
-# In[17]:
+# In[ ]:
 
 
 def get_sql(predicate: "PredicateNode"):
@@ -211,7 +211,7 @@ def get_sql(predicate: "PredicateNode"):
     """
 
 
-# In[18]:
+# In[ ]:
 
 
 slices = {
@@ -227,7 +227,7 @@ slices = {
 }
 
 
-# In[19]:
+# In[ ]:
 
 
 def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
@@ -432,7 +432,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     save_perf()
 
 
-# In[20]:
+# In[ ]:
 
 
 def create_pipeline(
@@ -496,7 +496,7 @@ def create_pipeline(
     return pipeline
 
 
-# In[21]:
+# In[ ]:
 
 
 p_noOpt = lambda predicate: create_pipeline(
@@ -617,14 +617,14 @@ pipelines = {
 }
 
 
-# In[22]:
+# In[ ]:
 
 
 # if test == 'dev':
 #     test = 'opt'
 
 
-# In[23]:
+# In[ ]:
 
 
 def run(__test):
@@ -716,10 +716,11 @@ def run(__test):
         run_benchmark(p1, 'q1-' + __test, [pred1], run=1, ignore_error=True)
 
 
-# In[24]:
+# In[ ]:
 
 
-tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+# tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+tests = ['de', 'optde']
 random.shuffle(tests)
 
 for _test in tests:

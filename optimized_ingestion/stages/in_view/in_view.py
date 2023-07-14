@@ -306,14 +306,14 @@ class PushInversionInForRoadTypePredicates(BaseTransformer):
         expr = visited.expr
 
         assert isinstance(expr, (BoolOpNode, CallNode)), expr
-        print('invert---')
+        # print('invert---')
         if isinstance(expr, BoolOpNode):
             if expr.op == 'and':
                 return self(BoolOpNode('or', [~e for e in expr.exprs]))
             else:
                 return self(BoolOpNode('and', [~e for e in expr.exprs]))
         else:
-            print('invert', expr)
+            # print('invert', expr)
             assert expr.fn in [IS_ROADTYPE, IS_OTHER_ROADTYPE, IGNORE_ROADTYPE], expr.fn
             if expr.fn == IS_ROADTYPE:
                 return F.is_other_roadtype(expr.params[0])
