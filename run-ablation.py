@@ -719,8 +719,8 @@ def run(__test):
 # In[ ]:
 
 
-# tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
-tests = ['de', 'optde']
+tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+# tests = ['de', 'optde']
 random.shuffle(tests)
 
 for _test in tests:
