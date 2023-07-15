@@ -242,7 +242,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     }
     print('# of total    videos:', len(videos))
 
-    names = set(sampled_scenes[:35])
+    names = set(sampled_scenes[:50])
     # names = {'0655'}
     filtered_videos = [
         n for n in videos
@@ -272,26 +272,26 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
             with open(p, "w") as f:
                 f.write(message)
 
-        with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
-            performance = [
-                {
-                    "stage": stage.classname(),
-                    "benchmark": stage.benchmark,
-                    **(
-                        {'explains': stage.explains}
-                        if hasattr(stage, 'explains')
-                        else {}
-                    ),
-                    **(
-                        {"ss-benchmark": stage.ss_benchmark}
-                        if hasattr(stage, 'ss_benchmark')
-                        else {}
-                    )
-                }
-                for stage
-                in pipeline.stages
-            ]
-            json.dump(performance, f, indent=1)
+        # with open(bm_dir(f"perf--{filename}_{run}.json"), "w") as f:
+        #     performance = [
+        #         {
+        #             "stage": stage.classname(),
+        #             "benchmark": stage.benchmark,
+        #             **(
+        #                 {'explains': stage.explains}
+        #                 if hasattr(stage, 'explains')
+        #                 else {}
+        #             ),
+        #             **(
+        #                 {"ss-benchmark": stage.ss_benchmark}
+        #                 if hasattr(stage, 'ss_benchmark')
+        #                 else {}
+        #             )
+        #         }
+        #         for stage
+        #         in pipeline.stages
+        #     ]
+        #     json.dump(performance, f, indent=1)
         # with open(bm_dir(f"perfexec--{filename}_{run}.json"), 'w') as f:
         #     json.dump({
         #         'ingest': 2.2629338979721068,
@@ -705,15 +705,15 @@ def run(__test):
     p2 = pipelines[__test](pred2)
     p34 = pipelines[__test](pred3)
 
-    # print(p2)
-    # run_benchmark(p2, 'q2-' + __test, [pred2], run=1, ignore_error=True)
+    print(p2)
+    run_benchmark(p2, 'q2-' + __test, [pred2], run=1, ignore_error=True)
 
     print(p34)
     run_benchmark(p34, 'q34-' + __test, [pred3, pred4], run=1, ignore_error=True)
 
-    # if __test != 'optde' and __test != 'de':
-    #     print(p1)
-    #     run_benchmark(p1, 'q1-' + __test, [pred1], run=1, ignore_error=True)
+    if __test != 'optde' and __test != 'de':
+        print(p1)
+        run_benchmark(p1, 'q1-' + __test, [pred1], run=1, ignore_error=True)
 
 
 # In[ ]:
@@ -726,7 +726,8 @@ random.shuffle(tests)
 for _test in tests:
     assert isinstance(pipelines[_test](lit(True)), Pipeline)
 
-for _test in tests:
+for idx, _test in enumerate(tests):
+    print(f'----------- {idx} / {len(tests)} --- {_test} -----------')
     run(_test)
 
 
