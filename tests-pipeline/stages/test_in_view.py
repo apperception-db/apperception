@@ -44,7 +44,7 @@ RT = '__ROADTYPES__'
 
     # General
     (o.type & True, ['ignore_roadtype()', None, None]),
-    (o.type & True & F.contained('intersection'), [
+    (o.type & True & F.contained('intersection', o.traj), [
         '(ignore_roadtype() AND is_roadtype(intersection))',
         None,
         'is_roadtype(intersection)',
