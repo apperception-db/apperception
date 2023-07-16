@@ -293,7 +293,7 @@ def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
         #     print(f'projection: {projection}')
         #     print(f'segment_line: {segment_line.coords.xy}')
         #     print(f'intersect? {segment_line.distance(projection) < 1e-8}')
-            
+
         if segment_line.distance(projection) < 1e-8:
             # return segment_line, segment_heading
 
