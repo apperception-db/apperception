@@ -71,7 +71,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _, dids = dets[i]
-            if i == 35:
+            if i == 195:
                 all_3d_points = []
                 for de, di in zip(det, dids):
                     bbox = de[:4]
@@ -79,6 +79,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                     left3d, right3d = bbox3d[:3], bbox3d[3:]
                     car_loc3d = tuple(map(float, (left3d + right3d) / 2))
                     all_3d_points.append(car_loc3d)
+            print(f'current frame num {i}')
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
@@ -177,6 +178,8 @@ def construct_estimated_all_detection_info(
 ) -> "list[DetectionInfo]":
     all_detections = []
     check_detections = []
+    if len(detection_ids) > 0:
+        print(detection_ids[0].frame_idx)
     for det, did in zip(detections, detection_ids):
         bbox = det[:4]
         # conf = det[4]
@@ -201,7 +204,7 @@ def construct_estimated_all_detection_info(
         )
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     for di in all_detection_info:
-        if di.detection_id.frame_idx == 207:
+        if di.detection_id.frame_idx == 212:
             # print(di.road_polygon_info.id)
             x, y = di.car_bbox2d[0]
             x_w, y_h = di.car_bbox2d[1]

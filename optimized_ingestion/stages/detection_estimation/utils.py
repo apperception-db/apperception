@@ -43,14 +43,14 @@ def mph_to_mps(mph: 'float'):
 
 
 MAX_CAR_SPEED = {
-    'lane': 20.,
+    'lane': 25.,
     # TODO: if we decide to map to smallest polygon,
     # 'lanegroup' would mean street parking spots.
-    'lanegroup': 20.,
-    'road': 20.,
-    'lanesection': 20.,
-    'roadSection': 20.,
-    'intersection': 20.,
+    'lanegroup': 25.,
+    'road': 25.,
+    'lanesection': 25.,
+    'roadSection': 25.,
+    'intersection': 25.,
     'highway': 55.,
     'residential': 25.,
 }
@@ -276,31 +276,43 @@ def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
     segment_lines = road_segment_info.segment_lines
     segment_headings = road_segment_info.segment_headings
 
-    closest_segment_line = None
-    closest_segment_heading = None
-
-    for segment_line, segment_heading in zip(segment_lines, segment_headings):
+    longest_segment_line = None
+    longest_segment_heading = None
+    line_heading = list(zip(segment_lines, segment_headings))
+    longest_line, longest_heading = max(line_heading, key=lambda x: x[0].length)
+    # logging.info(f'segment id: {road_segment_info.id}')
+    # logging.info(f'longest_heading: {longest_heading}')
+    for segment_line, segment_heading in line_heading:
         if segment_line is None:
             continue
 
         projection = project_point_onto_linestring(
             shapely.geometry.Point(car_loc3d[:2]), segment_line)
+        # if car_loc3d == (1826.4495849087664, 874.9766899196859, 0.0)\
+        #     and road_segment_info.id == '0dfe1044-0bd5-4640-87cc-1d2e86935021':
+        #     print(f'projection: {projection}')
+        #     print(f'segment_line: {segment_line.coords.xy}')
+        #     print(f'intersect? {segment_line.distance(projection) < 1e-8}')
+            
+        if segment_line.distance(projection) < 1e-8:
+            # return segment_line, segment_heading
 
-        if not projection.intersects(segment_line):
-            # TODO: if there are multiple ones that intersect -> find the one closer to the point
-            return segment_line, segment_heading
+            # if longest_segment_line is None:
+            #     longest_segment_line = segment_line
+            #     longest_segment_heading = segment_heading
+            # elif (longest_segment_line.length < segment_line.length):
+            #     longest_segment_line = segment_line
+            #     longest_segment_heading = segment_heading
+            if abs(segment_heading - longest_heading) < 30:
+                return segment_line, segment_heading
 
-        if closest_segment_line is None:
-            closest_segment_line = segment_line
-            closest_segment_heading = segment_heading
-        elif (projection.distance(closest_segment_line) > projection.distance(segment_line)):
-            closest_segment_line = segment_line
-            closest_segment_heading = segment_heading
-
-    assert closest_segment_line is not None
-    assert closest_segment_heading is not None
-
-    return closest_segment_line, closest_segment_heading
+    # assert longest_segment_heading is not None
+    # assert longest_segment_heading is not None
+    # if road_segment_info.id == '0dfe1044-0bd5-4640-87cc-1d2e86935021':
+    #     print(segment_lines, segment_headings)
+    #     print(f'car_loc3d: {car_loc3d}')
+    return None, None
+    # return longest_segment_line, longest_segment_heading
 
 
 def location_calibration(
@@ -415,13 +427,16 @@ def time_to_exit_current_segment(
         return time_elapse(current_time, -1), None
     segmentheading = detection_info.segment_heading + 90
     car_loc = shapely.geometry.Point(car_loc[:2])
-    car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
-                  car_loc.y + math.sin(math.radians(segmentheading)))
+    car_vector = (math.cos(math.radians(segmentheading)),
+                  math.sin(math.radians(segmentheading)))
+    # logger.info(f'car_vector is {car_vector}')
     car_heading_line = shapely.geometry.LineString([car_loc, car_vector])
     intersection = line_to_polygon_intersection(polygon, car_heading_line)
+    # logger.info(f'intersection is {intersection}')
     if len(intersection) == 2:
         intersection_1_vector = (intersection[0][0] - car_loc.x,
                                  intersection[0][1] - car_loc.y)
+        # logger.info(f'intersection_1_vector is {intersection_1_vector}')
         relative_direction_1 = relative_direction(car_vector, intersection_1_vector)
         intersection_2_vector = (intersection[1][0] - car_loc.x,
                                  intersection[1][1] - car_loc.y)
@@ -435,7 +450,7 @@ def time_to_exit_current_segment(
             # logger.info(f'relative_direction_2 {distance2} {current_time}')
             return time_elapse(current_time, distance2 / max_car_speed(current_polygon_info.road_type)), intersection[1]
         else:
-            logger.info("wrong car moving direction")
+            # logger.info("wrong car moving direction")
             return time_elapse(current_time, -1), None
     return time_elapse(current_time, -1), None
 
@@ -539,7 +554,8 @@ def relative_direction_to_ego(obj_heading: float, ego_heading: float):
        Now only support opposite and same direction
        TODO: add driving into and driving away from
     """
-    assert obj_heading is not None
+    if obj_heading is None:
+        return
 
     relative_heading = abs(obj_heading - ego_heading) % 360
     if math.cos(math.radians(relative_heading)) < 1 and math.cos(math.radians(relative_heading)) > math.pi / 6:
