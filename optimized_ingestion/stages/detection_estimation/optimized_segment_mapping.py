@@ -36,7 +36,6 @@ from .segment_mapping import (
     get_fov_lines,
     in_view,
     make_road_polygon_with_heading,
-    line_to_polygon_intersection,
     world2pixel_factory,
 )
 from .utils import Float2, Float22
