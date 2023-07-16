@@ -340,7 +340,7 @@ class BaseTransformer(Visitor[PredicateNode]):
         return TableAttrNode(node.name, self(node.table), node.shorten)
 
     def visit_CallNode(self, node: "CallNode"):
-        return CallNode(node.fn, [self(p) for p in node.params])
+        return CallNode(node.fn, node.name, [self(p) for p in node.params])
 
     def visit_TableNode(self, node: "TableNode"):
         return node
