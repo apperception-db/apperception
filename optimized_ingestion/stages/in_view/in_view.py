@@ -252,20 +252,20 @@ class KeepOnlyRoadTypePredicates(BaseTransformer):
         # print('call', node, node.fn, F.contained)
         if node.fn == F.contains_all().fn:
             # print('contains')
-            assert (len(node.params) >= 1)
+            assert (len(node.params) == 2)
             assert isinstance(node.params[0], LiteralNode), node.params[0]
             assert isinstance(node.params[0].value, str), node.params[0]
             return F.is_roadtype(node.params[0])
         elif node.fn == F.contained().fn:
             # print('contains')
-            assert (len(node.params) >= 1)
+            assert (len(node.params) == 2)
             segment = node.params[1]
             if isinstance(segment, LiteralNode):
                 assert isinstance(segment.value, str), (segment, node.fn)
                 return F.is_roadtype(segment)
             else:
                 assert isinstance(segment, CallNode), segment
-                assert segment == F.same_region(), segment
+                assert segment == F.same_region().fn, segment
                 assert len(segment.params) == 1, segment.param
                 assert isinstance(segment.params[0], LiteralNode), segment.params[0]
                 assert isinstance(segment.params[0].value, str), segment.params[0]

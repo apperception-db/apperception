@@ -237,8 +237,9 @@ class CallNode(PredicateNode):
     _fn: Tuple["Fn"]
     params: List["PredicateNode"]
 
-    def __init__(self, fn: "Fn", params: List["PredicateNode"]):
+    def __init__(self, fn: "Fn", name: "str", params: "list[PredicateNode]"):
         self._fn = (fn,)
+        self.name = name
         self.params = params
 
     @property
@@ -248,7 +249,7 @@ class CallNode(PredicateNode):
 
 def call_node(fn: "Fn"):
     def call_node_factory(*args: "PredicateNode | str | int | float | bool | list") -> "CallNode":
-        return CallNode(fn, [*map(wrap_literal, args)])
+        return CallNode(fn, fn.__name__, [*map(wrap_literal, args)])
 
     return call_node_factory
 
