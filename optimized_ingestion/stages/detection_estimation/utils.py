@@ -43,14 +43,14 @@ def mph_to_mps(mph: 'float'):
 
 
 MAX_CAR_SPEED = {
-    'lane': 20.,
+    'lane': 25.,
     # TODO: if we decide to map to smallest polygon,
     # 'lanegroup' would mean street parking spots.
-    'lanegroup': 20.,
-    'road': 20.,
-    'lanesection': 20.,
-    'roadSection': 20.,
-    'intersection': 20.,
+    'lanegroup': 25.,
+    'road': 25.,
+    'lanesection': 25.,
+    'roadSection': 25.,
+    'intersection': 25.,
     'highway': 55.,
     'residential': 25.,
 }
@@ -276,31 +276,20 @@ def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
     segment_lines = road_segment_info.segment_lines
     segment_headings = road_segment_info.segment_headings
 
-    closest_segment_line = None
-    closest_segment_heading = None
-
-    for segment_line, segment_heading in zip(segment_lines, segment_headings):
+    line_heading = list(zip(segment_lines, segment_headings))
+    _, longest_heading = max(line_heading, key=lambda x: x[0].length)
+    for segment_line, segment_heading in line_heading:
         if segment_line is None:
             continue
 
         projection = project_point_onto_linestring(
             shapely.geometry.Point(car_loc3d[:2]), segment_line)
 
-        if not projection.intersects(segment_line):
-            # TODO: if there are multiple ones that intersect -> find the one closer to the point
-            return segment_line, segment_heading
+        if segment_line.distance(projection) < 1e-8:
+            if abs(segment_heading - longest_heading) < 30:
+                return segment_line, segment_heading
 
-        if closest_segment_line is None:
-            closest_segment_line = segment_line
-            closest_segment_heading = segment_heading
-        elif (projection.distance(closest_segment_line) > projection.distance(segment_line)):
-            closest_segment_line = segment_line
-            closest_segment_heading = segment_heading
-
-    assert closest_segment_line is not None
-    assert closest_segment_heading is not None
-
-    return closest_segment_line, closest_segment_heading
+    return None, None
 
 
 def location_calibration(
@@ -415,8 +404,8 @@ def time_to_exit_current_segment(
         return time_elapse(current_time, -1), None
     segmentheading = detection_info.segment_heading + 90
     car_loc = shapely.geometry.Point(car_loc[:2])
-    car_vector = (car_loc.x + math.cos(math.radians(segmentheading)),
-                  car_loc.y + math.sin(math.radians(segmentheading)))
+    car_vector = (math.cos(math.radians(segmentheading)),
+                  math.sin(math.radians(segmentheading)))
     car_heading_line = shapely.geometry.LineString([car_loc, car_vector])
     intersection = line_to_polygon_intersection(polygon, car_heading_line)
     if len(intersection) == 2:
@@ -539,7 +528,8 @@ def relative_direction_to_ego(obj_heading: float, ego_heading: float):
        Now only support opposite and same direction
        TODO: add driving into and driving away from
     """
-    assert obj_heading is not None
+    if obj_heading is None:
+        return
 
     relative_heading = abs(obj_heading - ego_heading) % 360
     if math.cos(math.radians(relative_heading)) < 1 and math.cos(math.radians(relative_heading)) > math.pi / 6:
