@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[1]:
 
 
 import subprocess
@@ -720,7 +720,7 @@ def run(__test):
 
 
 tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
-# tests = ['de', 'optde']
+tests = ['de', 'optde']
 random.shuffle(tests)
 
 for _test in tests:
