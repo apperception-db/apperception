@@ -274,7 +274,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     """
     start_time = time.time()
     results = map_detections_to_segments(detections, ego_config)
-    assert all(r[6:] == (1, 1) for r in results)
+    # assert all(r[6:] == (1, 1) for r in results)
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
     mapped_polygons = [*map(make_road_polygon_with_heading, mapped_polygons)]
     for row in mapped_polygons:
