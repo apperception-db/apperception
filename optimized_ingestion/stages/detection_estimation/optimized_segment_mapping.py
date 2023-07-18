@@ -48,6 +48,9 @@ input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
 
+SQL_ROAD_TYPES = ','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPES)
+
+
 MAX_POLYGON_CONTAIN_QUERY = sql.SQL(f"""
 WITH
 AvailablePolygon AS (
@@ -69,11 +72,11 @@ SELECT
     p.elementpolygon::geometry,
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
-    {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPES)}
+    {SQL_ROAD_TYPES}
 FROM max_contain, AvailablePolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
-GROUP BY p.elementid, p.elementpolygon, {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPES)};
+GROUP BY p.elementid, p.elementpolygon, {SQL_ROAD_TYPES};
 """)
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
@@ -102,7 +105,7 @@ class RoadPolygonInfo(NamedTuple):
 
 def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
     def _(x: "RoadSegmentWithHeading") -> "Segment":
-        i, polygon, types, lines, headings = x
+        i, polygon, lines, headings, *types = x
         type = types[-1]
         for t in types:
             if t in USEFUL_TYPES:
@@ -185,20 +188,20 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
     else:
         convex = _points
 
-    out = sql.SQL("""
+    out = sql.SQL(f"""
     WITH
     Point AS (
         SELECT *
         FROM UNNEST(
-            {tokens},
-            {points}::geometry(Point)[]
+            {{tokens}},
+            {{points}}::geometry(Point)[]
         ) AS _point (token, point)
     ),
     AvailablePolygon AS (
         SELECT *
         FROM SegmentPolygon
-        WHERE location = {location}
-        AND ST_Intersects(SegmentPolygon.elementPolygon, {convex}::geometry(MultiPoint))
+        WHERE location = {{location}}
+        AND ST_Intersects(SegmentPolygon.elementPolygon, {{convex}}::geometry(MultiPoint))
         AND (SegmentPolygon.__RoadType__intersection__
         OR SegmentPolygon.__RoadType__lane__
         OR SegmentPolygon.__RoadType__lanegroup__
@@ -238,17 +241,15 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         p.token,
         p.elementid,
         p.elementpolygon,
-        p.segmenttypes,
         ARRAY_AGG(s.segmentline)::geometry[],
         ARRAY_AGG(s.heading)::real[],
-        COUNT(DISTINCT p.elementpolygon),
-        COUNT(DISTINCT p.segmenttypes)
+        {SQL_ROAD_TYPES}
     FROM PointPolygonSegment AS p
         LEFT OUTER JOIN segment AS s USING (elementid)
     JOIN MinDis USING (token)
     WHERE p.distance = MinDis.mindistance
         AND NOT p.__RoadType__roadsection__
-    GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
+    GROUP BY p.elementid, p.token, p.elementpolygon, {SQL_ROAD_TYPES};
     """).format(
         tokens=sql.Literal(tokens),
         points=sql.Literal(points),
