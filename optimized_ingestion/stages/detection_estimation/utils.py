@@ -26,6 +26,7 @@ SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
 
 SEGMENT_TO_MAP = ('lane', 'lanesection', 'intersection', 'lanegroup')
+ROAD_TYPES = ["road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"]
 
 
 class trajectory_3d(NamedTuple):

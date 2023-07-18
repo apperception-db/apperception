@@ -31,8 +31,7 @@ import shapely.wkb
 from apperception.database import database
 
 from ...camera_config import CameraConfig
-from .optimized_segment_mapping import ROAD_TYPE_ARR
-from .utils import Float2, Float3, Float22, line_to_polygon_intersection
+from .utils import ROAD_TYPES, Float2, Float3, Float22, line_to_polygon_intersection
 
 logger = logging.getLogger(__name__)
 
@@ -180,11 +179,11 @@ def hex_str_to_linestring(hex: 'str'):
 
 def make_road_polygon_with_heading(row: "tuple"):
     eid, polygon, lines, headings, *types = row
-    assert len(types) == len(ROAD_TYPE_ARR)
+    assert len(types) == len(ROAD_TYPES)
     return RoadSegmentWithHeading(
         eid,
         polygon,
-        [t for t, v in zip(ROAD_TYPE_ARR, types) if v],
+        [t for t, v in zip(ROAD_TYPES, types) if v],
         [*map(hex_str_to_linestring, lines[1:-1].split(':'))],
         headings,
     )

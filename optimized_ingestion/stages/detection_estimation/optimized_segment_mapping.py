@@ -27,7 +27,6 @@ import shapely.wkb
 from scipy.spatial import ConvexHull
 
 from apperception.database import database
-from apperception.utils.ingest_road import ROAD_TYPES
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
@@ -38,7 +37,7 @@ from .segment_mapping import (
     in_view,
     make_road_polygon_with_heading,
 )
-from .utils import Float2, Float22
+from .utils import ROAD_TYPES, Float2, Float22
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +47,6 @@ input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
-ROAD_TYPE_ARR = list(ROAD_TYPES)
 
 MAX_POLYGON_CONTAIN_QUERY = sql.SQL(f"""
 WITH
@@ -71,11 +69,11 @@ SELECT
     p.elementpolygon::geometry,
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
-    {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPE_ARR)}
+    {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPES)}
 FROM max_contain, AvailablePolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
-GROUP BY p.elementid, p.elementpolygon, {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPE_ARR)};
+GROUP BY p.elementid, p.elementpolygon, {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPES)};
 """)
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
