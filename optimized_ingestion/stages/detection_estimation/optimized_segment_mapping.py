@@ -105,7 +105,7 @@ class RoadPolygonInfo(NamedTuple):
 
 def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
     def _(x: "RoadSegmentWithHeading") -> "Segment":
-        i, polygon, lines, headings, *types = x
+        i, polygon, types, lines, headings = x
         type = types[-1]
         for t in types:
             if t in USEFUL_TYPES:
