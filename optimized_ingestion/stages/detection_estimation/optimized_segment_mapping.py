@@ -145,7 +145,7 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
                 break
     assert len(results) == 1
     result = results[0]
-    assert len(result) == 4 + len(ROAD_TYPES)
+    assert len(result) == 4 + len(ROAD_TYPES), (len(results), len(ROAD_TYPES) + 4)
 
     output = make_road_polygon_with_heading(result)
 

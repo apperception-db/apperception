@@ -179,7 +179,7 @@ def hex_str_to_linestring(hex: 'str'):
 
 def make_road_polygon_with_heading(row: "tuple"):
     eid, polygon, lines, headings, *types = row
-    assert len(types) == len(ROAD_TYPES)
+    assert len(types) == len(ROAD_TYPES), (types, ROAD_TYPES)
     return RoadSegmentWithHeading(
         eid,
         polygon,
