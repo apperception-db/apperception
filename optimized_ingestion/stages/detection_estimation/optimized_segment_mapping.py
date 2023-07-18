@@ -27,6 +27,7 @@ import shapely.wkb
 from scipy.spatial import ConvexHull
 
 from apperception.database import database
+from apperception.utils.ingest_road import ROAD_TYPES
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
@@ -47,40 +48,34 @@ input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
-MAX_POLYGON_CONTAIN_QUERY = sql.SQL("""
+ROAD_TYPE_ARR = list(ROAD_TYPES)
+
+MAX_POLYGON_CONTAIN_QUERY = sql.SQL(f"""
 WITH
 AvailablePolygon AS (
     SELECT *
     FROM SegmentPolygon as p
     WHERE
-        p.location = {location}
-        AND EXISTS (
-            SELECT *
-            FROM Segment
-            WHERE p.elementid = Segment.elementid
+        p.location = {{location}}
+        AND ST_Contains(
+            p.elementpolygon,
+            {{ego_translation}}::geometry
         )
 ),
 max_contain AS (
-    SELECT
-        MAX(ST_Area(p.elementpolygon)) max_segment_area
-    FROM AvailablePolygon AS p
-    WHERE ST_Contains(
-            p.elementpolygon,
-            {ego_translation}::geometry
-        )
+    SELECT MAX(ST_Area(elementpolygon)) max_segment_area
+    FROM AvailablePolygon
 )
 SELECT
     p.elementid,
     p.elementpolygon::geometry,
-    p.segmenttypes,
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
-    COUNT(DISTINCT p.elementpolygon),
-    COUNT(DISTINCT p.segmenttypes)
+    {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPE_ARR)}
 FROM max_contain, AvailablePolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
-GROUP BY p.elementid, p.elementpolygon, p.segmenttypes;
+GROUP BY p.elementid, p.elementpolygon, {','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPE_ARR)};
 """)
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
@@ -152,7 +147,7 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
                 break
     assert len(results) == 1
     result = results[0]
-    assert result[5:] == (1, 1)
+    assert len(result) == 4 + len(ROAD_TYPE_ARR)
 
     output = make_road_polygon_with_heading(result)
 
