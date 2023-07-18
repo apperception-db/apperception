@@ -132,6 +132,13 @@ def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: "shapely.geo
     return []
 
 
+def is_roadsection(segmenttypes: 'list[int]'):
+    for t, v in zip(ROAD_TYPES, segmenttypes):
+        if t == 'roadsection' and v:
+            return True
+    return False
+
+
 def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
     point = postgis.Point(*ego_config.ego_translation[:2])
     query = MAX_POLYGON_CONTAIN_QUERY.format(
@@ -142,8 +149,8 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
     results = database.execute(query)
     if len(results) > 1:
         for result in results:
-            segmenttypes = result[2]
-            if 'roadsection' not in segmenttypes:
+            segmenttypes = result[4:]
+            if not is_roadsection(segmenttypes):
                 results = [result]
                 break
     assert len(results) == 1
