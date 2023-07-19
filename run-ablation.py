@@ -413,6 +413,7 @@ def create_pipeline(
     detection_estimation=True,
     strongsort=False,
     ss_update_when_skip=True,
+    ss_cache=True,
 ):
     pipeline = Pipeline()
 
@@ -454,7 +455,7 @@ def create_pipeline(
     pipeline.add_filter(StrongSORT2D(
         # method='update-empty' if ss_update_when_skip else 'increment-ages',
         method='update-empty',
-        cache=True
+        cache=ss_cache,
     ))
 
     pipeline.add_filter(FromTracking2DAndRoad())
@@ -467,6 +468,15 @@ def create_pipeline(
 
 # In[ ]:
 
+
+p_noSSOpt = lambda predicate: create_pipeline(
+    predicate,
+    in_view=False,
+    object_filter=False,
+    geo_depth=False,
+    detection_estimation=False,
+    ss_cache=False,
+)
 
 p_noOpt = lambda predicate: create_pipeline(
     predicate,
@@ -570,6 +580,7 @@ p_gtOptDe = lambda predicate: create_pipeline(
 )
 
 pipelines = {
+    "nossopt": p_noSSOpt,
     "noopt": p_noOpt,
     "inview": p_inview,
     "objectfilter": p_objectFilter,
@@ -688,7 +699,7 @@ def run(__test):
 # In[ ]:
 
 
-tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde', 'nossopt']
 # tests = ['de', 'optde']
 random.shuffle(tests)
 
