@@ -417,15 +417,17 @@ class Database:
         predicate = normalize(predicate)
         predicate = MapTablesTransformer(mapping)(predicate)
 
-        t_tables = ''
-        t_outputs = ''
+        t_tables = ""
+        t_outputs = ""
         for i in range(len(tables)):
-            t_tables += '\n' \
-                'JOIN Item_General_Trajectory ' \
-                f'AS t{i} ' \
-                f'ON  Cameras.timestamp <@ t{i}.trajCentroids::period' \
-                f'AND Cameras.cameraId  =  t{i}.cameraId'
-            t_outputs += f', t{i}.itemId'
+            t_tables += (
+                "\n"
+                "JOIN Item_General_Trajectory "
+                f"AS t{i} "
+                f"ON  Cameras.timestamp <@ t{i}.trajCentroids::period"
+                f"AND Cameras.cameraId  =  t{i}.cameraId"
+            )
+            t_outputs += f", t{i}.itemId"
 
         sql_str = f"""
             SELECT Cameras.frameNum {t_outputs}, Cameras.cameraId
