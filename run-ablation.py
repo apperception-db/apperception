@@ -612,10 +612,10 @@ def run(__test):
     c = camera
     pred1 = (
         (o.type == 'person') &
-        # F.contained(c.ego, 'intersection') r
+        # F.contained(c.ego, 'intersection') &
         F.contained(o.trans@c.time, 'intersection') &
-        # F.angle_excluding(F.facing_relative(o.traj@c.time, c.ego), lit(-70), lit(70)) &
-        F.angle_between(F.facing_relative(c.cam, F.road_direction(c.ego)), lit(-15), lit(15)) &
+        F.angle_excluding(F.facing_relative(o.traj@c.time, c.cam), lit(-70), lit(70)) &
+        # F.angle_between(F.facing_relative(c.cam, F.road_direction(c.ego)), lit(-15), lit(15)) &
         (F.distance(c.cam, o.traj@c.time) < lit(50)) # &
         # (F.view_angle(o.trans@c.time, c.camAbs) < lit(35))
     )
@@ -633,9 +633,10 @@ def run(__test):
         # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2.0) &
         (F.distance(cam.cam, obj2.trans@cam.time) < 50) &
         # (F.view_angle(obj2.trans@cam.time, cam.ego) < 70 / 2.0) &
-        F.contains_all('intersection', [obj1.trans, obj2.trans]@cam.time)# &
-        # F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 40, 135) &
-        # F.angle_between(F.facing_relative(obj2.trans@cam.time, cam.ego), -135, -50) &
+        F.contains_all('intersection', [obj1.trans, obj2.trans]@cam.time) &
+        # F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.cam), 40, 135) &
+        # F.angle_between(F.facing_relative(obj2.trans@cam.time, cam.cam), -135, -50)
+        F.angle_between(F.facing_relative(obj1.trans@cam.time, obj2.trans@cam.time), -180, -90)
         # (F.min_distance(cam.ego, 'intersection') < 10) &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, obj2.trans@cam.time), 100, -100)
     )
@@ -644,41 +645,45 @@ def run(__test):
     cam = camera
     pred3 = (
         ((obj1.type == 'car') | (obj1.type == 'truck')) &
-        (F.distance(cam.cam, obj1.trans@cam.timestamp) < 50) &
         # (F.view_angle(obj1.trans@cam.time, cam.ego) < 70 / 2) &
-        F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.cam, cam.cam)), -180, -90) &
-        F.contained(cam.cam, F.road_segment('road')) &
-        F.contained(obj1.trans@cam.time, F.road_segment('road')) &
-        # F.angle_between(F.facing_relative(obj1.trans@cam.time, F.road_direction(obj1.traj@cam.time, cam.ego)), -15, 15) &
+        F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.ego, cam.ego)), 135, 225) &
+        F.contained(cam.cam, F.road_segment('lane')) &
+        F.contained(obj1.trans@cam.time, F.road_segment('lane')) &
+        F.angle_between(F.facing_relative(obj1.trans@cam.time, F.road_direction(obj1.traj@cam.time, cam.ego)), -15, 15) &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 135, 225) &
         (F.distance(cam.cam, obj1.trans@cam.time) < 10)
     )
 
     cam = camera
     car1 = objects[0]
-    opposite_car = objects[1]
-    car2 = objects[2]
+    opposite_car_1 = objects[1]
+    opposite_car_2 = objects[2]
 
     pred4 = (
         ((car1.type == 'car') | (car1.type == 'truck')) &
-        ((car2.type == 'car') | (car2.type == 'truck')) &
-        ((opposite_car.type == 'car') | (opposite_car.type == 'truck')) &
-        (opposite_car.id != car2.id) &
-        (car1.id != car2.id) &
-        (car1.id != opposite_car.id) &
+        ((opposite_car_2.type == 'car') | (opposite_car_2.type == 'truck')) &
+        ((opposite_car_1.type == 'car') | (opposite_car_1.type == 'truck')) &
+        (opposite_car_1.id != opposite_car_2.id) &
+        (car1.id != opposite_car_2.id) &
+        (car1.id != opposite_car_1.id) &
 
+        F.contained(cam.cam, F.road_segment('lane')) &
+        F.contained(car1.trans@cam.time, F.road_segment('lane')) &
+        F.contained(opposite_car_1.trans@cam.time, F.road_segment('lane')) &
+        F.contained(opposite_car_2.trans@cam.time, F.road_segment('lane')) &
         F.angle_between(F.facing_relative(cam.cam, F.road_direction(cam.cam, cam.cam)), -15, 15) &
         # (F.view_angle(car1.traj@cam.time, cam.ego) < 70 / 2) &
         (F.distance(cam.cam, car1.traj@cam.time) < 40) &
-        # F.angle_between(F.facing_relative(car1.traj@cam.time, cam.ego), -15, 15) &
+        F.angle_between(F.facing_relative(car1.traj@cam.time, cam.ego), -15, 15) &
         # F.angle_between(F.facing_relative(car1.traj@cam.time, F.road_direction(car1.traj@cam.time, cam.ego)), -15, 15) &
         F.ahead(car1.traj@cam.time, cam.cam) &
         # (F.convert_camera(opposite_car.traj@cam.time, cam.ego) > [-10, 0]) &
         # (F.convert_camera(opposite_car.traj@cam.time, cam.ego) < [-1, 50]) &
-        # F.angle_between(F.facing_relative(opposite_car.traj@cam.time, cam.ego), 140, 180) &
+        F.angle_between(F.facing_relative(opposite_car_1.traj@cam.time, cam.ego), 135, 225) &
         # (F.distance(opposite_car@cam.time, car2@cam.time) < 40)# &
-        # F.angle_between(F.facing_relative(car2.traj@cam.time, F.road_direction(car2.traj@cam.time, cam.ego)), -15, 15) &
-        F.ahead(car2.traj@cam.time, opposite_car.traj@cam.time)
+        F.angle_between(F.facing_relative(opposite_car_2.traj@cam.time, opposite_car_1.traj@cam.time), -15, 15) &
+        F.angle_between(F.facing_relative(opposite_car_2.traj@cam.time, F.road_direction(opposite_car_2.traj@cam.time, cam.ego)), -15, 15) &
+        F.ahead(opposite_car_2.traj@cam.time, opposite_car_1.traj@cam.time)
     )
 
     p1 = pipelines[__test](pred1)
@@ -699,7 +704,7 @@ def run(__test):
 # In[ ]:
 
 
-tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde', 'nossopt']
+tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
 # tests = ['de', 'optde']
 random.shuffle(tests)
 
