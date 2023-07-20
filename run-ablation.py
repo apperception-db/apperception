@@ -619,6 +619,11 @@ def run(__test):
         (F.distance(c.cam, o.traj@c.time) < lit(50)) # &
         # (F.view_angle(o.trans@c.time, c.camAbs) < lit(35))
     )
+    pred1_notrack = (
+        F.contained(o.trans@c.time, 'intersection') &
+        (F.distance(c.cam, o.traj@c.time) < lit(50)) &
+        (o.type == 'person')
+    )
 
     obj1 = objects[0]
     obj2 = objects[1]
@@ -640,6 +645,14 @@ def run(__test):
         # (F.min_distance(cam.ego, 'intersection') < 10) &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, obj2.trans@cam.time), 100, -100)
     )
+    pred2_notrack = (
+        (F.distance(cam.cam, obj1.trans@cam.time) < 50) &
+        (F.distance(cam.cam, obj2.trans@cam.time) < 50) &
+        F.contains_all('intersection', [obj1.trans, obj2.trans]@cam.time) &
+        (obj1.id != obj2.id) &
+        ((obj1.type == 'car') | (obj1.type == 'truck')) &
+        ((obj2.type == 'car') | (obj2.type == 'truck'))
+    )
 
     obj1 = objects[0]
     cam = camera
@@ -652,6 +665,12 @@ def run(__test):
         F.angle_between(F.facing_relative(obj1.trans@cam.time, F.road_direction(obj1.traj@cam.time, cam.ego)), -15, 15) &
         # F.angle_between(F.facing_relative(obj1.trans@cam.time, cam.ego), 135, 225) &
         (F.distance(cam.cam, obj1.trans@cam.time) < 10)
+    )
+    pred3_notrack = (
+        F.contained(cam.cam, F.road_segment('lane')) &
+        F.contained(obj1.trans@cam.time, F.road_segment('lane')) &
+        (F.distance(cam.cam, obj1.trans@cam.time) < 10) &
+        ((obj1.type == 'car') | (obj1.type == 'truck'))
     )
 
     cam = camera
@@ -685,20 +704,32 @@ def run(__test):
         F.angle_between(F.facing_relative(opposite_car_2.traj@cam.time, F.road_direction(opposite_car_2.traj@cam.time, cam.ego)), -15, 15) &
         F.ahead(opposite_car_2.traj@cam.time, opposite_car_1.traj@cam.time)
     )
+    pred4_notrack = (
+        F.contained(cam.cam,                       F.road_segment('lane')) &
+        F.contained(car1.trans@cam.time,           F.road_segment('lane')) &
+        F.contained(opposite_car_1.trans@cam.time, F.road_segment('lane')) &
+        F.contained(opposite_car_2.trans@cam.time, F.road_segment('lane')) &
+        ((car1.type == 'car') | (car1.type == 'truck')) &
+        ((opposite_car_2.type == 'car') | (opposite_car_2.type == 'truck')) &
+        ((opposite_car_1.type == 'car') | (opposite_car_1.type == 'truck')) &
+        (opposite_car_1.id != opposite_car_2.id) &
+        (car1.id != opposite_car_2.id) &
+        (car1.id != opposite_car_1.id)
+    )
 
     p1 = pipelines[__test](pred1)
     p2 = pipelines[__test](pred2)
     p34 = pipelines[__test](pred3)
 
     print(p2)
-    run_benchmark(p2, 'q2-' + __test, [pred2], run=1, ignore_error=True)
+    run_benchmark(p2, 'q2-' + __test, [pred2, pred2_notrack], run=1, ignore_error=True)
 
     print(p34)
-    run_benchmark(p34, 'q34-' + __test, [pred3, pred4], run=1, ignore_error=True)
+    run_benchmark(p34, 'q34-' + __test, [pred3, pred4, pred3_notrack, pred4_notrack], run=1, ignore_error=True)
 
     if __test != 'optde' and __test != 'de':
         print(p1)
-        run_benchmark(p1, 'q1-' + __test, [pred1], run=1, ignore_error=True)
+        run_benchmark(p1, 'q1-' + __test, [pred1, pred1_notrack], run=1, ignore_error=True)
 
 
 # In[ ]:
