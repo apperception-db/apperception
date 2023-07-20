@@ -117,7 +117,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
 
 def get_ego_views(payload: "Payload"):
-    indices, view_areas = get_views(payload.video, 100)
+    indices, view_areas = get_views(payload.video, distance=100, all=True)
     views_raw = database.execute(sql.SQL("""
     SELECT index, ST_ConvexHull(points)
     FROM UNNEST (
@@ -128,6 +128,7 @@ def get_ego_views(payload: "Payload"):
         view_areas=sql.Literal(view_areas),
         indices=sql.Literal(indices),
     ))
+    assert len(views_raw) == len(payload.video), (len(views_raw), len(payload.video))
     views = [None for _ in range(len(payload.video))]
     for idx, view in views_raw:
         views[idx] = view
