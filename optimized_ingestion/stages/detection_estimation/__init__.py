@@ -55,7 +55,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
-        get_ego_views(payload)
+        ego_views = get_ego_views(payload)
+        assert ego_views is not None
 
         skipped_frame_num = []
         next_frame_num = 0
