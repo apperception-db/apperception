@@ -6,7 +6,7 @@ import torch
 from bitarray import bitarray
 from psycopg2 import sql
 
-from apperception import database
+from apperception.database import database
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
