@@ -117,7 +117,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
 
 def get_ego_views(payload: "Payload"):
-    indices, view_areas = get_views(payload, distance=100, all=True)
+    indices, view_areas = get_views(payload, distance=100, skip=False)
     views_raw = database.execute(sql.SQL("""
     SELECT index, ST_ConvexHull(points)
     FROM UNNEST (

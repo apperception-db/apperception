@@ -115,7 +115,7 @@ class InView(Stage):
         return keep, None
 
 
-def get_views(payload: "Payload", distance: "float" = 100, all: "bool" = False):
+def get_views(payload: "Payload", distance: "float" = 100, skip: "bool" = True):
     w, h = payload.video.dimension
     Z = distance
     view_vertices_2d = np.array([
@@ -145,7 +145,7 @@ def get_views(payload: "Payload", distance: "float" = 100, all: "bool" = False):
     extrinsics: "list[npt.NDArray]" = []
     indices: "list[int]" = []
     for i, (k, f) in enumerate(zip(payload.keep, payload.video.interpolated_frames)):
-        if not k or all:
+        if not k and skip:
             continue
 
         rotation = Quaternion(f.camera_rotation)
