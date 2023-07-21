@@ -245,13 +245,14 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     names = set(sampled_scenes[:50])
     filtered_videos = [
         n for n in videos
-        if n[6:10] in names and 'FRONT' in n
+        if n[6:10] in names
     ]
     N = len(filtered_videos)
     print('# of filtered videos:', N)
 
-    s_from, s_to = slices[test]
-    STEP = N // 6
+    # s_from, s_to = slices[test]
+    s_from, s_to = (int(test), int(test) + 1)
+    STEP = N // 5
     print('test', test)
     print('from', s_from*STEP)
     print('to  ', s_to*STEP)
@@ -667,7 +668,7 @@ def run(__test):
         (F.distance(cam.cam, obj1.trans@cam.time) < 10)
     )
     pred3_notrack = (
-        F.contained(cam.cam, F.road_segment('lane')) &
+        # F.contained(cam.cam, F.road_segment('lane')) &
         F.contained(obj1.trans@cam.time, F.road_segment('lane')) &
         (F.distance(cam.cam, obj1.trans@cam.time) < 10) &
         ((obj1.type == 'car') | (obj1.type == 'truck'))
@@ -705,7 +706,7 @@ def run(__test):
         F.ahead(opposite_car_2.traj@cam.time, opposite_car_1.traj@cam.time)
     )
     pred4_notrack = (
-        F.contained(cam.cam,                       F.road_segment('lane')) &
+        # F.contained(cam.cam,                       F.road_segment('lane')) &
         F.contained(car1.trans@cam.time,           F.road_segment('lane')) &
         F.contained(opposite_car_1.trans@cam.time, F.road_segment('lane')) &
         F.contained(opposite_car_2.trans@cam.time, F.road_segment('lane')) &
