@@ -16,7 +16,6 @@ TODO:
 """
 
 import datetime
-import math
 import os
 import sys
 from dataclasses import dataclass, field
@@ -114,7 +113,7 @@ class DetectionInfo:
         #     relative_heading = abs(self.segment_heading - ego_heading) % 360
         # print(self.detection_id)
         # print(self.road_type)
-            # print(math.cos(math.radians(relative_heading)))
+        # print(math.cos(math.radians(relative_heading)))
 
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance
