@@ -79,7 +79,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                     left3d, right3d = bbox3d[:3], bbox3d[3:]
                     car_loc3d = tuple(map(float, (left3d + right3d) / 2))
                     all_3d_points.append(car_loc3d)
-            print(f'current frame num {i}')
+            logger.info(f'current frame num {i}')
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
@@ -97,7 +97,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             else:
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
-            investigation_frame_nums.append([next_frame_num, next_action_type])
+            investigation_frame_nums.append([i, next_action_type])
             if next_action_type:
                 investigation_frame_nums[-1].extend([next_sample_plan.action.target_obj_bbox])
             else:
@@ -204,7 +204,7 @@ def construct_estimated_all_detection_info(
         )
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     for di in all_detection_info:
-        if di.detection_id.frame_idx == 212:
+        if di.detection_id.frame_idx == 207 or di.detection_id.frame_idx == 190:
             # print(di.road_polygon_info.id)
             x, y = di.car_bbox2d[0]
             x_w, y_h = di.car_bbox2d[1]
