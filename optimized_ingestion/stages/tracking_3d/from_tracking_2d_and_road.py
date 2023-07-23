@@ -1,7 +1,8 @@
+from typing import List
+
 import numpy as np
 import numpy.typing as npt
 from pyquaternion import Quaternion
-from typing import Dict, List
 
 from ...payload import Payload
 from ..tracking_2d.tracking_2d import Tracking2D, Tracking2DResult
@@ -29,7 +30,7 @@ class FromTracking2DAndRoad(Tracking3D):
                 metadata.append({})
                 continue
 
-            trackings3d: "Dict[int, Tracking3DResult]" = {}
+            trackings3d: "dict[int, Tracking3DResult]" = {}
             [[fx, _, x0], [_, fy, y0], [_, _, s]] = frame.camera_intrinsic
             rotation = frame.camera_rotation
             timestamp = frame.timestamp

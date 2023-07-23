@@ -1,7 +1,7 @@
 import cv2
 from tqdm import tqdm
-from yolo_tracker.yolov5.utils.plots import Annotator, colors
 
+from ..modules.yolo_tracker.yolov5.utils.plots import Annotator, colors
 from ..payload import Payload
 from ..stages.filter_car_facing_sideway import FilterCarFacingSideway
 from ..stages.tracking_2d.tracking_2d import Tracking2D

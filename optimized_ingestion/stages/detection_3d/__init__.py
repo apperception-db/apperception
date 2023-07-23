@@ -1,5 +1,6 @@
-import torch
 from typing import NamedTuple
+
+import torch
 
 from ...types import DetectionId
 from ..stage import Stage
@@ -37,7 +38,7 @@ class Metadatum(NamedTuple):
     A mapping from an object class number (in detections[:, 5]) to a class string name
     """
     detections: "torch.Tensor"
-    class_map: "list[str]"
+    class_map: "list[str] | None"
     detection_ids: "list[DetectionId]"
 
 

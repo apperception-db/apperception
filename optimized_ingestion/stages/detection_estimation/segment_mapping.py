@@ -10,14 +10,16 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from apperception.database import database
-
 import array
 import logging
 import math
+import os
+import time
+from dataclasses import dataclass
+from typing import NamedTuple, Tuple
+
 import numpy as np
 import numpy.typing as npt
-import os
 import plpygis
 import postgis
 import psycopg2
@@ -25,12 +27,11 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-import time
-from dataclasses import dataclass
-from typing import NamedTuple, Tuple
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
-from .utils import Float2, Float3, Float22, line_to_polygon_intersection
+from .utils import ROAD_TYPES, Float2, Float3, Float22, line_to_polygon_intersection
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ WHERE ST_Contains(
         p.elementpolygon,
         {ego_translation}::geometry
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
@@ -76,7 +77,7 @@ WHERE ST_DWithin(
         {start_segment}::geometry,
         {view_distance}
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
@@ -177,11 +178,12 @@ def hex_str_to_linestring(hex: 'str'):
 
 
 def make_road_polygon_with_heading(row: "tuple"):
-    eid, polygon, types, lines, headings, *_ = row
+    eid, polygon, lines, headings, *types = row
+    assert len(types) == len(ROAD_TYPES), (types, ROAD_TYPES)
     return RoadSegmentWithHeading(
         eid,
         polygon,
-        types,
+        [t for t, v in zip(ROAD_TYPES, types) if v],
         [*map(hex_str_to_linestring, lines[1:-1].split(':'))],
         headings,
     )

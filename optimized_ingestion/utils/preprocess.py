@@ -1,18 +1,19 @@
-from apperception.database import database
-from apperception.utils import import_pickle
-
 import json
 import os
 import pickle
 import time
 
+from apperception.database import database
+from apperception.utils import import_pickle
 from optimized_ingestion.camera_config import camera_config
-from optimized_ingestion.utils.process_pipeline import (construct_pipeline,
-                                                        process_pipeline)
+from optimized_ingestion.utils.process_pipeline import (
+    construct_pipeline,
+    process_pipeline,
+)
 from optimized_ingestion.video import Video
 
 
-def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
+def preprocess(world, data_dir, video_names=[], base=True, insert_traj=True, benchmark_path=None):
     pipeline = construct_pipeline(world, base=base)
 
     video_path = os.path.join(data_dir, "videos/")
@@ -28,6 +29,8 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
     for name, video in videos.items():
         if video['location'] != 'boston-seaport':
             continue
+        if 'FRONT' not in name:
+            continue
         print(name, '--------------------------------------------------------------------------------')
         frames = Video(
             os.path.join(data_dir, "videos", video["filename"]),
@@ -35,7 +38,7 @@ def preprocess(world, data_dir, video_names=[], base=True, benchmark_path=None):
             video["start"],
         )
 
-        process_pipeline(name, frames, pipeline, base)
+        process_pipeline(name, frames, pipeline, base, insert_traj)
         num_video += 1
 
     print("num_video: ", num_video)

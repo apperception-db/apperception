@@ -67,7 +67,6 @@ def _3d_to_2d(
     top = min(ys)
     right = max(xs)
     bottom = max(ys)
-
     return left, top, right, bottom
 
 
@@ -148,7 +147,7 @@ class GroundTruthDetection(Detection2D):
                 top = max(0, min(top, dimension[1] - 1))
                 bottom = max(0, min(bottom, dimension[1] - 1))
 
-                d2d = [left, top, right - left, bottom - top]
+                d2d = [left, top, right, bottom]
                 tensor.append([*d2d, 1, CLASS_MAP[a['category']]])
                 ids.append(a['token'])
 

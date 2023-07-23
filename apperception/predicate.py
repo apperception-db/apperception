@@ -1,4 +1,15 @@
-from typing import Any, Callable, Dict, Generic, List, Literal, Optional, Set, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+)
 
 BinOp = Literal["add", "sub", "mul", "div", "matmul"]
 BoolOp = Literal["and", "or"]
@@ -60,13 +71,31 @@ class PredicateNode:
         other = wrap_literal(other)
         return BinOpNode(other, "matmul", self)
 
+    @staticmethod
+    def __expand_exprs(op: "BoolOp", node: "PredicateNode") -> "list[PredicateNode]":
+        if isinstance(node, BoolOpNode) and node.op == op:
+            return node.exprs
+        return [node]
+
     def __and__(self, other):
         other = wrap_literal(other)
-        return BoolOpNode("and", [self, other])
+        return BoolOpNode(
+            "and",
+            [
+                *PredicateNode.__expand_exprs("and", self),
+                *PredicateNode.__expand_exprs("and", other),
+            ],
+        )
 
     def __or__(self, other):
         other = wrap_literal(other)
-        return BoolOpNode("or", [self, other])
+        return BoolOpNode(
+            "or",
+            [
+                *PredicateNode.__expand_exprs("or", self),
+                *PredicateNode.__expand_exprs("or", other),
+            ],
+        )
 
     def __eq__(self, other):
         other = wrap_literal(other)
@@ -208,8 +237,9 @@ class CallNode(PredicateNode):
     _fn: Tuple["Fn"]
     params: List["PredicateNode"]
 
-    def __init__(self, fn: "Fn", params: List["PredicateNode"]):
+    def __init__(self, fn: "Fn", name: "str", params: "list[PredicateNode]"):
         self._fn = (fn,)
+        self.name = name
         self.params = params
 
     @property
@@ -218,10 +248,8 @@ class CallNode(PredicateNode):
 
 
 def call_node(fn: "Fn"):
-    def call_node_factory(*args: "PredicateNode") -> "CallNode":
-        return CallNode(
-            fn, [arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True) for arg in args]
-        )
+    def call_node_factory(*args: "PredicateNode | str | int | float | bool | list") -> "CallNode":
+        return CallNode(fn, fn.__name__, [*map(wrap_literal, args)])
 
     return call_node_factory
 
@@ -312,7 +340,7 @@ class BaseTransformer(Visitor[PredicateNode]):
         return TableAttrNode(node.name, self(node.table), node.shorten)
 
     def visit_CallNode(self, node: "CallNode"):
-        return CallNode(node.fn, [self(p) for p in node.params])
+        return CallNode(node.fn, node.name, [self(p) for p in node.params])
 
     def visit_TableNode(self, node: "TableNode"):
         return node

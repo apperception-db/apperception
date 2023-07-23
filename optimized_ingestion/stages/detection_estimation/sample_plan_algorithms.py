@@ -3,9 +3,17 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, List, Literal, Union
 
-from .utils import (OPPOSITE_DIRECTION, SAME_DIRECTION, Float2, Float3,
-                    ego_departure, meetup, time_to_exit_current_segment,
-                    time_to_exit_view, trajectory_3d)
+from .utils import (
+    OPPOSITE_DIRECTION,
+    SAME_DIRECTION,
+    Float2,
+    Float3,
+    ego_departure,
+    meetup,
+    time_to_exit_current_segment,
+    time_to_exit_view,
+    trajectory_3d,
+)
 
 if TYPE_CHECKING:
     from ...camera_config import CameraConfig
@@ -149,7 +157,14 @@ def ego_by_pass_car(detection_info: "DetectionInfo") -> "Action":
 
 
 def combine_sample_actions(sample_plan: "List[Action]"):
-    return min(sample_plan, key=lambda x: x.finish_time)
+    best_plan = None
+    for action in sample_plan:
+        if best_plan is None and not action.invalid_action:
+            best_plan = action
+        else:
+            if not action.invalid_action and action.finish_time < best_plan.finish_time:
+                best_plan = action
+    return best_plan
 
 
 def same_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
@@ -162,12 +177,13 @@ def same_direction_sample_action(detection_info: "DetectionInfo", view_distance:
     # logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # logger.info(f'car_exit_segment_action {car_exit_segment_action}')
-    # car_go_beyong_view_action = car_exit_view(
-    #     detection_info, ego_trajectory, ego_config, view_distance)
+    car_go_beyong_view_action = car_exit_view(
+        detection_info, ego_trajectory, ego_config, view_distance)
     # logger.info(f'car_go_beyong_view_action {car_go_beyong_view_action}')
     # ego_by_pass_car_action = ego_by_pass_car(detection_info, ego_trajectory, ego_config)
     return combine_sample_actions([ego_exit_segment_action,
-                                   car_exit_segment_action])
+                                   car_exit_segment_action,
+                                   car_go_beyong_view_action])
 
 
 def opposite_direction_sample_action(detection_info: "DetectionInfo", view_distance: float):
@@ -177,11 +193,11 @@ def opposite_direction_sample_action(detection_info: "DetectionInfo", view_dista
     if _ego_stop:
         return ego_stop_action
     ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
-    logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
+    # logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
     car_exit_segment_action = car_exit_current_segment(detection_info)
-    logger.info(f'car_exit_segment_action {car_exit_segment_action}')
+    # logger.info(f'car_exit_segment_action {car_exit_segment_action}')
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
-    logger.info(f'meet_ego_action {meet_ego_action}')
+    # logger.info(f'meet_ego_action {meet_ego_action}')
     # return car_exit_segment_action
     actions = [ego_exit_segment_action, car_exit_segment_action]
     if meet_ego_action is not None:

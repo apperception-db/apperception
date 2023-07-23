@@ -1,6 +1,7 @@
+from math import sqrt
+
 import numpy as np
 import numpy.typing as npt
-from math import sqrt
 
 from ..types import Float3, Float33
 

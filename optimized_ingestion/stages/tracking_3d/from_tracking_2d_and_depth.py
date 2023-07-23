@@ -1,22 +1,17 @@
 import numpy as np
 from bitarray import bitarray
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+from ...payload import Payload
 from ...utils.depth_to_3d import depth_to_3d
 from ..depth_estimation import DepthEstimation
 from ..tracking_2d.tracking_2d import Tracking2D
-from .tracking_3d import Tracking3D, Tracking3DResult
-
-if TYPE_CHECKING:
-    from ...payload import Payload
-
-    # from ...trackers.yolov5_strongsort_osnet_tracker import TrackingResult
+from .tracking_3d import Metadatum, Tracking3D, Tracking3DResult
 
 
 class FromTracking2DAndDepth(Tracking3D):
-    def _run(self, payload: "Payload") -> "Tuple[Optional[bitarray], Optional[Dict[str, list]]]":
-        metadata: "List[Dict[int, Tracking3DResult] | None]" = []
-        trajectories: "Dict[int, List[Tracking3DResult]]" = {}
+    def _run(self, payload: "Payload") -> "tuple[bitarray | None, dict[str, list] | None]":
+        metadata: "list[Metadatum]" = []
+        trajectories: "dict[int, list[Tracking3DResult]]" = {}
 
         depths = DepthEstimation.get(payload.metadata)
         assert depths is not None
@@ -26,10 +21,10 @@ class FromTracking2DAndDepth(Tracking3D):
 
         for k, depth, tracking, frame in zip(payload.keep, depths, trackings, payload.video):
             if not k or tracking is None or depth is None:
-                metadata.append(None)
+                metadata.append(dict())
                 continue
 
-            trackings3d: "Dict[int, Tracking3DResult]" = {}
+            trackings3d: "dict[int, Tracking3DResult]" = {}
             for object_id, t in tracking.items():
                 x = int(t.bbox_left + (t.bbox_w / 2))
                 y = int(t.bbox_top + (t.bbox_h / 2))

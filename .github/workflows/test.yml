@@ -62,65 +62,68 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: "3.10.6"
+          environment-file: environment.yml
+          init-shell: none
+          cache-downloads: true
 
-      - name: Install and configure Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      # - name: Cache Poetry virtualenv
-      #   uses: actions/cache@v3
-      #   id: cached-poetry-dependencies 
-      #   with:
-      #     path: .venv
-      #     key: poetry-venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Check Python Versions
+        shell: micromamba-shell {0}
+        run: |
+          python --version
+          python3 --version
+          which python
+          which python3
+          which pip
+          which pip3
+          which poetry
 
       - name: Install Dependencies
-        # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
-
-      - name: Check Python Version
-        run: poetry run python --version
+        shell: micromamba-shell {0}
+        run: poetry install --no-interaction --without dev,cv --with test
       
       - name: Check Installed Packages
-        run: poetry run pip list
+        shell: micromamba-shell {0}
+        run: pip list
 
       - name: Extend MobilityDB with User-Defined functions
+        shell: micromamba-shell {0}
         run: |
           pushd pg_extender
-          psql -h localhost -p 25440 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25441 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25442 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25443 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25444 -d mobilitydb -U docker -c "\i install.sql;"
+          python ../scripts/generate_pg_extender.py
+          cat install.sql
+          psql -h localhost -p 25440 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25441 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25442 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25443 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25444 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
           popd
         env:
           PGPASSWORD: docker
       
       - name: Ingest data
+        shell: micromamba-shell {0}
         run: |
-          poetry run python -c "from apperception.utils import ingest_road; from apperception.database import database; ingest_road(database, './data/scenic/road-network/boston-seaport')"
-          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data/scenic/database')"
-          poetry run jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
+          python ./scripts/ingest_road.py
+          python ./scripts/import_tables.py
+          jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
         env:
           AP_PORT: 25440
       
       - name: Generate Image data
-        run: |
-          poetry run python scripts/fake-images.py
+        shell: micromamba-shell {0}
+        run: python scripts/fake-images.py
       
       - name: Unit Test
-        run: poetry run pytest --cov=apperception --cov-report=xml tests
+        shell: micromamba-shell {0}
+        run: pytest --cov=apperception --cov-report=xml tests
         env:
           AP_PORT: 25440
           AP_PORT_ROAD_1: 25441

@@ -1,8 +1,12 @@
 import logging
 import time
+from typing import Callable, List, Tuple
+
 import torch
 from bitarray import bitarray
-from typing import Callable, List, Tuple
+from psycopg2 import sql
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -10,10 +14,15 @@ from ...types import DetectionId
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_3d import Detection3D
+from ..in_view.in_view import get_views
 from ..stage import Stage
-from .detection_estimation import (DetectionInfo, SamplePlan,
-                                   construct_all_detection_info,
-                                   generate_sample_plan, obj_detection)
+from .detection_estimation import (
+    DetectionInfo,
+    SamplePlan,
+    construct_all_detection_info,
+    generate_sample_plan,
+    obj_detection,
+)
 from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
@@ -42,9 +51,12 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
-        logger.info("ego_speed: ", ego_speed)
+        logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
+
+        ego_views = get_ego_views(payload)
+        assert ego_views is not None
 
         skipped_frame_num = []
         next_frame_num = 0
@@ -56,7 +68,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        for i in range(len(payload.video) - 1):
+        for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
                 skipped_frame_num.append(i)
@@ -102,6 +114,25 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             keep[f] = 0
 
         return keep, {DetectionEstimation.classname(): metadata}
+
+
+def get_ego_views(payload: "Payload"):
+    indices, view_areas = get_views(payload, distance=100, skip=False)
+    views_raw = database.execute(sql.SQL("""
+    SELECT index, ST_ConvexHull(points)
+    FROM UNNEST (
+        {view_areas},
+        {indices}::int[]
+    ) AS ViewArea(points, index)
+    """).format(
+        view_areas=sql.Literal(view_areas),
+        indices=sql.Literal(indices),
+    ))
+    assert len(views_raw) == len(payload.video), (len(views_raw), len(payload.video))
+    views = [None for _ in range(len(payload.video))]
+    for idx, view in views_raw:
+        views[idx] = view
+    return views
 
 
 def prune_detection(
