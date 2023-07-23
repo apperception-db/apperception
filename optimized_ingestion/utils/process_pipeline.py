@@ -1,7 +1,7 @@
 import math
 import time
 
-from apperception.database import database
+from apperception.database import Database, database
 from apperception.utils import join
 from optimized_ingestion.payload import Payload
 from optimized_ingestion.pipeline import Pipeline
@@ -84,6 +84,7 @@ def infer_heading(curItemHeading, prevPoint, current_point):
         return None
     x1, y1, z1 = prevPoint
     x2, y2, z2 = current_point
+    # 0 is north (y-axis) and counter clockwise
     return int(math.degrees(math.atan2(y2 - y1, x2 - x1)) - 90)
 
 
@@ -121,7 +122,7 @@ from typing import List, Tuple
 
 
 def insert_trajectory(
-    database,
+    database: "Database",
     item_id: str,
     camera_id: str,
     object_type: str,

@@ -26,6 +26,7 @@ SAME_DIRECTION = 'same_direction'
 OPPOSITE_DIRECTION = 'opposite_direction'
 
 SEGMENT_TO_MAP = ('lane', 'lanesection', 'intersection', 'lanegroup')
+ROAD_TYPES = ["road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"]
 
 
 class trajectory_3d(NamedTuple):
@@ -276,43 +277,20 @@ def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
     segment_lines = road_segment_info.segment_lines
     segment_headings = road_segment_info.segment_headings
 
-    longest_segment_line = None
-    longest_segment_heading = None
     line_heading = list(zip(segment_lines, segment_headings))
-    longest_line, longest_heading = max(line_heading, key=lambda x: x[0].length)
-    # logging.info(f'segment id: {road_segment_info.id}')
-    # logging.info(f'longest_heading: {longest_heading}')
+    _, longest_heading = max(line_heading, key=lambda x: x[0].length)
     for segment_line, segment_heading in line_heading:
         if segment_line is None:
             continue
 
         projection = project_point_onto_linestring(
             shapely.geometry.Point(car_loc3d[:2]), segment_line)
-        # if car_loc3d == (1826.4495849087664, 874.9766899196859, 0.0)\
-        #     and road_segment_info.id == '0dfe1044-0bd5-4640-87cc-1d2e86935021':
-        #     print(f'projection: {projection}')
-        #     print(f'segment_line: {segment_line.coords.xy}')
-        #     print(f'intersect? {segment_line.distance(projection) < 1e-8}')
 
         if segment_line.distance(projection) < 1e-8:
-            # return segment_line, segment_heading
-
-            # if longest_segment_line is None:
-            #     longest_segment_line = segment_line
-            #     longest_segment_heading = segment_heading
-            # elif (longest_segment_line.length < segment_line.length):
-            #     longest_segment_line = segment_line
-            #     longest_segment_heading = segment_heading
             if abs(segment_heading - longest_heading) < 30:
                 return segment_line, segment_heading
 
-    # assert longest_segment_heading is not None
-    # assert longest_segment_heading is not None
-    # if road_segment_info.id == '0dfe1044-0bd5-4640-87cc-1d2e86935021':
-    #     print(segment_lines, segment_headings)
-    #     print(f'car_loc3d: {car_loc3d}')
     return None, None
-    # return longest_segment_line, longest_segment_heading
 
 
 def location_calibration(
@@ -429,7 +407,6 @@ def time_to_exit_current_segment(
     car_loc = shapely.geometry.Point(car_loc[:2])
     car_vector = (math.cos(math.radians(segmentheading)),
                   math.sin(math.radians(segmentheading)))
-    # logger.info(f'car_vector is {car_vector}')
     car_heading_line = shapely.geometry.LineString([car_loc, car_vector])
     intersection = line_to_polygon_intersection(polygon, car_heading_line)
     # logger.info(f'intersection is {intersection}')

@@ -5,7 +5,8 @@ import pandas as pd
 import psycopg2
 import psycopg2.errors
 import psycopg2.sql as psql
-from mobilitydb.psycopg import register as mobilitydb_register
+
+# from mobilitydb.psycopg import register as mobilitydb_register
 from postgis.psycopg import register as postgis_register
 
 from apperception.data_types import Trajectory
@@ -94,14 +95,20 @@ class Database:
     def __init__(self, connection: "Connection"):
         self.connection = connection
         postgis_register(self.connection)
-        mobilitydb_register(self.connection)
+        # mobilitydb_register(self.connection)
         self.cursor = self.connection.cursor()
 
     def reset(self, commit=False):
+        self.reset_cursor()
         self._create_camera_table(commit)
         self._create_item_general_trajectory_table(commit)
         # self._create_general_bbox_table(False)
         self._create_index(commit)
+
+    def reset_cursor(self):
+        self.cursor.close()
+        assert self.cursor.closed
+        self.cursor = self.connection.cursor()
 
     def _create_camera_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Cameras CASCADE;")
@@ -385,7 +392,7 @@ class Database:
             .replace("SELECT DISTINCT *", f"SELECT {itemId}, {timestamp}, {camId}, {filename}", 1)
         )
 
-        print("get_id_time_camId_filename", _query)
+        # print("get_id_time_camId_filename", _query)
         return self.execute(_query)
 
     def get_video(self, query, cams, boxed):
@@ -402,6 +409,33 @@ class Database:
 
     def sql(self, query: str) -> pd.DataFrame:
         return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
+
+    def predicate(self, p: "PredicateNode"):
+        tables, camera = FindAllTablesVisitor()(predicate)
+        tables = sorted(tables)
+        mapping = {t: i for i, t in enumerate(tables)}
+        predicate = normalize(predicate)
+        predicate = MapTablesTransformer(mapping)(predicate)
+
+        t_tables = ""
+        t_outputs = ""
+        for i in range(len(tables)):
+            t_tables += (
+                "\n"
+                "JOIN Item_General_Trajectory "
+                f"AS t{i} "
+                f"ON  Cameras.timestamp <@ t{i}.trajCentroids::period"
+                f"AND Cameras.cameraId  =  t{i}.cameraId"
+            )
+            t_outputs += f", t{i}.itemId"
+
+        sql_str = f"""
+            SELECT Cameras.frameNum {t_outputs}, Cameras.cameraId
+            FROM Cameras{t_tables}
+            WHERE
+            {GenSqlVisitor()(predicate)}
+        """
+        return self.execute(sql_str)
 
     # def get_len(self, query: "psql.Composable | str"):
     #     """

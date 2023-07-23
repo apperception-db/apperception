@@ -4,6 +4,9 @@ from typing import Callable, List, Tuple
 
 import torch
 from bitarray import bitarray
+from psycopg2 import sql
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
 from ...payload import Payload
@@ -11,6 +14,7 @@ from ...types import DetectionId
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
 from ..detection_3d import Detection3D
+from ..in_view.in_view import get_views
 from ..stage import Stage
 from .detection_estimation import (
     DetectionInfo,
@@ -50,6 +54,9 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
+
+        ego_views = get_ego_views(payload)
+        assert ego_views is not None
 
         skipped_frame_num = []
         next_frame_num = 0
@@ -123,6 +130,25 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             keep[f] = 0
 
         return keep, {DetectionEstimation.classname(): metadata}
+
+
+def get_ego_views(payload: "Payload"):
+    indices, view_areas = get_views(payload, distance=100, skip=False)
+    views_raw = database.execute(sql.SQL("""
+    SELECT index, ST_ConvexHull(points)
+    FROM UNNEST (
+        {view_areas},
+        {indices}::int[]
+    ) AS ViewArea(points, index)
+    """).format(
+        view_areas=sql.Literal(view_areas),
+        indices=sql.Literal(indices),
+    ))
+    assert len(views_raw) == len(payload.video), (len(views_raw), len(payload.video))
+    views = [None for _ in range(len(payload.video))]
+    for idx, view in views_raw:
+        views[idx] = view
+    return views
 
 
 def prune_detection(

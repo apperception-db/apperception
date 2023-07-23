@@ -1,7 +1,7 @@
 import multiprocessing
 from functools import reduce
 from multiprocessing import Pool
-from typing import TYPE_CHECKING, List, Tuple
+from typing import TYPE_CHECKING
 
 import cv2
 from tqdm import tqdm
@@ -15,11 +15,11 @@ if TYPE_CHECKING:
     from ...payload import Payload
 
 
-def decode(args: "Tuple[str, int, int]"):
+def decode(args: "tuple[str, int, int]"):
     videofile, start, end = args
     cap = cv2.VideoCapture(videofile)
     cap.set(cv2.CAP_PROP_POS_FRAMES, start)
-    out: "List[npt.NDArray]" = []
+    out: "list[npt.NDArray]" = []
     for _ in range(start, end):
         ret, frame = cap.read()
         if not ret:
@@ -34,7 +34,7 @@ class ParallelDecodeFrame(DecodeFrame):
     @cache
     def _run(self, payload: "Payload"):
         try:
-            metadata: "List[npt.NDArray]" = []
+            metadata: "list[npt.NDArray]" = []
 
             n_cpus = multiprocessing.cpu_count()
             n_frames = len(payload.video)
@@ -43,7 +43,7 @@ class ParallelDecodeFrame(DecodeFrame):
             q, mod = divmod(n_frames, n_cpus)
             frames_per_cpu = [q + (i < mod) for i in range(n_cpus)]
 
-            def _r(acc: "Tuple[int, List[Tuple[int, int]]]", frames: int):
+            def _r(acc: "tuple[int, list[tuple[int, int]]]", frames: int):
                 start, arr = acc
                 end = start + frames
                 return (end, arr + [(start, end)])
