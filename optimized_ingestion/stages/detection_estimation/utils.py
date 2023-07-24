@@ -78,6 +78,12 @@ def relative_direction(vec1, vec2):
     return (vec1[0] * vec2[0] + vec1[1] * vec2[1]) / math.sqrt(vec1[0]**2 + vec1[1]**2) / math.sqrt(vec2[0]**2 + vec2[1]**2) > 0
 
 
+def car_move(car_loc, car_heading, car_speed, duration):
+    """Return the location of the car after duration in seconds"""
+    return (car_loc[0] + car_speed * duration * math.cos(math.radians(car_heading)),
+            car_loc[1] + car_speed * duration * math.sin(math.radians(car_heading)))
+
+
 def project_point_onto_linestring(
     point: "shapely.geometry.Point",
     line: "shapely.geometry.LineString"
@@ -400,9 +406,9 @@ def time_to_exit_current_segment(
             if (point.timestamp > current_time
                and not shapely.geometry.Polygon(polygon).contains(shapely.geometry.Point(point.coordinates[:2]))):
                 return point.timestamp, point.coordinates[:2]
-        return time_elapse(current_time, -1), None
+        return None, None
     if detection_info.segment_heading is None:
-        return time_elapse(current_time, -1), None
+        return None, None
     segmentheading = detection_info.segment_heading + 90
     car_loc = shapely.geometry.Point(car_loc[:2])
     car_vector = (math.cos(math.radians(segmentheading)),
@@ -428,8 +434,8 @@ def time_to_exit_current_segment(
             return time_elapse(current_time, distance2 / max_car_speed(current_polygon_info.road_type)), intersection[1]
         else:
             # logger.info("wrong car moving direction")
-            return time_elapse(current_time, -1), None
-    return time_elapse(current_time, -1), None
+            return None, None
+    return None, None
 
 
 def meetup(car1_loc: "Float3 | shapely.geometry.Point",
@@ -524,6 +530,47 @@ def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, current_tim
     car_speed = max_car_speed(road_type)
     exit_view_time = time_elapse(current_time, (view_distance - compute_distance(ego_loc, car_loc)) / (car_speed - ego_speed))
     return timestamp_to_nearest_trajectory(ego_trajectory, exit_view_time)
+
+
+def get_car_exits_view_action(detection_info: "DetectionInfo",
+                              ego_views: "List[shape.geometry.Polygon]",
+                              max_frame_num: int,
+                              fps=20):
+    car_heading = detection_info.segment_heading
+    road_type = detection_info.road_type
+    car_loc = detection_info.car_loc3d[:2]
+    if car_heading is None:
+        return None
+    if road_type == 'intersection':
+        return None
+    return car_exits_view_frame_num(car_loc, car_heading, road_type,
+                                    ego_views, detection_info.ego_config.frame_num,
+                                    max_frame_num, fps)
+
+
+def car_exits_view_frame_num(car_loc, car_heading, road_type, ego_views,
+                             current_frame_num, car_exits_segment_frame_num, fps):
+    assert car_exits_segment_frame_num < len(ego_views)
+    assert current_frame_num < car_exits_segment_frame_num
+    start_frame_num = current_frame_num
+    car_speed = max_car_speed(road_type)
+    car_heading += 90
+    print(f"car_location {car_loc}")
+    print(f"car_heading {car_heading}")
+    print(f"car_speed {car_speed}")
+    print(f"start_frame_num {start_frame_num}")
+    while current_frame_num + 1 < car_exits_segment_frame_num:
+        next_frame_num = current_frame_num + 1
+        print(f"next_frame_num {next_frame_num}")
+        next_ego_view = ego_views[next_frame_num]
+        print(f"next_ego_view {next_ego_view}")
+        duration = (next_frame_num - start_frame_num) / fps
+        next_car_loc = car_move(car_loc, car_heading, car_speed, duration)
+        print(f"next_car_loc {next_car_loc}")
+        if not next_ego_view.contains(shapely.geometry.Point(next_car_loc[:2])):
+            return current_frame_num
+        current_frame_num = next_frame_num
+    return car_exits_segment_frame_num
 
 
 def relative_direction_to_ego(obj_heading: float, ego_heading: float):

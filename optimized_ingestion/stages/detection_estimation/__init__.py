@@ -27,7 +27,7 @@ from .utils import get_ego_avg_speed, trajectory_3d
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARN)
 
 
 DetectionEstimationMetadatum = List[DetectionInfo]
@@ -71,6 +71,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         investigation_frame_nums = []
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
+            current_fps = 1 // (payload.video[i+1].timestamp - current_ego_config.timestamp).total_seconds()
+            print(f"current fps is {current_fps}")
             if i != next_frame_num:
                 skipped_frame_num.append(i)
                 metadata.append([])
@@ -96,7 +98,9 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 metadata.append([])
                 continue
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info_pruned)
+            next_sample_plan, _ = generate_sample_plan_once(
+                payload.video, current_ego_config, next_frame_num,
+                all_detection_info=all_detection_info_pruned, fps=fps)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
@@ -175,24 +179,13 @@ def generate_sample_plan_once(
     video: "Video",
     ego_config: "CameraConfig",
     next_frame_num: "int",
+    fps: "int",
     car_loc3d=None,
     target_car_detection=None,
     all_detection_info: "List[DetectionInfo] | None" = None
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
-    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
-    # next_frame = None
-    next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
-    if next_sample_frame_info:
-        next_sample_frame_name, next_sample_frame_num, _ = next_sample_frame_info
-        logger.info(f"next frame name {next_sample_frame_name}")
-        logger.info(f"next frame num {next_sample_frame_num}")
-        logger.info(f"Action {next_sample_plan.action}")
-        # TODO: should not read next frame -> get the next frame from frames.pickle
-        # next_frame = cv2.imread(test_img_base_dir+next_sample_frame_name)
-        # cv2.imshow("next_frame", next_frame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50, fps=fps)
     return next_sample_plan, None
 
 
