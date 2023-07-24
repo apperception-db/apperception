@@ -71,7 +71,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         investigation_frame_nums = []
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
-            current_fps = 1 // (payload.video[i+1].timestamp - current_ego_config.timestamp).total_seconds()
+            current_fps = 1 // (payload.video[i + 1].timestamp - current_ego_config.timestamp).total_seconds()
             print(f"current fps is {current_fps}")
             if i != next_frame_num:
                 skipped_frame_num.append(i)

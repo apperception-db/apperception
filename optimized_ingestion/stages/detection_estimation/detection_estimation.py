@@ -41,11 +41,11 @@ from .utils import (
     Float22,
     compute_area,
     compute_distance,
+    get_car_exits_view_frame_num,
     get_segment_line,
     relative_direction_to_ego,
-    trajectory_3d,
     time_to_exit_current_segment,
-    get_car_exits_view_frame_num
+    trajectory_3d,
 )
 
 
@@ -119,7 +119,7 @@ class DetectionInfo:
 
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance
-        
+
     def get_car_exits_segment_action(self):
         current_time = self.timestamp
         car_loc = self.car_loc3d
@@ -130,7 +130,6 @@ class DetectionInfo:
                       end_loc=exit_point, action_type=CAR_EXIT_SEGMENT,
                       target_obj_id=detection_info.detection_id,
                       target_obj_bbox=detection_info.car_bbox2d)
-
 
     # def generate_single_sample_action(self, view_distance: float = 50.):
     #     """Generate a sample plan for the given detection of a single car
@@ -176,9 +175,9 @@ class SamplePlan:
                         detection_info, ego_views, car_exit_segment_frame_num, fps)
                     print(f"frame when car exits view: {car_exit_view_frame_num}")
                     self.next_frame_num = min(self.next_frame_num,
-                                            car_exit_segment_frame_num,
-                                            car_exit_view_frame_num)
-    
+                                              car_exit_segment_frame_num,
+                                              car_exit_view_frame_num)
+
     def generate_sample_plan(self, view_distance: float = 50.0):
         assert self.all_detection_info is not None
         for detection_info in self.all_detection_info:
