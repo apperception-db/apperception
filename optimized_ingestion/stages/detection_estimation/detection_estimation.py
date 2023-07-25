@@ -243,7 +243,7 @@ def construct_all_detection_info(
     if len(all_detections) == 0:
         return all_detection_info
 
-    ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
+    # ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
     detections_polygon_mapping = get_detection_polygon_mapping(all_detections, ego_config)
     # assert len(all_detections) == len(detections_polygon_mapping)
     for detection in all_detections:
@@ -259,7 +259,7 @@ def construct_all_detection_info(
                                            car_bbox2d,
                                            ego_trajectory,
                                            ego_config,
-                                           ego_road_polygon_info)
+                                           None)
             all_detection_info.append(detection_info)
 
     return all_detection_info
