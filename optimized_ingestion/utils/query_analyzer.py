@@ -51,7 +51,7 @@ ALL_MAPPING_RULES = {
                                         and isinstance(x.left.params[0], TableAttrNode)
                                         and x.left.params[0].name == 'egoTranslation'
                                         and isinstance(x.left.params[1], LiteralNode)),
-                'param': lambda x: dict(segment_type=x.left.params[1].value, distance=x.right.value),
+                'param': lambda x: dict(roadtypes=[x.left.params[1].value], distance=x.right.value),
                 'pipeline': in_view},
     'object_type': {'condition': lambda x: (isinstance(x, CallNode)
                                             and x._fn[0].__name__ == 'like'

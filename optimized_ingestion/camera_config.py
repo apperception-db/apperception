@@ -65,8 +65,8 @@ class CameraConfig:
     _data: "npt.NDArray[np.float32]"
 
     @property
-    def frame_num(self) -> float:
-        return self._data[0].item()
+    def frame_num(self) -> int:
+        return int(self._data[0].item())
 
     @property
     def camera_translation(self) -> Float3:
