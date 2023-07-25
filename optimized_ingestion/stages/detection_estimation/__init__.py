@@ -77,11 +77,10 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
-        investigation_frame_nums = []
+        # investigation_frame_nums = []
+        current_fps = payload.video.fps
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
-            current_fps = math.ceil(
-                1 / (payload.video[i + 1].timestamp - current_ego_config.timestamp).total_seconds())
             if i != next_frame_num:
                 skipped_frame_num.append(i)
                 metadata.append([])
@@ -176,7 +175,7 @@ def generate_sample_plan_once(
     next_frame_num: "int",
     ego_views: "List[shape.geometry.Polygon]",
     all_detection_info: "List[DetectionInfo] | None" = None,
-    fps: "int" = 20,
+    fps: "int" = 13,
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
     next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, ego_views, 50, fps=fps)

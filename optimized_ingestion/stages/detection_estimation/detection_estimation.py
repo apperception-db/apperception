@@ -138,9 +138,9 @@ class DetectionInfo:
 class SamplePlan:
     video: "Video"
     next_frame_num: int
-    all_detection_info: "List[DetectionInfo]"
-    ego_views: "List[shape.geometry.Polygon]"
-    fps: int = 20
+    all_detection_info: "list[DetectionInfo]"
+    ego_views: "list[shapely.geometry.Polygon]"
+    fps: int = 12
     metadata: Any = None
     current_priority: "float | None" = None
     action: "Action | None" = None
@@ -264,10 +264,10 @@ def construct_all_detection_info(
 def generate_sample_plan(
     video: "Video",
     next_frame_num: int,
-    all_detection_info: "List[DetectionInfo]",
-    ego_views: "List[shape.geometry.Polygon]",
+    all_detection_info: "list[DetectionInfo]",
+    ego_views: "list[shapely.geometry.Polygon]",
     view_distance: float,
-    fps: int = 20,
+    fps: int = 12,
 ):
     ### the object detection with higher priority doesn't necessarily get sampled first,
     # it also based on the sample plan
