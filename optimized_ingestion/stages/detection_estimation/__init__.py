@@ -2,6 +2,8 @@ import logging
 import time
 from typing import Callable, List, Tuple
 
+import shapely
+import shapely.geometry
 import torch
 from bitarray import bitarray
 from psycopg2 import sql
@@ -49,13 +51,20 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         keep = bitarray(len(payload.video))
         keep[:] = 1
 
-        ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
+        ego_trajectory = []
+        for i in range(len(payload.video)):
+            v = payload.video[i]
+            v.frame_num_in_video = i
+            ego_trajectory.append(trajectory_3d(v.ego_translation, v.timestamp))
         ego_speed = get_ego_avg_speed(ego_trajectory)
         logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
         ego_views = get_ego_views(payload)
+        ego_views = [shapely.wkb.loads(view.to_ewkb(), hex=True)
+                     if not isinstance(view, shapely.geometry.Polygon) else view
+                     for view in ego_views]
         assert ego_views is not None
 
         skipped_frame_num = []
@@ -68,6 +77,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
         start_time = time.time()
+        # investigation_frame_nums = []
+        current_fps = payload.video.fps
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
             if i != next_frame_num:
@@ -77,6 +88,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _, dids = dets[i]
+            logger.info(f"current frame num {i}")
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
@@ -86,14 +98,17 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 metadata.append([])
                 continue
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(payload.video, current_ego_config, next_frame_num, all_detection_info=all_detection_info_pruned)
+            next_sample_plan, _ = generate_sample_plan_once(
+                payload.video, next_frame_num, ego_views,
+                all_detection_info_pruned, fps=current_fps)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
                 action_type_counts[next_action_type] = 1
             else:
                 action_type_counts[next_action_type] += 1
-            next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+            next_frame_num = next_sample_plan.get_next_frame_num()
+            logger.info(f"founded next_frame_num {next_frame_num}")
             metadata.append(all_detection_info)
 
         # TODO: ignore the last frame ->
@@ -157,28 +172,13 @@ def prune_detection(
 
 def generate_sample_plan_once(
     video: "Video",
-    ego_config: "CameraConfig",
     next_frame_num: "int",
-    car_loc3d=None,
-    target_car_detection=None,
-    all_detection_info: "List[DetectionInfo] | None" = None
+    ego_views: "list[shapely.geometry.Polygon]",
+    all_detection_info: "list[DetectionInfo] | None" = None,
+    fps: "int" = 13,
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
-    if all_detection_info:
-        logger.info(all_detection_info[0].road_type)
-    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50)
-    # next_frame = None
-    next_sample_frame_info = next_sample_plan.get_next_sample_frame_info()
-    if next_sample_frame_info:
-        next_sample_frame_name, next_sample_frame_num, _ = next_sample_frame_info
-        logger.info(f"next frame name {next_sample_frame_name}")
-        logger.info(f"next frame num {next_sample_frame_num}")
-        logger.info(f"Action {next_sample_plan.action}")
-        # TODO: should not read next frame -> get the next frame from frames.pickle
-        # next_frame = cv2.imread(test_img_base_dir+next_sample_frame_name)
-        # cv2.imshow("next_frame", next_frame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, ego_views, 50, fps=fps)
     return next_sample_plan, None
 
 
@@ -199,7 +199,7 @@ def construct_estimated_all_detection_info(
         w = x2 - x
         h = y2 - y
         car_loc2d = (x + w // 2, y + h // 2)
-        car_bbox2d = ((x - w // 2, y - h // 2), (x + w // 2, y + h // 2))
+        car_bbox2d = ((x, y), (x2, y2))
         left3d, right3d = bbox3d[:3], bbox3d[3:]
         car_loc3d = tuple(map(float, (left3d + right3d) / 2))
         assert len(car_loc3d) == 3
@@ -211,6 +211,5 @@ def construct_estimated_all_detection_info(
             car_bbox3d,
             car_bbox2d)
         )
-    # logger.info("all_detections", all_detections)
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     return all_detection_info

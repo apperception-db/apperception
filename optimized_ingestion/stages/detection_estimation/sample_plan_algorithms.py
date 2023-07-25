@@ -49,6 +49,7 @@ class Action:
     end_loc: "Float2 | Float3"  # TODO: should either be Float2 or Float3
     action_type: "ActionType"
     target_obj_id: "str | None" = None
+    target_obj_bbox: "Float2 | None" = None
     invalid_action: bool = field(init=False)
     estimated_time: "datetime.timedelta" = field(init=False)
 

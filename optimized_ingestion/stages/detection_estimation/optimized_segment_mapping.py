@@ -14,7 +14,6 @@ import array
 import logging
 import math
 import os
-import time
 from typing import NamedTuple, Tuple
 
 import numpy as np
@@ -168,7 +167,6 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
     polygon = shapely.wkb.loads(roadpolygon.to_ewkb(), hex=True)
     assert isinstance(polygon, shapely.geometry.Polygon)
-
     return RoadPolygonInfo(
         polygonid,
         polygon,
@@ -188,11 +186,6 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
     location = ego_config.location
 
     convex_points = np.array([[d.car_loc3d[0], d.car_loc3d[1]] for d in detections])
-    # if len(detections) >= 3:
-    #     ch = ConvexHull(_points)
-    #     convex = _points[[*ch.vertices, ch.vertices[0]]]
-    # else:
-    #     convex = _points
 
     out = sql.SQL(f"""
     WITH
@@ -262,7 +255,6 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         convex=sql.Literal(postgis.MultiPoint(map(tuple, convex_points))),
         location=sql.Literal(location),
     )
-
     result = database.execute(out)
     return result
 
@@ -271,7 +263,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     """
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
-    start_time = time.time()
+    # start_time = time.time()
     results = map_detections_to_segments(detections, ego_config)
     # assert all(r[6:] == (1, 1) for r in results)
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
@@ -334,5 +326,5 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 fov_lines
             )
 
-    logger.info(f'total mapping time: {time.time() - start_time}')
+    # logger.info(f'total mapping time: {time.time() - start_time}')
     return mapped_road_polygon_info
