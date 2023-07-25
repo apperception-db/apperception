@@ -152,7 +152,7 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
             if not is_roadsection(segmenttypes):
                 results = [result]
                 break
-    assert len(results) == 1
+    assert len(results) == 1, (ROAD_TYPES, [r[4:] for r in results])
     result = results[0]
     assert len(result) == 4 + len(ROAD_TYPES), (len(results), len(ROAD_TYPES) + 4)
 
