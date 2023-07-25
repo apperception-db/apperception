@@ -14,7 +14,6 @@ import array
 import logging
 import math
 import os
-import time
 from typing import NamedTuple, Tuple
 
 import numpy as np
@@ -264,7 +263,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     """
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
-    start_time = time.time()
+    # start_time = time.time()
     results = map_detections_to_segments(detections, ego_config)
     # assert all(r[6:] == (1, 1) for r in results)
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]

@@ -535,7 +535,7 @@ def time_to_exit_view(ego_loc, car_loc, car_heading, ego_trajectory, current_tim
 
 
 def get_car_exits_view_frame_num(detection_info: "DetectionInfo",
-                                 ego_views: "List[shape.geometry.Polygon]",
+                                 ego_views: "list[shapely.geometry.Polygon]",
                                  max_frame_num: int,
                                  fps=20):
     car_heading = detection_info.segment_heading
