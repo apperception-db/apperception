@@ -28,11 +28,7 @@ import shapely
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
 from ...video import Video
-from .optimized_segment_mapping import (
-    RoadPolygonInfo,
-    get_detection_polygon_mapping,
-    get_largest_polygon_containing_point,
-)
+from .optimized_segment_mapping import RoadPolygonInfo, get_detection_polygon_mapping
 from .sample_plan_algorithms import CAR_EXIT_SEGMENT, Action
 from .utils import (
     Float2,
