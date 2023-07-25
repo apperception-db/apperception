@@ -409,7 +409,7 @@ def time_to_exit_current_segment(
         return None, None
     if detection_info.road_type == 'intersection':
         return None, None
-    if detection_info.segment_heading is None and detection_info.road_type!='intersection':
+    if detection_info.segment_heading is None and detection_info.road_type != 'intersection':
         return None, None
     segmentheading = detection_info.segment_heading + 90
     car_loc = shapely.geometry.Point(car_loc[:2])

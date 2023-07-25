@@ -33,7 +33,7 @@ from .optimized_segment_mapping import (
     get_detection_polygon_mapping,
     get_largest_polygon_containing_point,
 )
-from .sample_plan_algorithms import Action, CAR_EXIT_SEGMENT
+from .sample_plan_algorithms import CAR_EXIT_SEGMENT, Action
 from .utils import (
     Float2,
     Float3,
