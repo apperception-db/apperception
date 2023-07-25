@@ -1,9 +1,9 @@
 import logging
-import math
 import time
 from typing import Callable, List, Tuple
 
 import shapely
+import shapely.geometry
 import torch
 from bitarray import bitarray
 from psycopg2 import sql
@@ -173,8 +173,8 @@ def prune_detection(
 def generate_sample_plan_once(
     video: "Video",
     next_frame_num: "int",
-    ego_views: "List[shape.geometry.Polygon]",
-    all_detection_info: "List[DetectionInfo] | None" = None,
+    ego_views: "list[shapely.geometry.Polygon]",
+    all_detection_info: "list[DetectionInfo] | None" = None,
     fps: "int" = 13,
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
