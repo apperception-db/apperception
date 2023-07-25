@@ -410,7 +410,7 @@ class Database:
     def sql(self, query: str) -> pd.DataFrame:
         return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
 
-    def predicate(self, p: "PredicateNode"):
+    def predicate(self, predicate: "PredicateNode"):
         tables, camera = FindAllTablesVisitor()(predicate)
         tables = sorted(tables)
         mapping = {t: i for i, t in enumerate(tables)}
