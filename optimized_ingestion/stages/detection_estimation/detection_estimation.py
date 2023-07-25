@@ -21,10 +21,9 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, List, Literal, Tuple
 
-import shapely.geometry
-
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
+import shapely
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
@@ -34,7 +33,7 @@ from .optimized_segment_mapping import (
     get_detection_polygon_mapping,
     get_largest_polygon_containing_point,
 )
-from .sample_plan_algorithms import Action, get_sample_action_alg
+from .sample_plan_algorithms import Action, CAR_EXIT_SEGMENT
 from .utils import (
     Float2,
     Float3,
@@ -128,8 +127,8 @@ class DetectionInfo:
             return None
         return Action(current_time, exit_time, start_loc=car_loc,
                       end_loc=exit_point, action_type=CAR_EXIT_SEGMENT,
-                      target_obj_id=detection_info.detection_id,
-                      target_obj_bbox=detection_info.car_bbox2d)
+                      target_obj_id=self.detection_id,
+                      target_obj_bbox=self.car_bbox2d)
 
     # def generate_single_sample_action(self, view_distance: float = 50.):
     #     """Generate a sample plan for the given detection of a single car
@@ -160,23 +159,30 @@ class SamplePlan:
     action: "Action | None" = None
 
     def update_next_sample_frame_num(self):
+        next_sample_frame_num = len(self.ego_views)
         assert self.all_detection_info is not None
-        for detection_info in self.all_detection_infos:
-            # get the frame num of car exits
+        for detection_info in self.all_detection_info:
+            # get the frame num of car exits,
+            # if the detection_info road type is intersection
+            # car_exit_segment_action would be None
             car_exit_segment_action = detection_info.get_car_exits_segment_action()
-            print(car_exit_segment_action)
             if car_exit_segment_action and not car_exit_segment_action.invalid_action:
                 car_exit_segment_frame_num = self.find_closest_frame_num(
                     car_exit_segment_action.finish_time)
                 if car_exit_segment_frame_num > self.next_frame_num:
                     # get the frame num of car exits view
-                    print("start to get car exits view frame num")
                     car_exit_view_frame_num = get_car_exits_view_frame_num(
-                        detection_info, ego_views, car_exit_segment_frame_num, fps)
-                    print(f"frame when car exits view: {car_exit_view_frame_num}")
-                    self.next_frame_num = min(self.next_frame_num,
-                                              car_exit_segment_frame_num,
-                                              car_exit_view_frame_num)
+                        detection_info, self.ego_views, car_exit_segment_frame_num, self.fps)
+                    next_sample_frame_num = min(next_sample_frame_num,
+                                                car_exit_segment_frame_num,
+                                                car_exit_view_frame_num)
+                else:
+                    next_sample_frame_num = self.next_frame_num
+                    break
+            else:
+                next_sample_frame_num = self.next_frame_num
+                break
+        self.next_frame_num = next_sample_frame_num
 
     def generate_sample_plan(self, view_distance: float = 50.0):
         assert self.all_detection_info is not None
@@ -273,12 +279,12 @@ def generate_sample_plan(
     next_frame_num: int,
     all_detection_info: "List[DetectionInfo]",
     ego_views: "List[shape.geometry.Polygon]",
-    fps: int = 20,
     view_distance: float,
+    fps: int = 20,
 ):
     ### the object detection with higher priority doesn't necessarily get sampled first,
     # it also based on the sample plan
     sample_plan = SamplePlan(video, next_frame_num, all_detection_info, ego_views, fps=fps)
-    sample_plan.get_next_sample_frame_num()
+    sample_plan.update_next_sample_frame_num()
     # sample_plan.generate_sample_plan(view_distance)
     return sample_plan

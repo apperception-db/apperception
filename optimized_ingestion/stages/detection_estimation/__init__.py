@@ -1,10 +1,12 @@
 import logging
 import time
 from typing import Callable, List, Tuple
+import math
 
 import torch
 from bitarray import bitarray
 from psycopg2 import sql
+import shapely
 
 from apperception.database import database
 
@@ -48,14 +50,21 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         keep = bitarray(len(payload.video))
         keep[:] = 1
-
-        ego_trajectory = [trajectory_3d(f.ego_translation, f.timestamp) for f in payload.video]
+        
+        ego_trajectory = []
+        for i in range(len(payload.video)):
+            v = payload.video[i]
+            v.frame_num_in_video = i
+            ego_trajectory.append(trajectory_3d(v.ego_translation, v.timestamp))
         ego_speed = get_ego_avg_speed(ego_trajectory)
         logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
         ego_views = get_ego_views(payload)
+        ego_views = [shapely.wkb.loads(view.to_ewkb(), hex=True)
+                     if type(view) is not shapely.geometry.Polygon else view
+                     for view in ego_views]
         assert ego_views is not None
 
         skipped_frame_num = []
@@ -71,8 +80,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         investigation_frame_nums = []
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
-            current_fps = 1 // (payload.video[i + 1].timestamp - current_ego_config.timestamp).total_seconds()
-            print(f"current fps is {current_fps}")
+            current_fps = math.ceil(
+                1 / (payload.video[i + 1].timestamp - current_ego_config.timestamp).total_seconds())
             if i != next_frame_num:
                 skipped_frame_num.append(i)
                 metadata.append([])
@@ -80,15 +89,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
             start_detection_time = time.time()
             det, _, dids = dets[i]
-            if i == 195:
-                all_3d_points = []
-                for de, di in zip(det, dids):
-                    bbox = de[:4]
-                    bbox3d = de[6:12]
-                    left3d, right3d = bbox3d[:3], bbox3d[3:]
-                    car_loc3d = tuple(map(float, (left3d + right3d) / 2))
-                    all_3d_points.append(car_loc3d)
-            logger.info(f'current frame num {i}')
+            logger.info(f"current frame num {i}")
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
@@ -99,15 +100,16 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 continue
             start_generate_sample_plan = time.time()
             next_sample_plan, _ = generate_sample_plan_once(
-                payload.video, current_ego_config, next_frame_num,
-                all_detection_info=all_detection_info_pruned, fps=fps)
+                payload.video, next_frame_num, ego_views,
+                all_detection_info_pruned,  fps=current_fps)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
                 action_type_counts[next_action_type] = 1
             else:
                 action_type_counts[next_action_type] += 1
-            next_frame_num = next_sample_plan.get_next_frame_num(next_frame_num)
+            next_frame_num = next_sample_plan.get_next_frame_num()
+            logger.info(f"founded next_frame_num {next_frame_num}")
             investigation_frame_nums.append([i, next_action_type])
             if next_action_type:
                 investigation_frame_nums[-1].extend([next_sample_plan.action.target_obj_bbox])
@@ -177,15 +179,13 @@ def prune_detection(
 
 def generate_sample_plan_once(
     video: "Video",
-    ego_config: "CameraConfig",
     next_frame_num: "int",
-    fps: "int",
-    car_loc3d=None,
-    target_car_detection=None,
-    all_detection_info: "List[DetectionInfo] | None" = None
+    ego_views: "List[shape.geometry.Polygon]",
+    all_detection_info: "List[DetectionInfo] | None" = None,
+    fps: "int" = 20,
 ) -> "Tuple[SamplePlan, None]":
     assert all_detection_info is not None
-    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, 50, fps=fps)
+    next_sample_plan = generate_sample_plan(video, next_frame_num, all_detection_info, ego_views, 50, fps=fps)
     return next_sample_plan, None
 
 
@@ -197,8 +197,6 @@ def construct_estimated_all_detection_info(
 ) -> "list[DetectionInfo]":
     all_detections = []
     check_detections = []
-    if len(detection_ids) > 0:
-        print(detection_ids[0].frame_idx)
     for det, did in zip(detections, detection_ids):
         bbox = det[:4]
         # conf = det[4]
@@ -223,11 +221,11 @@ def construct_estimated_all_detection_info(
         )
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
     for di in all_detection_info:
-        if di.detection_id.frame_idx == 207 or di.detection_id.frame_idx == 190:
+        if di.detection_id.frame_idx == 192 or di.detection_id.frame_idx == 233:
             # print(di.road_polygon_info.id)
             x, y = di.car_bbox2d[0]
             x_w, y_h = di.car_bbox2d[1]
-            check_detections.append([di.detection_id.obj_order, x, y, x_w, y_h,
+            check_detections.append([di.detection_id.frame_idx, di.detection_id.obj_order, x, y, x_w, y_h,
                                      di.road_type, di.road_polygon_info.polygon2d.exterior.coords.xy, di.ego_config.filename])
     if len(check_detections) > 0:
         print(f"check_detections {check_detections}")
