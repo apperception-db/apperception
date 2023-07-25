@@ -106,15 +106,6 @@ class DetectionInfo:
             self.segment_heading,
             ego_heading
         )
-        # if self.segment_line is None:
-        #     print(self.road_polygon_info.id)
-        #     print(self.road_type)
-        # if self.detection_id.frame_idx == 55 and self.road_type != 'intersection':
-        #     print([self.detection_id.obj_order, self.car_bbox2d], ',')
-        #     relative_heading = abs(self.segment_heading - ego_heading) % 360
-        # print(self.detection_id)
-        # print(self.road_type)
-        # print(math.cos(math.radians(relative_heading)))
 
     def compute_priority(self):
         self.priority = self.segment_area_2d / self.distance

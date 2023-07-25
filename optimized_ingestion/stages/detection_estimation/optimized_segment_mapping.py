@@ -35,7 +35,6 @@ from .segment_mapping import (
     get_fov_lines,
     in_view,
     make_road_polygon_with_heading,
-    world2pixel_factory,
 )
 from .utils import ROAD_TYPES, Float2, Float22
 
@@ -95,7 +94,6 @@ class RoadPolygonInfo(NamedTuple):
     """
     id: str
     polygon: "shapely.geometry.Polygon"
-    polygon2d: "shapely.geometry.Polygon"
     segment_lines: "list[shapely.geometry.LineString]"
     road_type: str
     segment_headings: "list[float]"
@@ -170,12 +168,9 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
     polygon = shapely.wkb.loads(roadpolygon.to_ewkb(), hex=True)
     assert isinstance(polygon, shapely.geometry.Polygon)
-    XYs: "Tuple[array.array[float], array.array[float]]" = polygon.exterior.coords.xy
-    polygon_points = list(zip(*XYs))
     return RoadPolygonInfo(
         polygonid,
         polygon,
-        shapely.geometry.Polygon(list(map(world2pixel_factory(ego_config), polygon_points))),
         segmentlines,
         roadtype,
         segmentheadings,
@@ -187,18 +182,11 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
 def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "CameraConfig"):
     tokens = [*map(lambda x: x.detection_id.obj_order, detections)]
-    # if detections[0].detection_id.frame_idx == 35:
-    #     print([(d.car_loc3d[0], d.car_loc3d[1]) for d in detections])
     points = [postgis.Point(d.car_loc3d[0], d.car_loc3d[1]) for d in detections]
 
     location = ego_config.location
 
     convex_points = np.array([[d.car_loc3d[0], d.car_loc3d[1]] for d in detections])
-    # if len(detections) >= 3:
-    #     ch = ConvexHull(_points)
-    #     convex = _points[[*ch.vertices, ch.vertices[0]]]
-    # else:
-    #     convex = _points
 
     out = sql.SQL(f"""
     WITH
@@ -323,18 +311,14 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         intersection_points = intersection(fov_lines, roadpolygon)
         decoded_road_polygon_points += intersection_points
         keep_road_polygon_points: "list[Float2]" = []
-        keep_cam_points: "list[Float2]" = []
-        deduced_cam_points = list(map(world2pixel_factory(ego_config), decoded_road_polygon_points))
-        for current_cam_point, current_road_point in zip(deduced_cam_points, decoded_road_polygon_points):
+        for current_road_point in decoded_road_polygon_points:
             if in_view(current_road_point, ego_config.ego_translation, fov_lines):
-                keep_cam_points.append(current_cam_point)
                 keep_road_polygon_points.append(current_road_point)
         if (len(keep_road_polygon_points) > 2
                 and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 40):
             mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
                 shapely.geometry.Polygon(keep_road_polygon_points),
-                shapely.geometry.Polygon(keep_cam_points),
                 segmentlines,
                 roadtype,
                 segmentheadings,

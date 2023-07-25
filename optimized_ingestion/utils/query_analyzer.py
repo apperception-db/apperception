@@ -13,7 +13,6 @@ from optimized_ingestion.stages.in_view import InView
 
 
 def in_view(pipeline, param):
-    # pass
     pipeline.stages.insert(0, InView(**param))
 
 

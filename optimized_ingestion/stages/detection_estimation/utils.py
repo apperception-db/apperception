@@ -419,11 +419,9 @@ def time_to_exit_current_segment(
                          car_loc.y + car_vector[1])
     car_heading_line = shapely.geometry.LineString([car_loc, car_heading_point])
     intersection = line_to_polygon_intersection(polygon, car_heading_line)
-    # logger.info(f'intersection is {intersection}')
     if len(intersection) == 2:
         intersection_1_vector = (intersection[0][0] - car_loc.x,
                                  intersection[0][1] - car_loc.y)
-        # logger.info(f'intersection_1_vector is {intersection_1_vector}')
         relative_direction_1 = relative_direction(car_vector, intersection_1_vector)
         intersection_2_vector = (intersection[1][0] - car_loc.x,
                                  intersection[1][1] - car_loc.y)

@@ -32,7 +32,7 @@ class Payload:
         self.metadata = metadata
 
     def filter(self, filter: "Stage"):
-        print("Stage: ", filter.classname())
+        # print("Stage: ", filter.classname())
         keep, metadata = filter.run(self)
 
         if keep is None:
@@ -48,8 +48,6 @@ class Payload:
             assert metadata_l == len(keep), f"{filter.classname()} -- metadata: {metadata_l}, keep: {len(keep)}"
 
         metadata = {**self.metadata, **metadata}
-        # print(f"  filtered frames: {sum(keep) * 100.0 / len(keep)}%")
-        # print("\n".join(_split_keep(keep, 100)))
         return Payload(self.video, keep, metadata)
 
     def __getitem__(self, stage) -> "list[Any] | None":
@@ -80,15 +78,3 @@ def _default_keep(video: "Video", keep: "bitarray | None" = None):
     elif len(keep) != len(video):
         raise Exception()
     return keep
-
-
-def _split_keep(keep: "bitarray", size: int = 64) -> "List[str]":
-    out: "List[str]" = []
-    i = 0
-    while i * size < len(keep):
-        curr = i * size
-        next = min((i + 1) * size, len(keep))
-        out.append("".join(["K" if k else "." for k in keep[curr:next]]))
-        i += 1
-
-    return out

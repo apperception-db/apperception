@@ -110,11 +110,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 action_type_counts[next_action_type] += 1
             next_frame_num = next_sample_plan.get_next_frame_num()
             logger.info(f"founded next_frame_num {next_frame_num}")
-            investigation_frame_nums.append([i, next_action_type])
-            if next_action_type:
-                investigation_frame_nums[-1].extend([next_sample_plan.action.target_obj_bbox])
-            else:
-                investigation_frame_nums[-1].extend([None])
             metadata.append(all_detection_info)
 
         # TODO: ignore the last frame ->
@@ -124,7 +119,6 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         #     times.append([t2 - t1 for t1, t2 in zip(t[:-1], t[1:])])
         # logger.info(np.array(times).sum(axis=0))
         logger.info(f"sorted_ego_config_length {len(payload.video)}")
-        logger.info(f"investigation_frame_nums {investigation_frame_nums}")
         logger.info(f"number of skipped {len(skipped_frame_num)}")
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
@@ -196,7 +190,6 @@ def construct_estimated_all_detection_info(
     ego_trajectory: "list[trajectory_3d]",
 ) -> "list[DetectionInfo]":
     all_detections = []
-    check_detections = []
     for det, did in zip(detections, detection_ids):
         bbox = det[:4]
         # conf = det[4]
@@ -220,13 +213,4 @@ def construct_estimated_all_detection_info(
             car_bbox2d)
         )
     all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
-    for di in all_detection_info:
-        if di.detection_id.frame_idx == 192 or di.detection_id.frame_idx == 233:
-            # print(di.road_polygon_info.id)
-            x, y = di.car_bbox2d[0]
-            x_w, y_h = di.car_bbox2d[1]
-            check_detections.append([di.detection_id.frame_idx, di.detection_id.obj_order, x, y, x_w, y_h,
-                                     di.road_type, di.road_polygon_info.polygon2d.exterior.coords.xy, di.ego_config.filename])
-    if len(check_detections) > 0:
-        print(f"check_detections {check_detections}")
     return all_detection_info
