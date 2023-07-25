@@ -1,12 +1,12 @@
 import logging
+import math
 import time
 from typing import Callable, List, Tuple
-import math
 
+import shapely
 import torch
 from bitarray import bitarray
 from psycopg2 import sql
-import shapely
 
 from apperception.database import database
 
@@ -50,7 +50,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         keep = bitarray(len(payload.video))
         keep[:] = 1
-        
+
         ego_trajectory = []
         for i in range(len(payload.video)):
             v = payload.video[i]
@@ -63,7 +63,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
         ego_views = get_ego_views(payload)
         ego_views = [shapely.wkb.loads(view.to_ewkb(), hex=True)
-                     if type(view) is not shapely.geometry.Polygon else view
+                     if not isinstance(view, shapely.geometry.Polygon) else view
                      for view in ego_views]
         assert ego_views is not None
 
@@ -101,7 +101,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_generate_sample_plan = time.time()
             next_sample_plan, _ = generate_sample_plan_once(
                 payload.video, next_frame_num, ego_views,
-                all_detection_info_pruned,  fps=current_fps)
+                all_detection_info_pruned, fps=current_fps)
             total_sample_plan_time += time.time() - start_generate_sample_plan
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
