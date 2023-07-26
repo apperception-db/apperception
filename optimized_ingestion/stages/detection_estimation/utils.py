@@ -29,8 +29,6 @@ OPPOSITE_DIRECTION = 'opposite_direction'
 SEGMENT_TO_MAP = ('lane', 'lanesection', 'intersection', 'lanegroup')
 ROAD_TYPES = ["road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"]
 
-warnings.filterwarnings('error')
-
 
 class trajectory_3d(NamedTuple):
     coordinates: "Float3"
@@ -101,6 +99,8 @@ def project_point_onto_linestring(
 
     n = v - u
     assert n.dtype == np.dtype(np.float64)
+
+    warnings.filterwarnings('error')
     try:
         norm = np.linalg.norm(n, 2)
     except RuntimeWarning:
