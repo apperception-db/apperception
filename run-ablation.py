@@ -736,9 +736,9 @@ def run(__test):
 # In[ ]:
 
 
-tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+tests = ['de', 'optde', 'noopt', 'inview', 'objectfilter', 'geo', 'opt']
 # tests = ['de', 'optde']
-random.shuffle(tests)
+# random.shuffle(tests)
 
 for _test in tests:
     assert isinstance(pipelines[_test](lit(True)), Pipeline)
