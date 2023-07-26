@@ -149,17 +149,15 @@ class SamplePlan:
         for detection_info in self.all_detection_info:
             # get the frame num of car exits,
             # if the detection_info road type is intersection
-            # car_exit_segment_action would be None
+            # car_exit_segment_action would be invalid
             car_exit_segment_action = detection_info.get_car_exits_segment_action()
             if car_exit_segment_action.invalid:
-                next_sample_frame_num = self.next_frame_num
-                break
+                return
 
             car_exit_segment_frame_num = self.find_closest_frame_num(car_exit_segment_action.finish_time)
             next_sample_frame_num = min(next_sample_frame_num, car_exit_segment_frame_num)
             if next_sample_frame_num <= self.next_frame_num:
-                next_sample_frame_num = self.next_frame_num
-                break
+                return
 
             # get the frame num of car exits view
             car_exit_view_frame_num = get_car_exits_view_frame_num(detection_info, self.ego_views, next_sample_frame_num, self.fps)

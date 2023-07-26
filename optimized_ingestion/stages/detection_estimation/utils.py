@@ -549,7 +549,7 @@ def get_car_exits_view_frame_num(detection_info: "DetectionInfo",
         car_heading,
         road_type,
         ego_views,
-        detection_info.ego_config.frame_num_in_video,
+        detection_info.detection_id.frame_idx,
         max_frame_num,
         fps,
     )
