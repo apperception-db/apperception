@@ -96,6 +96,9 @@ def project_point_onto_linestring(
     v: "npt.NDArray[np.float64]" = np.array(line.coords[len(line.coords) - 1])
     assert v.dtype == np.dtype(np.float64)
 
+    if np.allclose(u, v):
+        return shapely.geometry.Point(u)
+
     n = v - u
     assert n.dtype == np.dtype(np.float64)
     n /= np.linalg.norm(n, 2)

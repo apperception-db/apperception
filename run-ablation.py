@@ -242,7 +242,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     }
     print('# of total    videos:', len(videos))
 
-    names = set(sampled_scenes[:50])
+    names = set(sampled_scenes[:20])
     filtered_videos = [
         n for n in videos
         if n[6:10] in names
@@ -357,6 +357,14 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                     'stage': stage.classname(),
                     'benchmark': benchmarks[0]
                 })
+
+                for bm in getattr(stage, '_benchmark', []):
+                    if video['filename'] in bm['name']:
+                        perf.append({
+                            'stage': stage.classname(),
+                            'addition': True,
+                            'benchmark': bm,
+                        })
 
             perf.append({
                 'stage': 'ingest',
@@ -736,9 +744,9 @@ def run(__test):
 # In[ ]:
 
 
-tests = ['noopt', 'inview', 'objectfilter', 'geo', 'de', 'opt', 'optde']
+tests = ['de', 'optde', 'noopt', 'inview', 'objectfilter', 'geo', 'opt']
 # tests = ['de', 'optde']
-random.shuffle(tests)
+# random.shuffle(tests)
 
 for _test in tests:
     assert isinstance(pipelines[_test](lit(True)), Pipeline)
