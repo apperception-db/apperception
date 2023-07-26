@@ -24,6 +24,7 @@ from typing import Any, List, Literal, Tuple
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
 import shapely
+import shapely.geometry
 
 from ...camera_config import CameraConfig
 from ...types import DetectionId, obj_detection
