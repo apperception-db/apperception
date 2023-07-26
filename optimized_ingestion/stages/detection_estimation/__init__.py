@@ -40,12 +40,14 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
     def __init__(self, predicate: "Callable[[DetectionInfo], bool]" = lambda _: True):
         self.predicates = [predicate]
+        self._benchmark = []
         super(DetectionEstimation, self).__init__()
 
     def add_filter(self, predicate: "Callable[[DetectionInfo], bool]"):
         self.predicates.append(predicate)
 
     def _run(self, payload: "Payload"):
+        start_time = time.time()
         if Detection2D.get(payload) is None:
             raise Exception()
 
@@ -68,13 +70,11 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         skipped_frame_num = []
         next_frame_num = 0
         action_type_counts = {}
-        start_time = time.time()
-        total_detection_time = 0
-        total_sample_plan_time = 0
+        total_detection_time = []
+        total_sample_plan_time = []
         dets = Detection3D.get(payload)
         assert dets is not None, [*payload.metadata.keys()]
         metadata: "list[DetectionEstimationMetadatum]" = []
-        start_time = time.time()
         # investigation_frame_nums = []
         current_fps = payload.video.fps
         for i in Stage.tqdm(range(len(payload.video) - 1)):
@@ -91,7 +91,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             det, _, dids = dets[i]
             logger.info(f"current frame num {i}")
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
-            total_detection_time += time.time() - start_detection_time
+            total_detection_time.append(time.time() - start_detection_time)
 
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
 
@@ -104,7 +104,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_sample_plan, _ = generate_sample_plan_once(
                 payload.video, next_frame_num, ego_views,
                 all_detection_info_pruned, fps=current_fps)
-            total_sample_plan_time += time.time() - start_generate_sample_plan
+            total_sample_plan_time.append(time.time() - start_generate_sample_plan)
 
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
@@ -126,8 +126,17 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
         logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"total_detection_time {total_detection_time}")
-        logger.info(f"total_generate_sample_plan_time {total_sample_plan_time}")
+        logger.info(f"total_detection_time {sum(total_detection_time)}")
+        logger.info(f"total_generate_sample_plan_time {sum(total_sample_plan_time)}")
+
+        self._benchmark.append({
+            'name': payload.video.videofile,
+            'skipped_frames': skipped_frame_num,
+            'actions': action_type_counts,
+            'runtime': total_run_time,
+            'detection': total_detection_time,
+            'sample_plan': total_sample_plan_time,
+        })
 
         for f in skipped_frame_num:
             keep[f] = 0
