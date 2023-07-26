@@ -358,6 +358,14 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                     'benchmark': benchmarks[0]
                 })
 
+                for bm in getattr(stage, '_benchmark', []):
+                    if video['filename'] in bm['name']:
+                        perf.append({
+                            'stage': stage.classname(),
+                            'addition': True,
+                            'benchmark': bm,
+                        })
+
             perf.append({
                 'stage': 'ingest',
                 'benchmark': {
