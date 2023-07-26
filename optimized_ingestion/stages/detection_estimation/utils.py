@@ -1,6 +1,7 @@
 import datetime
 import logging
 import math
+import warnings
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
 import numpy as np
@@ -27,6 +28,8 @@ OPPOSITE_DIRECTION = 'opposite_direction'
 
 SEGMENT_TO_MAP = ('lane', 'lanesection', 'intersection', 'lanegroup')
 ROAD_TYPES = ["road", "lane", "lanesection", "roadsection", "intersection", "lanegroup"]
+
+warnings.filterwarnings('error')
 
 
 class trajectory_3d(NamedTuple):
@@ -98,7 +101,14 @@ def project_point_onto_linestring(
 
     n = v - u
     assert n.dtype == np.dtype(np.float64)
-    n /= np.linalg.norm(n, 2)
+    try:
+        norm = np.linalg.norm(n, 2)
+    except RuntimeWarning:
+        print('norm', norm)
+    try:
+        n /= norm
+    except RuntimeWarning:
+        print('n', n)
 
     P = u + n * np.dot(x - u, n)
     return shapely.geometry.Point(P)
