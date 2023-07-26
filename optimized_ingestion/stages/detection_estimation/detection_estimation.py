@@ -110,8 +110,6 @@ class DetectionInfo:
         current_time = self.timestamp
         car_loc = self.car_loc3d
         exit_time, exit_point = time_to_exit_current_segment(self, current_time, car_loc)
-        if exit_time is None or exit_point is None:
-            return None
         return Action(current_time, exit_time, start_loc=car_loc,
                       end_loc=exit_point, action_type=CAR_EXIT_SEGMENT,
                       target_obj_id=self.detection_id,
@@ -153,22 +151,19 @@ class SamplePlan:
             # if the detection_info road type is intersection
             # car_exit_segment_action would be None
             car_exit_segment_action = detection_info.get_car_exits_segment_action()
-            if car_exit_segment_action and not car_exit_segment_action.invalid_action:
-                car_exit_segment_frame_num = self.find_closest_frame_num(
-                    car_exit_segment_action.finish_time)
-                if car_exit_segment_frame_num > self.next_frame_num:
-                    # get the frame num of car exits view
-                    car_exit_view_frame_num = get_car_exits_view_frame_num(
-                        detection_info, self.ego_views, car_exit_segment_frame_num, self.fps)
-                    next_sample_frame_num = min(next_sample_frame_num,
-                                                car_exit_segment_frame_num,
-                                                car_exit_view_frame_num)
-                else:
-                    next_sample_frame_num = self.next_frame_num
-                    break
-            else:
+            if car_exit_segment_action.invalid:
                 next_sample_frame_num = self.next_frame_num
                 break
+
+            car_exit_segment_frame_num = self.find_closest_frame_num(car_exit_segment_action.finish_time)
+            next_sample_frame_num = min(next_sample_frame_num, car_exit_segment_frame_num)
+            if next_sample_frame_num <= self.next_frame_num:
+                next_sample_frame_num = self.next_frame_num
+                break
+
+            # get the frame num of car exits view
+            car_exit_view_frame_num = get_car_exits_view_frame_num(detection_info, self.ego_views, next_sample_frame_num, self.fps)
+            next_sample_frame_num = min(next_sample_frame_num, car_exit_view_frame_num)
         self.next_frame_num = next_sample_frame_num
 
     def generate_sample_plan(self, view_distance: float = 50.0):
@@ -177,16 +172,16 @@ class SamplePlan:
             priority, sample_action = detection_info.generate_single_sample_action(view_distance)
             if sample_action is not None:
                 self.add(priority, sample_action)
-        if self.action and not self.action.invalid_action:
+        if self.action and not self.action.invalid:
             self.next_frame_num = min(
                 self.next_frame_num,
                 self.find_closest_frame_num(self.action.finish_time))
 
     def add(self, priority: float, sample_action: "Action", time_threshold: float = 0.5):
         assert sample_action is not None
-        if sample_action.invalid_action:
+        if sample_action.invalid:
             return
-        # assert not sample_action.invalid_action
+        # assert not sample_action.invalid
 
         assert (self.action is None) == (self.current_priority is None)
         if self.action is None or self.current_priority is None:
@@ -225,6 +220,20 @@ class SamplePlan:
                 nearest_index = i
 
         return nearest_index
+        # TODO: Binary Search
+        # lo, hi = 0, len(self.video) - 1
+        # confs = self.video.interpolated_frames
+        # assert confs[lo].timestamp < finish_time, (confs[lo].timestamp, finish_time)
+        # if confs[hi].timestamp < finish_time:
+        #     return hi
+
+        # while hi - lo > 1:
+        #     mid = (lo + hi) // 2
+        #     if confs[mid].timestamp < finish_time:
+        #         lo = mid
+        #     else:
+        #         hi = mid
+        # return lo
 
     def get_next_frame_num(self):
         return self.next_frame_num

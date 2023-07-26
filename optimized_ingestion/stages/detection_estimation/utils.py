@@ -541,17 +541,27 @@ def get_car_exits_view_frame_num(detection_info: "DetectionInfo",
     car_heading = detection_info.segment_heading
     road_type = detection_info.road_type
     car_loc = detection_info.car_loc3d[:2]
-    if car_heading is None:
+    if car_heading is None or road_type == 'intersection':
         return None
-    if road_type == 'intersection':
-        return None
-    return car_exits_view_frame_num(car_loc, car_heading, road_type,
-                                    ego_views, detection_info.ego_config.frame_num_in_video,
-                                    max_frame_num, fps)
+
+    return car_exits_view_frame_num(
+        car_loc,
+        car_heading,
+        road_type,
+        ego_views,
+        detection_info.ego_config.frame_num_in_video,
+        max_frame_num,
+        fps,
+    )
 
 
-def car_exits_view_frame_num(car_loc, car_heading, road_type, ego_views,
-                             current_frame_num, car_exits_segment_frame_num, fps):
+def car_exits_view_frame_num(car_loc: "Float2",
+                             car_heading: "float",
+                             road_type: "str",
+                             ego_views: "list[shapely.geometry.Polygon]",
+                             current_frame_num: "int",
+                             car_exits_segment_frame_num: "int",
+                             fps: "int"):
     assert car_exits_segment_frame_num < len(ego_views)
     assert current_frame_num < car_exits_segment_frame_num
     start_frame_num = current_frame_num
