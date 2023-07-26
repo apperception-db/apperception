@@ -314,7 +314,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
             if in_view(current_road_point, ego_config.ego_translation, fov_lines):
                 keep_road_polygon_points.append(current_road_point)
         if (len(keep_road_polygon_points) > 2
-                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 40):
+                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
             mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
                 shapely.geometry.Polygon(keep_road_polygon_points),
