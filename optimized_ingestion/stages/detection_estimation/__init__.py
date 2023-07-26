@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Callable, List, Tuple
 
+import postgis
 import shapely
 import shapely.geometry
 import torch
@@ -62,10 +63,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             return keep, {DetectionEstimation.classname(): [[]] * len(keep)}
 
         ego_views = get_ego_views(payload)
-        ego_views = [shapely.wkb.loads(view.to_ewkb(), hex=True)
-                     if not isinstance(view, shapely.geometry.Polygon) else view
-                     for view in ego_views]
-        assert ego_views is not None
+        ego_views = [shapely.wkb.loads(view.to_ewkb(), hex=True) for view in ego_views]
 
         skipped_frame_num = []
         next_frame_num = 0
@@ -81,32 +79,38 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         current_fps = payload.video.fps
         for i in Stage.tqdm(range(len(payload.video) - 1)):
             current_ego_config = payload.video[i]
+
             if i != next_frame_num:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
+
             next_frame_num = i + 1
+
             start_detection_time = time.time()
             det, _, dids = dets[i]
             logger.info(f"current frame num {i}")
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time += time.time() - start_detection_time
+
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
-            # assert len(all_detection_info_pruned) == len(det), (len(all_detection_info_pruned), len(det))
+
             if len(det) == 0:
                 skipped_frame_num.append(i)
                 metadata.append([])
                 continue
+
             start_generate_sample_plan = time.time()
             next_sample_plan, _ = generate_sample_plan_once(
                 payload.video, next_frame_num, ego_views,
                 all_detection_info_pruned, fps=current_fps)
             total_sample_plan_time += time.time() - start_generate_sample_plan
+
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
-                action_type_counts[next_action_type] = 1
-            else:
-                action_type_counts[next_action_type] += 1
+                action_type_counts[next_action_type] = 0
+            action_type_counts[next_action_type] += 1
+
             next_frame_num = next_sample_plan.get_next_frame_num()
             logger.info(f"founded next_frame_num {next_frame_num}")
             metadata.append(all_detection_info)
@@ -131,7 +135,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         return keep, {DetectionEstimation.classname(): metadata}
 
 
-def get_ego_views(payload: "Payload"):
+def get_ego_views(payload: "Payload") -> "list[postgis.Polygon]":
     indices, view_areas = get_views(payload, distance=100, skip=False)
     views_raw = database.execute(sql.SQL("""
     SELECT index, ST_ConvexHull(points)
@@ -143,11 +147,11 @@ def get_ego_views(payload: "Payload"):
         view_areas=sql.Literal(view_areas),
         indices=sql.Literal(indices),
     ))
-    assert len(views_raw) == len(payload.video), (len(views_raw), len(payload.video))
-    views = [None for _ in range(len(payload.video))]
-    for idx, view in views_raw:
-        views[idx] = view
-    return views
+
+    idxs_set = set(idx for idx, _ in views_raw)
+    idxs_all = set(range(len(payload.video)))
+    assert idxs_set == idxs_all, (idxs_set.difference(idxs_all), idxs_all.difference(idxs_set))
+    return [v for _, v in sorted(views_raw)]
 
 
 def prune_detection(
