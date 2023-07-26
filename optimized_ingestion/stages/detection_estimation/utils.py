@@ -1,7 +1,6 @@
 import datetime
 import logging
 import math
-import warnings
 from typing import TYPE_CHECKING, List, NamedTuple, Tuple
 
 import numpy as np
@@ -97,18 +96,12 @@ def project_point_onto_linestring(
     v: "npt.NDArray[np.float64]" = np.array(line.coords[len(line.coords) - 1])
     assert v.dtype == np.dtype(np.float64)
 
+    if np.allclose(u, v):
+        return shapely.geometry.Point(u)
+
     n = v - u
     assert n.dtype == np.dtype(np.float64)
-
-    warnings.filterwarnings('error')
-    try:
-        norm = np.linalg.norm(n, 2)
-    except RuntimeWarning:
-        print('norm', norm)
-    try:
-        n /= norm
-    except RuntimeWarning:
-        print('n', n)
+    n /= np.linalg.norm(n, 2)
 
     P = u + n * np.dot(x - u, n)
     return shapely.geometry.Point(P)
