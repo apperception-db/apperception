@@ -16,6 +16,7 @@ from ...payload import Payload
 from ...types import DetectionId
 from ...video import Video
 from ..detection_2d.detection_2d import Detection2D
+from ..detection_2d.detection_2d import Metadatum as D2DMetadatum
 from ..detection_3d import Detection3D
 from ..in_view.in_view import get_views
 from ..stage import Stage
@@ -83,8 +84,12 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
             next_frame_num = i + 1
 
-            start_detection_time = time.time()
             det, _, dids = dets[i]
+            if objects_count_change(dets, i, i + 5) <= i + 2:
+                metadata.append([])
+                continue
+
+            start_detection_time = time.time()
             logger.info(f"current frame num {i}")
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
             total_detection_time.append(time.time() - start_detection_time)
@@ -108,11 +113,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             action_type_counts[next_action_type] += 1
 
             next_frame_num = next_sample_plan.get_next_frame_num()
-            for j in range(i + 1, next_frame_num):
-                det_j, _, _ = dets[j]
-                if len(det_j) != len(det):
-                    next_frame_num = max(j - 1, i + 1)
-                    break
+            next_frame_num = objects_count_change(dets, i, next_frame_num)
             logger.info(f"founded next_frame_num {next_frame_num}")
             metadata.append(all_detection_info)
 
@@ -143,6 +144,17 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             keep[f] = 0
 
         return keep, {DetectionEstimation.classname(): metadata}
+
+
+def objects_count_change(dets: "list[D2DMetadatum]", cur: "int", nxt: "int"):
+    det, _, _ = dets[cur]
+    for j in range(cur + 1, nxt + 1):
+        future_det, _, _ = dets[j]
+        if len(future_det) > len(det):
+            return j
+        elif len(future_det) < len(det):
+            return max(j - 1, cur + 1)
+    return nxt
 
 
 def get_ego_views(payload: "Payload") -> "list[postgis.Polygon]":
