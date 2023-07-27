@@ -86,6 +86,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
             det, _, dids = dets[i]
             if objects_count_change(dets, i, i + 5) <= i + 2:
+                # will not skip if skipping less than 2 frames
                 metadata.append([])
                 continue
 
