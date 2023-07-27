@@ -44,6 +44,8 @@ from .utils import (
     trajectory_3d,
 )
 
+MAX_SKIP = 5
+
 
 @dataclass
 class DetectionInfo:
@@ -145,7 +147,7 @@ class SamplePlan:
     action: "Action | None" = None
 
     def update_next_sample_frame_num(self):
-        next_sample_frame_num = len(self.ego_views)
+        next_sample_frame_num = self.next_frame_num + MAX_SKIP - 1
         assert self.all_detection_info is not None
         for detection_info in self.all_detection_info:
             # get the frame num of car exits,
