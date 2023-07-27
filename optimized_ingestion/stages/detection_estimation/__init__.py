@@ -115,7 +115,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             for j in range(i + 1, next_frame_num):
                 det_j, _, _ = dets[j]
                 if len(det_j) != len(det):
-                    next_frame_num = max(j-1, i+1)
+                    next_frame_num = max(j - 1, i + 1)
                     break
             logger.info(f"founded next_frame_num {next_frame_num}")
             metadata.append(all_detection_info)
