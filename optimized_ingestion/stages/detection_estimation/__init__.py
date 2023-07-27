@@ -103,20 +103,21 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                 continue
 
             start_generate_sample_plan = time.time()
-            next_sample_plan, _ = generate_sample_plan_once(
-                payload.video, next_frame_num, ego_views,
-                all_detection_info_pruned, fps=current_fps)
+            next_sample_plan, _ = generate_sample_plan_once(payload.video,
+                                                            next_frame_num,
+                                                            ego_views,
+                                                            all_detection_info_pruned,
+                                                            fps=current_fps)
             total_sample_plan_time.append(time.time() - start_generate_sample_plan)
+            next_frame_num = next_sample_plan.get_next_frame_num()
+            next_frame_num = objects_count_change(dets, i, next_frame_num)
+            logger.info(f"founded next_frame_num {next_frame_num}")
+            metadata.append(all_detection_info)
 
             next_action_type = next_sample_plan.get_action_type()
             if next_action_type not in action_type_counts:
                 action_type_counts[next_action_type] = 0
             action_type_counts[next_action_type] += 1
-
-            next_frame_num = next_sample_plan.get_next_frame_num()
-            next_frame_num = objects_count_change(dets, i, next_frame_num)
-            logger.info(f"founded next_frame_num {next_frame_num}")
-            metadata.append(all_detection_info)
 
         # TODO: ignore the last frame ->
         metadata.append([])
