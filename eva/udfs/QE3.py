@@ -17,7 +17,7 @@ from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.map_expansion import arcline_path_utils
 from nuscenes.map_expansion.bitmap import BitMap
 
-class IntersectionQuery(AbstractUDF):
+class QE3(AbstractUDF):
     @setup(cacheable=True, udf_type="Query", batchable=True)
     def setup(self):
         self.nusc_map = NuScenesMap(dataroot='/data/raw/map-expansion', map_name='boston-seaport')
@@ -39,19 +39,19 @@ class IntersectionQuery(AbstractUDF):
         ],
     )
     def forward(self, df):
-        objClasses = ["truck"]
+        objClasses = ["car", "truck"]
         def _forward(row):
             locations, egoTranslation, egoHeading = [np.array(x) for x in row.iloc]
             for object in locations:
                 x, y, z, objClass, conf = object
-                loc = [float(x) for x in (x, y, z)]
+                loc = np.array([float(x) for x in (x, y, z)])
 
                 if objClass not in objClasses:
                    continue
                 
-                convX, convY = convert_camera([np.float(x) for x in egoTranslation], math.radians(np.float(egoHeading)), loc)
+                distance = np.linalg.norm(egoTranslation - loc)
 
-                if -10 < convX < -1 and 0 < convY < 50:
+                if distance < 10 and is_contained_lane(self.nusc_map, loc):
                    return True
             return False
 
@@ -61,18 +61,12 @@ class IntersectionQuery(AbstractUDF):
 
 
     def name(self):
-        return "RelativePositionQuery"
+        return "QE3"
 
-def convert_camera(cam_position, cam_heading, obj_point):
-    cam_x, cam_y, _ = cam_position
-    obj_x, obj_y, _ = obj_point
-    
-    subtract_x = obj_x - cam_x
-    subtract_y = obj_y - cam_y
-
-    subtract_mag = np.sqrt(subtract_x**2 + subtract_y**2)
-
-    res_x = subtract_mag * np.cos(-cam_heading + np.arctan2(subtract_y, subtract_x))
-    res_y = subtract_mag * np.sin(-cam_heading + np.arctan2(subtract_y, subtract_x))
-
-    return res_x, res_y
+def is_contained_lane(nusc_map, position):
+  x, y, z = position
+  lane_segment_token = nusc_map.layers_on_point(x, y)['lane']
+  if lane_segment_token != '':
+    return True
+  else:
+    return False

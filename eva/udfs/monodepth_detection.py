@@ -84,7 +84,7 @@ class monodepth:
         assert model_name in MODEL_NAMES, "Invalid Model Name"
 
         if torch.cuda.is_available() and not no_cuda:
-            self.device = torch.device("cuda:1")
+            self.device = torch.device("cuda")
             # print("GPU Visible")
         else:
             self.device = torch.device("cpu")

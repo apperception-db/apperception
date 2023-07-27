@@ -16,7 +16,7 @@ from nuscenes.map_expansion.map_api import NuScenesMap
 from nuscenes.map_expansion import arcline_path_utils
 from nuscenes.map_expansion.bitmap import BitMap
 
-class IntersectionQuery(AbstractUDF):
+class QE4(AbstractUDF):
     @setup(cacheable=True, udf_type="Query", batchable=True)
     def setup(self):
         self.nusc_map = NuScenesMap(dataroot='/data/raw/map-expansion', map_name='boston-seaport')
@@ -40,17 +40,17 @@ class IntersectionQuery(AbstractUDF):
     def forward(self, df):
         objClasses = ["car", "truck"]
         def _forward(row):
-            locations = [np.array(x) for x in row.iloc][0]
+            locations, egoTranslation, egoHeading = [np.array(x) for x in row.iloc]
+            numFound = 0
             for object in locations:
                 x, y, z, objClass, conf = object
                 loc = [float(x) for x in (x, y, z)]
 
-                if objClass not in objClasses:
-                   continue
-                   
-                if is_contained_intersection(self.nusc_map, loc):
-                   return True
-            return False
+                distance = np.linalg.norm(egoTranslation - loc)
+
+                if objClass in objClasses and is_contained_lane(self.nusc_map, loc) and distance < 50:
+                   numFound += 1
+            return numFound >= 3
 
         ret = pd.DataFrame()
         ret["queryresult"] = df.apply(_forward, axis=1)
@@ -58,13 +58,12 @@ class IntersectionQuery(AbstractUDF):
 
 
     def name(self):
-        return "IntersectionQuery"
+        return "QE4"
 
-def is_contained_intersection(nusc_map, position):
+def is_contained_lane(nusc_map, position):
   x, y, z = position
-  road_segment_token = nusc_map.layers_on_point(x, y)['road_segment']
-  if road_segment_token != '':
-    road_segment = nusc_map.get('road_segment', road_segment_token)
-    return road_segment["is_intersection"]
+  lane_segment_token = nusc_map.layers_on_point(x, y)['lane']
+  if lane_segment_token != '':
+    return True
   else:
     return False

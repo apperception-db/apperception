@@ -39,8 +39,7 @@ class LocationDetection(AbstractUDF):
     def forward(self, df): 
         def _forward(row):
             classes, detections, confs, depth, cameraTranslation, _, cameraIntrinsic = [np.array(x) for x in row.iloc]  
-            ## Inner joins do not work in eva, so if encounter rows that are not supposed to be there
-            # return dummy data that will be filtered out by query
+            ## Eva has a bug where duplicate rows sometimes appear with NaN values so we discard these
             if np.isnan(cameraTranslation).any():
                 d3ds = [[-1, -1, -1, "dummy", 0]]
                 return d3ds
