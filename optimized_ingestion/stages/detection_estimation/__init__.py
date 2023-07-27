@@ -96,7 +96,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
 
             if len(det) == 0:
-                skipped_frame_num.append(i)
+                # skipped_frame_num.append(i)
                 metadata.append([])
                 continue
 
@@ -112,6 +112,11 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             action_type_counts[next_action_type] += 1
 
             next_frame_num = next_sample_plan.get_next_frame_num()
+            for j in range(i + 1, next_frame_num):
+                det_j, _, _ = dets[j]
+                if len(det_j) != len(det):
+                    next_frame_num = max(j - 1, i + 1)
+                    break
             logger.info(f"founded next_frame_num {next_frame_num}")
             metadata.append(all_detection_info)
 
