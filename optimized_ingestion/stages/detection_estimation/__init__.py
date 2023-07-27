@@ -149,7 +149,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
 def objects_count_change(dets: "list[D2DMetadatum]", cur: "int", nxt: "int"):
     det, _, _ = dets[cur]
-    for j in range(cur + 1, nxt + 1):
+    for j in range(cur + 1, min(nxt + 1, len(dets))):
         future_det, _, _ = dets[j]
         if len(future_det) > len(det):
             return j
