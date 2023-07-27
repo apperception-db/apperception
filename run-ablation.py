@@ -293,7 +293,8 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
             for pre, metadata in all_metadata.items():
                 p = bm_dir(f"{pre}--{filename}_{run}", f"{name}.json")
                 with open(p, "w") as f:
-                    json.dump(metadata[name], f, cls=MetadataJSONEncoder, indent=1)
+                    json.dump(metadata[name], f, cls=MetadataJSONEncoder,
+                              indent=1)
 
             times_rquery = []
             for i, predicate in enumerate(predicates):
@@ -303,10 +304,11 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
                 # Ingest Trackings
                 ego_meta = frames.interpolated_frames
                 sortmeta = FromTracking2DAndRoad.get(output)
-                segment_trajectory_mapping = FromTracking3D.get(output)
-                tracks = get_tracks(sortmeta, ego_meta, segment_trajectory_mapping, True)
+                assert sortmeta is not None
+                segment_trajectories = FromTracking3D.get(output)
+                tracks = get_tracks(sortmeta, ego_meta, segment_trajectories)
                 for obj_id, track in tracks.items():
-                    trajectory = format_trajectory(name, obj_id, track, True)
+                    trajectory = format_trajectory(name, obj_id, track)
                     if trajectory:
                         insert_trajectory(database, *trajectory)
 
@@ -470,7 +472,7 @@ def create_pipeline(
     pipeline.add_filter(FromTracking2DAndRoad())
 
     # Segment Trajectory
-    pipeline.add_filter(FromTracking3D())
+    # pipeline.add_filter(FromTracking3D())
 
     return pipeline
 
