@@ -1,5 +1,3 @@
-import collections
-import collections.abc
 from datetime import datetime
 from typing import Iterable
 
@@ -43,7 +41,7 @@ class Video(Iterable["CameraConfig"]):
     def __getitem__(self, index: "int"):
         return self.interpolated_frames[index]
 
-    def __iter__(self) -> "collections.abc.Iterator":
+    def __iter__(self):
         return iter(self.interpolated_frames)
 
     def __len__(self):

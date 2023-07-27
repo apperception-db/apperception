@@ -54,11 +54,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         keep = bitarray(len(payload.video))
         keep[:] = 1
 
-        ego_trajectory = []
-        for i in range(len(payload.video)):
-            v = payload.video[i]
-            v.frame_num_in_video = i
-            ego_trajectory.append(trajectory_3d(v.ego_translation, v.timestamp))
+        ego_trajectory = [trajectory_3d(v.ego_translation, v.timestamp) for v in payload.video]
         ego_speed = get_ego_avg_speed(ego_trajectory)
         logger.info(f"ego_speed: {ego_speed}")
         if ego_speed < 2:
@@ -95,7 +91,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
 
-            if len(det) == 0:
+            if len(det) == 0 or len(all_detection_info_pruned) == 0:
                 # skipped_frame_num.append(i)
                 metadata.append([])
                 continue
