@@ -85,8 +85,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
 
             det, _, dids = dets[i]
-            if objects_count_change(dets, i, i + 5) <= i + 2:
-                # will not skip if skipping less than 2 frames
+            if objects_count_change(dets, i, i + 5) <= i + 1:
+                # will not map segment if cannot skip in the first place
                 metadata.append([])
                 continue
 

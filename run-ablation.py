@@ -252,7 +252,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
 
     # s_from, s_to = slices[test]
     s_from, s_to = (int(test), int(test) + 1)
-    STEP = N // 5
+    STEP = N // 10
     print('test', test)
     print('from', s_from*STEP)
     print('to  ', s_to*STEP)
@@ -732,14 +732,20 @@ def run(__test):
     p2 = pipelines[__test](pred2)
     p34 = pipelines[__test](pred3)
 
-    print(p2)
+    print('Pipeline P2:')
+    for s in p2.stages:
+        print(' -', s)
     run_benchmark(p2, 'q2-' + __test, [pred2, pred2_notrack], run=1, ignore_error=True)
 
-    print(p34)
+    print('Pipeline P3,P4:')
+    for s in p34.stages:
+        print(' -', s)
     run_benchmark(p34, 'q34-' + __test, [pred3, pred4, pred3_notrack, pred4_notrack], run=1, ignore_error=True)
 
     if __test != 'optde' and __test != 'de':
-        print(p1)
+        print('Pipeline P1:')
+        for s in p1.stages:
+            print(' -', s)
         run_benchmark(p1, 'q1-' + __test, [pred1, pred1_notrack], run=1, ignore_error=True)
 
 
@@ -755,7 +761,17 @@ for _test in tests:
 
 for idx, _test in enumerate(tests):
     print(f'----------- {idx} / {len(tests)} --- {_test} -----------')
-    run(_test)
+    done = False
+    retry = 0
+    while not done and retry < 5:
+        try:
+            run(_test)
+            done = True
+        except Exception as e:
+            print(e)
+            print('retrying...')
+            time.sleep(60)
+            retry += 1
 
 
 # In[ ]:
