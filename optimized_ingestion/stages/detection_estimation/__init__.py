@@ -93,7 +93,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             logger.info(f"current frame num {i}")
             all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
-            total_detection_time.append(time.time() - start_detection_time)
+            total_detection_time.append((time.time() - start_detection_time, len(det), len(all_detection_info)))
 
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
 
@@ -130,7 +130,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
         logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"total_detection_time {sum(total_detection_time)}")
+        logger.info(f"total_detection_time {sum(t for t, _, _ in total_detection_time)}")
         logger.info(f"total_generate_sample_plan_time {sum(total_sample_plan_time)}")
 
         self._benchmark.append({
