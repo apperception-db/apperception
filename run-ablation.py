@@ -790,8 +790,8 @@ for idx, _test in enumerate(tests):
 # In[ ]:
 
 
-if not is_notebook():
-    subprocess.Popen('sudo shutdown -h now', shell=True)
+# if not is_notebook():
+#     subprocess.Popen('sudo shutdown -h now', shell=True)
 
 
 # In[ ]:
