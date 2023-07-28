@@ -205,50 +205,40 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
         OR SegmentPolygon.__RoadType__lane__
         OR SegmentPolygon.__RoadType__lanegroup__
         OR SegmentPolygon.__RoadType__lanesection__)
+        AND NOT SegmentPolygon.__RoadType__roadsection__
     ),
-    MaxPolygon AS (
-        SELECT token, MAX(ST_Area(Polygon.elementPolygon)) as size
+    MinPolygon AS (
+        SELECT token, MIN(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
         JOIN AvailablePolygon AS Polygon
             ON ST_Contains(Polygon.elementPolygon, p.point)
         GROUP BY token
     ),
-    MaxPolygonId AS (
+    MinPolygonId AS (
         SELECT token, MIN(elementId) as elementId
         FROM Point AS p
-        JOIN MaxPolygon USING (token)
+        JOIN MinPolygon USING (token)
         JOIN AvailablePolygon as Polygon
             ON ST_Contains(Polygon.elementPolygon, p.point)
-            AND ST_Area(Polygon.elementPolygon) = MaxPolygon.size
+            AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
         GROUP BY token
     ),
-    PointPolygonSegment AS (
-        SELECT
-            *,
-            ST_Distance(p.point, segmentLine) AS distance
-        FROM Point AS p
-        JOIN MaxPolygonId USING (token)
-        JOIN AvailablePolygon USING (elementId)
-        JOIN Segment USING (elementId)
-    ),
-    MinDis as (
-        SELECT token, MIN(distance) as mindistance
-        FROM PointPolygonSegment
-        GROUP BY token
-    )
     SELECT
         p.token,
-        p.elementid,
-        p.elementpolygon,
-        ARRAY_AGG(s.segmentline)::geometry[],
-        ARRAY_AGG(s.heading)::real[],
+        AvailablePolygon.elementid,
+        AvailablePolygon.elementpolygon,
+        ARRAY_AGG(Segment.segmentline)::geometry[],
+        ARRAY_AGG(Segment.heading)::real[],
         {SQL_ROAD_TYPES}
-    FROM PointPolygonSegment AS p
-        LEFT OUTER JOIN segment AS s USING (elementid)
-    JOIN MinDis USING (token)
-    WHERE p.distance = MinDis.mindistance
-        AND NOT p.__RoadType__roadsection__
-    GROUP BY p.elementid, p.token, p.elementpolygon, {SQL_ROAD_TYPES};
+    FROM Point AS p
+    JOIN MinPolygonId USING (token)
+    JOIN AvailablePolygon USING (elementId)
+    JOIN Segment USING (elementId)
+    GROUP BY
+        AvailablePolygon.elementid,
+        p.token,
+        AvailablePolygon.elementpolygon,
+        {SQL_ROAD_TYPES};
     """).format(
         tokens=sql.Literal(tokens),
         points=sql.Literal(points),

@@ -97,7 +97,7 @@ def project_point_onto_linestring(
     assert v.dtype == np.dtype(np.float64)
 
     if np.allclose(u, v):
-        return shapely.geometry.Point(u)
+        return None
 
     n = v - u
     assert n.dtype == np.dtype(np.float64)
@@ -294,6 +294,9 @@ def get_segment_line(road_segment_info: "RoadPolygonInfo", car_loc3d: "Float3"):
 
         projection = project_point_onto_linestring(
             shapely.geometry.Point(car_loc3d[:2]), segment_line)
+
+        if projection is None:
+            continue
 
         if segment_line.distance(projection) < 1e-8:
             if abs(segment_heading - longest_heading) < 30:
