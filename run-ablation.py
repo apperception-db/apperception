@@ -772,6 +772,8 @@ for idx, _test in enumerate(tests):
             print('retrying...')
             time.sleep(60)
             retry += 1
+            with open(os.path.join(BENCHMARK_DIR, f'exception--bm{test}-t{_test}-r{retry}'), 'w') as f:
+                f.write(str(e))
 
 
 # In[ ]:
@@ -790,8 +792,8 @@ for idx, _test in enumerate(tests):
 # In[ ]:
 
 
-# if not is_notebook():
-#     subprocess.Popen('sudo shutdown -h now', shell=True)
+if not is_notebook():
+    subprocess.Popen('sudo shutdown -h now', shell=True)
 
 
 # In[ ]:
