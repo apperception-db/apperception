@@ -45,7 +45,7 @@ input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
 
-SQL_ROAD_TYPES = ','.join('p.__RoadType__' + rt + '__' for rt in ROAD_TYPES)
+SQL_ROAD_TYPES = ','.join('__RoadType__' + rt + '__' for rt in ROAD_TYPES)
 
 
 MAX_POLYGON_CONTAIN_QUERY = sql.SQL(f"""
