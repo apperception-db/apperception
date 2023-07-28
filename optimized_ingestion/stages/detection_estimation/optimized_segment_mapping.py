@@ -32,10 +32,9 @@ from .segment_mapping import (
     RoadSegmentWithHeading,
     Segment,
     get_fov_lines,
-    in_view,
     make_road_polygon_with_heading,
 )
-from .utils import ROAD_TYPES, Float2, Float22
+from .utils import ROAD_TYPES, Float22
 
 logger = logging.getLogger(__name__)
 
@@ -267,8 +266,8 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     mapped_road_polygon_info = {}
     fov_lines = get_fov_lines(ego_config)
 
-    def not_in_view(point: "Float2"):
-        return not in_view(point, ego_config.ego_translation, fov_lines)
+    # def not_in_view(point: "Float2"):
+    #     return not in_view(point, ego_config.ego_translation, fov_lines)
 
     for order_id, road_polygon in list(zip(order_ids, mapped_polygons)):
         frame_idx = detections[0].detection_id.frame_idx
@@ -291,23 +290,23 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         assert isinstance(XYs[0][0], float), type(XYs[0][0])
         assert isinstance(XYs[1][0], float), type(XYs[1][0])
         polygon_points = list(zip(*XYs))
-        roadpolygon = shapely.geometry.Polygon(polygon_points)
+        # roadpolygon = shapely.geometry.Polygon(polygon_points)
 
-        decoded_road_polygon_points = polygon_points
-        if all(map(not_in_view, polygon_points)):
-            continue
+        # decoded_road_polygon_points = polygon_points
+        # if all(map(not_in_view, polygon_points)):
+        #     continue
 
-        intersection_points = intersection(fov_lines, roadpolygon)
-        decoded_road_polygon_points += intersection_points
-        keep_road_polygon_points: "list[Float2]" = []
-        for current_road_point in decoded_road_polygon_points:
-            if in_view(current_road_point, ego_config.ego_translation, fov_lines):
-                keep_road_polygon_points.append(current_road_point)
-        if (len(keep_road_polygon_points) > 2
-                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
+        # intersection_points = intersection(fov_lines, roadpolygon)
+        # decoded_road_polygon_points += intersection_points
+        # keep_road_polygon_points: "list[Float2]" = []
+        # for current_road_point in decoded_road_polygon_points:
+        #     if in_view(current_road_point, ego_config.ego_translation, fov_lines):
+        #         keep_road_polygon_points.append(current_road_point)
+        if len(polygon_points) > 2:
+            # and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
             mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
-                shapely.geometry.Polygon(keep_road_polygon_points),
+                shapely.geometry.Polygon(polygon_points),
                 segmentlines,
                 roadtype,
                 segmentheadings,
