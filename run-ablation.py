@@ -242,10 +242,10 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     }
     print('# of total    videos:', len(videos))
 
-    names = set(sampled_scenes[:50])
+    names = set(sampled_scenes[:100])
     filtered_videos = [
         n for n in videos
-        if n[6:10] in names
+        if n[6:10] in names and 'FRONT' in n
     ]
     N = len(filtered_videos)
     print('# of filtered videos:', N)
