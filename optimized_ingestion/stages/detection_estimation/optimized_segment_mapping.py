@@ -221,7 +221,7 @@ def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "C
             ON ST_Contains(Polygon.elementPolygon, p.point)
             AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
         GROUP BY token
-    ),
+    )
     SELECT
         p.token,
         AvailablePolygon.elementid,
