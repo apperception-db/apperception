@@ -92,8 +92,8 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
 
             start_detection_time = time.time()
             logger.info(f"current frame num {i}")
-            all_detection_info = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
-            total_detection_time.append((time.time() - start_detection_time, len(det), len(all_detection_info)))
+            all_detection_info, times = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
+            total_detection_time.append((time.time() - start_detection_time, len(det), len(all_detection_info, times)))
 
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
 
@@ -216,6 +216,7 @@ def construct_estimated_all_detection_info(
     ego_config: "CameraConfig",
     ego_trajectory: "list[trajectory_3d]",
 ) -> "list[DetectionInfo]":
+    _times = time.time()
     all_detections = []
     for det, did in zip(detections, detection_ids):
         bbox = det[:4]
@@ -239,5 +240,5 @@ def construct_estimated_all_detection_info(
             car_bbox3d,
             car_bbox2d)
         )
-    all_detection_info = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
-    return all_detection_info
+    all_detection_info, times = construct_all_detection_info(ego_config, ego_trajectory, all_detections)
+    return all_detection_info, [_times] + times

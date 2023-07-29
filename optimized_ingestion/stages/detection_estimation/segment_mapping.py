@@ -138,7 +138,7 @@ class RoadPolygonInfo:
         if len(self.segment_lines) == 0:
             return
 
-        start_segment_map: "dict[Tuple[float, float], Tuple[shapely.geometry.LineString, float]]" = {}
+        start_segment_map: "dict[Float2, Tuple[shapely.geometry.LineString, float]]" = {}
         ends: "set[Float2]" = set()
         for line, heading in zip(self.segment_lines, self.segment_headings):
             start = line.coords[0]
@@ -146,7 +146,7 @@ class RoadPolygonInfo:
             start_segment_map[start] = (line, heading)
             ends.add(end)
 
-        starts: "list[Tuple[float, float]]" = [
+        starts: "list[Float2]" = [
             start
             for start
             in start_segment_map
@@ -156,13 +156,13 @@ class RoadPolygonInfo:
 
         sorted_lines: "list[shapely.geometry.LineString]" = []
         sorted_headings: "list[float]" = []
-        start: "Tuple[float, float]" = starts[0]
+        start: "Float2" = starts[0]
         while start in start_segment_map:
             line, heading = start_segment_map[start]
             sorted_lines.append(line)
             sorted_headings.append(heading)
 
-            start: "Tuple[float, float]" = line.coords[1]
+            start: "Float2" = line.coords[1]
 
         self.segment_lines = sorted_lines
         self.segment_headings = sorted_headings

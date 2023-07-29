@@ -14,6 +14,7 @@ import array
 import logging
 import math
 import os
+import time
 from typing import NamedTuple, Tuple
 
 import numpy as np
@@ -97,7 +98,7 @@ class RoadPolygonInfo(NamedTuple):
     segment_headings: "list[float]"
     contains_ego: bool
     ego_config: "CameraConfig"
-    fov_lines: "Tuple[Float22, Float22]"
+    fov_lines: "tuple[Float22, Float22]"
 
 
 def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
@@ -253,18 +254,25 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
     # start_time = time.time()
+    times = []
+    times.append(time.time())
     results = map_detections_to_segments(detections, ego_config)
-    # assert all(r[6:] == (1, 1) for r in results)
+    times.append(time.time())
+
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
     mapped_polygons = [*map(make_road_polygon_with_heading, mapped_polygons)]
+    times.append(time.time())
     for row in mapped_polygons:
         types, line, heading = row[2:5]
         assert line is not None
         assert types is not None
         assert heading is not None
+    times.append(time.time())
     mapped_polygons = reformat_return_polygon(mapped_polygons)
+    times.append(time.time())
     mapped_road_polygon_info = {}
     fov_lines = get_fov_lines(ego_config)
+    times.append(time.time())
 
     # def not_in_view(point: "Float2"):
     #     return not in_view(point, ego_config.ego_translation, fov_lines)
@@ -279,7 +287,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         assert segmentlines is not None
         assert segmentheadings is not None
 
-        assert all(isinstance(line, shapely.geometry.LineString) for line in segmentlines)
+        # assert all(isinstance(line, shapely.geometry.LineString) for line in segmentlines)
 
         p = plpygis.Geometry(roadpolygon.to_ewkb())
         assert isinstance(p, plpygis.Polygon)
@@ -314,6 +322,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 ego_config,
                 fov_lines
             )
+    times.append(time.time())
 
     # logger.info(f'total mapping time: {time.time() - start_time}')
-    return mapped_road_polygon_info
+    return mapped_road_polygon_info, times

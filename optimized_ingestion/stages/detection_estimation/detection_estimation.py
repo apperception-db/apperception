@@ -18,8 +18,9 @@ TODO:
 import datetime
 import os
 import sys
+import time
 from dataclasses import dataclass, field
-from typing import Any, List, Literal, Tuple
+from typing import Any, Literal, Tuple
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -245,12 +246,12 @@ def construct_all_detection_info(
     ego_trajectory: "list[trajectory_3d]",
     all_detections: "list[obj_detection]"
 ):
-    all_detection_info: "List[DetectionInfo]" = []
+    all_detection_info: "list[DetectionInfo]" = []
     if len(all_detections) == 0:
         return all_detection_info
 
     # ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
-    detections_polygon_mapping = get_detection_polygon_mapping(all_detections, ego_config)
+    detections_polygon_mapping, times = get_detection_polygon_mapping(all_detections, ego_config)
     # assert len(all_detections) == len(detections_polygon_mapping)
     for detection in all_detections:
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection
@@ -267,8 +268,9 @@ def construct_all_detection_info(
                                            ego_config,
                                            None)
             all_detection_info.append(detection_info)
+    times.append(time.time())
 
-    return all_detection_info
+    return all_detection_info, times
 
 
 def generate_sample_plan(
