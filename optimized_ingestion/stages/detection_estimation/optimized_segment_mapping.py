@@ -270,6 +270,9 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     times.append(time.time())
     mapped_polygons = reformat_return_polygon(mapped_polygons)
     times.append(time.time())
+    if any(p.road_type == 'intersection' for p in mapped_polygons):
+        return []
+    times.append(time.time())
     mapped_road_polygon_info = {}
     fov_lines = get_fov_lines(ego_config)
     times.append(time.time())
