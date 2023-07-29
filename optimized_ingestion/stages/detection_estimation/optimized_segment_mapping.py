@@ -274,6 +274,8 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         assert types is not None
         assert heading is not None
     mapped_polygons = reformat_return_polygon(mapped_polygons)
+    if any(p.type == 'intersection' for p in mapped_polygons):
+        return []
     mapped_road_polygon_info = {}
     fov_lines = get_fov_lines(ego_config)
 
