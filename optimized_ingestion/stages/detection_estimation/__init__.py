@@ -93,7 +93,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             start_detection_time = time.time()
             logger.info(f"current frame num {i}")
             all_detection_info, times = construct_estimated_all_detection_info(det, dids, current_ego_config, ego_trajectory)
-            total_detection_time.append((time.time() - start_detection_time, len(det), len(all_detection_info, times)))
+            total_detection_time.append((time.time() - start_detection_time, len(det), len(all_detection_info), times))
 
             all_detection_info_pruned, det = prune_detection(all_detection_info, det, self.predicates)
 
