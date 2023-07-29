@@ -242,7 +242,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     }
     print('# of total    videos:', len(videos))
 
-    names = set(sampled_scenes[:100])
+    names = set(sampled_scenes[:30])
     filtered_videos = [
         n for n in videos
         if n[6:10] in names and 'FRONT' in n
@@ -737,23 +737,24 @@ def run(__test):
         print(' -', s)
     run_benchmark(p2, 'q2-' + __test, [pred2, pred2_notrack], run=1, ignore_error=True)
 
-    print('Pipeline P3,P4:')
-    for s in p34.stages:
-        print(' -', s)
-    run_benchmark(p34, 'q34-' + __test, [pred3, pred4, pred3_notrack, pred4_notrack], run=1, ignore_error=True)
+    # print('Pipeline P3,P4:')
+    # for s in p34.stages:
+    #     print(' -', s)
+    # run_benchmark(p34, 'q34-' + __test, [pred3, pred4, pred3_notrack, pred4_notrack], run=1, ignore_error=True)
 
-    if __test != 'optde' and __test != 'de':
-        print('Pipeline P1:')
-        for s in p1.stages:
-            print(' -', s)
-        run_benchmark(p1, 'q1-' + __test, [pred1, pred1_notrack], run=1, ignore_error=True)
+    # if __test != 'optde' and __test != 'de':
+    #     print('Pipeline P1:')
+    #     for s in p1.stages:
+    #         print(' -', s)
+    #     run_benchmark(p1, 'q1-' + __test, [pred1, pred1_notrack], run=1, ignore_error=True)
 
 
 # In[ ]:
 
 
-tests = ['de', 'optde', 'noopt', 'inview', 'objectfilter', 'geo', 'opt']
+# tests = ['de', 'optde', 'noopt', 'inview', 'objectfilter', 'geo', 'opt']
 # tests = ['de', 'optde']
+tests = ['de']
 # random.shuffle(tests)
 
 for _test in tests:
