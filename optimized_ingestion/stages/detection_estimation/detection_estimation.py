@@ -20,7 +20,7 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
-from typing import Any, Literal, Tuple
+from typing import Any, Tuple
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir)))
 
@@ -36,11 +36,8 @@ from .utils import (
     Float2,
     Float3,
     Float22,
-    compute_area,
-    compute_distance,
     get_car_exits_view_frame_num,
     get_segment_line,
-    relative_direction_to_ego,
     time_to_exit_current_segment,
     trajectory_3d,
 )
@@ -61,54 +58,69 @@ class DetectionInfo:
     ego_road_polygon_info: "RoadPolygonInfo"
     timestamp: "datetime.datetime" = field(init=False)
     road_type: str = field(init=False)
-    distance: float = field(init=False)
-    segment_area_2d: float = field(init=False)
-    relative_direction: "Literal['same_direction', 'opposite_direction']" = field(init=False)
-    priority: float = field(init=False)
-    segment_line: "shapely.geometry.LineString" = field(init=False)
-    segment_heading: float = field(init=False)
+    # distance: float = field(init=False)
+    # segment_area_2d: float = field(init=False)
+    # relative_direction: "Literal['same_direction', 'opposite_direction']" = field(init=False)
+    # priority: float = field(init=False)
+    _segment_line: "shapely.geometry.LineString" = field(init=False)
+    _segment_heading: float = field(init=False)
+    _to_compute_geo_info: bool = field(init=False)
 
     def __post_init__(self):
         timestamp = self.ego_config.timestamp
         assert isinstance(timestamp, datetime.datetime)
         self.timestamp = timestamp
         self.road_type = self.road_polygon_info.road_type
+        self._to_compute_geo_info = True
 
-        self.compute_geo_info()
-        self.compute_priority()
+        # self.compute_geo_info()
+        # self.compute_priority()
+
+    @property
+    def segment_line(self):
+        if self._to_compute_geo_info:
+            self.compute_geo_info()
+        return self._segment_line
+
+    @property
+    def segment_heading(self):
+        if self._to_compute_geo_info:
+            self.compute_geo_info()
+        return self._segment_heading
 
     def compute_geo_info(self):
-        if self.ego_config is None:
-            ego_heading = 0
-            self.distance = 0
-        else:
-            ego_heading = self.ego_config.ego_heading
-            self.distance = compute_distance(
-                self.car_loc3d,
-                self.ego_config.ego_translation
-            )
-        assert isinstance(ego_heading, float)
+        self._to_compute_geo_info = False
+        # if self.ego_config is None:
+        #     ego_heading = 0
+        #     self.distance = 0
+        # else:
+        #     ego_heading = self.ego_config.ego_heading
+        #     self.distance = compute_distance(
+        #         self.car_loc3d,
+        #         self.ego_config.ego_translation
+        #     )
+        # assert isinstance(ego_heading, float)
 
-        if self.car_bbox2d is None:
-            self.segment_area_2d = 0
-        else:
-            self.segment_area_2d = compute_area([
-                *self.car_bbox2d[0],
-                *self.car_bbox2d[1],
-            ])
+        # if self.car_bbox2d is None:
+        #     self.segment_area_2d = 0
+        # else:
+        #     self.segment_area_2d = compute_area([
+        #         *self.car_bbox2d[0],
+        #         *self.car_bbox2d[1],
+        #     ])
 
-        self.segment_line, self.segment_heading = get_segment_line(
+        self._segment_line, self._segment_heading = get_segment_line(
             self.road_polygon_info,
             self.car_loc3d
         )
 
-        self.relative_direction = relative_direction_to_ego(
-            self.segment_heading,
-            ego_heading
-        )
+        # self.relative_direction = relative_direction_to_ego(
+        #     self.segment_heading,
+        #     ego_heading
+        # )
 
-    def compute_priority(self):
-        self.priority = self.segment_area_2d / self.distance
+    # def compute_priority(self):
+    #     self.priority = self.segment_area_2d / self.distance
 
     def get_car_exits_segment_action(self):
         current_time = self.timestamp
