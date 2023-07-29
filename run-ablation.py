@@ -242,7 +242,7 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
     }
     print('# of total    videos:', len(videos))
 
-    names = set(sampled_scenes[:30])
+    names = set(sampled_scenes[:50])
     filtered_videos = [
         n for n in videos
         if n[6:10] in names and 'FRONT' in n
@@ -752,9 +752,9 @@ def run(__test):
 # In[ ]:
 
 
-# tests = ['de', 'optde', 'noopt', 'inview', 'objectfilter', 'geo', 'opt']
+tests = ['de', 'optde', 'noopt', 'inview', 'objectfilter', 'geo', 'opt']
 # tests = ['de', 'optde']
-tests = ['de']
+# tests = ['de']
 # random.shuffle(tests)
 
 for _test in tests:
