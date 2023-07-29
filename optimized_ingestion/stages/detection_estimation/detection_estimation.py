@@ -248,7 +248,7 @@ def construct_all_detection_info(
 ):
     all_detection_info: "list[DetectionInfo]" = []
     if len(all_detections) == 0:
-        return all_detection_info
+        return all_detection_info, []
 
     # ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
     detections_polygon_mapping, times = get_detection_polygon_mapping(all_detections, ego_config)

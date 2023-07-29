@@ -130,7 +130,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
         logger.info(action_type_counts)
         total_run_time = time.time() - start_time
         logger.info(f"total_run_time {total_run_time}")
-        logger.info(f"total_detection_time {sum(t for t, _, _ in total_detection_time)}")
+        logger.info(f"total_detection_time {sum(t for t, *_ in total_detection_time)}")
         logger.info(f"total_generate_sample_plan_time {sum(total_sample_plan_time)}")
 
         self._benchmark.append({
