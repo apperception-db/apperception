@@ -271,15 +271,15 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     mapped_polygons = reformat_return_polygon(mapped_polygons)
     times.append(time.time())
     if any(p.road_type == 'intersection' for p in mapped_polygons):
-        return []
+        return {}, times
     times.append(time.time())
-    mapped_road_polygon_info = {}
     fov_lines = get_fov_lines(ego_config)
     times.append(time.time())
 
     # def not_in_view(point: "Float2"):
     #     return not in_view(point, ego_config.ego_translation, fov_lines)
 
+    mapped_road_polygon_info: "dict[DetectionId, RoadPolygonInfo]" = {}
     for order_id, road_polygon in list(zip(order_ids, mapped_polygons)):
         frame_idx = detections[0].detection_id.frame_idx
         det_id = DetectionId(frame_idx=frame_idx, obj_order=order_id)
