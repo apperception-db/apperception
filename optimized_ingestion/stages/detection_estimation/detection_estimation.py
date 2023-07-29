@@ -264,6 +264,9 @@ def construct_all_detection_info(
 
     # ego_road_polygon_info = get_largest_polygon_containing_point(ego_config)
     detections_polygon_mapping, times = get_detection_polygon_mapping(all_detections, ego_config)
+    if len(detections_polygon_mapping) == 0:
+        return [], times
+
     # assert len(all_detections) == len(detections_polygon_mapping)
     for detection in all_detections:
         detection_id, car_loc3d, car_loc2d, car_bbox3d, car_bbox2d = detection

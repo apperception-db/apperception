@@ -737,16 +737,16 @@ def run(__test):
         print(' -', s)
     run_benchmark(p2, 'q2-' + __test, [pred2, pred2_notrack], run=1, ignore_error=True)
 
-    # print('Pipeline P3,P4:')
-    # for s in p34.stages:
-    #     print(' -', s)
-    # run_benchmark(p34, 'q34-' + __test, [pred3, pred4, pred3_notrack, pred4_notrack], run=1, ignore_error=True)
+    print('Pipeline P3,P4:')
+    for s in p34.stages:
+        print(' -', s)
+    run_benchmark(p34, 'q34-' + __test, [pred3, pred4, pred3_notrack, pred4_notrack], run=1, ignore_error=True)
 
-    # if __test != 'optde' and __test != 'de':
-    #     print('Pipeline P1:')
-    #     for s in p1.stages:
-    #         print(' -', s)
-    #     run_benchmark(p1, 'q1-' + __test, [pred1, pred1_notrack], run=1, ignore_error=True)
+    if __test != 'optde' and __test != 'de':
+        print('Pipeline P1:')
+        for s in p1.stages:
+            print(' -', s)
+        run_benchmark(p1, 'q1-' + __test, [pred1, pred1_notrack], run=1, ignore_error=True)
 
 
 # In[ ]:
