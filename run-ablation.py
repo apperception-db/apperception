@@ -13,6 +13,8 @@ import shutil
 import socket
 import time
 import random
+import math
+
 
 from os import environ
 
@@ -253,11 +255,11 @@ def run_benchmark(pipeline, filename, predicates, run=0, ignore_error=False):
 
     # s_from, s_to = slices[test]
     s_from, s_to = (int(test), int(test) + 1)
-    STEP = N // 10
+    STEP = math.ceil(N / 10)
     print('test', test)
     print('from', s_from*STEP)
     print('to  ', s_to*STEP)
-    filtered_videos = filtered_videos[s_from*STEP:s_to*STEP]
+    filtered_videos = filtered_videos[s_from*STEP:min(s_to*STEP, N)]
     print('# of sliced   videos:', len(filtered_videos))
     # ingest_road(database, './data/scenic/road-network/boston-seaport')
 
