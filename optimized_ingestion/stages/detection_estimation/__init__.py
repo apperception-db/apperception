@@ -85,10 +85,10 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             next_frame_num = i + 1
 
             det, _, dids = dets[i]
-            # if objects_count_change(dets, i, i + 5) <= i + 1:
-            #     # will not map segment if cannot skip in the first place
-            #     metadata.append([])
-            #     continue
+            if new_car(dets, i, i + 5) <= i + 1:
+                # will not map segment if cannot skip in the first place
+                metadata.append([])
+                continue
 
             start_detection_time = time.time()
             logger.info(f"current frame num {i}")
@@ -110,7 +110,7 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
                                                             fps=current_fps)
             total_sample_plan_time.append(time.time() - start_generate_sample_plan)
             next_frame_num = next_sample_plan.get_next_frame_num()
-            # next_frame_num = objects_count_change(dets, i, next_frame_num)
+            next_frame_num = new_car(dets, i, next_frame_num)
             logger.info(f"founded next_frame_num {next_frame_num}")
             metadata.append(all_detection_info)
 
@@ -146,6 +146,15 @@ class DetectionEstimation(Stage[DetectionEstimationMetadatum]):
             keep[f] = 0
 
         return keep, {DetectionEstimation.classname(): metadata}
+
+
+def new_car(dets: "list[D2DMetadatum]", cur: "int", nxt: "int"):
+    len_det = len(dets[cur][0])
+    for j in range(cur + 1, min(nxt + 1, len(dets))):
+        future_det = dets[j][0]
+        if len(future_det) > len_det:
+            return j
+    return nxt
 
 
 def objects_count_change(dets: "list[D2DMetadatum]", cur: "int", nxt: "int"):
