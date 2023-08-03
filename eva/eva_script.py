@@ -19,7 +19,6 @@ def delete_db():
     except Exception:
         print("Dir does not exist")
     print("deleting db")
-    pass
 
 def setup_udfs():
     cursor = evadb.connect().cursor()
@@ -93,8 +92,8 @@ def load_data(sceneNumbers):
     for sceneNumber in sceneNumbers:
         sceneNumber = sceneNumber.strip()
         # Load videos
-        video_name = f"boston-seaport-scene-{sceneNumber}-CAM_FRONT.mp4"
-        scene = f"scene-{sceneNumber}-CAM_FRONT"
+        video_name = f"boston-seaport-scene-{sceneNumber}-CAM_FRONT_LEFT.mp4"
+        scene = f"scene-{sceneNumber}-CAM_FRONT_LEFT"
         video_path = "/data/processed/full-dataset/trainval/videos/"
         cursor.load(file_regex=video_path + video_name, format="VIDEO", table_name='ObjectDetectionVideos').df()
 
@@ -118,7 +117,7 @@ def q1():
     cursor = evadb.connect().cursor()
     start = time.time()
     res1 = cursor.query("""
-                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), QE1(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
+                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, QE1(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
                     FROM ObjectDetectionVideos JOIN CameraConfigs ON (id = framenum AND SameVideo(name, cameraid).issame)
     """).df()
     res1 = res1[res1["qe1.queryresult"]]    
@@ -130,7 +129,7 @@ def q2():
     cursor = evadb.connect().cursor()
     start = time.time()
     res2 = cursor.query("""
-                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), QE2(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
+                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, QE2(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
                     FROM ObjectDetectionVideos JOIN CameraConfigs ON (id = framenum AND SameVideo(name, cameraid).issame)
     """).df()
     res2 = res2[res2["qe2.queryresult"]]
@@ -142,7 +141,7 @@ def q3():
     cursor = evadb.connect().cursor()
     start = time.time()
     res3 = cursor.query("""
-                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), QE3(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
+                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, QE3(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
                     FROM ObjectDetectionVideos JOIN CameraConfigs ON (id = framenum AND SameVideo(name, cameraid).issame)
     """).df()
     res3 = res3[res3["qe3.queryresult"]]
@@ -154,7 +153,7 @@ def q4():
     cursor = evadb.connect().cursor()
     start = time.time()
     res4 = cursor.query("""
-                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), QE4(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
+                SELECT framenum, id, cameraid, filename, name, egoheading, cameratranslation, QE4(LocationDetection(Yolo(data), MonodepthDetection(data).depth, cameratranslation, camerarotation, cameraintrinsic), cameratranslation, egoheading).queryresult
                     FROM ObjectDetectionVideos JOIN CameraConfigs ON (id = framenum AND SameVideo(name, cameraid).issame)
     """).df()
     res4= res4[res4["qe4.queryresult"]]
@@ -178,8 +177,6 @@ while len(sceneNumbers) > 0:
     delete_db()
     setup_udfs()
     load_data(currentScenes)
-    q1_time = q1()
-    q2_time = q2()
     q3_time = q3()
     q4_time = q4()
     write_times(currentScenes, "q4", q4_time)
@@ -187,8 +184,6 @@ while len(sceneNumbers) > 0:
     delete_db()
     setup_udfs()
     load_data(currentScenes)
-    q2_time = q2()
-    q3_time = q3()
     q4_time = q4()
     q1_time = q1()
     write_times(currentScenes, "q1", q1_time)
@@ -196,8 +191,6 @@ while len(sceneNumbers) > 0:
     delete_db()
     setup_udfs()
     load_data(currentScenes)
-    q3_time = q3()
-    q4_time = q4()
     q1_time = q1()
     q2_time = q2()
     write_times(currentScenes, "q2", q2_time)
@@ -205,8 +198,6 @@ while len(sceneNumbers) > 0:
     delete_db()
     setup_udfs()
     load_data(currentScenes)
-    q4_time = q4()
-    q1_time = q1()
     q2_time = q2()
     q3_time = q3()
     write_times(currentScenes, "q3", q3_time)
