@@ -9,7 +9,9 @@ def import_pickle(database: "Database", data_path: str):
     with open(os.path.join(data_path, "frames.pkl"), "rb") as f:
         data_frames = pickle.loads(f.read())
 
-    with open("/home/youse/apperception/data/evaluation/video-samples/boston-seaport.txt", 'r') as f:
+    with open(
+        "/home/youse/apperception/data/evaluation/video-samples/boston-seaport.txt", "r"
+    ) as f:
         sceneNumbers = f.readlines()
         sceneNumbers = [x.strip() for x in sceneNumbers]
         sceneNumbers = sceneNumbers[0:150]
