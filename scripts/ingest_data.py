@@ -60,12 +60,19 @@ scenes = df_sample_data['scene_name'].drop_duplicates().values.tolist()
 from apperception.utils import df_to_camera_config
 from apperception.data_types import Camera
 
+with open("/home/youse/apperception/data/evaluation/video-samples/boston-seaport.txt", 'r') as f:
+    sceneNumbers = f.readlines()
+    sceneNumbers = [x.strip() for x in sceneNumbers]
+    sceneNumbers = sceneNumbers[0:80]
+    
 database.reset()
 for scene in scenes:
-    print(scene, scenes[-1])
-    config = df_to_camera_config(scene, df_sample_data)
-    camera = Camera(config=config, id=scene)
-    world <<= (camera, df_annotation)
+    sceneNumber = scene[6:10]
+    if sceneNumber in sceneNumbers:
+        print(scene, scenes[-1])
+        config = df_to_camera_config(scene, df_sample_data)
+        camera = Camera(config=config, id=scene)
+        world <<= (camera, df_annotation)
 
 # %%
 try:

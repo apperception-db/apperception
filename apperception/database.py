@@ -403,6 +403,33 @@ class Database:
         _fetched_meta = reformat_bbox_trajectories(fetched_meta)
         overlay_bboxes(_fetched_meta, cams, boxed)
 
+    def predicate(self, predicate: "PredicateNode"):
+        tables, camera = FindAllTablesVisitor()(predicate)
+        tables = sorted(tables)
+        mapping = {t: i for i, t in enumerate(tables)}
+        predicate = normalize(predicate)
+        predicate = MapTablesTransformer(mapping)(predicate)
+
+        t_tables = ""
+        t_outputs = ""
+        for i in range(len(tables)):
+            t_tables += (
+                "\n"
+                "JOIN Item_General_Trajectory "
+                f"AS t{i} "
+                f"ON  Cameras.timestamp <@ t{i}.trajCentroids::period "
+                f"AND Cameras.cameraId  =  t{i}.cameraId"
+            )
+            t_outputs += f", t{i}.itemId"
+
+        sql_str = f"""
+            SELECT Cameras.frameNum {t_outputs}, Cameras.cameraId, Cameras.filename
+            FROM Cameras{t_tables}
+            WHERE
+            {GenSqlVisitor()(predicate)}
+        """
+        return self.execute(sql_str)
+
     def sql(self, query: str) -> pd.DataFrame:
         return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
 
