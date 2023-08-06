@@ -400,10 +400,10 @@ class Database:
 
     def get_video(self, query, cams, boxed):
         query = psql.SQL(
-            f"SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
-            f"XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox), TMin(trajBbox) "
+            "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
+            "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox), TMin(trajBbox) "
             f"FROM ({query}) "
-            f"JOIN General_Bbox using (itemId)"
+            "JOIN General_Bbox using (itemId)"
         )
 
         fetched_meta = self.execute(query)
