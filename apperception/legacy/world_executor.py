@@ -2,12 +2,15 @@ import numpy as np
 import psycopg2
 
 from apperception.legacy.metadata_context import geometry, primarykey, time
-from apperception.legacy.metadata_context_executor import \
-    MetadataContextExecutor
+from apperception.legacy.metadata_context_executor import MetadataContextExecutor
 from apperception.legacy.video_context_executor import VideoContextExecutor
-from apperception.utils import (create_transform_matrix,
-                                datetimes_to_framenums, fetch_camera,
-                                get_video_roi, world_to_pixel)
+from apperception.utils import (
+    create_transform_matrix,
+    datetimes_to_framenums,
+    fetch_camera,
+    get_video_roi,
+    world_to_pixel,
+)
 
 
 class WorldExecutor:
@@ -19,7 +22,6 @@ class WorldExecutor:
     def connect_db(
         self, host="localhost", user=None, password=None, port=25432, database_name=None
     ):
-
         self.conn = psycopg2.connect(
             database=database_name, user=user, password=password, host=host, port=port
         )

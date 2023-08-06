@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "geocontainedMargin"
-\echo ""
-
 /* return true if a point is contained in any of the geometry in the array*/
 
 /* this first function should already exist in mobilitydb, plz double check**/

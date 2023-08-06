@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "convertCamera"
-\echo ""
-
 DROP FUNCTION IF EXISTS ConvertCamera(geometry, geometry, real);
 CREATE OR REPLACE FUNCTION ConvertCamera(objPoint geometry, camPoint geometry, camHeading real) RETURNS geometry AS
 $BODY$

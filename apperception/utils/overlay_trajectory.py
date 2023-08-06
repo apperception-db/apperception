@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Set, Tuple, Union
 
 if TYPE_CHECKING:
     pass
@@ -28,7 +28,7 @@ Outputs videos for all recognized objects.
 def overlay_trajectory(
     world,
     database,
-    images_data_path: Optional[str] = None,
+    images_data_path: str,
     num_joined_tables: int = 1,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
@@ -65,7 +65,7 @@ def overlay_trajectory(
         )
         return
 
-    for (file_prefix, camId) in frames:
+    for file_prefix, camId in frames:
         frames[(file_prefix, camId)].sort(key=lambda x: x[1])  # sort base on time
         frame_width = None
         frame_height = None
@@ -73,9 +73,9 @@ def overlay_trajectory(
         for frame in frames[(file_prefix, camId)]:
             objId, time, camId, cam_filename = frame
             filename = cam_filename
-            if images_data_path is not None:
-                filename_no_prefix = filename.split("/")[-1]
-                filename = images_data_path + "/" + filename_no_prefix
+            assert images_data_path is not None
+            filename_no_prefix = filename.split("/")[-1]
+            filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
 
             camera_config = fetch_camera_config(cam_filename, database)
@@ -106,7 +106,7 @@ def overlay_trajectory_keep_whole(
     database,
     camIds: Dict[str, Dict[str, str]],
     itemIds: Set[str],
-    images_data_path: Optional[str] = None,
+    images_data_path: str,
     is_overlay_headings: bool = False,
     is_overlay_road: bool = False,
     is_overlay_objects: bool = False,
@@ -119,10 +119,8 @@ def overlay_trajectory_keep_whole(
         for cam_filename in filenames:
             filename_no_prefix = cam_filename.split("/")[-1]
             prefix = "-".join(cam_filename.split("/")[:-1])
-            if images_data_path is not None:
-                filename = images_data_path + "/" + filename_no_prefix
-            else:
-                filename = cam_filename
+            assert images_data_path is not None
+            filename = images_data_path + "/" + filename_no_prefix
             frame_im = cv2.imread(filename)
             camera_config = fetch_camera_config(cam_filename, database)
             if is_overlay_objects and cam_filename in camIds[camId]:
@@ -162,7 +160,7 @@ def fetch_camera_video(camId: str, database):
         cameraId = '{camId}'
     ORDER BY frameNum ASC;
     """
-    result = database._execute_query(query)
+    result = database.execute(query)
     filenames = [x[0] for x in result]
     return filenames
 
@@ -180,31 +178,32 @@ def fetch_camera_config(filename: str, database):
         ST_XYZ(egoTranslation),
         egoRotation,
         ST_XYZ(cameraTranslation),
-        ST_XYZ(cameraTranslationAbs),
         cameraRotation,
         cameraIntrinsic,
         frameNum,
         fileName,
         cameraHeading,
-        egoHeading
+        egoHeading,
+        timestamp
     FROM Cameras
     WHERE
         fileName = '{filename}'
     ORDER BY cameraId ASC, frameNum ASC;
     """
-    result = database._execute_query(query)[0]
+    result = database.execute(query)[0]
+    print(result)
     camera_config = {
         "cameraId": result[0],
         "egoTranslation": result[1],
         "egoRotation": result[2],
         "cameraTranslation": result[3],
-        "cameraTranslationAbs": result[4],
-        "cameraRotation": result[5],
-        "cameraIntrinsic": result[6],
-        "frameNum": result[7],
-        "fileName": result[8],
-        "cameraHeading": result[9],
-        "egoHeading": result[10],
+        "cameraRotation": result[4],
+        "cameraIntrinsic": result[5],
+        "frameNum": result[6],
+        "fileName": result[7],
+        "cameraHeading": result[8],
+        "egoHeading": result[9],
+        "timestamp": result[10],
     }
     return camera_config
 
@@ -222,7 +221,7 @@ def fetch_trajectory(itemId: str, time: str, database):
         WHERE itemId = '{itemId}';
         """
 
-    traj = database._execute_query(query)[0][0]
+    traj = database.execute(query)[0][0]
     return traj
 
 

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+tmux new-session -d -s run-test -n run-test || echo 'hi'
+tmux send-keys -t run-test 'docker container start mobilitydb' Enter
+tmux send-keys -t run-test 'cd ~/Documents/apperception' Enter
+tmux send-keys -t run-test 'rm -rf ./outputs/run/*' Enter
+tmux send-keys -t run-test 'rm -rf ./run-ablation.py' Enter
+tmux send-keys -t run-test 'git restore .' Enter
+tmux send-keys -t run-test 'git checkout ck/ablation-query' Enter
+tmux send-keys -t run-test 'git pull' Enter
+tmux send-keys -t run-test 'python ./apperception/utils/ingest_road.py "./data/scenic/road-network/boston-seaport"' Enter
+tmux send-keys -t run-test 'jupyter nbconvert --to python ./playground/run-ablation.ipynb && mv playground/run-ablation.py .' Enter
+tmux send-keys -t run-test 'python run-ablation.py' Enter

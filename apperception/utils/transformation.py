@@ -1,16 +1,18 @@
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple
 
 import numpy as np
+import numpy.typing as npt
 from pyquaternion import Quaternion
 
 
 def transformation(
-    copy_centroid_3d: Union[np.ndarray, Tuple[float, float, float]], camera_config: Dict[str, Any]
-) -> np.ndarray:
+    copy_centroid_3d: "npt.NDArray[np.floating] | Tuple[float, float, float]",
+    camera_config: Dict[str, Any],
+) -> "npt.NDArray[np.floating]":
     """
-    TODO: transformation from 3d world coordinate to 2d frame coordinate given the camera config
+    Transformation from 3d world coordinate to 2d frame coordinate given the camera config
     """
-    centroid_3d: np.ndarray = np.copy(copy_centroid_3d)
+    centroid_3d: npt.NDArray[np.floating] = np.copy(copy_centroid_3d)
 
     centroid_3d -= camera_config["egoTranslation"]
     centroid_3d = np.dot(

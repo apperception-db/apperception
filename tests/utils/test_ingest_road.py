@@ -5,31 +5,46 @@ import os
 import pytest
 
 
-d = Database(psycopg2.connect(
+d1 = Database(psycopg2.connect(
     dbname="mobilitydb",
     user="docker",
     host="localhost",
-    port=os.environ["AP_PORT_ROAD"],
+    port=os.environ["AP_PORT_ROAD_1"],
     password="docker",
 ))
-ingest_road(d, "./data/scenic/road_network_boston")
+ingest_road(d1, "./data/scenic/road-network")
+
+d2 = Database(psycopg2.connect(
+    dbname="mobilitydb",
+    user="docker",
+    host="localhost",
+    port=os.environ["AP_PORT_ROAD_2"],
+    password="docker",
+))
+ingest_road(d2, "./data/scenic/road-network/boston-seaport")
 
 
 @pytest.mark.parametrize("table, count", [
-    ("segmentpolygon", 5170),
-    ("segment", 16480),
-    ("lanesection", 1178),
-    ("lane", 1178),
-    ("lane_lanesection", 1178),
-    ("lanegroup", 964),
-    ("lanegroup_lane", 1178),
-    ("opposite_lanegroup", 742),
-    ("road", 925),
-    ("road_lanegroup", 964),
-    ("road_roadsection", 593),
-    ("roadsection", 593),
-    ("roadsection_lanesection", 1178),
+    ("segmentpolygon", 3072),
+    ("segment", 11410),
+    ("lanesection", 1180),
+    ("lane", 1180),
+    ("lane_lanesection", 1180),
+    ("lanegroup", 966),
+    ("lanegroup_lane", 1180),
+    ("opposite_lanegroup", 744),
+    ("road", 926),
+    ("road_lanegroup", 966),
+    ("road_roadsection", 594),
+    ("roadsection", 594),
+    ("roadsection_lanesection", 1180),
     ("intersection", 332),
 ])
 def test_simple_ops(table, count):
-    assert d._execute_query(f"select count(*) from {table}") == [(count,)]
+    assert d1.execute(f"select count(*) from {table}") == [(count,)]
+    assert d2.execute(f"select count(*) from {table}") == [(count,)]
+
+
+@pytest.mark.parametrize("database", [d1, d2])
+def test_location(database):
+    assert database.execute("select location, count(*) from segmentpolygon group by location") == [('boston-seaport', 3072)]

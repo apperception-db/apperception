@@ -1,12 +1,10 @@
-from apperception.predicate import (BinOpNode, CastNode, PredicateNode,
-                                    TableAttrNode)
+from apperception.predicate import BinOpNode, CastNode, PredicateNode, TableAttrNode
 
 HEADINGS = {
     "trajCentroids": "itemHeadings",
     "translations": "itemHeadings",
     "egoTranslation": "egoHeading",
     "cameraTranslation": "cameraHeading",
-    "cameraTranslationAbs": "cameraHeading",
 }
 
 ROAD_TYPES = {

@@ -27,6 +27,15 @@ from common import *
             HAVING COUNT(point) = cardinality(timestamp)
         ))"""
     ),
+    (
+        contains_all('intersection', [c.time, o.trans]),
+        """(EXISTS(SELECT 1
+            FROM SegmentPolygon
+            WHERE
+                SegmentPolygon.__RoadType__intersection__ AND
+                ST_Covers(SegmentPolygon.elementPolygon, timestamp) AND ST_Covers(SegmentPolygon.elementPolygon, t0.translations)
+        ))"""
+    )
 ])
 def test_contain_all(fn, sql):
     assert gen(fn) == sql
@@ -34,11 +43,11 @@ def test_contain_all(fn, sql):
 
 @pytest.mark.parametrize("fn, msg", [
     (contains_all(c.time, 1), 
-        "Frist argument of contains_all should be a constant, recieved "),
+        "Frist argument of contains_all should be a constant, recieved TableAttrNode(name='timestamp', table=CameraTableNode, shorten=True)"),
     (contains_all('invalid', 1), 
-        "polygon should be either road or lane or lanesection or roadSection or intersection"),
+        "polygon should be either intersection or lane or lanesection or road or roadsection"),
 ])
 def test_exception(fn, msg):
     with pytest.raises(Exception) as e_info:
         gen(fn)
-    str(e_info.value) == msg
+    assert str(e_info.value) == msg

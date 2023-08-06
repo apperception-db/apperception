@@ -3,12 +3,9 @@ from __future__ import annotations
 import datetime
 import inspect
 import uuid
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
-                    Union)
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from pypika import Table
-from pypika.dialects import SnowflakeQuery
 
 from apperception.data_types import Camera, FetchCameraTuple
 from apperception.database import database
@@ -100,7 +97,7 @@ class World:
     def sym_diff(self, other: World) -> World:
         return self.union(other).exclude(self.intersect(other))
 
-    def __lshift__(self, camera: Union["Camera", Tuple["Camera", "pd.DataFrame"]]):
+    def __lshift__(self, camera: "Camera | tuple[Camera, pd.DataFrame]"):
         """add a camera or add a camera and recognize"""
         if isinstance(camera, Camera):
             return self.add_camera(camera)
@@ -148,9 +145,6 @@ class World:
             database.get_traj_key,
         )._execute_from_root()
 
-    def get_traj_attr(self, attr: str):
-        return derive_world(self, database.get_traj_attr, attr=attr)._execute_from_root()
-
     def get_headings(self) -> List[List[List[float]]]:
         # TODO: Optimize operations with NumPy if possible
         trajectories = self.get_traj()
@@ -176,52 +170,20 @@ class World:
             headings.append(_headings)
         return headings
 
-    def get_distance(self, start: datetime.datetime, end: datetime.datetime):
-        return derive_world(
-            self,
-            database.get_distance,
-            start=str(start),
-            end=str(end),
-        )._execute_from_root()
-
-    def get_speed(self, start: datetime.datetime, end: datetime.datetime):
-        return derive_world(
-            self,
-            database.get_speed,
-            start=str(start),
-            end=str(end),
-        )._execute_from_root()
-
-    def get_len(self):
-        return derive_world(
-            self,
-            database.get_len,
-        )._execute_from_root()
-
     def get_camera(self):
         return derive_world(
             self,
             database.get_cam,
         )._execute_from_root()
 
-    def get_bbox_geo(self):
-        return derive_world(
-            self,
-            database.get_bbox_geo,
-        )._execute_from_root()
-
-    def get_time(self):
-        return derive_world(
-            self,
-            database.get_time,
-        )._execute_from_root()
-
     def get_id_time_camId_filename(self, num_joined_tables: int):
-        return derive_world(
+        result = derive_world(
             self,
             database.get_id_time_camId_filename,
             num_joined_tables=num_joined_tables,
         )._execute_from_root()
+        result = sorted(result, key=lambda x: x[num_joined_tables])
+        return result
 
     def _insert_camera(self, camera: "Camera"):
         return derive_world(
@@ -255,7 +217,7 @@ class World:
         nodes: list[World] = []
         curr: Optional[World] = self
         res = None
-        query = SnowflakeQuery.from_(Table("item_general_trajectory")).select("*")
+        query = "SELECT * FROM item_general_trajectory"
 
         # collect all the nodes til the root
         while curr:
@@ -269,20 +231,20 @@ class World:
                 continue
 
             if node.fn == database.insert_cam or node.fn == database.insert_bbox_traj:
-                print("execute:", node.fn.__name__)
+                # print("execute:", node.fn.__name__)
                 if not node.done:
                     node._execute()
                     node._done = True
             # treat update method differently
             else:
-                print("execute:", node.fn.__name__)
+                # print("execute:", node.fn.__name__)
                 # print(query)
                 query = node._execute(query=query, **node.kwargs)
-        print("done execute node")
+        # print("done execute node")
 
         res = query
-        if isinstance(query, list):
-            print("Result length:", len(query))
+        # if isinstance(query, list):
+        #     print("Result length:", len(query))
         return res
 
     def _execute(self, **kwargs):
@@ -335,6 +297,37 @@ class World:
     @property
     def materialized(self):
         return self._materialized
+
+    # def get_traj_attr(self, attr: str):
+    #     return derive_world(self, database.get_traj_attr, attr=attr)._execute_from_root()
+
+    # def get_distance(self, start: datetime.datetime, end: datetime.datetime):
+    #     return derive_world(
+    #         self,
+    #         database.get_distance,
+    #         start=str(start),
+    #         end=str(end),
+    #     )._execute_from_root()
+
+    # def get_speed(self, start: datetime.datetime, end: datetime.datetime):
+    #     return derive_world(
+    #         self,
+    #         database.get_speed,
+    #         start=str(start),
+    #         end=str(end),
+    #     )._execute_from_root()
+
+    # def get_bbox_geo(self):
+    #     return derive_world(
+    #         self,
+    #         database.get_bbox_geo,
+    #     )._execute_from_root()
+
+    # def get_time(self):
+    #     return derive_world(
+    #         self,
+    #         database.get_time,
+    #     )._execute_from_root()
 
 
 def empty_world(name: str = "world") -> World:

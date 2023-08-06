@@ -14,8 +14,12 @@ from deep_sort_pytorch.utils.parser import get_config
 from yolov5.models.experimental import attempt_load
 from yolov5.utils.datasets import LoadImages
 from yolov5.utils.downloads import attempt_download
-from yolov5.utils.general import (check_img_size, non_max_suppression,
-                                  scale_coords, xyxy2xywh)
+from yolov5.utils.general import (
+    check_img_size,
+    non_max_suppression,
+    scale_coords,
+    xyxy2xywh,
+)
 from yolov5.utils.torch_utils import select_device
 
 from ..data_types import BoundingBox, TrackedObject
@@ -143,7 +147,6 @@ def detect(opt: YoloV5Opt):
 
         # Process detections
         for det in pred:  # detections per image
-
             if det is None or not len(det):
                 deepsort.increment_ages()
                 continue
@@ -167,7 +170,6 @@ def detect(opt: YoloV5Opt):
 
             # collect result bounding boxes
             for output in outputs:
-
                 y1, x1, y2, x2, id, c = [int(o) for o in output]
                 bboxes = BoundingBox(x1, y1, x2, y2)
                 item_id = f"{names[c]}-{str(id)}"

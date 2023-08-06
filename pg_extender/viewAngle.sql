@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "viewAngle"
-\echo ""
-
 -- `view_point` is the object from which `obj` is being viewed
 DROP FUNCTION IF EXISTS viewAngle(geometry, real, geometry);
 CREATE OR REPLACE FUNCTION viewAngle(obj_position geometry, view_point_heading real, view_point geometry) RETURNS real AS 

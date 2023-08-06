@@ -1,0 +1,82 @@
+name: Generate Videos
+on:
+  push:
+
+jobs:
+  generate-videos:
+    name: Generate Videos
+    runs-on: ubuntu-latest
+    services:
+      mobilitydb:
+        image: mobilitydb/mobilitydb:14-3.2-1
+        ports:
+          - 25432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GH_PAT || github.token }}
+          submodules: recursive
+
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
+        with:
+          environment-file: environment.yml
+          init-shell: none
+          cache-downloads: true
+
+      - name: Check Python Versions
+        shell: micromamba-shell {0}
+        run: |
+          python --version
+          python3 --version
+          which python
+          which python3
+          which pip
+          which pip3
+          which poetry
+
+      - name: Install Dependencies
+        shell: micromamba-shell {0}
+        run: poetry install --no-interaction --without dev --with test
+      
+      - name: Install lap (Hack)
+        shell: micromamba-shell {0}
+        run: |
+          pip install --upgrade pip
+          pip install lap
+      
+      - name: Check Installed Packages
+        shell: micromamba-shell {0}
+        run: pip list
+
+      - name: Extend MobilityDB with User-Defined functions
+        shell: micromamba-shell {0}
+        run: |
+          pushd pg_extender
+          mv install.sql install.sql.bak
+          python ../scripts/generate_pg_extender.py
+          cat install.sql
+          psql -h localhost -p 25432 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          mv install.sql.bak install.sql
+          popd
+        env:
+          PGPASSWORD: docker
+      
+      - name: Ingest data
+        shell: micromamba-shell {0}
+        run: python ./scripts/ingest_road.py
+        env:
+          AP_PORT: 25432
+      
+      - name: Generate Image data
+        shell: micromamba-shell {0}
+        run: python examples/inference_pipeline.py
+
+      - name: Commit generated examples
+        run: ./scripts/commit-and-push-if-latest.sh "[CI] generate video examples"

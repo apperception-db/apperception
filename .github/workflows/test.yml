@@ -6,122 +6,131 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
     services:
       mobilitydb:
-        image: mobilitydb/mobilitydb:latest
+        image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25432:5432
+          - 25440:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      mobilitydb-road:
-        image: mobilitydb/mobilitydb:latest
+      mobilitydb-road-1:
+        image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25433:5432
+          - 25441:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mobilitydb-road-2:
+        image: mobilitydb/mobilitydb:14-3.2-1
+        ports:
+          - 25442:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
       mobilitydb-reset:
-        image: mobilitydb/mobilitydb:latest
+        image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25434:5432
+          - 25443:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
       mobilitydb-import:
-        image: mobilitydb/mobilitydb:latest
+        image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25435:5432
+          - 25444:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
       mobilitydb-sql:
-        image: mobilitydb/mobilitydb:latest
+        image: mobilitydb/mobilitydb:14-3.2-1
         ports:
-          - 25436:5432
+          - 25445:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
         with:
           token: ${{ secrets.GH_PAT || github.token }}
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Setup Micromamba
+        uses: mamba-org/setup-micromamba@v1
         with:
-          python-version: ${{ matrix.python-version }}
+          environment-file: environment.yml
+          init-shell: none
+          cache-downloads: true
 
-      - name: Install and configure Poetry
-        uses: snok/install-poetry@v1
-        with:
-          virtualenvs-create: true
-          virtualenvs-in-project: true
-          installer-parallel: true
-
-      # - name: Cache Poetry virtualenv
-      #   uses: actions/cache@v3
-      #   id: cached-poetry-dependencies 
-      #   with:
-      #     path: .venv
-      #     key: poetry-venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Check Python Versions
+        shell: micromamba-shell {0}
+        run: |
+          python --version
+          python3 --version
+          which python
+          which python3
+          which pip
+          which pip3
+          which poetry
 
       - name: Install Dependencies
-        # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction
-
-      - name: Check Python Version
-        run: poetry run python --version
+        shell: micromamba-shell {0}
+        run: poetry install --no-interaction --without dev,cv --with test
       
       - name: Check Installed Packages
-        run: poetry run pip list
+        shell: micromamba-shell {0}
+        run: pip list
 
       - name: Extend MobilityDB with User-Defined functions
+        shell: micromamba-shell {0}
         run: |
           pushd pg_extender
-          psql -h localhost -p 25432 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25433 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25434 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25435 -d mobilitydb -U docker -c "\i install.sql;"
-          psql -h localhost -p 25436 -d mobilitydb -U docker -c "\i install.sql;"
+          python ../scripts/generate_pg_extender.py
+          cat install.sql
+          psql -h localhost -p 25440 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25441 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25442 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25443 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
+          psql -h localhost -p 25444 -d mobilitydb -U docker -c "SET client_min_messages TO WARNING;" -c "\i install.sql;"
           popd
         env:
           PGPASSWORD: docker
       
       - name: Ingest data
+        shell: micromamba-shell {0}
         run: |
-          poetry run python -c "from apperception.utils import import_tables; from apperception.database import database; import_tables(database, './data/scenic/database')"
-          poetry run python -c "from apperception.utils import ingest_road; from apperception.database import database; ingest_road(database, './data/scenic/road_network_boston')"
-          poetry run jupyter nbconvert --execute --to notebook ./nb-scripts/optimized-scenic/add_attributes.ipynb
-          poetry run jupyter nbconvert --execute --to notebook ./nb-scripts/optimized-scenic/index_segment.ipynb
+          python ./scripts/ingest_road.py
+          python ./scripts/import_tables.py
+          jupyter nbconvert --execute --to notebook ./scripts/optimized-scenic/add_attributes.ipynb
         env:
-          AP_PORT: 25432
+          AP_PORT: 25440
       
       - name: Generate Image data
-        run: |
-          poetry run python scripts/fake-images.py
+        shell: micromamba-shell {0}
+        run: python scripts/fake-images.py
       
       - name: Unit Test
-        run: poetry run pytest --cov=apperception --cov-report=xml tests tests-scenic
+        shell: micromamba-shell {0}
+        run: pytest --cov=apperception --cov-report=xml tests
         env:
-          AP_PORT: 25432
-          AP_PORT_ROAD: 25433
-          AP_PORT_RESET: 25434
-          AP_PORT_IMPORT: 25435
-          AP_PORT_SQL: 25436
+          AP_PORT: 25440
+          AP_PORT_ROAD_1: 25441
+          AP_PORT_ROAD_2: 25442
+          AP_PORT_RESET: 25443
+          AP_PORT_IMPORT: 25444
+          AP_PORT_SQL: 25445
       
       - name: Upload coverage reports to Codecov
         run: |
