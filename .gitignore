@@ -23,7 +23,6 @@ sweeps
 data/v1.0-mini
 data/nuscenes
 data/scenic/road_network
-data/scenic/database
 
 models
 
