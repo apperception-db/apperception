@@ -222,10 +222,11 @@ class Database:
                 ARRAY{config.camera_intrinsic}::real[][],
                 'POINT Z ({' '.join(map(str, config.ego_translation))})',
                 ARRAY[{','.join(map(str, config.ego_rotation))}]::real[],
-                '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}',
+                '{config.timestamp}',
                 {config.cameraHeading},
                 {config.egoHeading}
             )"""
+            # timestamp -> '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}', @yousefh409
             for config in camera.configs
         ]
 
