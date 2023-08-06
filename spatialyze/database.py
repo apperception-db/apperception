@@ -60,6 +60,8 @@ TRAJECTORY_COLUMNS: "list[tuple[str, str]]" = [
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
     ("itemHeadings", "tfloat"),
+    # ("color", "TEXT"),
+    # ("largestBbox", "STBOX")
     # ("roadPolygons", "tgeompoint"),
     # ("period", "period") [today, nextweek]
 ]
@@ -102,7 +104,7 @@ class Database:
         self.reset_cursor()
         self._create_camera_table(commit)
         self._create_item_general_trajectory_table(commit)
-        # self._create_general_bbox_table(False)
+        self._create_general_bbox_table(commit)
         self._create_index(commit)
 
     def reset_cursor(self):
@@ -115,18 +117,18 @@ class Database:
         self.cursor.execute(f"CREATE TABLE Cameras ({columns(_schema, CAMERA_COLUMNS)})")
         self._commit(commit)
 
-    # def _create_general_bbox_table(self, commit=True):
-    #     self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
-    #     self.cursor.execute(
-    #         f"""
-    #         CREATE TABLE General_Bbox (
-    #             {columns(_schema, BBOX_COLUMNS)},
-    #             FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
-    #             PRIMARY KEY (itemId, timestamp)
-    #         )
-    #         """
-    #     )
-    #     self._commit(commit)
+    def _create_general_bbox_table(self, commit=True):
+        self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
+        self.cursor.execute(
+            f"""
+            CREATE TABLE General_Bbox (
+                {columns(_schema, BBOX_COLUMNS)},
+                FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
+                PRIMARY KEY (itemId, timestamp)
+            )
+            """
+        )
+        self._commit(commit)
 
     def _create_item_general_trajectory_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
@@ -224,6 +226,7 @@ class Database:
                 {config.cameraHeading},
                 {config.egoHeading}
             )"""
+            # timestamp -> '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}', @yousefh409
             for config in camera.configs
         ]
 
@@ -399,16 +402,13 @@ class Database:
         query = psql.SQL(
             "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
             "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox), TMin(trajBbox) "
-            "FROM ({query}) "
+            f"FROM ({query}) "
             "JOIN General_Bbox using (itemId)"
         )
 
         fetched_meta = self.execute(query)
         _fetched_meta = reformat_bbox_trajectories(fetched_meta)
         overlay_bboxes(_fetched_meta, cams, boxed)
-
-    def sql(self, query: str) -> pd.DataFrame:
-        return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
 
     def predicate(self, predicate: "PredicateNode"):
         tables, camera = FindAllTablesVisitor()(predicate)
@@ -424,18 +424,21 @@ class Database:
                 "\n"
                 "JOIN Item_General_Trajectory "
                 f"AS t{i} "
-                f"ON  Cameras.timestamp <@ t{i}.trajCentroids::period"
+                f"ON  Cameras.timestamp <@ t{i}.trajCentroids::period "
                 f"AND Cameras.cameraId  =  t{i}.cameraId"
             )
             t_outputs += f", t{i}.itemId"
 
         sql_str = f"""
-            SELECT Cameras.frameNum {t_outputs}, Cameras.cameraId
+            SELECT Cameras.frameNum {t_outputs}, Cameras.cameraId, Cameras.filename
             FROM Cameras{t_tables}
             WHERE
             {GenSqlVisitor()(predicate)}
         """
         return self.execute(sql_str)
+
+    def sql(self, query: str) -> pd.DataFrame:
+        return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
 
     # def get_len(self, query: "psql.Composable | str"):
     #     """
