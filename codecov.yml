@@ -1,0 +1,4 @@
+ignore:
+  - "spatialyze/legacy"
+  - "optimized_ingestion"
+  - "**/__init__.py"

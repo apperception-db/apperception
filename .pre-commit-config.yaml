@@ -1,0 +1,37 @@
+repos:
+  - repo: local
+    hooks:
+      - id: notebook-clear-output
+        name: notebook-clear-output
+        files: \.ipynb$
+        exclude: benchmarks\/.*\.ipynb$
+        language: system
+        entry: jupyter nbconvert --clear-output --inplace
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.1.1
+    hooks:
+      - id: autoflake
+        files: (?:spatialyze|optimized_ingestion)\/.*\.py$
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: 'v2.0.2'  # Use the sha / tag you want to point at
+    hooks:
+      - id: autopep8
+        files: (?:spatialyze|optimized_ingestion)\/.*\.py$
+  # - repo: https://github.com/psf/black
+  #   rev: 23.3.0
+  #   hooks:
+  #     - id: black
+  - repo: https://github.com/pycqa/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        name: isort (python)
+        files: (?:spatialyze|optimized_ingestion)\/.*$
+      - id: isort
+        name: isort (cython)
+        types: [cython]
+        files: (?:spatialyze|optimized_ingestion)\/.*$
+      - id: isort
+        name: isort (pyi)
+        types: [pyi]
+        files: (?:spatialyze|optimized_ingestion)\/.*$

@@ -1,34 +1,71 @@
 [tool.poetry]
-name = "apperception"
+name = "spatialyze"
 version = "0.1.0"
 description = ""
 authors = ["Your Name <you@example.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.8"
-PyPika = "^0.48.9"
+python = "^3.10"
 pyquaternion = "^0.9.9"
 numpy = "^1.22.4"
 matplotlib = "^3.5.2"
 opencv-python = "^4.6.0"
 pandas = "^1.4.2"
-decompyle3 = "^3.9.0"
-psycopg2-binary = "^2.9.3"
+bitarray = "^2.6.0"
+tqdm = "^4.64.1"
+shapely = "^1.8.5.post1"
+plpygis = "^0.2.0"
 
-[tool.poetry.dev-dependencies]
-jupyterlab = "^3.4.3"
-flake8 = "^4.0.1"
-mypy = "^0.961"
+# MobilityDB
+psycopg2-binary = "^2.9.3"
+postgis = "^1.0.4"
+# python-mobilitydb = "^0.1.2"
+
+[tool.poetry.group.cv.dependencies]
+torch = "^1.13.0"
+torchvision = "^0.14.0"
+scipy = "^1.4.1"
+easydict = "^1.10"
+gdown = "^4.7.1"
+cython-bbox = {git = "https://github.com/apperception-db/cython_bbox.git"}
+ultralytics = "^8.0.148"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.0"
+coverage = "^7.2.7"
+pytest-cov = "^4.1.0"
+notebook = "^6.4.12"
+
+[tool.poetry.group.dev.dependencies]
 types-psycopg2 = "^2.9.16"
-pyright = "^1.1.253"
-pytest = "^7.1.2"
-astpretty = "^3.0.0"
-coverage = "^6.4.1"
-pytest-cov = "^3.0.0"
+# mypy = "^1.4.1"
+pyright = "^1.1.320"
+flake8 = "^5.0.4"
+pre-commit = "^3.2.2"
+
+# Notebook
+jupyterlab = "^3.6.2"
+ipywidgets = "^8.0.6"
+jupyterlab-lsp = "^4.0.1"
+python-lsp-server = {extras = ["all"], version = "^1.7.1"}
+jupyterlab-vim = "^0.16.0"
+nbdime = "^3.2.1"
+altair = "^4.2.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.autoflake]
+recursive = true
+in-place = true
+remove-all-unused-imports = true
+ignore-init-module-imports = true
+expand-star-imports = true
+
+[tool.isort]
+profile = "black"
+verbose = true
 
 [tool.black]
 line-length = 100
@@ -40,33 +77,30 @@ recursive = true
 aggressive = 3
 verbose = 2
 
-[tool.mypy]
-exclude = [
-  'trackers/object_tracker_yolov4_deepsort\.py',
-  'trackers/object_tracker_yolov5_deepsort\.py',
-  'legacy/.*',
-  'video_util\.py',
-  'scenic_util\.py',
-]
+# [tool.mypy]
+# exclude = [
+#   'trackers/object_tracker_yolov4_deepsort\.py',
+#   'trackers/object_tracker_yolov5_deepsort\.py',
+#   'legacy/.*',
+#   'video_util\.py',
+#   'scenic_util\.py',
+# ]
 
-[[tool.mypy.overrides]]
-module = [
-  'pandas',
-  'pypika',
-  'pypika.dialects',
-  'pypika.functions',
-  'cv2',
-  'pyquaternion',
-  'pyquaternion.quaternion',
-  'uncompyle6',
-  'decompyle3',
-]
-ignore_missing_imports = true
+# [[tool.mypy.overrides]]
+# module = [
+#   'pandas',
+#   'cv2',
+#   'pyquaternion',
+#   'pyquaternion.quaternion',
+#   'postgis.psycopg',
+#   'mobilitydb.psycopg',
+# ]
+# ignore_missing_imports = true
 
 [tool.pyright]
+pythonVersion = '3.10'
 ignore = [
-  'apperception/legacy/*',
-  'apperception/video_util.py',
-  'apperception/trackers/object_tracker_yolov4_deepsort.py',
-  'apperception/trackers/object_tracker_yolov5_deepsort.py',
+  'spatialyze/legacy/*',
+  'spatialyze/trackers/object_tracker_yolov4_deepsort.py',
+  'spatialyze/trackers/object_tracker_yolov5_deepsort.py',
 ]

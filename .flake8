@@ -1,0 +1,12 @@
+[flake8]
+ignore =
+  # let black handles line length
+  E501,
+  # let black handles spaces between colon (list slicing)
+  E203,
+  # let black handles line break before binary operator
+  W503,
+  # multiple '#' leading a line comment is ok
+  E266,
+  # module-level import not on top of file is ok
+  E402

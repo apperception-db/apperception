@@ -1,0 +1,2 @@
+class GeospatialVideo:
+    pass

@@ -9,19 +9,24 @@ yolov5-deepsort
 .pytest_cache
 .idea
 output
-.apperception_cache
-env
 .venv
 .coverage
 coverage.xml
+.virtual_documents
 
-*.csv
 *.pickle
 maps
 samples
 sweeps
-v1.0-mini
-*.pickle
 
-*.json
+data/v1.0-mini
 data/nuscenes
+data/scenic/road_network
+
+models
+
+weights
+
+outputs
+
+yolov5s.pt

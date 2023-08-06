@@ -1,0 +1,8 @@
+[submodule "monodepth2"]
+	path = optimized_ingestion/modules/monodepth2
+	url = git@github.com:apperception-db/monodepth2.git
+	branch = pip-module
+[submodule "yolo_tracker"]
+	path = optimized_ingestion/modules/yolo_tracker
+	url = git@github.com:apperception-db/Yolov5_StrongSORT_OSNet.git
+	branch = module

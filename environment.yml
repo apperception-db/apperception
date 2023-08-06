@@ -1,0 +1,10 @@
+name: spatialyze
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - poetry==1.5.1

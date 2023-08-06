@@ -1,26 +1,6 @@
 version: '2.3'
 services:
-  tasm:
-    image: apperceptiontasm/tasm:latest
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-    ports:
-      - "8890:8890"
-    # Mount volume 
-    volumes:
-      - "./:/apperception"
-    entrypoint: /bin/sh
-    stdin_open: true
-    tty: true
-    links:
-      - "mobilitydb:localhost"
-    networks:
-      vpcbr:
-        ipv4_address: 172.19.0.2
-    
   mobilitydb:
-
     # image to fetch from docker hub
     image: mobilitydb/mobilitydb
     ports:

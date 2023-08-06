@@ -1,85 +1,86 @@
-# Apperception: a database management system optimized for multi-video applications
+# Spatialyze: A Geospatial Video Analytic System with Spatial-Aware Optimizations
 
-Apperception ingests video data from many perspectives and makes them queryable as a single multidimensional visual object. It incorporates new techniques for optimizing, executing, and storing multi-perspective video data. 
+![Tests and Type Checks](https://github.com/apperception-db/spatialyze/actions/workflows/test-and-check.yml/badge.svg?branch=dev)
 
-## How to Setup Apperception Repo
+## Absract
+Videos that are shot using commodity hardware such as phones
+and surveillance cameras record various metadata such as time and
+location. We encounter such geospatial videos on a daily basis and
+such videos have been growing in volume significantly. Yet, we
+do not have data management systems that allow users to interact
+with such data effectively.
+
+In this paper, we describe Spatialyze, a new framework for end-
+to-end querying of geospatial videos. Spatialyze comes with a
+domain-specific language where users can construct geospatial
+video analytic workflows using a 3-step, declarative, build-filter-
+observe paradigm. Internally, Spatialyze leverages the declarative
+nature of such workflows, the temporal-spatial metadata stored
+with videos, and physical behavior of real-world objects to optimize
+the execution of workflows. Our results using real-world videos
+and workflows show that Spatialyze can reduce execution time by
+up to 5.3x, while maintaining up to 97.1% accuracy compared to
+unoptimized execution.
+
+## Requirement
+```
+python >= 3.10
+```
+
+## How to Setup Spatialyze Repo
 ### Install dependencies:
+#### Debian based Linux
+```sh
+apt-get update && apt-get install -y python3-opencv
 ```
-apt-get update && apt-get install -y postgresql python3-opencv
-```
-### Clone the Apperception repo
+### Clone the Spatialyze repo
 For ssh:
+```sh
+git clone -b optimized_ingestion --recurse-submodules git@github.com:apperception-db/spatialyze.git
+cd spatialyze
 ```
-git clone git@github.com:apperception-db/apperception.git
-cd apperception
-```
-For HTTPS:
-```
-git clone https://github.com/apperception-db/apperception.git
-cd apperception
-```
-### Downloading Official YOLOv4 Pre-trained in the repo
 
-Copy and paste yolov4.weights from your downloads folder into this repository. For the Demo, we use yolov4-tiny.weights,
+### We use Conda/Mamba to manage our python environment
+Install Mamba: https://mamba.readthedocs.io/en/latest/installation.html
+or install Conda: https://docs.conda.io/en/latest/miniconda.html
 
-If you want to use yolov4-tiny.weights, a smaller model that is faster at running detections but less accurate, download file here: https://github.com/AlexeyAB/darknet/releases/download/darknet_yolo_v4_pre/yolov4-tiny.weights
+### Setup Environment and Dependencies
+```sh
+# clone submodules
+git submodule update --init --recursive
 
-Our object tracker uses YOLOv4 to make the object detections, which deep sort then uses to track. There exists an official pre-trained YOLOv4 object detector model that is able to detect 80 classes. For easy demo purposes we will use the pre-trained weights for our tracker. Download pre-trained yolov4.weights file: https://drive.google.com/open?id=1cewMfusmPjYWbrnuJRuKhPMwRe_b9PaT
+# setup virtual environment
+# with conda
+conda env create -f environment.yml
+conda activate spatialyze
+# OR with mamba
+mamba env create -f environment.yml
+mamba activate spatialyze
 
-Download the yolov4 model, unzip in the current repo
-https://drive.google.com/file/d/1g5D0pU-PKoe7uTHI7cRjFlGRm-xRQ1ZL/view?usp=sharing
-
-### Then we setup the repo
+# install python dependencies
+poetry install
+pip install lap  # a bug in lap/poetry/conda that lap needs to be installed using pip.
 ```
-chmod u+x ./setup.sh
-chmod 733 ./setup.sh
-./setup.sh
-```
-## Apperception Demo Tryout without TASM
-As TASM requires nividia-docker/nvidia-docker2(https://www.ibm.com/docs/en/maximo-vi/8.2.0?topic=planning-installing-docker-nvidia-docker2) during runtime, and a machine with an encode-capable GPU (https://developer.nvidia.com/video-encode-and-decode-gpu-support-matrix-new). To tryout Apperception features without TASM, run the following:
-### Start Apperception Metadata Store MobilityDB(https://github.com/MobilityDB/MobilityDB)
-```
+
+## Spatialyze Demo
+### Start Spatialyze Geospatial Metadata Store [MobilityDB](https://github.com/MobilityDB/MobilityDB)
+```sh
 docker volume create mobilitydb_data
 docker run --name "mobilitydb" -d -p 25432:5432 -v mobilitydb_data:/var/lib/postgresql mobilitydb/mobilitydb
 ```
 We need to setup the mobilitydb with customized functions
+```sh
+docker exec -it mobilitydb rm -rf /pg_extender
+docker cp pg_extender mobilitydb:/pg_extender
+docker exec -it -w /pg_extender mobilitydb python3 install.py
 ```
-cd pg_extender
-psql -h localhost -p 25432 -d mobilitydb -U docker
-Enter "docker" as the default password
-\i overlap.sql;
-\q
+To run MobilityDB every system restart
+```sh
+docker update --restart unless-stopped mobilitydb
 ```
 
 ### Try the demo.
-In apperception repo:
+In spatialyze repo:
 `jupyter notebook` or `python3 -m notebook`
 
 The demo notebook first constructs the world. Then it queries for the trajectory of the cars that appeared once in an area of interests within some time interval.
-
-## To fully activate apperception in TASM:
-```
-docker-compose up
-cd pg_extender
-psql -h 172.19.0.3 -d mobilitydb -U docker
-Enter "docker" as the default password
-\i overlap.sql
-\q
-docker ps
-```
-After fetching the CONTAINER_ID of apperceptiontasm/tasm:latest, run
-```
-docker exec -it {CONTAINER_ID of apperceptiontasm/tasm:latest} /bin/bash
-```
-Now we are under TASM env
-```
-cd /apperception/
-pip3 install -r requirements.txt
-```
-### Try the demo.
-In the docker:  
-`jupyter notebook --ip 172.19.0.2 --port 8890 --allow-root &`
-Directly open the jupyter url
-The demo notebook first constructs the world. Then it queries for the trajectory and videos of the cars that appeared once in an area of interests within some time interval.
-
-
