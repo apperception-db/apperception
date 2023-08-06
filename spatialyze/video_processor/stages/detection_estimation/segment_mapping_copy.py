@@ -28,7 +28,7 @@ from plpygis import Geometry
 from shapely.geometry import LineString, Polygon
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir, os.pardir)))
-from optimized_ingestion.camera_config_copy import CameraConfig, camera_config
+from ...camera_config_copy import CameraConfig, camera_config
 
 # from pyquaternion import Quaternion
 pd.get_option("display.max_columns")
