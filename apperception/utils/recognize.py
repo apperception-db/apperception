@@ -15,23 +15,22 @@ def recognize(camera_configs: List[CameraConfig], annotation):
         sample_token_to_time[config.frame_id] = int(config.timestamp)
 
     for a in annotation.itertuples(index=False):
-        sample_data_token = a.token_sample_data
-        if sample_data_token not in sample_token_to_time:
-            continue
-        timestamp = sample_token_to_time[sample_data_token]
-        item_id = a.instance_token
-        if item_id not in annotations:
-            annotations[item_id] = TrackedObject(a.category, [], [])
+        sample_data_tokens = [sdt for sdt in a.sample_data_tokens if sdt in sample_token_to_time]
+        for sample_data_token in sample_data_tokens:
+            timestamp = sample_token_to_time[sample_data_token]
+            item_id = a.instance_token
+            if item_id not in annotations:
+                annotations[item_id] = TrackedObject(a.category, [], [])
 
-        box = Box(a.translation, a.size, Quaternion(a.rotation))
+            box = Box(a.translation, a.size, Quaternion(a.rotation))
 
-        corners = box.corners()
-        bbox = np.transpose(corners[:, [3, 7]])  # type: ignore
+            corners = box.corners()
+            bbox = np.transpose(corners[:, [3, 7]])  # type: ignore
 
-        annotations[item_id].bboxes.append(bbox)
-        annotations[item_id].timestamps.append(timestamp)
-        annotations[item_id].itemHeading.append(a.heading)
-        annotations[item_id].translations.append(a.translation)
+            annotations[item_id].bboxes.append(bbox)
+            annotations[item_id].timestamps.append(timestamp)
+            annotations[item_id].itemHeading.append(a.heading)
+            annotations[item_id].translations.append(a.translation)
 
     for item_id in annotations:
         timestamps = np.array(annotations[item_id].timestamps)

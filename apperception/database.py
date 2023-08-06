@@ -60,6 +60,8 @@ TRAJECTORY_COLUMNS: "list[tuple[str, str]]" = [
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
     ("itemHeadings", "tfloat"),
+    # ("color", "TEXT"),
+    # ("largestBbox", "STBOX")
     # ("roadPolygons", "tgeompoint"),
     # ("period", "period") [today, nextweek]
 ]
@@ -102,7 +104,7 @@ class Database:
         self.reset_cursor()
         self._create_camera_table(commit)
         self._create_item_general_trajectory_table(commit)
-        # self._create_general_bbox_table(False)
+        self._create_general_bbox_table(commit)
         self._create_index(commit)
 
     def reset_cursor(self):
@@ -224,6 +226,7 @@ class Database:
                 {config.cameraHeading},
                 {config.egoHeading}
             )"""
+            # timestamp -> '{datetime.fromtimestamp(float(config.timestamp)/1000000.0)}', @yousefh409
             for config in camera.configs
         ]
 
@@ -399,13 +402,40 @@ class Database:
         query = psql.SQL(
             "SELECT XMin(trajBbox), YMin(trajBbox), ZMin(trajBbox), "
             "XMax(trajBbox), YMax(trajBbox), ZMax(trajBbox), TMin(trajBbox) "
-            "FROM ({query}) "
+            f"FROM ({query}) "
             "JOIN General_Bbox using (itemId)"
         )
 
         fetched_meta = self.execute(query)
         _fetched_meta = reformat_bbox_trajectories(fetched_meta)
         overlay_bboxes(_fetched_meta, cams, boxed)
+
+    def predicate(self, predicate: "PredicateNode"):
+        tables, camera = FindAllTablesVisitor()(predicate)
+        tables = sorted(tables)
+        mapping = {t: i for i, t in enumerate(tables)}
+        predicate = normalize(predicate)
+        predicate = MapTablesTransformer(mapping)(predicate)
+
+        t_tables = ""
+        t_outputs = ""
+        for i in range(len(tables)):
+            t_tables += (
+                "\n"
+                "JOIN Item_General_Trajectory "
+                f"AS t{i} "
+                f"ON  Cameras.timestamp <@ t{i}.trajCentroids::period "
+                f"AND Cameras.cameraId  =  t{i}.cameraId"
+            )
+            t_outputs += f", t{i}.itemId"
+
+        sql_str = f"""
+            SELECT Cameras.frameNum {t_outputs}, Cameras.cameraId, Cameras.filename
+            FROM Cameras{t_tables}
+            WHERE
+            {GenSqlVisitor()(predicate)}
+        """
+        return self.execute(sql_str)
 
     def sql(self, query: str) -> pd.DataFrame:
         return pd.DataFrame(self.execute(query), columns=[d.name for d in self.cursor.description])
