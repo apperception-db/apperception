@@ -68,6 +68,9 @@ class Stage(Generic[T]):
 
         return out
 
+    def __repr__(self) -> "str":
+        return self.classname()
+
     @classmethod
     def classname(cls):
         return ".".join(_get_classnames(cls))

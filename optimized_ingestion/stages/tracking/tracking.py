@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import List
 
+import numpy as np
+
 from ...types import DetectionId
 from ..stage import Stage
 
@@ -9,7 +11,7 @@ from ..stage import Stage
 class TrackingResult:
     detection_id: DetectionId
     object_id: int
-    confidence: float
+    confidence: "float | np.float32"
     next: "TrackingResult | None" = field(default=None, compare=False, repr=False)
     prev: "TrackingResult | None" = field(default=None, compare=False, repr=False)
 

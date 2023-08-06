@@ -17,6 +17,7 @@ import os
 import time
 from typing import NamedTuple, Tuple
 
+import numpy as np
 import plpygis
 import postgis
 import psycopg2.sql as sql
@@ -32,10 +33,9 @@ from .segment_mapping import (
     RoadSegmentWithHeading,
     Segment,
     get_fov_lines,
-    in_view,
     make_road_polygon_with_heading,
 )
-from .utils import Float2, Float22
+from .utils import ROAD_TYPES, Float22
 
 logger = logging.getLogger(__name__)
 
@@ -45,40 +45,36 @@ input_video_name = 'CAM_FRONT_n008-2018-08-27.mp4'
 input_date = input_video_name.split('_')[-1][:-4]
 test_img = 'samples/CAM_FRONT/n008-2018-08-01-15-52-19-0400__CAM_FRONT__1533153253912404.jpg'
 
-MAX_POLYGON_CONTAIN_QUERY = sql.SQL("""
+
+SQL_ROAD_TYPES = ','.join('__RoadType__' + rt + '__' for rt in ROAD_TYPES)
+
+
+MAX_POLYGON_CONTAIN_QUERY = sql.SQL(f"""
 WITH
 AvailablePolygon AS (
     SELECT *
     FROM SegmentPolygon as p
     WHERE
-        p.location = {location}
-        AND EXISTS (
-            SELECT *
-            FROM Segment
-            WHERE p.elementid = Segment.elementid
+        p.location = {{location}}
+        AND ST_Contains(
+            p.elementpolygon,
+            {{ego_translation}}::geometry
         )
 ),
 max_contain AS (
-    SELECT
-        MAX(ST_Area(p.elementpolygon)) max_segment_area
-    FROM AvailablePolygon AS p
-    WHERE ST_Contains(
-            p.elementpolygon,
-            {ego_translation}::geometry
-        )
+    SELECT MAX(ST_Area(elementpolygon)) max_segment_area
+    FROM AvailablePolygon
 )
 SELECT
     p.elementid,
     p.elementpolygon::geometry,
-    p.segmenttypes,
     ARRAY_AGG(s.segmentline)::geometry[],
     ARRAY_AGG(s.heading)::real[],
-    COUNT(DISTINCT p.elementpolygon),
-    COUNT(DISTINCT p.segmenttypes)
+    {SQL_ROAD_TYPES}
 FROM max_contain, AvailablePolygon AS p
     LEFT OUTER JOIN segment AS s USING (elementid)
 WHERE ST_Area(p.elementpolygon) = max_contain.max_segment_area
-GROUP BY p.elementid, p.elementpolygon, p.segmenttypes;
+GROUP BY p.elementid, p.elementpolygon, {SQL_ROAD_TYPES};
 """)
 
 USEFUL_TYPES = ['lane', 'lanegroup', 'intersection']
@@ -102,7 +98,7 @@ class RoadPolygonInfo(NamedTuple):
     segment_headings: "list[float]"
     contains_ego: bool
     ego_config: "CameraConfig"
-    fov_lines: "Tuple[Float22, Float22]"
+    fov_lines: "tuple[Float22, Float22]"
 
 
 def reformat_return_polygon(segments: "list[RoadSegmentWithHeading]") -> "list[Segment]":
@@ -134,6 +130,13 @@ def intersection(fov_line: Tuple[Float22, Float22], segmentpolygon: "shapely.geo
     return []
 
 
+def is_roadsection(segmenttypes: 'list[int]'):
+    for t, v in zip(ROAD_TYPES, segmenttypes):
+        if t == 'roadsection' and v:
+            return True
+    return False
+
+
 def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
     point = postgis.Point(*ego_config.ego_translation[:2])
     query = MAX_POLYGON_CONTAIN_QUERY.format(
@@ -144,13 +147,13 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
     results = database.execute(query)
     if len(results) > 1:
         for result in results:
-            segmenttypes = result[2]
-            if 'roadsection' not in segmenttypes:
+            segmenttypes = result[4:]
+            if not is_roadsection(segmenttypes):
                 results = [result]
                 break
-    assert len(results) == 1
+    assert len(results) == 1, (ROAD_TYPES, [r[4:] for r in results])
     result = results[0]
-    assert result[5:] == (1, 1)
+    assert len(result) == 4 + len(ROAD_TYPES), (len(results), len(ROAD_TYPES) + 4)
 
     output = make_road_polygon_with_heading(result)
 
@@ -164,7 +167,6 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
     polygon = shapely.wkb.loads(roadpolygon.to_ewkb(), hex=True)
     assert isinstance(polygon, shapely.geometry.Polygon)
-
     return RoadPolygonInfo(
         polygonid,
         polygon,
@@ -179,75 +181,70 @@ def get_largest_polygon_containing_point(ego_config: "CameraConfig"):
 
 def map_detections_to_segments(detections: "list[obj_detection]", ego_config: "CameraConfig"):
     tokens = [*map(lambda x: x.detection_id.obj_order, detections)]
-    txs = [*map(lambda x: x.car_loc3d[0], detections)]
-    tys = [*map(lambda x: x.car_loc3d[1], detections)]
-    tzs = [*map(lambda x: x.car_loc3d[2], detections)]
+    points = [postgis.Point(d.car_loc3d[0], d.car_loc3d[1]) for d in detections]
 
     location = ego_config.location
 
-    _point = sql.SQL("UNNEST({fields}) AS _point (token, tx, ty, tz)").format(
-        fields=sql.SQL(',').join(map(sql.Literal, [tokens, txs, tys, tzs]))
-    )
+    convex_points = np.array([[d.car_loc3d[0], d.car_loc3d[1]] for d in detections])
 
-    out = sql.SQL("""
+    out = sql.SQL(f"""
     WITH
-    Point AS (SELECT * FROM {_point}),
+    Point AS (
+        SELECT *
+        FROM UNNEST(
+            {{tokens}},
+            {{points}}::geometry(Point)[]
+        ) AS _point (token, point)
+    ),
     AvailablePolygon AS (
         SELECT *
         FROM SegmentPolygon
-        WHERE location = {location}
-        AND SegmentPolygon.__RoadType__intersection__
-        AND SegmentPolygon.__RoadType__lane__
-        AND SegmentPolygon.__RoadType__lanegroup__
-        AND SegmentPolygon.__RoadType__lanesection__
+        WHERE location = {{location}}
+        AND ST_Intersects(SegmentPolygon.elementPolygon, ST_ConvexHull({{convex}}::geometry(MultiPoint)))
+        AND (SegmentPolygon.__RoadType__intersection__
+        OR SegmentPolygon.__RoadType__lane__
+        OR SegmentPolygon.__RoadType__lanegroup__
+        OR SegmentPolygon.__RoadType__lanesection__)
+        AND NOT SegmentPolygon.__RoadType__roadsection__
     ),
-    MaxPolygon AS (
-        SELECT token, MAX(ST_Area(Polygon.elementPolygon)) as size
+    MinPolygon AS (
+        SELECT token, MIN(ST_Area(Polygon.elementPolygon)) as size
         FROM Point AS p
         JOIN AvailablePolygon AS Polygon
-            ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
+            ON ST_Contains(Polygon.elementPolygon, p.point)
         GROUP BY token
     ),
-    MaxPolygonId AS (
+    MinPolygonId AS (
         SELECT token, MIN(elementId) as elementId
         FROM Point AS p
-        JOIN MaxPolygon USING (token)
+        JOIN MinPolygon USING (token)
         JOIN AvailablePolygon as Polygon
-            ON ST_Contains(Polygon.elementPolygon, ST_Point(p.tx, p.ty))
-            AND ST_Area(Polygon.elementPolygon) = MaxPolygon.size
-        GROUP BY token
-    ),
-    PointPolygonSegment AS (
-        SELECT
-            *,
-            ST_Distance(ST_Point(tx, ty), ST_MakeLine(startPoint, endPoint)) AS distance
-        FROM Point AS p
-        JOIN MaxPolygonId USING (token)
-        JOIN AvailablePolygon USING (elementId)
-        JOIN Segment USING (elementId)
-    ),
-    MinDis as (
-        SELECT token, MIN(distance) as mindistance
-        FROM PointPolygonSegment
+            ON ST_Contains(Polygon.elementPolygon, p.point)
+            AND ST_Area(Polygon.elementPolygon) = MinPolygon.size
         GROUP BY token
     )
     SELECT
         p.token,
-        p.elementid,
-        p.elementpolygon,
-        p.segmenttypes,
-        ARRAY_AGG(s.segmentline)::geometry[],
-        ARRAY_AGG(s.heading)::real[],
-        COUNT(DISTINCT p.elementpolygon),
-        COUNT(DISTINCT p.segmenttypes)
-    FROM PointPolygonSegment AS p
-        LEFT OUTER JOIN segment AS s USING (elementid)
-    JOIN MinDis USING (token)
-    WHERE p.distance = MinDis.mindistance
-        AND NOT p.__RoadType__roadsection__
-    GROUP BY p.elementid, p.token, p.elementpolygon, p.segmenttypes;
-    """).format(_point=_point, location=sql.Literal(location))
-
+        AvailablePolygon.elementid,
+        AvailablePolygon.elementpolygon,
+        ARRAY_AGG(Segment.segmentline)::geometry[],
+        ARRAY_AGG(Segment.heading)::real[],
+        {SQL_ROAD_TYPES}
+    FROM Point AS p
+    JOIN MinPolygonId USING (token)
+    JOIN AvailablePolygon USING (elementId)
+    JOIN Segment USING (elementId)
+    GROUP BY
+        AvailablePolygon.elementid,
+        p.token,
+        AvailablePolygon.elementpolygon,
+        {SQL_ROAD_TYPES};
+    """).format(
+        tokens=sql.Literal(tokens),
+        points=sql.Literal(points),
+        convex=sql.Literal(postgis.MultiPoint(map(tuple, convex_points))),
+        location=sql.Literal(location),
+    )
     result = database.execute(out)
     return result
 
@@ -256,23 +253,33 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
     """
     Given a list of detections, return a list of RoadSegmentWithHeading
     """
-    start_time = time.time()
+    # start_time = time.time()
+    times = []
+    times.append(time.time())
     results = map_detections_to_segments(detections, ego_config)
-    assert all(r[6:] == (1, 1) for r in results)
+    times.append(time.time())
+
     order_ids, mapped_polygons = [r[0] for r in results], [r[1:] for r in results]
     mapped_polygons = [*map(make_road_polygon_with_heading, mapped_polygons)]
+    times.append(time.time())
     for row in mapped_polygons:
         types, line, heading = row[2:5]
         assert line is not None
         assert types is not None
         assert heading is not None
+    times.append(time.time())
     mapped_polygons = reformat_return_polygon(mapped_polygons)
-    mapped_road_polygon_info = {}
+    times.append(time.time())
+    if any(p.road_type == 'intersection' for p in mapped_polygons):
+        return {}, times
+    times.append(time.time())
     fov_lines = get_fov_lines(ego_config)
+    times.append(time.time())
 
-    def not_in_view(point: "Float2"):
-        return not in_view(point, ego_config.ego_translation, fov_lines)
+    # def not_in_view(point: "Float2"):
+    #     return not in_view(point, ego_config.ego_translation, fov_lines)
 
+    mapped_road_polygon_info: "dict[DetectionId, RoadPolygonInfo]" = {}
     for order_id, road_polygon in list(zip(order_ids, mapped_polygons)):
         frame_idx = detections[0].detection_id.frame_idx
         det_id = DetectionId(frame_idx=frame_idx, obj_order=order_id)
@@ -283,7 +290,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         assert segmentlines is not None
         assert segmentheadings is not None
 
-        assert all(isinstance(line, shapely.geometry.LineString) for line in segmentlines)
+        # assert all(isinstance(line, shapely.geometry.LineString) for line in segmentlines)
 
         p = plpygis.Geometry(roadpolygon.to_ewkb())
         assert isinstance(p, plpygis.Polygon)
@@ -294,23 +301,23 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
         assert isinstance(XYs[0][0], float), type(XYs[0][0])
         assert isinstance(XYs[1][0], float), type(XYs[1][0])
         polygon_points = list(zip(*XYs))
-        roadpolygon = shapely.geometry.Polygon(polygon_points)
+        # roadpolygon = shapely.geometry.Polygon(polygon_points)
 
-        decoded_road_polygon_points = polygon_points
-        if all(map(not_in_view, polygon_points)):
-            continue
+        # decoded_road_polygon_points = polygon_points
+        # if all(map(not_in_view, polygon_points)):
+        #     continue
 
-        intersection_points = intersection(fov_lines, roadpolygon)
-        decoded_road_polygon_points += intersection_points
-        keep_road_polygon_points: "list[Float2]" = []
-        for current_road_point in decoded_road_polygon_points:
-            if in_view(current_road_point, ego_config.ego_translation, fov_lines):
-                keep_road_polygon_points.append(current_road_point)
-        if (len(keep_road_polygon_points) > 2
-                and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
+        # intersection_points = intersection(fov_lines, roadpolygon)
+        # decoded_road_polygon_points += intersection_points
+        # keep_road_polygon_points: "list[Float2]" = []
+        # for current_road_point in decoded_road_polygon_points:
+        #     if in_view(current_road_point, ego_config.ego_translation, fov_lines):
+        #         keep_road_polygon_points.append(current_road_point)
+        if len(polygon_points) > 2:
+            # and shapely.geometry.Polygon(tuple(keep_road_polygon_points)).area > 1):
             mapped_road_polygon_info[det_id] = RoadPolygonInfo(
                 polygonid,
-                shapely.geometry.Polygon(keep_road_polygon_points),
+                shapely.geometry.Polygon(polygon_points),
                 segmentlines,
                 roadtype,
                 segmentheadings,
@@ -318,6 +325,7 @@ def get_detection_polygon_mapping(detections: "list[obj_detection]", ego_config:
                 ego_config,
                 fov_lines
             )
+    times.append(time.time())
 
-    logger.info(f'total mapping time: {time.time() - start_time}')
-    return mapped_road_polygon_info
+    # logger.info(f'total mapping time: {time.time() - start_time}')
+    return mapped_road_polygon_info, times

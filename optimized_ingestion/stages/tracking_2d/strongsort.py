@@ -1,15 +1,14 @@
 from pathlib import Path
+from typing import Literal
 
 import torch
 
-from ...cache import cache
-from ...modules.yolo_tracker.trackers.multi_tracker_zoo import StrongSORT as _StrongSORT
-from ...modules.yolo_tracker.trackers.multi_tracker_zoo import create_tracker
-from ...modules.yolo_tracker.yolov5.utils.torch_utils import select_device
 from ...payload import Payload
-from ..decode_frame.decode_frame import DecodeFrame
+from ...types import DetectionId
 from ..detection_2d.detection_2d import Detection2D
-from .tracking_2d import Tracking2D, Tracking2DResult
+from ..tracking.strongsort import StrongSORT as Tracking
+from ..tracking.tracking import TrackingResult
+from .tracking_2d import Metadatum, Tracking2D, Tracking2DResult
 
 FILE = Path(__file__).resolve()
 APPERCEPTION = FILE.parent.parent.parent.parent
@@ -18,110 +17,47 @@ reid_weights = WEIGHTS / "osnet_x0_25_msmt17.pt"
 
 
 class StrongSORT(Tracking2D):
-    def __init__(self, cache: "bool" = True) -> None:
+    def __init__(
+        self,
+        method: "Literal['increment-ages', 'update-empty']" = 'update-empty',
+        cache: "bool" = True
+    ) -> None:
         super().__init__()
-        self.cache = cache
-        # self.ss_benchmarks: "list[list[list[float]]]" = []
+        self.tracking = Tracking(method=method, cache=cache)
+        if hasattr(self.tracking, 'ss_benchmark'):
+            self.ss_benchmark = getattr(self.tracking, 'ss_benchmark')
 
-    @cache
     def _run(self, payload: "Payload"):
+        _, _metadata = self.tracking._run(payload)
+
+        trackings = self.tracking.get(_metadata)
+        assert trackings is not None
+
         detections = Detection2D.get(payload)
         assert detections is not None
 
-        images = DecodeFrame.get(payload)
-        assert images is not None
         metadata: "list[dict[int, Tracking2DResult]]" = []
         trajectories: "dict[int, list[Tracking2DResult]]" = {}
-        device = select_device("")
-        strongsort = create_tracker('strongsort', reid_weights, device, False)
-        assert isinstance(strongsort, _StrongSORT)
-        assert hasattr(strongsort, 'tracker')
-        assert hasattr(strongsort.tracker, 'camera_update')
-        assert hasattr(strongsort, 'model')
-        assert hasattr(strongsort.model, 'warmup')
-        curr_frame, prev_frame = None, None
-        with torch.no_grad():
-            # ss_benchmark: "list[list[float]]" = []
-            strongsort.model.warmup()
 
-            assert len(detections) == len(images)
-            # for idx, ((det, names, dids), im0s) in tqdm(enumerate(zip(detections, images)), total=len(images)):
-            for idx, ((det, names, dids), im0s) in enumerate(zip(detections, images)):
-                # frame_benchmark: "list[float]" = []
-                # frame_benchmark.append(time.time())
-                im0 = im0s.copy()
-                curr_frame = im0
-                # frame_benchmark.append(time.time())
+        names = detections[0][1]
+        assert names is not None
 
-                if prev_frame is not None and curr_frame is not None:
-                    strongsort.tracker.camera_update(prev_frame, curr_frame, cache=self.cache)
-                # frame_benchmark.append(time.time())
+        for (dets, _, dids), ts in StrongSORT.tqdm(zip(detections, trackings)):
+            d2ds_map: "dict[DetectionId, torch.Tensor]" = {}
+            for d2d, did in zip(dets, dids):
+                d2ds_map[did] = d2d
 
-                if not payload.keep[idx] or len(det) == 0:
-                    metadata.append({})
-                    strongsort.increment_ages()
-                    prev_frame = curr_frame
-                    continue
+            metadatum: "Metadatum" = {}
+            for t in ts:
+                d2d = d2ds_map[t.detection_id]
+                oid, tr = tracking_result(d2d, t, names)
 
-                confs = det[:, 4]
-                output_ = strongsort.update(det.cpu(), im0)
+                metadatum[oid] = tr
 
-                # frame_benchmark.extend(_t)
-                # frame_benchmark.append(time.time())
-
-                labels: "dict[int, Tracking2DResult]" = {}
-                for output in output_:
-                    obj_id = int(output[4])
-                    cls = int(output[5])
-                    det_idx = int(output[7])
-                    frame_idx_offset = int(output[8])
-
-                    if frame_idx_offset == 0:
-                        did = dids[det_idx]
-                        conf = confs[det_idx].item()
-                    else:
-                        # We have to access detection id from previous frames.
-                        # When a track is initialized, it is not in the output of strongsort.update right away.
-                        # Instead if the track is confirmed, it will be in the output of strongsort.update in the next frame.
-                        did = detections[idx - frame_idx_offset][2][det_idx]
-                        # TODO: this is a hack.
-                        # When we need to use conf, we will have to store conf from previous frames.
-                        conf = -1.
-
-                    bbox_left = output[0]
-                    bbox_top = output[1]
-                    bbox_w = output[2] - output[0]
-                    bbox_h = output[3] - output[1]
-                    labels[obj_id] = Tracking2DResult(
-                        idx,
-                        did,
-                        obj_id,
-                        bbox_left,
-                        bbox_top,
-                        bbox_w,
-                        bbox_h,
-                        names[cls],
-                        conf,
-                    )
-                    if obj_id not in trajectories:
-                        trajectories[obj_id] = []
-                    trajectories[obj_id].append(labels[obj_id])
-                metadata.append(labels)
-
-                # frame_benchmark.append(time.time())
-                prev_frame = curr_frame
-
-            #     ss = [
-            #         t2 - t1
-            #         for t1, t2
-            #         in zip(frame_benchmark[:-1], frame_benchmark[1:])
-            #     ]
-            #     # print('[', ', '.join(map(str, ss)), '],')
-            #     ss_benchmark.append(ss)
-
-            # # for s in ss_benchmark:
-            # #     print(s)
-            # self.ss_benchmarks.append(ss_benchmark)
+                if oid not in trajectories:
+                    trajectories[oid] = []
+                trajectories[oid].append(tr)
+            metadata.append(metadatum)
 
         for trajectory in trajectories.values():
             for before, after in zip(trajectory[:-1], trajectory[1:]):
@@ -129,3 +65,22 @@ class StrongSORT(Tracking2D):
                 after.prev = before
 
         return None, {self.classname(): metadata}
+
+
+def tracking_result(d2d: "torch.Tensor", t: "TrackingResult", names: "list[str]"):
+    bbox = d2d[:4].tolist()
+    bl, bt, br, bb = bbox
+    cls = int(d2d[5])
+    oid = t.object_id
+
+    return oid, Tracking2DResult(
+        t.detection_id.frame_idx,
+        t.detection_id,
+        oid,
+        bl,
+        bt,
+        br - bl,
+        bb - bt,
+        names[cls],
+        t.confidence,
+    )

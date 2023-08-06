@@ -51,7 +51,7 @@ class FromTracking3D(SegmentTrajectory):
 
         object_map: "dict[int, dict[DetectionId, torch.Tensor]]" = dict()
         for fidx, frame in enumerate(tracking):
-            for tracking_result in frame:
+            for tracking_result in frame.values():
                 did = tracking_result.detection_id
                 oid = tracking_result.object_id
                 if oid not in object_map:
@@ -217,7 +217,7 @@ def valid_segment_point(
 def _get_direction_2d(p1: "tuple[DetectionId, torch.Tensor]", p2: "tuple[DetectionId, torch.Tensor]") -> "tuple[float, float]":
     _p1 = (p1[1][6:9] + p1[1][9:12]) / 2
     _p2 = (p2[1][6:9] + p2[1][9:12]) / 2
-    diff = (_p2 - _p1)[:2]
+    diff = (_p2 - _p1)[:2].cpu()
     udiff = diff / np.linalg.norm(diff)
     return tuple(udiff.numpy())
 
@@ -253,9 +253,36 @@ def map_points_and_directions_to_segment(
     dxs = [d and d[0] for _, d in annotations]
     dys = [d and d[1] for _, d in annotations]
 
-    _point = psycopg2.sql.SQL("UNNEST({fields}) AS _point (fid, oid, tx, ty, dx, dy)").format(
-        fields=psycopg2.sql.SQL(',').join(map(psycopg2.sql.Literal, [frame_indices, object_indices, txs, tys, dxs, dys]))
+    _point = psycopg2.sql.SQL(
+        "UNNEST({fid}, {oid}, {tx}, {ty}, {dx}::double precision[], {dy}::double precision[]) AS _point (fid, oid, tx, ty, dx, dy)"
+    ).format(
+        fid=psycopg2.sql.Literal(frame_indices),
+        oid=psycopg2.sql.Literal(object_indices),
+        tx=psycopg2.sql.Literal(txs),
+        ty=psycopg2.sql.Literal(tys),
+        dx=psycopg2.sql.Literal(dxs),
+        dy=psycopg2.sql.Literal(dys),
+        # fields=psycopg2.sql.SQL(',').join(map(psycopg2.sql.Literal, [frame_indices, object_indices, txs, tys, dxs, dys]))
     )
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
+    # print()
+    # print('fid')
+    # print(frame_indices)
+    # print('oid')
+    # print(object_indices)
+    # print('txs')
+    # print(txs)
+    # print('tys')
+    # print(tys)
+    # print('dxs')
+    # print(dxs)
+    # print('dys')
+    # print(dys)
 
     helper = psycopg2.sql.SQL("""
     SET client_min_messages TO WARNING;

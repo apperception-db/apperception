@@ -61,7 +61,7 @@ class monodepth:
             # print("GPU Visible")
         else:
             self.device = torch.device("cpu")
-            # print("GPU not visible; CPU mode")
+            print("GPU not visible; CPU mode")
 
         if pred_metric_depth and "stereo" not in model_name:
             print(

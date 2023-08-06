@@ -49,11 +49,16 @@ class Action:
     end_loc: "Float2 | Float3"  # TODO: should either be Float2 or Float3
     action_type: "ActionType"
     target_obj_id: "str | None" = None
-    invalid_action: bool = field(init=False)
+    target_obj_bbox: "Float2 | None" = None
+    invalid: bool = field(init=False)
     estimated_time: "datetime.timedelta" = field(init=False)
 
     def __post_init__(self):
-        self.invalid_action = self.finish_time < self.start_time
+        if self.finish_time is None or self.end_loc is None:
+            self.invalid = True
+            return
+
+        self.invalid = self.finish_time < self.start_time
         self.estimated_time = self.finish_time - self.start_time
         if self.action_type and self.action_type in OBJ_BASED_ACTION:
             assert self.target_obj_id is not None
@@ -159,10 +164,10 @@ def ego_by_pass_car(detection_info: "DetectionInfo") -> "Action":
 def combine_sample_actions(sample_plan: "List[Action]"):
     best_plan = None
     for action in sample_plan:
-        if best_plan is None and not action.invalid_action:
+        if best_plan is None and not action.invalid:
             best_plan = action
         else:
-            if not action.invalid_action and action.finish_time < best_plan.finish_time:
+            if not action.invalid and action.finish_time < best_plan.finish_time:
                 best_plan = action
     return best_plan
 
@@ -192,14 +197,14 @@ def opposite_direction_sample_action(detection_info: "DetectionInfo", view_dista
     _ego_stop, ego_stop_action = ego_stop(ego_trajectory, ego_config)
     if _ego_stop:
         return ego_stop_action
-    # ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
+    ego_exit_segment_action = ego_exit_current_segment(detection_info, ego_trajectory, ego_config)
     # logger.info(f'ego_exit_segment_action {ego_exit_segment_action}')
     car_exit_segment_action = car_exit_current_segment(detection_info)
     # logger.info(f'car_exit_segment_action {car_exit_segment_action}')
     meet_ego_action = car_meet_up_with_ego(detection_info, ego_trajectory, ego_config)
     # logger.info(f'meet_ego_action {meet_ego_action}')
     # return car_exit_segment_action
-    actions = [car_exit_segment_action]
+    actions = [ego_exit_segment_action, car_exit_segment_action]
     if meet_ego_action is not None:
         actions.append(meet_ego_action)
     return combine_sample_actions(actions)

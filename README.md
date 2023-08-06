@@ -43,9 +43,6 @@ mamba activate apperception
 
 # install python dependencies
 poetry install
-
-# install yolo's + strongsort's dependencies
-pip install -r ./optimized_ingestion/modules/yolo_tracker/requirements.txt
 ```
 
 ### [Deprecated] Downloading Official YOLOv4 Pre-trained in the repo
@@ -82,7 +79,11 @@ We need to setup the mobilitydb with customized functions
 ```sh
 docker exec -it mobilitydb rm -rf /pg_extender
 docker cp pg_extender mobilitydb:/pg_extender
-docker exec -it -w /pg_extender mobilitydb psql -h localhost -p 5432 -d mobilitydb -U docker --command '\i install.sql;'
+docker exec -it -w /pg_extender mobilitydb python3 install.py
+```
+To run MobilityDB every system restart
+```sh
+docker update --restart unless-stopped mobilitydb
 ```
 
 ### Try the demo.
