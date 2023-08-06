@@ -1,7 +1,7 @@
+from typing import TYPE_CHECKING
+
 import cv2
 import numpy as np
-from tqdm import tqdm
-from typing import TYPE_CHECKING, List
 
 from ...cache import cache
 from ..stage import Stage
@@ -15,11 +15,11 @@ if TYPE_CHECKING:
 class DecodeFrame(Stage[np.ndarray]):
     @cache
     def _run(self, payload: "Payload"):
-        metadata: "List[npt.NDArray]" = []
+        metadata: "list[npt.NDArray]" = []
 
         video = cv2.VideoCapture(payload.video.videofile)
         n_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        for _ in tqdm(range(n_frames)):
+        for _ in DecodeFrame.tqdm(range(n_frames)):
             if not video.isOpened():
                 break
             frame = video.read()[1]

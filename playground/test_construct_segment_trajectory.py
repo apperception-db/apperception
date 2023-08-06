@@ -1,4 +1,4 @@
-from optimized_ingestion.stages.segment_trajectory.construct_segment_trajectory import *
+from ..optimized_ingestion.stages.segment_trajectory.test import *
 
 if __name__ == '__main__':
     test_same_segment()

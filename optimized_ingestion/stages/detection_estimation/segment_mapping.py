@@ -10,14 +10,16 @@ Usage example:
     mapping = map_imgsegment_roadsegment(test_config)
 """
 
-from apperception.database import database
-
 import array
 import logging
 import math
+import os
+import time
+from dataclasses import dataclass
+from typing import NamedTuple, Tuple
+
 import numpy as np
 import numpy.typing as npt
-import os
 import plpygis
 import postgis
 import psycopg2
@@ -25,12 +27,11 @@ import psycopg2.sql
 import shapely
 import shapely.geometry
 import shapely.wkb
-import time
-from dataclasses import dataclass
-from typing import NamedTuple, Tuple
+
+from apperception.database import database
 
 from ...camera_config import CameraConfig
-from .utils import Float2, Float3, Float22, line_to_polygon_intersection
+from .utils import ROAD_TYPES, Float2, Float3, Float22, line_to_polygon_intersection
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ WHERE ST_Contains(
         p.elementpolygon,
         {ego_translation}::geometry
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
@@ -76,7 +77,7 @@ WHERE ST_DWithin(
         {start_segment}::geometry,
         {view_distance}
     )
-    AND 'roadsection' != ALL(p.segmenttypes)
+    AND NOT p.__RoadType__roadsection__
     AND p.location = {location}
 GROUP BY p.elementid;
 """)
@@ -137,7 +138,7 @@ class RoadPolygonInfo:
         if len(self.segment_lines) == 0:
             return
 
-        start_segment_map: "dict[Tuple[float, float], Tuple[shapely.geometry.LineString, float]]" = {}
+        start_segment_map: "dict[Float2, Tuple[shapely.geometry.LineString, float]]" = {}
         ends: "set[Float2]" = set()
         for line, heading in zip(self.segment_lines, self.segment_headings):
             start = line.coords[0]
@@ -145,7 +146,7 @@ class RoadPolygonInfo:
             start_segment_map[start] = (line, heading)
             ends.add(end)
 
-        starts: "list[Tuple[float, float]]" = [
+        starts: "list[Float2]" = [
             start
             for start
             in start_segment_map
@@ -155,13 +156,13 @@ class RoadPolygonInfo:
 
         sorted_lines: "list[shapely.geometry.LineString]" = []
         sorted_headings: "list[float]" = []
-        start: "Tuple[float, float]" = starts[0]
+        start: "Float2" = starts[0]
         while start in start_segment_map:
             line, heading = start_segment_map[start]
             sorted_lines.append(line)
             sorted_headings.append(heading)
 
-            start: "Tuple[float, float]" = line.coords[1]
+            start: "Float2" = line.coords[1]
 
         self.segment_lines = sorted_lines
         self.segment_headings = sorted_headings
@@ -177,11 +178,12 @@ def hex_str_to_linestring(hex: 'str'):
 
 
 def make_road_polygon_with_heading(row: "tuple"):
-    eid, polygon, types, lines, headings, *_ = row
+    eid, polygon, lines, headings, *types = row
+    assert len(types) == len(ROAD_TYPES), (types, ROAD_TYPES)
     return RoadSegmentWithHeading(
         eid,
         polygon,
-        types,
+        [t for t, v in zip(ROAD_TYPES, types) if v],
         [*map(hex_str_to_linestring, lines[1:-1].split(':'))],
         headings,
     )

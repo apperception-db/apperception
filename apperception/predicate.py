@@ -1,4 +1,15 @@
-from typing import Any, Callable, Dict, Generic, List, Literal, Optional, Set, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+)
 
 BinOp = Literal["add", "sub", "mul", "div", "matmul"]
 BoolOp = Literal["and", "or"]
@@ -9,21 +20,16 @@ UnaryOp = Literal["invert", "neg"]
 class PredicateNode:
     def __init__(self, *args, **kwargs):
         anns = self.__annotations__.keys()
-        if len(args) + len(kwargs) != len(anns):
-            raise Exception(
-                f"Mismatch number of arguments: expecting {len(anns)}, received {len(args)} args and {len(kwargs)} kwargs"
-            )
+        assert len(args) + len(kwargs) == len(
+            anns
+        ), f"Mismatch number of arguments: expecting {len(anns)}, received {len(args)} args and {len(kwargs)} kwargs"
 
         for k in kwargs:
-            if k not in anns:
-                raise Exception(f"{self.__class__.__name__} does not have attribute {k}")
+            assert k in anns, f"{self.__class__.__name__} does not have attribute {k}"
 
         arg = iter(args)
         for k in anns:
-            if k in kwargs:
-                setattr(self, k, kwargs[k])
-            else:
-                setattr(self, k, next(arg))
+            setattr(self, k, kwargs[k] if k in kwargs else next(arg))
 
     def __add__(self, other):
         other = wrap_literal(other)
@@ -65,13 +71,31 @@ class PredicateNode:
         other = wrap_literal(other)
         return BinOpNode(other, "matmul", self)
 
+    @staticmethod
+    def __expand_exprs(op: "BoolOp", node: "PredicateNode") -> "list[PredicateNode]":
+        if isinstance(node, BoolOpNode) and node.op == op:
+            return node.exprs
+        return [node]
+
     def __and__(self, other):
         other = wrap_literal(other)
-        return BoolOpNode("and", [self, other])
+        return BoolOpNode(
+            "and",
+            [
+                *PredicateNode.__expand_exprs("and", self),
+                *PredicateNode.__expand_exprs("and", other),
+            ],
+        )
 
     def __or__(self, other):
         other = wrap_literal(other)
-        return BoolOpNode("or", [self, other])
+        return BoolOpNode(
+            "or",
+            [
+                *PredicateNode.__expand_exprs("or", self),
+                *PredicateNode.__expand_exprs("or", other),
+            ],
+        )
 
     def __eq__(self, other):
         other = wrap_literal(other)
@@ -213,8 +237,9 @@ class CallNode(PredicateNode):
     _fn: Tuple["Fn"]
     params: List["PredicateNode"]
 
-    def __init__(self, fn: "Fn", params: List["PredicateNode"]):
+    def __init__(self, fn: "Fn", name: "str", params: "list[PredicateNode]"):
         self._fn = (fn,)
+        self.name = name
         self.params = params
 
     @property
@@ -223,10 +248,8 @@ class CallNode(PredicateNode):
 
 
 def call_node(fn: "Fn"):
-    def call_node_factory(*args: "PredicateNode") -> "CallNode":
-        return CallNode(
-            fn, [arg if isinstance(arg, PredicateNode) else LiteralNode(arg, True) for arg in args]
-        )
+    def call_node_factory(*args: "PredicateNode | str | int | float | bool | list") -> "CallNode":
+        return CallNode(fn, fn.__name__, [*map(wrap_literal, args)])
 
     return call_node_factory
 
@@ -246,8 +269,7 @@ T = TypeVar("T")
 class Visitor(Generic[T]):
     def __call__(self, node: "PredicateNode") -> T:
         attr = f"visit_{node.__class__.__name__}"
-        if not hasattr(self, attr):
-            raise Exception("Unknown node type:", node.__class__.__name__)
+        assert hasattr(self, attr), "Unknown node type: " + node.__class__.__name__
         return getattr(self, attr)(node)
 
     def visit_ArrayNode(self, node: "ArrayNode") -> Any:
@@ -318,7 +340,7 @@ class BaseTransformer(Visitor[PredicateNode]):
         return TableAttrNode(node.name, self(node.table), node.shorten)
 
     def visit_CallNode(self, node: "CallNode"):
-        return CallNode(node.fn, [self(p) for p in node.params])
+        return CallNode(node.fn, node.name, [self(p) for p in node.params])
 
     def visit_TableNode(self, node: "TableNode"):
         return node
@@ -442,9 +464,9 @@ class GenSqlVisitor(Visitor[str]):
             return f"({left}{BIN_OP[node.op]}{right})"
 
         if isinstance(node.left, TableAttrNode) and node.left.name == "bbox":
-            return f"objectBBox({self(node.left.table.id)}, {right})"
+            return f"objectBBox({self(node.left.table.id)},{right})"
         if "Headings" in left:
-            return f"headingAtTimestamp({left}, {right})"
+            return f"headingAtTimestamp({left},{right})"
         return f"valueAtTimestamp({left},{right})"
 
     def visit_BoolOpNode(self, node: "BoolOpNode"):
@@ -457,12 +479,12 @@ class GenSqlVisitor(Visitor[str]):
 
     def visit_TableAttrNode(self, node: "TableAttrNode"):
         table = node.table
+        assert isinstance(table, (ObjectTableNode, CameraTableNode)), "table type not supported"
+
         if isinstance(table, ObjectTableNode):
             return resolve_object_attr(node.name, table.index)
         elif isinstance(table, CameraTableNode):
             return resolve_camera_attr(node.name, table.index)
-        else:
-            raise Exception("table type not supported")
 
     def visit_CompOpNode(self, node: "CompOpNode"):
         left = self(node.left)
@@ -516,13 +538,6 @@ TRAJECTORY_COLUMNS: List[Tuple[str, str]] = [
 ]
 
 
-def map_object(to: int, from_: Optional[int] = None):
-    return ",".join(
-        f"{resolve_object_attr(attr, from_)} AS {resolve_object_attr(attr, to)}"
-        for attr, _ in TRAJECTORY_COLUMNS
-    )
-
-
 CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("cameraId", "TEXT"),
     ("frameId", "TEXT"),
@@ -537,10 +552,3 @@ CAMERA_COLUMNS: List[Tuple[str, str]] = [
     ("cameraHeading", "real"),
     ("egoHeading", "real"),
 ]
-
-
-def map_camera(to: int, from_: Optional[int] = None):
-    return ",".join(
-        f"{resolve_camera_attr(attr, from_)} AS {resolve_camera_attr(attr, to)}"
-        for attr, _ in TRAJECTORY_COLUMNS
-    )

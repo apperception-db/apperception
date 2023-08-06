@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .payload import Payload
@@ -8,16 +8,19 @@ if TYPE_CHECKING:
 
 @dataclass
 class Pipeline:
-    stages: "List[Stage]" = field(default_factory=list)
+    stages: "list[Stage]" = field(default_factory=list)
 
-    def __init__(self) -> None:
-        self.stages = []
+    def __init__(self, stages: "list[Stage] | None" = None) -> None:
+        if stages is None:
+            self.stages = []
+        else:
+            self.stages = [*stages]
 
-    def add_filter(self, filter: "Stage"):
+    def add_filter(self, filter: "Stage") -> "Pipeline":
         self.stages.append(filter)
         return self
 
     def run(self, payload: "Payload") -> "Payload":
-        for filter in self.stages:
-            payload = payload.filter(filter)
+        for stage in self.stages:
+            payload = payload.filter(stage)
         return payload

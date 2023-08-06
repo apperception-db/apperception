@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "facingRelative"
-\echo ""
-
 DROP FUNCTION IF EXISTS facingRelative(real, real);
 CREATE OR REPLACE FUNCTION facingRelative(target_heading real, viewpoint_heading real) RETURNS real AS
 $BODY$

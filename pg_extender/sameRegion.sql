@@ -1,9 +1,3 @@
-\echo ""
-\echo ""
-\echo ""
-\echo "sameRegion"
-\echo ""
-
 DROP FUNCTION IF EXISTS sameRegion(text, geometry, geometry);
 CREATE OR REPLACE FUNCTION sameRegion(segment_type text, traj1 geometry, traj2 geometry) RETURNS boolean AS
 $BODY$

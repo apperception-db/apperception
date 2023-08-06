@@ -1,8 +1,9 @@
-from apperception.database import database
-
 import datetime
 import math
+
 from plpygis import Geometry
+
+from apperception.database import database
 
 from ..detection_estimation.detection_estimation import DetectionInfo
 from ..detection_estimation.segment_mapping import RoadPolygonInfo

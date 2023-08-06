@@ -1,9 +1,10 @@
 import itertools
+from datetime import datetime
+from typing import Optional, Tuple
+
 import numpy as np
 import numpy.typing as npt
-from datetime import datetime
 from pyquaternion import Quaternion
-from typing import Optional, Tuple
 
 Float3 = Tuple[float, float, float]
 Float4 = Tuple[float, float, float, float]
@@ -64,8 +65,8 @@ class CameraConfig:
     _data: "npt.NDArray[np.float32]"
 
     @property
-    def frame_num(self) -> float:
-        return self._data[0].item()
+    def frame_num(self) -> int:
+        return int(self._data[0].item())
 
     @property
     def camera_translation(self) -> Float3:

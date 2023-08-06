@@ -1,11 +1,14 @@
-from apperception.predicate import (BinOpNode, CallNode, CompOpNode,
-                                    LiteralNode, PredicateNode, TableAttrNode,
-                                    Visitor)
-
-from optimized_ingestion.stages.detection_2d.object_type_filter import \
-    ObjectTypeFilter
-from optimized_ingestion.stages.detection_2d.yolo_detection import \
-    YoloDetection
+from apperception.predicate import (
+    BinOpNode,
+    CallNode,
+    CompOpNode,
+    LiteralNode,
+    PredicateNode,
+    TableAttrNode,
+    Visitor,
+)
+from optimized_ingestion.stages.detection_2d.object_type_filter import ObjectTypeFilter
+from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
 from optimized_ingestion.stages.in_view import InView
 
 
@@ -41,14 +44,14 @@ def distance_to_ego(pipeline, param):
 
 
 ALL_MAPPING_RULES = {
-    'in_view': {'condition': lambda x: (isinstance(x, CompOpNode) and
-                                        isinstance(x.left, CallNode)
+    'in_view': {'condition': lambda x: (isinstance(x, CompOpNode)
+                                        and isinstance(x.left, CallNode)
                                         and isinstance(x.right, LiteralNode)
                                         and x.left._fn[0].__name__ == 'fn'
                                         and isinstance(x.left.params[0], TableAttrNode)
                                         and x.left.params[0].name == 'egoTranslation'
                                         and isinstance(x.left.params[1], LiteralNode)),
-                'param': lambda x: dict(segment_type=x.left.params[1].value, distance=x.right.value),
+                'param': lambda x: dict(roadtypes=[x.left.params[1].value], distance=x.right.value),
                 'pipeline': in_view},
     'object_type': {'condition': lambda x: (isinstance(x, CallNode)
                                             and x._fn[0].__name__ == 'like'
@@ -59,8 +62,8 @@ ALL_MAPPING_RULES = {
                                           and x._fn[0].__name__ == 'contains_all'),
                   'param': lambda x: x.params[0].value,
                   'pipeline': road_type},
-    'distance_to_ego': {'condition': lambda x: (isinstance(x, CompOpNode) and
-                                                isinstance(x.left, CallNode)
+    'distance_to_ego': {'condition': lambda x: (isinstance(x, CompOpNode)
+                                                and isinstance(x.left, CallNode)
                                                 and isinstance(x.right, LiteralNode)
                                                 and x.left._fn[0].__name__ == 'fn'
                                                 and isinstance(x.left.params[0], TableAttrNode)
