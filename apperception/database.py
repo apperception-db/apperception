@@ -1,4 +1,3 @@
-from datetime import datetime
 from os import environ
 from typing import TYPE_CHECKING, Callable, List, Tuple
 
@@ -61,8 +60,8 @@ TRAJECTORY_COLUMNS: "list[tuple[str, str]]" = [
     ("trajCentroids", "tgeompoint"),
     ("translations", "tgeompoint"),  # [(x,y,z)@today, (x2, y2,z2)@tomorrow, (x2, y2,z2)@nextweek]
     ("itemHeadings", "tfloat"),
-    ("color", "TEXT"),
-    ("largestBbox", "STBOX")
+    # ("color", "TEXT"),
+    # ("largestBbox", "STBOX")
     # ("roadPolygons", "tgeompoint"),
     # ("period", "period") [today, nextweek]
 ]
@@ -118,18 +117,18 @@ class Database:
         self.cursor.execute(f"CREATE TABLE Cameras ({columns(_schema, CAMERA_COLUMNS)})")
         self._commit(commit)
 
-    def _create_general_bbox_table(self, commit=True):
-        self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
-        self.cursor.execute(
-            f"""
-            CREATE TABLE General_Bbox (
-                {columns(_schema, BBOX_COLUMNS)},
-                FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
-                PRIMARY KEY (itemId, timestamp)
-            )
-            """
-        )
-        self._commit(commit)
+    # def _create_general_bbox_table(self, commit=True):
+    #     self.cursor.execute("DROP TABLE IF EXISTS General_Bbox CASCADE;")
+    #     self.cursor.execute(
+    #         f"""
+    #         CREATE TABLE General_Bbox (
+    #             {columns(_schema, BBOX_COLUMNS)},
+    #             FOREIGN KEY(itemId) REFERENCES Item_General_Trajectory(itemId),
+    #             PRIMARY KEY (itemId, timestamp)
+    #         )
+    #         """
+    #     )
+    #     self._commit(commit)
 
     def _create_item_general_trajectory_table(self, commit=True):
         self.cursor.execute("DROP TABLE IF EXISTS Item_General_Trajectory CASCADE;")
@@ -254,7 +253,7 @@ class Database:
         """
         Select cams with certain world id
         """
-        return psql.SQL(f"SELECT * FROM Cameras WHERE cameraId = '{camera_id}'").format(
+        return psql.SQL("SELECT * FROM Cameras WHERE cameraId = {camera_id}").format(
             camera_id=camera_id
         )
 
@@ -333,7 +332,7 @@ class Database:
         add_recognized_objects(self.connection, tracking_results, camera.id)
 
     def retrieve_bbox(self, query: "psql.Composable | str | None" = None, camera_id: str = ""):
-        q = psql.SQL(f"SELECT * FROM General_Bbox WHERE cameraId = {camera_id}").format(
+        q = psql.SQL("SELECT * FROM General_Bbox WHERE cameraId = {camera_id}").format(
             camera_id=camera_id
         )
         return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(
@@ -341,7 +340,7 @@ class Database:
         )
 
     def retrieve_traj(self, query: "psql.Composable | str | None" = None, camera_id: str = ""):
-        q = psql.SQL(f"SELECT * FROM Item_General_Trajectory WHERE cameraId = {camera_id}").format(
+        q = psql.SQL("SELECT * FROM Item_General_Trajectory WHERE cameraId = {camera_id}").format(
             camera_id=camera_id
         )
         return (psql.SQL("({}) UNION ({})").format(create_sql(query), q) if query else q).as_string(
@@ -361,7 +360,7 @@ class Database:
     def get_traj(self, query: "psql.Composable | str") -> List[List[Trajectory]]:
         # hack
         _query = psql.SQL(
-            f"SELECT asMFJSON(trajCentroids)::json->'sequences'" "FROM ({query}) as final"
+            "SELECT asMFJSON(trajCentroids)::json->'sequences'" "FROM ({query}) as final"
         ).format(query=query)
 
         print("get_traj", _query.as_string(self.cursor))
@@ -380,7 +379,7 @@ class Database:
         ]
 
     def get_traj_key(self, query: "psql.Composable | str"):
-        _query = psql.SQL(f"SELECT itemId FROM ({query}) as final").format(query=create_sql(query))
+        _query = psql.SQL("SELECT itemId FROM ({query}) as final").format(query=create_sql(query))
         print("get_traj_key", _query.as_string(self.cursor))
         return self.execute(_query)
 
