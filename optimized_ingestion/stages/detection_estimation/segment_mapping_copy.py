@@ -13,18 +13,19 @@ Usage example:
 import array
 import logging
 import math
+import os
+import sys
+import time
+from typing import Any, Dict, List, NamedTuple, Tuple, Union
+
 import matplotlib.pyplot as plt
 import numpy as np
 import numpy.typing as npt
-import os
 import pandas as pd
 import postgis
 import psycopg2
-import sys
-import time
 from plpygis import Geometry
 from shapely.geometry import LineString, Polygon
-from typing import Any, Dict, List, NamedTuple, Tuple, Union
 
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir, os.pardir)))
 from optimized_ingestion.camera_config_copy import CameraConfig, camera_config
@@ -32,10 +33,10 @@ from optimized_ingestion.camera_config_copy import CameraConfig, camera_config
 # from pyquaternion import Quaternion
 pd.get_option("display.max_columns")
 
+from utils import line_to_polygon_intersection
+
 from apperception.database import database
 from apperception.utils import fetch_camera_config
-
-from utils import line_to_polygon_intersection
 
 logger = logging.getLogger(__name__)
 
