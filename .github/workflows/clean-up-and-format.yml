@@ -23,7 +23,7 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install nbconvert
-          python -m jupyter nbconvert --clear-output --inplace benchmarks/**/*.ipynb benchmarks/*.ipynb
+          python -m jupyter nbconvert --clear-output --inplace evaluation/**/*.ipynb benchmarks/*.ipynb
           python -m jupyter nbconvert --clear-output --inplace scripts/**/*.ipynb scripts/*.ipynb
           python -m jupyter nbconvert --clear-output --inplace playground/**/*.ipynb playground/*.ipynb
       
