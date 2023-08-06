@@ -62,20 +62,24 @@ in-place = true
 remove-all-unused-imports = true
 ignore-init-module-imports = true
 expand-star-imports = true
+exclude = ['spatialyze/video_processor/modules']
 
 [tool.isort]
 profile = "black"
 verbose = true
+skip = ['spatialyze/video_processor/modules']
 
 [tool.black]
 line-length = 100
 verbose = true
+exclude = 'spatialyze/video_processor/modules'
 
 [tool.autopep8]
 in-place = true
 recursive = true
 aggressive = 3
 verbose = 2
+exclude = 'spatialyze/video_processor/modules'
 
 # [tool.mypy]
 # exclude = [
@@ -103,4 +107,11 @@ ignore = [
   'spatialyze/legacy/*',
   'spatialyze/trackers/object_tracker_yolov4_deepsort.py',
   'spatialyze/trackers/object_tracker_yolov5_deepsort.py',
+  'spatialyze/video_processor/modules',
+  'spatialyze/video_processor/stages/detection_estimation',
+  'spatialyze/video_processor/stages/segment_trajectory',
+  'spatialyze/video_processor/utils/process_pipeline.py',
+  'spatialyze/video_processor/utils/query_analyzer.py',
+  'spatialyze/video_processor/utils/preprocess.py',
+  'spatialyze/video_processor'
 ]

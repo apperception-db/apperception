@@ -1,4 +1,5 @@
 [flake8]
+exclude = spatialyze/video_processor/modules
 ignore =
   # let black handles line length
   E501,

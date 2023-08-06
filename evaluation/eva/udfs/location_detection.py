@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 import torch
 from pyquaternion import Quaternion
-from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
-from optimized_ingestion.stages.stage import Stage
+from spatialyze.video_processor.stages.decode_frame.decode_frame import DecodeFrame
+from spatialyze.video_processor.stages.stage import Stage
 from evadb.udfs.abstract.abstract_udf import AbstractUDF
 from evadb.udfs.decorators.decorators import forward, setup
 from evadb.udfs.decorators.io_descriptors.data_types import PandasDataframe

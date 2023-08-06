@@ -11,14 +11,14 @@ import torch
 from bitarray import bitarray
 from torchvision import transforms
 
-from optimized_ingestion.modules.monodepth2.monodepth2 import networks
-from optimized_ingestion.modules.monodepth2.monodepth2.layers import disp_to_depth
-from optimized_ingestion.modules.monodepth2.monodepth2.utils import (
+from spatialyze.video_processor.modules.monodepth2.monodepth2 import networks
+from spatialyze.video_processor.modules.monodepth2.monodepth2.layers import disp_to_depth
+from spatialyze.video_processor.modules.monodepth2.monodepth2.utils import (
     download_model_if_doesnt_exist,
     monodepth2_models_path,
 )
-from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
-from optimized_ingestion.stages.stage import Stage
+from spatialyze.video_processor.stages.decode_frame.decode_frame import DecodeFrame
+from spatialyze.video_processor.stages.stage import Stage
 from evadb.udfs.abstract.abstract_udf import AbstractUDF
 from evadb.udfs.decorators.decorators import forward, setup
 from evadb.udfs.decorators.io_descriptors.data_types import PandasDataframe

@@ -1,20 +1,20 @@
 import os
 import pickle
-from optimized_ingestion.actions.tracking2d_overlay import tracking2d_overlay
+from spatialyze.video_processor.actions.tracking2d_overlay import tracking2d_overlay
 
-from optimized_ingestion.pipeline import Pipeline
-from optimized_ingestion.payload import Payload
-from optimized_ingestion.video import Video
-from optimized_ingestion.camera_config import camera_config
+from spatialyze.video_processor.pipeline import Pipeline
+from spatialyze.video_processor.payload import Payload
+from spatialyze.video_processor.video import Video
+from spatialyze.video_processor.camera_config import camera_config
 
-from optimized_ingestion.stages.in_view.in_view import InView
-from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
-from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
-from optimized_ingestion.stages.tracking_2d.strongsort import StrongSORT
-from optimized_ingestion.stages.detection_2d.object_type_filter import ObjectTypeFilter
-from optimized_ingestion.stages.detection_3d.from_detection_2d_and_road import FromDetection2DAndRoad
+from spatialyze.video_processor.stages.in_view.in_view import InView
+from spatialyze.video_processor.stages.decode_frame.decode_frame import DecodeFrame
+from spatialyze.video_processor.stages.detection_2d.yolo_detection import YoloDetection
+from spatialyze.video_processor.stages.tracking_2d.strongsort import StrongSORT
+from spatialyze.video_processor.stages.detection_2d.object_type_filter import ObjectTypeFilter
+from spatialyze.video_processor.stages.detection_3d.from_detection_2d_and_road import FromDetection2DAndRoad
 
-from optimized_ingestion.cache import disable_cache
+from spatialyze.video_processor.cache import disable_cache
 
 disable_cache()
 

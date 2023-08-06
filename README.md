@@ -36,7 +36,7 @@ apt-get update && apt-get install -y python3-opencv
 ### Clone the Spatialyze repo
 For ssh:
 ```sh
-git clone -b optimized_ingestion --recurse-submodules git@github.com:apperception-db/spatialyze.git
+git clone --recurse-submodules git@github.com:apperception-db/spatialyze.git
 cd spatialyze
 ```
 

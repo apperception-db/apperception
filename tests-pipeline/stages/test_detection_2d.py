@@ -3,13 +3,13 @@ import pickle
 import numpy as np
 import json
 
-from optimized_ingestion.pipeline import Pipeline
-from optimized_ingestion.payload import Payload
-from optimized_ingestion.video import Video
-from optimized_ingestion.camera_config import camera_config
+from spatialyze.video_processor.pipeline import Pipeline
+from spatialyze.video_processor.payload import Payload
+from spatialyze.video_processor.video import Video
+from spatialyze.video_processor.camera_config import camera_config
 
-from optimized_ingestion.stages.decode_frame.decode_frame import DecodeFrame
-from optimized_ingestion.stages.detection_2d.yolo_detection import YoloDetection
+from spatialyze.video_processor.stages.decode_frame.decode_frame import DecodeFrame
+from spatialyze.video_processor.stages.detection_2d.yolo_detection import YoloDetection
 
 OUTPUT_DIR = './data/pipeline/test-results'
 VIDEO_DIR =  './data/pipeline/videos'
