@@ -86,20 +86,22 @@ class CameraConfig:
         return self._data[25].item()
 
     def __iter__(self):
-        return iter([
-            self.camera_id,
-            self.frame_id,
-            self.frame_num,
-            self.filename,
-            self.camera_translation,
-            self.camera_rotation,
-            self.camera_intrinsic,
-            self.ego_translation,
-            self.ego_rotation,
-            self.timestamp,
-            self.camera_heading,
-            self.ego_heading
-        ])
+        return iter(
+            [
+                self.camera_id,
+                self.frame_id,
+                self.frame_num,
+                self.filename,
+                self.camera_translation,
+                self.camera_rotation,
+                self.camera_intrinsic,
+                self.ego_translation,
+                self.ego_rotation,
+                self.timestamp,
+                self.camera_heading,
+                self.ego_heading,
+            ]
+        )
 
 
 def interpolate(f1: CameraConfig, f2: CameraConfig, timestamp: datetime):
